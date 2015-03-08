@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+#
+# Licensed to Big Data Genomics (BDG) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The BDG licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Figure out where MANGO is installed
+SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
+
+# Get list of required jars for MANGO
+MANGO_JARS=$("$SCRIPT_DIR"/bin/compute-mango-jars.sh)
+
+if [ ! -z "$ADDL_JARS" ]; then
+  MANGO_JARS="$MANGO_JARS","$ADDL_JARS"
+fi
+
+# append ADAM_JARS to the --jars option, if any
+NEW_OPTIONS=$("$SCRIPT_DIR"/bin/append_to_option.py , --jars "$MANGO_JARS" "$@")
+
+# Binary distribution
+REPO_DIR="$SCRIPT_DIR/repo"
+if [ ! -d "$REPO_DIR" ]; then
+# Fallback to source directory
+REPO_DIR="$SCRIPT_DIR/mango-cli/target/appassembler/repo/"
+fi
+
+# Find the MANGO CLI jar
+CLI_DIR="$REPO_DIR/org/bdgenomics/mango/mango-cli"
+num_versions=$(ls "$CLI_DIR" | wc -l)
+if [ "$num_versions" -eq "0" ]; then
+  echo "Failed to find mango-cli jar in $CLI_DIR"
+  echo "You need to build MANGO before running this program."
+  exit 1
+fi
+if [ "$num_versions" -gt "1" ]; then
+  versions_list=$(ls "$CLI_DIR")
+  echo "Found multiple MANGO CLI versions in $CLI_DIR:"
+  echo "$versions_list"
+  echo "Please remove all but one."
+  exit 1
+fi
+MANGO_CLI_JAR=$(ls $CLI_DIR/*/mango-cli-*.jar)
+
+# Find spark-submit script
+if [ -z "$SPARK_HOME" ]; then
+  echo "SPARK_HOME must be set for 'mango-submit'"
+  exit 1
+else
+  SPARK_SUBMIT="$SPARK_HOME"/bin/spark-submit
+fi
+
+# Split args into Spark args and ADAM args
+# NOTE: if Spark uses gatherSparkSubmitOpts in spark-submit, this is unnecessary
+function usage() {
+  echo "mango-submit <spark-args> <mango-args>"
+  exit 0
+}
+source "$SPARK_HOME"/bin/utils.sh
+SUBMIT_USAGE_FUNCTION=usage
+gatherSparkSubmitOpts $NEW_OPTIONS
+
+# submit the job to Spark
+"$SPARK_SUBMIT" \
+  --class org.bdgenomics.mango.cli.VizReads \
+  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+  --conf spark.kryo.registrator=org.bdgenomics.adam.serialization.ADAMKryoRegistrator \
+  --conf spark.kryoserializer.buffer.mb=4 \
+  --conf spark.kryo.referenceTracking=true \
+  ${MANGO_OPTS:- } \
+  --conf spark.executor.memory=${MANGO_EXECUTOR_MEMORY:-"4g"} \
+  --driver-memory ${MANGO_DRIVER_MEMORY:-"4g"} \
+  "${SUBMISSION_OPTS[@]}" \
+  "$MANGO_CLI_JAR" \
+  "${APPLICATION_OPTS[@]}"
