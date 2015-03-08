@@ -15,9 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bdgenomics.adam.rich
-
-import org.bdgenomics.adam.rich.ReferenceMappingContext.AlignmentRecordReferenceMapping
+package org.bdgenomics.mango.rich
+import org.bdgenomics.mango.rich.ReferenceMappingContext.AlignmentRecordReferenceMapping
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 

@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bdgenomics.adam.models
+package org.bdgenomics.mango.models
+import org.bdgenomics.adam.models.ReferenceRegion
 
 trait ReferenceMapping[T] {
   def getReferenceName(value: T): String

@@ -30,6 +30,7 @@
 
   <modules>
     <module>mango-core</module>
+    <module>mango-cli</module>
   </modules>
 
   <licenses>
@@ -118,6 +119,11 @@
           <source>${java.version}</source>
           <target>${java.version}</target>
         </configuration>
+      </plugin>
+      <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>appassembler-maven-plugin</artifactId>
+          <version>1.8</version>
       </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
@@ -222,6 +228,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.bdgenomics.mango</groupId>
+        <artifactId>mango-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.bdgenomics.bdg-utils</groupId>
         <artifactId>bdg-utils-misc</artifactId>
