@@ -1,2 +1,4 @@
 # mango
-Visualization tools for genomic data. Apache 2 licensed.
+
+A set of genomic visualization tools built on top of ADAM. Apache 2 licensed.
+
