@@ -42,7 +42,6 @@ object VizReads extends ADAMCommandCompanion {
 
   var readsRefName = ""
   var variantsRefName = ""
-  // var inputPath = ""
   var reads: RDD[AlignmentRecord] = null
   var variants: RDD[Genotype] = null
   var reference: RDD[NucleotideContigFragment] = null
@@ -77,6 +76,7 @@ object VizReads extends ADAMCommandCompanion {
       tracks += new VariationJson(aRec.getVariant.getContig.getContigName, aRec.getAlleles.mkString(" / "), aRec.getVariant.getStart, aRec.getVariant.getEnd, track)
 
     }
+    println(tracks.toList)
     tracks.toList
   }
 
@@ -137,13 +137,13 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
-  var readsRegion = ReferenceRegion(VizReads.readsRefName, 50, 100)
-  var variantsRegion = ReferenceRegion(VizReads.variantsRefName, 0, 200)
+  var readsRegion = ReferenceRegion(VizReads.readsRefName, 0, 100)
+  var variantsRegion = ReferenceRegion(VizReads.variantsRefName, 0, 100)
   var filteredLayout: OrderedTrackedLayout[AlignmentRecord] = null
   var filteredArray: Array[AlignmentRecord] = null
 
   get("/?") {
-    redirect(url("reads"))
+    redirect(url("overall"))
   }
 
   get("/reads") {
@@ -165,6 +165,20 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     readsRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     filteredLayout = new OrderedTrackedLayout(VizReads.reads.filterByOverlappingRegion(readsRegion).collect())
     VizReads.printTrackJson(filteredLayout)
+  }
+
+  get("/overall") {
+    contentType = "text/html"
+
+    filteredLayout = new OrderedTrackedLayout(VizReads.reads.filterByOverlappingRegion(readsRegion).collect())
+    val templateEngine = new TemplateEngine
+    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
+      Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
+        "variantsRegion" -> (variantsRegion.referenceName, variantsRegion.start.toString, variantsRegion.end.toString),
+        "width" -> VizReads.width.toString,
+        "base" -> VizReads.base.toString,
+        "numTracks" -> filteredLayout.numTracks.toString,
+        "trackHeight" -> VizReads.trackHeight.toString))
   }
 
   get("/freq") {
@@ -227,19 +241,6 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       VizReads.variants = sc.loadGenotypes(args.variantsPath, projection = Some(proj))
       VizReads.variantsRefName = args.variantsRefName
     }
-
-    // if (args.inputPath.endsWith(".fa")) {
-    //   println("DETECTED FA")
-    //   VizReads.reference = sc.loadSequence(args.inputPath, projection = Some(proj))
-    //   for (ref <- VizReads.reference) {
-    //     ref.getContig.
-    //   }
-    // }
-
-    // if (args.inputPath.endsWith(".bed")) {
-    //   println("DETECTED BED")
-    //   VizReads.features = sc.loadFeatures(args.inputPath, projection = Some(proj))
-    // }
 
     val server = new org.eclipse.jetty.server.Server(args.port)
     val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
