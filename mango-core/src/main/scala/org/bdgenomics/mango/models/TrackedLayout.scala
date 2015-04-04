@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 package org.bdgenomics.mango.models
-
+import org.bdgenomics.adam.models.ReferenceRegion
 import scala.collection.mutable
 
 /**
@@ -30,44 +30,41 @@ import scala.collection.mutable
  */
 trait TrackedLayout[T] {
   def numTracks: Int
-  def trackAssignments: Map[T, Int]
+  def trackAssignments: Map[(ReferenceRegion, T), Int]
 }
 
 object TrackedLayout {
 
-  def overlaps[T](rec1: T, rec2: T)(implicit rm: ReferenceMapping[T]): Boolean = {
-    val ref1 = rm.getReferenceRegion(rec1)
-    val ref2 = rm.getReferenceRegion(rec2)
+  def overlaps[T](rec1: (ReferenceRegion, T), rec2: (ReferenceRegion, T)): Boolean = {
+    val ref1 = rec1._1
+    val ref2 = rec2._1
     ref1.overlaps(ref2)
   }
 }
 
 /**
- * An implementation of TrackedLayout which takes a sequence of ReferenceMappable values,
+ * An implementation of TrackedLayout which takes a sequence of tuples of Reference Region and an input type,
  * and lays them out <i>in order</i> (i.e. from first-to-last) in the naive way: for each
  * value, it looks for the track with the lowest index that doesn't already have an overlapping
  * value, and it doesn't use any special data structures (it just does a linear search for each
  * track.)
  *
- * @param reads The set of values (i.e. "reads", but anything that is mappable to the reference
- *              genome ultimately) to lay out in tracks
- * @param mapping The (implicit) reference mapping which converts values to ReferenceRegions
+ * @param values The set of values (i.e. reads, variants) to lay out in tracks
  * @tparam T the type of value which is to be tracked.
  */
-class OrderedTrackedLayout[T](reads: Traversable[T])(implicit val mapping: ReferenceMapping[T]) extends TrackedLayout[T] {
-
+class OrderedTrackedLayout[T](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] {
   private var trackBuilder = new mutable.ListBuffer[Track]()
-  reads.toSeq.foreach(findAndAddToTrack)
+  values.toSeq.foreach(findAndAddToTrack)
   trackBuilder = trackBuilder.filter(_.records.nonEmpty)
 
   val numTracks = trackBuilder.size
-  val trackAssignments: Map[T, Int] =
+  val trackAssignments: Map[(ReferenceRegion, T), Int] =
     Map(trackBuilder.toList.zip(0 to numTracks).flatMap {
       case (track: Track, idx: Int) => track.records.map(_ -> idx)
     }: _*)
 
-  private def findAndAddToTrack(rec: T) {
-    val reg = mapping.getReferenceRegion(rec)
+  private def findAndAddToTrack(rec: (ReferenceRegion, T)) {
+    val reg = rec._1
     if (reg != null) {
       val track: Option[Track] = trackBuilder.find(track => !track.conflicts(rec))
       track.map(_ += rec).getOrElse(addTrack(new Track(rec)))
@@ -79,17 +76,17 @@ class OrderedTrackedLayout[T](reads: Traversable[T])(implicit val mapping: Refer
     t
   }
 
-  private class Track(val initial: T) {
+  private class Track(val initial: (ReferenceRegion, T)) {
 
-    val records = new mutable.ListBuffer[T]()
+    val records = new mutable.ListBuffer[(ReferenceRegion, T)]()
     records += initial
 
-    def +=(rec: T): Track = {
+    def +=(rec: (ReferenceRegion, T)): Track = {
       records += rec
       this
     }
 
-    def conflicts(rec: T): Boolean =
+    def conflicts(rec: (ReferenceRegion, T)): Boolean =
       records.exists(r => TrackedLayout.overlaps(r, rec))
   }
 
