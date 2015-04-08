@@ -134,7 +134,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   var variantsRegion = ReferenceRegion(VizReads.variantsRefName, 0, 100)
 
   get("/?") {
-    redirect(url("reads"))
+    redirect(url("overall"))
   }
 
   get("/reads") {
