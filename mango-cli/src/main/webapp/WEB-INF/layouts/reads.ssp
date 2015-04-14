@@ -21,60 +21,60 @@
         <li>move:</li>
         <li>
             <input name="Move very far left button"
-               type="button"
-               value="<<<"
-               onclick="moveVeryFarLeft()"
-               class="btn btn-primary btn-xs"/>
+              type="button"
+              value="<<<"
+              onclick="moveVeryFarLeft()"
+              class="btn btn-primary btn-xs"/>
         </li>
         <li>
             <input name="Move far left button"
-               type="button"
-               value="<<"
-               onclick="moveFarLeft()"
-               class="btn btn-primary btn-xs"/>
+              type="button"
+              value="<<"
+              onclick="moveFarLeft()"
+              class="btn btn-primary btn-xs"/>
         </li>
         <li>
             <input name="Move left button"
-               type="button"
-               value="<"
-               onclick="moveLeft()"
-               class="btn btn-primary btn-xs"/>
+              type="button"
+              value="<"
+              onclick="moveLeft()"
+              class="btn btn-primary btn-xs"/>
         </li>
         <li>
             <input name="Move right button"
-               type="button"
-               value=">"
-               onclick="moveRight()"
-               class="btn btn-info btn-xs"/>
+              type="button"
+              value=">"
+              onclick="moveRight()"
+              class="btn btn-info btn-xs"/>
         </li>
         <li>
             <input name="Move far right button"
-               type="button"
-               value=">>"
-               onclick="moveFarRight()"
-               class="btn btn-info btn-xs"/>
+              type="button"
+              value=">>"
+              onclick="moveFarRight()"
+              class="btn btn-info btn-xs"/>
         </li>
         <li>
             <input name="Move very far right button"
-               type="button"
-               value=">>>"
-               onclick="moveVeryFarRight()"
-               class="btn btn-info btn-xs"/>
+              type="button"
+              value=">>>"
+              onclick="moveVeryFarRight()"
+              class="btn btn-info btn-xs"/>
         </li>
         <li>zoom:</li>
         <li>
             <input name="Zoom in button"
-               type="button"
-               value="++"
-               onclick="zoomIn()"
-               class="btn btn-warning btn-xs"/>
+              type="button"
+              value="++"
+              onclick="zoomIn()"
+              class="btn btn-warning btn-xs"/>
         </li>
         <li>
             <input name="Zoom out button"
-               type="button"
-               value="--"
-               onclick="zoomOut()"
-               class="btn btn-warning btn-xs"/>
+              type="button"
+              value="--"
+              onclick="zoomOut()"
+              class="btn btn-warning btn-xs"/>
         </li>
         <li>
             <form name="regForm" method="GET" class="form-inline">
@@ -82,19 +82,19 @@
                 <input type="text" name="start" size="10" class="form-control" placeholder="start">
                 - <input type="text" name="end" size="10" class="form-control" placeholder="end">
                 <input name="Submit button"
-                       type="button"
-                       value="Submit"
-                       onclick="checkForm(this.form)"
-                       class="btn btn-danger btn-xs"/>
+                      type="button"
+                      value="Submit"
+                      onclick="checkForm(this.form)"
+                      class="btn btn-danger btn-xs"/>
             </form>
         </li>
     </ul>
     <br>
 </body>
 <script>
-  var refName = "${readsRegion._1}";
-  var start = parseInt(${readsRegion._2}, 10);
-  var end = parseInt(${readsRegion._3}, 10);
+  var readRefName = "${readsRegion._1}";
+  var readRegStart = parseInt(${readsRegion._2}, 10);
+  var readRegEnd = parseInt(${readsRegion._3}, 10);
   var width = parseInt(${width}, 10);
   var base = parseInt(${base}, 10);
   var trackHeight = parseInt(${trackHeight}, 10);
