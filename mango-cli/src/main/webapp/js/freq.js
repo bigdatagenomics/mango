@@ -13,59 +13,59 @@ d3.json(jsonLocation, function(error, data) {
     });
 
     var svgContainer = d3.select("body")
-                         .append("svg")
-                         .attr("height", (height+base))
-                         .attr("width", (width+base));
+        .append("svg")
+        .attr("height", (height+base))
+        .attr("width", (width+base));
 
     // Create the scale for the data
     var dataScale = d3.scale.linear()
-                            .domain([0, maxFreq])
-                            .range([0, height]);
+        .domain([0, maxFreq])
+        .range([0, height]);
 
     var freqline = d3.svg.line()
-                     .x(function(d){return base + (d.base-start)/(end-start) * width;})
-                     .y(function(d){return dataScale(maxFreq-d.freq);})
-                     .interpolate("basis");
+        .x(function(d){return base + (d.base-start)/(end-start) * width;})
+        .y(function(d){return dataScale(maxFreq-d.freq);})
+        .interpolate("basis");
 
     svgContainer.append("g")
-                .append("svg:path")
-                .attr("d", freqline(data))
-                .style("stroke-width", 2)
-                .style("stroke", "steelblue")
-                .style("fill", "none");
+        .append("svg:path")
+        .attr("d", freqline(data))
+        .style("stroke-width", 2)
+        .style("stroke", "steelblue")
+        .style("fill", "none");
 
     // Create the scale for the x axis
     var xAxisScale = d3.scale.linear()
-                            .domain([start, end])
-                            .range([0, width]);
+        .domain([start, end])
+        .range([0, width]);
 
     // Create the scale for the y axis
     var yAxisScale = d3.scale.linear()
-                            .domain([maxFreq, 0])
-                            .range([0, height]);
+        .domain([maxFreq, 0])
+        .range([0, height]);
 
     // Create the x axis
     var xAxis = d3.svg.axis()
-                   .scale(xAxisScale)
-                   .ticks(5);
+       .scale(xAxisScale)
+       .ticks(5);
 
     // Create the y axis
     var yAxis = d3.svg.axis()
-                   .scale(yAxisScale)
-                   .orient("left")
-                   .ticks(5);
+       .scale(yAxisScale)
+       .orient("left")
+       .ticks(5);
 
     // Add the x axis to the container
     svgContainer.append("g")
-                .attr("class", "axis")
-                .attr("transform", "translate(" + base + ", " + height + ")")
-                .call(xAxis);
+        .attr("class", "axis")
+        .attr("transform", "translate(" + base + ", " + height + ")")
+        .call(xAxis);
 
     // Add the y axis to the container
     svgContainer.append("g")
-                .attr("class", "axis")
-                .attr("transform", "translate(" + base + ", 0)")
-                .call(yAxis);
+        .attr("class", "axis")
+        .attr("transform", "translate(" + base + ", 0)")
+        .call(yAxis);
 });
 
 // Try to move very far left
@@ -146,67 +146,65 @@ function update(newStart, newEnd) {
         });
 
         d3.select("h2")
-                      .select("span")
-                      .text(start + "-" + end);
-
+            .select("span")
+            .text(start + "-" + end);
 
         // Create the scale for the data
         var dataScale = d3.scale.linear()
-                                .domain([0, maxFreq])
-                                .range([0, height]);
+            .domain([0, maxFreq])
+            .range([0, height]);
 
         var freqline = d3.svg.line()
-                         .x(function(d){return base + (d.base-start)/(end-start) * width;})
-                         .y(function(d){return dataScale(maxFreq-d.freq);})
-                         .interpolate("basis");
+            .x(function(d){return base + (d.base-start)/(end-start) * width;})
+            .y(function(d){return dataScale(maxFreq-d.freq);})
+            .interpolate("basis");
 
         // Change dimensions of the SVG container
         var svgContainer = d3.select("svg")
-                             .attr("height", (height+base));
+            .attr("height", (height+base));
 
         // Remove old content
-        svgContainer.selectAll("g")
-                    .remove();
+        svgContainer.selectAll("g").remove();
 
         // Add the path
         svgContainer.append("g")
-                    .append("path")
-                    .attr("d", freqline(data))
-                    .style("stroke-width", 2)
-                    .style("stroke", "steelblue")
-                    .style("fill", "none");
+            .append("path")
+            .attr("d", freqline(data))
+            .style("stroke-width", 2)
+            .style("stroke", "steelblue")
+            .style("fill", "none");
 
         // Create the scale for the x axis
         var xAxisScale = d3.scale.linear()
-                                .domain([start, end])
-                                .range([0, width]);
+            .domain([start, end])
+            .range([0, width]);
 
         // Create the scale for the y axis
         var yAxisScale = d3.scale.linear()
-                                .domain([maxFreq, 0])
-                                .range([0, height]);
+            .domain([maxFreq, 0])
+            .range([0, height]);
 
         // Create the x axis
         var xAxis = d3.svg.axis()
-                       .scale(xAxisScale)
-                       .ticks(5);
+            .scale(xAxisScale)
+            .ticks(5);
 
         // Create the y axis
         var yAxis = d3.svg.axis()
-                       .scale(yAxisScale)
-                       .orient("left")
-                       .ticks(5);
+            .scale(yAxisScale)
+            .orient("left")
+            .ticks(5);
 
         // Add the x axis to the container
         svgContainer.append("g")
-                    .attr("class", "axis")
-                    .attr("transform", "translate(" + base + ", " + height + ")")
-                    .call(xAxis);
+            .attr("class", "axis")
+            .attr("transform", "translate(" + base + ", " + height + ")")
+            .call(xAxis);
 
         // Add the y axis to the container
         svgContainer.append("g")
-                    .attr("class", "axis")
-                    .attr("transform", "translate(" + base + ", 0)")
-                    .call(yAxis);
+            .attr("class", "axis")
+            .attr("transform", "translate(" + base + ", 0)")
+            .call(yAxis);
     });
 }
