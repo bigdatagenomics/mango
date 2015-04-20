@@ -106,5 +106,5 @@
   var height = (numTracks+1) * trackHeight;
 </script>
 <script src="js/reads.js"></script>
-<script src="js/variants.js"></script>
+// <script src="js/variants.js"></script>
 </html>

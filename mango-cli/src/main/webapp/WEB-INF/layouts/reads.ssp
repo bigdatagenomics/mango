@@ -1,4 +1,5 @@
 <%@ val readsRegion: (String, String, String) %>
+<%@ val reference: String %>
 <%@ val width: String %>
 <%@ val base: String %>
 <%@ val trackHeight: String %>
@@ -13,7 +14,8 @@
     <link rel="stylesheet" type = "text/css" href = "css/style.css">
     <title>mango: Genome visualization for ADAM</title>
 </head>
-<body>
+
+<div id = "navigation">
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
     <h2 align="center">current region: ${readsRegion._1}:</h2>
     <br>
@@ -90,7 +92,9 @@
         </li>
     </ul>
     <br>
-</body>
+</div>
+<div id="area1"></div>
+<body></body>
 <script>
   var readRefName = "${readsRegion._1}";
   var readRegStart = parseInt(${readsRegion._2}, 10);
@@ -100,6 +104,8 @@
   var trackHeight = parseInt(${trackHeight}, 10);
   var numTracks = parseInt(${numTracks}, 10);
   var height = (numTracks+1) * trackHeight;
+  var reference = "${reference}";
+  var referenceArray = reference.split("");
 </script>
 <script src="js/reads.js"></script>
 </html>

@@ -1,4 +1,44 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
+// var featureJsonLocation = "/features/" + readRefName + "?start=" + readRegStart + "&end=" readRegEnd;
+
+var refContainer = d3.select("#area1")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", 50);
+
+// d3.text
+refContainer.selectAll("rect").data(referenceArray)
+    .enter()
+        .append("g")
+        .append("rect")
+            .attr("x", function(d, i) {
+                return i/(readRegEnd-readRegStart) * width;
+            })
+            .attr("y", 30)
+            .attr("fill", function(d, i) {
+                if (d === "G") {
+                    return '#336600';
+                } else if (d === "C") {
+                    return '#36B2AB';
+                } else if (d === "A") {
+                    return '#0066FF';
+                } else {
+                    return '#99FF99';
+                }
+            })
+            .attr("width", function(d) {
+                return Math.max(1, width/(readRegEnd-readRegStart));
+            })
+            .attr("height", 10)
+            .on("mouseover", function(d) {
+                div.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                div.html(d)
+                    .style("left", (d3.event.pageX - 10) + "px")
+                    .style("top", (d3.event.pageY - 30) + "px");
+            });
+
 var svgContainer = d3.select("body")
     .append("svg")
     .attr("height", (height+base))
@@ -25,6 +65,7 @@ d3.json(readJsonLocation,function(error, data) {
                 .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
                 .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(readRegEnd-readRegStart))); }))
                 .attr("height", (trackHeight-2))
+                .attr("fill", "steelblue")
                 .on("mouseover", function(d) {
                     div.transition()
                     .duration(200)
@@ -156,6 +197,7 @@ function update(newStart, newEnd) {
                 .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
                 .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(readRegEnd-readRegStart))); }))
                 .attr("height", (trackHeight-2))
+                .attr("fill", "steelblue")
                 .on("mouseover", function(d) {
                     div.transition()
                     .duration(200)
@@ -188,7 +230,7 @@ function update(newStart, newEnd) {
     });
 }
 
-// Hover box for reads
+// // Hover box for reads
 var div = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
