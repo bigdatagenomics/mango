@@ -104,8 +104,8 @@
   var trackHeight = parseInt(${trackHeight}, 10);
   var numTracks = parseInt(${numTracks}, 10);
   var height = (numTracks+1) * trackHeight;
-  var reference = "${reference}";
-  var referenceArray = reference.split("");
+  // var reference = "${reference}";
+  // var referenceArray = reference.split("");
 </script>
 <script src="js/reads.js"></script>
 </html>

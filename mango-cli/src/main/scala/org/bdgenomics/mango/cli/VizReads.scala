@@ -133,6 +133,7 @@ case class TrackJson(readName: String, start: Long, end: Long, track: Long)
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class FreqJson(base: Long, freq: Long)
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
+case class ReferenceJson(reference: String)
 
 class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "READS", usage = "The reads file to view", index = 0)
@@ -259,8 +260,13 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/reference/:ref") {
     val referenceRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    println("IN REFERENCE" + VizReads.reference.adamGetReferenceString(referenceRegion))
     val referenceString: String = VizReads.reference.adamGetReferenceString(referenceRegion)
+    val splitReference: Array[String] = referenceString.split("")
+    var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
+    for (base <- splitReference) {
+      tracks += new ReferenceJson(base)
+    }
+    tracks.toList
   }
 }
 
@@ -279,35 +285,12 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       VizReads.variantsRefName = args.variantsRefName
     }
 
-    //NEW
     if (args.referencePath.endsWith(".fa")) {
-      // println("DETECTED FA")
       VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
-      var inputRegion: ReferenceRegion = ReferenceRegion("chrM", 0L, 10L)
-      println(VizReads.reference.adamGetReferenceString(inputRegion))
-      // println("reference is" + VizReads.reference)
-      // var refContig = VizReads.reference.getContig
-      // println("contig is" + refContig)
-      // println("contigName is" + refContig.getContigName)
-      // println("contigLength is" + refContig.getContigLength)
-      // println("contigAssembly is" + refContig.getAssembly)
-      // println("contigSpecies is" + refContig.getSpecies)
-      // println("description is" + VizReads.reference.getDescription)
-      // println("fragmentSequence is" + VizReads.reference.getFragmentSequence)
-      // println("fragmentNumber is" + VizReads.reference.getFragmentNumber)
-      // println("fragmentStartPosition is" + VizReads.reference.getFragmentStartPosition)
-      // println("numFragsInContig is" + VizReads.reference.getNumberOfFragmentsInContig)
     }
 
     if (args.featurePath.endsWith(".bed")) {
-      println("DETECTED BED")
       VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
-      //TODO
-      // println(features.getFeatureId)
-      // println(features.getFeatureType)
-      // println(features.getStart)
-      // println(features.getEnd)
-
     }
 
     val server = new org.eclipse.jetty.server.Server(args.port)

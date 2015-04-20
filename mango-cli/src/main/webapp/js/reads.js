@@ -1,13 +1,12 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
-// var featureJsonLocation = "/features/" + readRefName + "?start=" + readRegStart + "&end=" readRegEnd;
-
+var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 var refContainer = d3.select("#area1")
     .append("svg")
     .attr("width", width)
     .attr("height", 50);
 
-// d3.text
-refContainer.selectAll("rect").data(referenceArray)
+d3.json(referenceStringLocation, function(error, data) {
+    refContainer.selectAll("rect").data(data)
     .enter()
         .append("g")
         .append("rect")
@@ -16,14 +15,14 @@ refContainer.selectAll("rect").data(referenceArray)
             })
             .attr("y", 30)
             .attr("fill", function(d, i) {
-                if (d === "G") {
-                    return '#336600';
-                } else if (d === "C") {
-                    return '#36B2AB';
-                } else if (d === "A") {
-                    return '#0066FF';
+                if (d.reference === "G") {
+                    return '#296629'; //DARK GREEN
+                } else if (d.reference === "C") {
+                    return '#CC2900'; //RED
+                } else if (d.reference === "A") { 
+                    return '#0066FF'; //BLUE
                 } else {
-                    return '#99FF99';
+                    return '#FF6600'; //ORANGE
                 }
             })
             .attr("width", function(d) {
@@ -34,10 +33,12 @@ refContainer.selectAll("rect").data(referenceArray)
                 div.transition()
                     .duration(200)
                     .style("opacity", .9);
-                div.html(d)
+                div.html(d.reference)
                     .style("left", (d3.event.pageX - 10) + "px")
                     .style("top", (d3.event.pageY - 30) + "px");
-            });
+            })
+});
+
 
 var svgContainer = d3.select("body")
     .append("svg")
@@ -166,7 +167,49 @@ function update(newStart, newEnd) {
     readRegEnd = newEnd;
     readJsonLocation = ("/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd);
     var numTracks = 0;
+    var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
+    
+    //Updating Reference
+    var refContainer = d3.select("#area1")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", 50);
 
+    d3.json(referenceStringLocation, function(error, data) {
+        refContainer.selectAll("rect").data(data)
+        .enter()
+            .append("g")
+            .append("rect")
+                .attr("x", function(d, i) {
+                    return i/(readRegEnd-readRegStart) * width;
+                })
+                .attr("y", 30)
+                .attr("fill", function(d, i) {
+                    if (d.reference === "G") {
+                        return '#296629'; //DARK GREEN
+                    } else if (d.reference === "C") {
+                        return '#CC2900'; //RED
+                    } else if (d.reference === "A") { 
+                        return '#0066FF'; //BLUE
+                    } else {
+                        return '#FF6600'; //ORANGE
+                    }
+                })
+                .attr("width", function(d) {
+                    return Math.max(1, width/(readRegEnd-readRegStart));
+                })
+                .attr("height", 10)
+                .on("mouseover", function(d) {
+                    div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    div.html(d.reference)
+                        .style("left", (d3.event.pageX - 10) + "px")
+                        .style("top", (d3.event.pageY - 30) + "px");
+                });
+    });
+
+    //Updating
     d3.json(readJsonLocation, function(error, data) {
         data.forEach(function(d) {
             d.readName = d.readName;
