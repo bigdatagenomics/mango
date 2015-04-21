@@ -169,11 +169,7 @@ function update(newStart, newEnd) {
     var numTracks = 0;
     var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
     
-    //Updating Reference
-    var refContainer = d3.select("#area1")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", 50);
+    refContainer.selectAll("g").remove();
 
     d3.json(referenceStringLocation, function(error, data) {
         refContainer.selectAll("rect").data(data)
@@ -225,35 +221,34 @@ function update(newStart, newEnd) {
         height = (numTracks+1) * trackHeight;
 
         // Change dimensions of the SVG container
-        var svgContainer = d3.select("svg")
-            .attr("height", (height+base));
+        svgContainer.attr("height", (height+base));
 
         // Remove old content
         svgContainer.selectAll("g").remove();
 
         // Add the rectangles
-    svgContainer.selectAll("rect").data(data)
-        .enter()
-            .append("g")
-            .append("rect")
-                .attr("x", (function(d) { return (d.start-readRegStart)/(readRegEnd-readRegStart) * width; }))
-                .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
-                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(readRegEnd-readRegStart))); }))
-                .attr("height", (trackHeight-2))
-                .attr("fill", "steelblue")
-                .on("mouseover", function(d) {
-                    div.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                    div .html(d.readName)
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY - 28) + "px");
-                })
-                .on("mouseout", function(d) {
-                    div.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-                });
+        svgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-readRegStart)/(readRegEnd-readRegStart) * width; }))
+                    .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(readRegEnd-readRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .attr("fill", "steelblue")
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.readName)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
 
         // Recreate the scale for the axis
         var axisScale = d3.scale.linear()
