@@ -164,7 +164,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   var variantsRegion = ReferenceRegion(VizReads.variantsRefName, 0, 100)
 
   get("/?") {
-    redirect(url("reads"))
+    redirect(url("overall"))
   }
 
   get("/reads") {
@@ -176,7 +176,6 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
       Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
-        "reference" -> referenceString,
         "width" -> VizReads.width.toString,
         "base" -> VizReads.base.toString,
         "numTracks" -> filteredLayout.numTracks.toString,
