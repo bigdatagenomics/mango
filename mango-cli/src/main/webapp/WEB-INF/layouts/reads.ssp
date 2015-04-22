@@ -13,7 +13,8 @@
     <link rel="stylesheet" type = "text/css" href = "css/style.css">
     <title>mango: Genome visualization for ADAM</title>
 </head>
-<body>
+
+<div id = "navigation">
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
     <h2 align="center">current region: ${readsRegion._1}:</h2>
     <br>
@@ -90,7 +91,9 @@
         </li>
     </ul>
     <br>
-</body>
+</div>
+<div id="area1"></div>
+<body></body>
 <script>
   var readRefName = "${readsRegion._1}";
   var readRegStart = parseInt(${readsRegion._2}, 10);

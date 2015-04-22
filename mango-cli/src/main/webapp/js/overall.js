@@ -1,10 +1,30 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
+var varJsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd;
+var featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
+
+//Reference
 var refContainer = d3.select("#area1")
     .append("svg")
     .attr("width", width)
     .attr("height", 50);
 
+
+// Create the scale for the axis
+var axisScale = d3.scale.linear()
+    .domain([readRegStart, readRegEnd])
+    .range([0, width]);
+
+// Create the axis
+var xAxis = d3.svg.axis()
+   .scale(axisScale);
+
+// Add the axis to the container
+refContainer.append("g")
+    .attr("class", "axis")
+    .call(xAxis);
+
+//Adding Reference rectangles
 d3.json(referenceStringLocation, function(error, data) {
     refContainer.selectAll("rect").data(data)
     .enter()
@@ -14,7 +34,7 @@ d3.json(referenceStringLocation, function(error, data) {
                 return i/(readRegEnd-readRegStart) * width;
             })
             .attr("y", 30)
-            .attr("fill", function(d, i) {
+            .attr("fill", function(d) {
                 if (d.reference === "G") {
                     return '#296629'; //DARK GREEN
                 } else if (d.reference === "C") {
@@ -39,7 +59,97 @@ d3.json(referenceStringLocation, function(error, data) {
             })
 });
 
+//Features
+var featureSvgContainer = d3.select("#area2")
+    .append("svg")
+    .attr("height", 50)
+    .attr("width", width);
 
+d3.json(featureJsonLocation, function(error, data) {
+    data.forEach(function(d) {
+        d.featureId = d.featureId;
+        d.featureType = d.featureType;
+        d.start = +d.start;
+        d.end = +d.end;
+        d.track = +d.track;        
+    });
+
+    // Add the rectangles
+    featureSvgContainer.selectAll("rect").data(data)
+        .enter()
+            .append("g")
+            .append("rect")
+                .attr("x", (function(d) { return (d.start-featureRegStart)/(featureRegEnd-featureRegStart) * width; }))
+                .attr("y", 30)
+                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
+                .attr("height", (trackHeight-2))
+                .on("mouseover", function(d) {
+                    div.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                    div .html(d.featureId)
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    div.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+                });
+});
+
+//Variants
+var varSvgContainer = d3.select("#area3")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", 50);
+
+d3.json(varJsonLocation, function(error, data) {
+    data.forEach(function(d) {
+        d.contigName = d.contigName;
+        d.start = +d.start;
+        d.end = +d.end;
+        d.track = +d.track;
+        d.alleles = d.alleles;
+        
+    });
+
+    // Add the rectangles
+    varSvgContainer.selectAll("rect").data(data)
+        .enter()
+            .append("g")
+            .append("rect")
+                .attr("x", (function(d) { return (d.start-varRegStart)/(varRegEnd-varRegStart) * width; }))
+                .attr("y", 30)
+                .attr("fill", function(d) {
+                    if (d.alleles === "Ref / Alt") {
+                        return '#00FFFF'; //CYAN
+                    } else if (d.alleles === "Alt / Alt") {
+                        return '#FF66FF'; //MAGENTA
+                    } else if (d.reference === "Ref / Ref") { 
+                        return '#99FF33'; //NEON GREEN
+                    } else {
+                        return '#FFFF66'; //YELLOW
+                    }
+                })
+                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(varRegEnd-varRegStart))); }))
+                .attr("height", (trackHeight-2))
+                .on("mouseover", function(d) {
+                    div.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                    div .html(d.alleles)
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    div.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+                });
+});
+
+//Reads
 var svgContainer = d3.select("body")
     .append("svg")
     .attr("height", (height+base))
@@ -81,16 +191,6 @@ d3.json(readJsonLocation,function(error, data) {
                     .style("opacity", 0);
                 });
 });
-
-// Create the scale for the axis
-var axisScale = d3.scale.linear()
-    .domain([readRegStart, readRegEnd])
-    .range([0, width]);
-
-// Create the axis
-var xAxis = d3.svg.axis()
-   .scale(axisScale)
-   .ticks(5);
 
 // Add the axis to the container
 svgContainer.append("g")
@@ -163,14 +263,39 @@ function checkForm(form) {
 }
 
 function update(newStart, newEnd) {
+    //update all region start and endings
     readRegStart = newStart;
     readRegEnd = newEnd;
-    readJsonLocation = ("/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd);
+    varRegStart = newStart;
+    varRegEnd = newEnd;
+    featureRegStart = newStart;
+    featureRegEnd = newEnd;
     var numTracks = 0;
-    var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
-    
+
+    //updating fetch locations
+    readJsonLocation = ("/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd);
+    referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
+    varJsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd; //matching read region
+    featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
+
+    //Updating Reference
     refContainer.selectAll("g").remove();
 
+    // Recreate the scale for the axis
+    axisScale = d3.scale.linear()
+        .domain([readRegStart, readRegEnd])
+        .range([0, width]);
+
+    // Recreate the axis
+    xAxis = d3.svg.axis()
+       .scale(axisScale);
+
+    // Add the axis to the container
+    refContainer.append("g")
+        .attr("class", "axis")
+        .call(xAxis);
+
+    //Updating reference rectangles
     d3.json(referenceStringLocation, function(error, data) {
         refContainer.selectAll("rect").data(data)
         .enter()
@@ -205,7 +330,93 @@ function update(newStart, newEnd) {
                 });
     });
 
-    //Updating
+    //Updating Features
+    d3.json(featureJsonLocation, function(error, data) {
+        data.forEach(function(d) {
+            d.featureId = d.featureId;
+            d.featureType = d.featureType;
+            d.start = +d.start;
+            d.end = +d.end;
+            d.track = +d.track;        
+        });
+        
+        //remove all current elements
+        featureSvgContainer.selectAll("g").remove();
+
+        // Add the rectangles
+        featureSvgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-featureRegStart)/(featureRegEnd-featureRegStart) * width; }))
+                    .attr("y", 30)
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.featureId)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
+    });
+
+    //Updating Variants
+    d3.json(varJsonLocation, function(error, data) {
+        data.forEach(function(d) {
+            d.contigName = d.contigName;
+            d.start = +d.start;
+            d.end = +d.end;
+            d.track = +d.track;
+            d.alleles = d.alleles;
+            
+        });
+
+        varSvgContainer.selectAll("g").remove();
+
+        // Add the rectangles
+        varSvgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-varRegStart)/(varRegEnd-varRegStart) * width; }))
+                    .attr("y", 30)
+                    .attr("fill", function(d) {
+                        if (d.alleles === "Ref / Alt") {
+                            return '#00FFFF'; //CYAN
+                        } else if (d.alleles === "Alt / Alt") {
+                            return '#FF66FF'; //MAGENTA
+                        } else if (d.reference === "Ref / Ref") { 
+                            return '#99FF33'; //NEON GREEN
+                        } else {
+                            return '#FFFF66'; //YELLOW
+                        }
+                    })
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(varRegEnd-varRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.alleles)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
+    });
+
+
+    //Updating Reads
     d3.json(readJsonLocation, function(error, data) {
         data.forEach(function(d) {
             d.readName = d.readName;
@@ -249,16 +460,6 @@ function update(newStart, newEnd) {
                         .duration(500)
                         .style("opacity", 0);
                     });
-
-        // Recreate the scale for the axis
-        var axisScale = d3.scale.linear()
-            .domain([readRegStart, readRegEnd])
-            .range([0, width]);
-
-        // Recreate the axis
-        var xAxis = d3.svg.axis()
-           .scale(axisScale)
-           .ticks(5);
 
         // Add the axis to the container
         svgContainer.append("g")
