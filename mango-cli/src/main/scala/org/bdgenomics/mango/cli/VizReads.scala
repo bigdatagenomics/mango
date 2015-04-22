@@ -40,6 +40,7 @@ object VizReads extends ADAMCommandCompanion {
   val commandDescription: String = "Genomic visualization for ADAM"
   var readsRefName = ""
   var variantsRefName = ""
+  var featuresRefName = ""
   var reads: RDD[AlignmentRecord] = null
   var variants: RDD[Genotype] = null
   var reference: RDD[NucleotideContigFragment] = null
@@ -66,11 +67,6 @@ object VizReads extends ADAMCommandCompanion {
     var tracks = new scala.collection.mutable.ListBuffer[FeatureJson]
     for ((rec, track) <- layout.trackAssignments) {
       val fRec = rec._2.asInstanceOf[Feature]
-      println(fRec)
-      println(fRec.getFeatureId)
-      println(fRec.getFeatureType)
-      println(fRec.getStart)
-      println(fRec.getEnd)
       tracks += new FeatureJson(fRec.getFeatureId, fRec.getFeatureType, fRec.getStart, fRec.getEnd, track)
     }
     tracks.toList
@@ -80,8 +76,6 @@ object VizReads extends ADAMCommandCompanion {
     var tracks = new scala.collection.mutable.ListBuffer[VariationJson]
     for ((rec, track) <- layout.trackAssignments) {
       val vRec = rec._2.asInstanceOf[Genotype]
-      // val referenceAllele = vRec.getVariant.getReferenceAllele
-      // val alternateAllele = vRec.getVariant.getAlternateAllele
       tracks += new VariationJson(vRec.getVariant.getContig.getContigName, vRec.getAlleles.mkString(" / "), vRec.getVariant.getStart, vRec.getVariant.getEnd, track)
     }
     tracks.toList
@@ -148,11 +142,14 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "VARIANTS REFNAME", usage = "The variants reference to view", index = 3)
   var variantsRefName: String = null
 
-  @Argument(required = true, metaVar = "REFERENCE", usage = "The referece file to view", index = 4)
+  @Argument(required = true, metaVar = "REFERENCE", usage = "The reference file to view", index = 4)
   var referencePath: String = null
 
-  @Argument(required = true, metaVar = "FEATURE", usage = "The referece file to view", index = 5)
+  @Argument(required = true, metaVar = "FEATURE", usage = "The feature file to view", index = 5)
   var featurePath: String = null
+
+  @Argument(required = true, metaVar = "FEATURE REF NAME", usage = "The feature reference to view", index = 6)
+  var featuresRefName: String = null
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
@@ -162,6 +159,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
   var readsRegion = ReferenceRegion(VizReads.readsRefName, 0, 100)
   var variantsRegion = ReferenceRegion(VizReads.variantsRefName, 0, 100)
+  var featureRegion = ReferenceRegion(VizReads.featuresRefName, 0, 100) //
 
   get("/?") {
     redirect(url("overall"))
@@ -172,7 +170,6 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(readsRegion)
     val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
     val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-    val referenceString: String = VizReads.reference.adamGetReferenceString(readsRegion)
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
       Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
@@ -200,6 +197,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
         "variantsRegion" -> (variantsRegion.referenceName, variantsRegion.start.toString, variantsRegion.end.toString),
+        "featureRegion" -> (featureRegion.referenceName, featureRegion.start.toString, featureRegion.end.toString),
         "width" -> VizReads.width.toString,
         "base" -> VizReads.base.toString,
         "numTracks" -> filteredLayout.numTracks.toString,
@@ -228,10 +226,8 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(variantsRegion)
     val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
     val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
-    val referenceString = VizReads.reference.adamGetReferenceString(variantsRegion)
     val templateEngine = new TemplateEngine
     val displayMap = Map("variantsRegion" -> (variantsRegion.referenceName, variantsRegion.start.toString, variantsRegion.end.toString),
-      "reference" -> referenceString,
       "width" -> VizReads.width.toString,
       "base" -> VizReads.base.toString,
       "numTracks" -> filteredGenotypeTrack.numTracks.toString,
@@ -249,6 +245,20 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     VizReads.printVariationJson(filteredGenotypeTrack)
   }
 
+  get("/features") {
+    contentType = "text/html"
+    val featureRDD: RDD[Feature] = VizReads.features.filterByOverlappingRegion(featureRegion)
+    val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
+    val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
+    val templateEngine = new TemplateEngine
+    val displayMap = Map("featureRegion" -> (featureRegion.referenceName, featureRegion.start.toString, featureRegion.end.toString),
+      "width" -> VizReads.width.toString,
+      "base" -> VizReads.base.toString,
+      "numTracks" -> filteredFeatureTrack.numTracks.toString,
+      "trackHeight" -> VizReads.trackHeight.toString)
+    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
+      displayMap)
+  }
   get("/features/:ref") {
     val featureRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     val featureRDD: RDD[Feature] = VizReads.filterByOverlappingRegion(featureRegion)
@@ -290,6 +300,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
 
     if (args.featurePath.endsWith(".bed")) {
       VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
+      VizReads.featuresRefName = args.featuresRefName
     }
 
     val server = new org.eclipse.jetty.server.Server(args.port)
@@ -301,6 +312,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
     println("Frequency visualization at: /freq")
     println("Overlapping reads visualization at: /reads")
     println("Variant visualization at: /variants")
+    println("Feature visualization at /features")
     println("Overall visualization at: /overall")
     server.join()
   }

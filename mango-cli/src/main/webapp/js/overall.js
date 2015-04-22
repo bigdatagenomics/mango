@@ -1,6 +1,7 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 var varJsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd;
+var featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
 
 //Reference
 var refContainer = d3.select("#area1")
@@ -42,8 +43,47 @@ d3.json(referenceStringLocation, function(error, data) {
             })
 });
 
+//Features
+var featureSvgContainer = d3.select("#area2")
+    .append("svg")
+    .attr("height", 50)
+    .attr("width", width);
+
+d3.json(featureJsonLocation, function(error, data) {
+    data.forEach(function(d) {
+        d.featureId = d.featureId;
+        d.featureType = d.featureType;
+        d.start = +d.start;
+        d.end = +d.end;
+        d.track = +d.track;        
+    });
+
+    // Add the rectangles
+    featureSvgContainer.selectAll("rect").data(data)
+        .enter()
+            .append("g")
+            .append("rect")
+                .attr("x", (function(d) { return (d.start-featureRegStart)/(featureRegEnd-featureRegStart) * width; }))
+                .attr("y", 30)
+                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
+                .attr("height", (trackHeight-2))
+                .on("mouseover", function(d) {
+                    div.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                    div .html(d.featureId)
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    div.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+                });
+});
+
 //Variants
-var varSvgContainer = d3.select("#area2")
+var varSvgContainer = d3.select("#area3")
     .append("svg")
     .attr("width", width)
     .attr("height", 50);
@@ -92,8 +132,6 @@ d3.json(varJsonLocation, function(error, data) {
                     .style("opacity", 0);
                 });
 });
-
-
 
 //Reads
 var svgContainer = d3.select("body")
@@ -224,10 +262,15 @@ function update(newStart, newEnd) {
     readRegEnd = newEnd;
     varRegStart = newStart;
     varRegEnd = newEnd;
-    readJsonLocation = ("/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd);
+    featureRegStart = newStart;
+    featureRegEnd = newEnd;
     var numTracks = 0;
+
+    //updating fetch locations
+    readJsonLocation = ("/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd);
     referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
     varJsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd; //matching read region
+    featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
 
     //Updating Reference
     refContainer.selectAll("g").remove();
@@ -263,6 +306,42 @@ function update(newStart, newEnd) {
                         .style("left", (d3.event.pageX - 10) + "px")
                         .style("top", (d3.event.pageY - 30) + "px");
                 });
+    });
+
+    //Updating Features
+    d3.json(featureJsonLocation, function(error, data) {
+        data.forEach(function(d) {
+            d.featureId = d.featureId;
+            d.featureType = d.featureType;
+            d.start = +d.start;
+            d.end = +d.end;
+            d.track = +d.track;        
+        });
+        //remove all current elements
+        featureSvgContainer.selectAll("g").remove();
+
+        // Add the rectangles
+        featureSvgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-featureRegStart)/(featureRegEnd-featureRegStart) * width; }))
+                    .attr("y", 30)
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.featureId)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
     });
 
     //Updating Variants
