@@ -1,6 +1,6 @@
 var jsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd;
 
-var svgContainer = d3.select("body")
+var svgContainer = d3.select("#varArea")
     .append("svg")
     .attr("height", (height+base))
     .attr("width", width);
@@ -26,6 +26,17 @@ d3.json(jsonLocation, function(error, data) {
             .append("rect")
                 .attr("x", (function(d) { return (d.start-varRegStart)/(varRegEnd-varRegStart) * width; }))
                 .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
+                .attr("fill", function(d) {
+                    if (d.alleles === "Ref / Alt") {
+                        return '#00FFFF'; //CYAN
+                    } else if (d.alleles === "Alt / Alt") {
+                        return '#FF66FF'; //MAGENTA
+                    } else if (d.reference === "Ref / Ref") { 
+                        return '#99FF33'; //NEON GREEN
+                    } else {
+                        return '#FFFF66'; //YELLOW
+                    }
+                })
                 .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(varRegEnd-varRegStart))); }))
                 .attr("height", (trackHeight-2))
                 .on("mouseover", function(d) {
@@ -159,6 +170,17 @@ function update(newStart, newEnd) {
                 .append("rect")
                     .attr("x", (function(d) { return (d.start-varRegStart)/(varRegEnd-varRegStart) * width; }))
                     .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
+                    .attr("fill", function(d) {
+                        if (d.alleles === "Ref / Alt") {
+                            return '#00FFFF'; //CYAN
+                        } else if (d.alleles === "Alt / Alt") {
+                            return '#FF66FF'; //MAGENTA
+                        } else if (d.reference === "Ref / Ref") { 
+                            return '#99FF33'; //NEON GREEN
+                        } else {
+                            return '#FFFF66'; //YELLOW
+                        }
+                    })
                     .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(varRegEnd-varRegStart))); }))
                     .attr("height", (trackHeight-2))
                     .on("mouseover", function(d) {
@@ -194,7 +216,7 @@ function update(newStart, newEnd) {
 }
 
 // Hover box for reads
-var div = d3.select("body")
+var div = d3.select("#var")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);

@@ -157,9 +157,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
-  var readsRegion = ReferenceRegion(VizReads.readsRefName, 0, 100)
-  var variantsRegion = ReferenceRegion(VizReads.variantsRefName, 0, 100)
-  var featureRegion = ReferenceRegion(VizReads.featuresRefName, 0, 100) //
+  var viewRegion = ReferenceRegion(VizReads.readsRefName, 0, 100)
 
   get("/?") {
     redirect(url("overall"))
@@ -167,12 +165,12 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/reads") {
     contentType = "text/html"
-    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(readsRegion)
+    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
     val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-      Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
+      Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
         "width" -> VizReads.width.toString,
         "base" -> VizReads.base.toString,
         "numTracks" -> filteredLayout.numTracks.toString,
@@ -181,8 +179,8 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/reads/:ref") {
     contentType = formats("json")
-    val readRefRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(readRefRegion)
+    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
     val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
     VizReads.printTrackJson(filteredLayout)
@@ -190,14 +188,12 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/overall") {
     contentType = "text/html"
-    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(readsRegion)
+    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
     val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
-      Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
-        "variantsRegion" -> (variantsRegion.referenceName, variantsRegion.start.toString, variantsRegion.end.toString),
-        "featureRegion" -> (featureRegion.referenceName, featureRegion.start.toString, featureRegion.end.toString),
+      Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
         "width" -> VizReads.width.toString,
         "base" -> VizReads.base.toString,
         "numTracks" -> filteredLayout.numTracks.toString,
@@ -208,7 +204,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
-      Map("readsRegion" -> (readsRegion.referenceName, readsRegion.start.toString, readsRegion.end.toString),
+      Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
         "width" -> VizReads.width.toString,
         "height" -> VizReads.height.toString,
         "base" -> VizReads.base.toString))
@@ -216,18 +212,18 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/freq/:ref") {
     contentType = formats("json")
-    val readRefRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val filteredArray = VizReads.reads.filterByOverlappingRegion(readRefRegion).collect()
-    VizReads.printJsonFreq(filteredArray, readRefRegion)
+    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    val filteredArray = VizReads.reads.filterByOverlappingRegion(viewRegion).collect()
+    VizReads.printJsonFreq(filteredArray, viewRegion)
   }
 
   get("/variants") {
     contentType = "text/html"
-    val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(variantsRegion)
+    val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
     val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
     val templateEngine = new TemplateEngine
-    val displayMap = Map("variantsRegion" -> (variantsRegion.referenceName, variantsRegion.start.toString, variantsRegion.end.toString),
+    val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
       "width" -> VizReads.width.toString,
       "base" -> VizReads.base.toString,
       "numTracks" -> filteredGenotypeTrack.numTracks.toString,
@@ -238,8 +234,8 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/variants/:ref") {
     contentType = formats("json")
-    val variantRefRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(variantRefRegion)
+    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
     val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
     VizReads.printVariationJson(filteredGenotypeTrack)
@@ -247,11 +243,11 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/features") {
     contentType = "text/html"
-    val featureRDD: RDD[Feature] = VizReads.features.filterByOverlappingRegion(featureRegion)
+    val featureRDD: RDD[Feature] = VizReads.features.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
     val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
     val templateEngine = new TemplateEngine
-    val displayMap = Map("featureRegion" -> (featureRegion.referenceName, featureRegion.start.toString, featureRegion.end.toString),
+    val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
       "width" -> VizReads.width.toString,
       "base" -> VizReads.base.toString,
       "numTracks" -> filteredFeatureTrack.numTracks.toString,
@@ -260,16 +256,16 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
       displayMap)
   }
   get("/features/:ref") {
-    val featureRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val featureRDD: RDD[Feature] = VizReads.filterByOverlappingRegion(featureRegion)
+    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    val featureRDD: RDD[Feature] = VizReads.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
     val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
     VizReads.printFeatureJson(filteredFeatureTrack)
   }
 
   get("/reference/:ref") {
-    val referenceRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val referenceString: String = VizReads.reference.adamGetReferenceString(referenceRegion)
+    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    val referenceString: String = VizReads.reference.adamGetReferenceString(viewRegion)
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     for (base <- splitReference) {
