@@ -130,25 +130,25 @@ case class FeatureJson(featureId: String, featureType: String, start: Long, end:
 case class ReferenceJson(reference: String)
 
 class VizReadsArgs extends Args4jBase with ParquetArgs {
-  @Argument(required = true, metaVar = "READS", usage = "The reads file to view", index = 0)
-  var readPath: String = null
-
-  @Argument(required = true, metaVar = "READS REFNAME", usage = "The reads reference to view", index = 1)
-  var readsRefName: String = null
-
-  @Argument(required = true, metaVar = "VARIANTS", usage = "The variants file to view", index = 2)
-  var variantsPath: String = null
-
-  @Argument(required = true, metaVar = "VARIANTS REFNAME", usage = "The variants reference to view", index = 3)
-  var variantsRefName: String = null
-
-  @Argument(required = true, metaVar = "REFERENCE", usage = "The reference file to view", index = 4)
+  @Argument(required = true, metaVar = "REFERENCE", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = true, metaVar = "FEATURE", usage = "The feature file to view", index = 5)
+  @Argument(required = false, metaVar = "READS", usage = "The reads file to view", index = 1)
+  var readPath: String = null
+
+  @Argument(required = false, metaVar = "READS REFNAME", usage = "The reads reference to view", index = 2)
+  var readsRefName: String = null
+
+  @Argument(required = false, metaVar = "VARIANTS", usage = "The variants file to view", index = 3)
+  var variantsPath: String = null
+
+  @Argument(required = false, metaVar = "VARIANTS REFNAME", usage = "The variants reference to view", index = 4)
+  var variantsRefName: String = null
+
+  @Argument(required = false, metaVar = "FEATURE", usage = "The feature file to view", index = 5)
   var featurePath: String = null
 
-  @Argument(required = true, metaVar = "FEATURE REF NAME", usage = "The feature reference to view", index = 6)
+  @Argument(required = false, metaVar = "FEATURE REF NAME", usage = "The feature reference to view", index = 6)
   var featuresRefName: String = null
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
@@ -280,6 +280,9 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
 
   override def run(sc: SparkContext, job: Job): Unit = {
     val proj = Projection(contig, readMapped, readName, start, end)
+    if (args.referencePath.endsWith(".fa")) {
+      VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
+    }
     if (args.readPath.endsWith(".bam") || args.readPath.endsWith(".sam") || args.readPath.endsWith(".align.adam")) {
       VizReads.reads = sc.loadAlignments(args.readPath, projection = Some(proj))
       VizReads.readsRefName = args.readsRefName
@@ -290,9 +293,6 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       VizReads.variantsRefName = args.variantsRefName
     }
 
-    if (args.referencePath.endsWith(".fa")) {
-      VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
-    }
 
     if (args.featurePath.endsWith(".bed")) {
       VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
