@@ -5,6 +5,28 @@ var refContainer = d3.select("#area1")
     .attr("width", width)
     .attr("height", 50);
 
+//Reference
+var refContainer = d3.select("#refArea")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", 50);
+
+
+// Create the scale for the axis
+var axisScale = d3.scale.linear()
+    .domain([readRegStart, readRegEnd])
+    .range([0, width]);
+
+// Create the axis
+var xAxis = d3.svg.axis()
+   .scale(axisScale);
+
+// Add the axis to the container
+refContainer.append("g")
+    .attr("class", "axis")
+    .call(xAxis);
+
+//Adding Reference rectangles
 d3.json(referenceStringLocation, function(error, data) {
     refContainer.selectAll("rect").data(data)
     .enter()
@@ -14,7 +36,7 @@ d3.json(referenceStringLocation, function(error, data) {
                 return i/(readRegEnd-readRegStart) * width;
             })
             .attr("y", 30)
-            .attr("fill", function(d, i) {
+            .attr("fill", function(d) {
                 if (d.reference === "G") {
                     return '#296629'; //DARK GREEN
                 } else if (d.reference === "C") {
@@ -169,8 +191,24 @@ function update(newStart, newEnd) {
     var numTracks = 0;
     var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
     
+    //Updating Reference
     refContainer.selectAll("g").remove();
 
+    // Recreate the scale for the axis
+    axisScale = d3.scale.linear()
+        .domain([readRegStart, readRegEnd])
+        .range([0, width]);
+
+    // Recreate the axis
+    xAxis = d3.svg.axis()
+       .scale(axisScale);
+
+    // Add the axis to the container
+    refContainer.append("g")
+        .attr("class", "axis")
+        .call(xAxis);
+
+    //Updating reference rectangles
     d3.json(referenceStringLocation, function(error, data) {
         refContainer.selectAll("rect").data(data)
         .enter()

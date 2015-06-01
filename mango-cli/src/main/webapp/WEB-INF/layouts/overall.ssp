@@ -120,10 +120,15 @@
     </ul>
     <br>
 </div>
-<div id="area1"></div>
-<div id="area2"></div>
-<div id="area3"></div>
-<body></body>
+
+<br>
+
+<div id="refArea"></div>
+<div id="featArea"></div>
+<div id="varArea"></div>
+
+<br>
+
 <script>
   var readRefName = "${viewRegion._1}";
   var readRegStart = parseInt(${viewRegion._2}, 10);

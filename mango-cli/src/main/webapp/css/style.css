@@ -52,3 +52,21 @@ div.tooltip {
 input[type="text"] {
     height: 22px;
 }
+
+#refArea {
+    border-radius: 25px;
+    border: 1px solid #8AC007;
+    padding: 15px; 
+}
+
+#varArea {
+    border-radius: 25px;
+    border: 1px solid #FF9933;
+    padding: 15px; 
+}
+
+#featArea {
+    border-radius: 25px;
+    border: 1px solid #FF99CC;
+    padding: 15px; 
+}

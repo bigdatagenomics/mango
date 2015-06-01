@@ -120,8 +120,13 @@
     </ul>
     <br>
 </div>
-<div id="area1"></div>
-<body></body>
+
+<br>
+
+<div id="refArea"></div>
+
+<br>
+
 <script>
   var readRefName = "${viewRegion._1}";
   var readRegStart = parseInt(${viewRegion._2}, 10);

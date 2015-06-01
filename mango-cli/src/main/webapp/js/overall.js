@@ -4,7 +4,7 @@ var varJsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&en
 var featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
 
 //Reference
-var refContainer = d3.select("#area1")
+var refContainer = d3.select("#refArea")
     .append("svg")
     .attr("width", width)
     .attr("height", 50);
@@ -60,7 +60,7 @@ d3.json(referenceStringLocation, function(error, data) {
 });
 
 //Features
-var featureSvgContainer = d3.select("#area2")
+var featureSvgContainer = d3.select("#featArea")
     .append("svg")
     .attr("height", 50)
     .attr("width", width);
@@ -99,7 +99,7 @@ d3.json(featureJsonLocation, function(error, data) {
 });
 
 //Variants
-var varSvgContainer = d3.select("#area3")
+var varSvgContainer = d3.select("#varArea")
     .append("svg")
     .attr("width", width)
     .attr("height", 50);

@@ -119,6 +119,9 @@
     </ul>
     <br>
 </body>
+
+<br>
+
 <script>
     var refName = "${viewRegion._1}";
     var start = parseInt(${viewRegion._2}, 10);

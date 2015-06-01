@@ -120,6 +120,9 @@
     </ul>
     <br>
 </body>
+
+<br>
+
 <script>
   var featureRefName = "${viewRegion._1}";
   var featureRegStart = parseInt(${viewRegion._2}, 10);

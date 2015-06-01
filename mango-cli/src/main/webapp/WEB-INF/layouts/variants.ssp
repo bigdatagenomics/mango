@@ -120,6 +120,9 @@
     </ul>
     <br>
 </body>
+
+<br>
+
 <script>
   var varRefName = "${viewRegion._1}";
   var varRegStart = parseInt(${viewRegion._2}, 10);
