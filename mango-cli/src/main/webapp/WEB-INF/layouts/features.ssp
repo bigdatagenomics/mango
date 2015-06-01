@@ -1,4 +1,4 @@
-<%@ val featureRegion: (String, String, String) %>
+<%@ val viewRegion: (String, String, String) %>
 <%@ val width: String %>
 <%@ val base: String %>
 <%@ val trackHeight: String %>
@@ -44,7 +44,7 @@
 
 <body>
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
-    <h2 align="center">current region: ${featureRegion._1}:</h2>
+    <h2 align="center">current region: ${viewRegion._1}:</h2>
     <br>
     <ul>
         <li>move:</li>
@@ -121,9 +121,9 @@
     <br>
 </body>
 <script>
-  var featureRefName = "${featureRegion._1}";
-  var featureRegStart = parseInt(${featureRegion._2}, 10);
-  var featureRegEnd = parseInt(${featureRegion._3}, 10);
+  var featureRefName = "${viewRegion._1}";
+  var featureRegStart = parseInt(${viewRegion._2}, 10);
+  var featureRegEnd = parseInt(${viewRegion._3}, 10);
   var width = parseInt(${width}, 10);
   var base = parseInt(${base}, 10);
   var trackHeight = parseInt(${trackHeight}, 10);

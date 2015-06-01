@@ -1,4 +1,4 @@
-<%@ val readsRegion: (String, String, String) %>
+<%@ val viewRegion: (String, String, String) %>
 <%@ val width: String %>
 <%@ val base: String %>
 <%@ val trackHeight: String %>
@@ -44,7 +44,7 @@
 
 <div id = "navigation">
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
-    <h2 align="center">current region: ${readsRegion._1}:</h2>
+    <h2 align="center">current region: ${viewRegion._1}:</h2>
     <br>
     <ul>
         <li>move:</li>
@@ -123,9 +123,9 @@
 <div id="area1"></div>
 <body></body>
 <script>
-  var readRefName = "${readsRegion._1}";
-  var readRegStart = parseInt(${readsRegion._2}, 10);
-  var readRegEnd = parseInt(${readsRegion._3}, 10);
+  var readRefName = "${viewRegion._1}";
+  var readRegStart = parseInt(${viewRegion._2}, 10);
+  var readRegEnd = parseInt(${viewRegion._3}, 10);
   var width = parseInt(${width}, 10);
   var base = parseInt(${base}, 10);
   var trackHeight = parseInt(${trackHeight}, 10);
