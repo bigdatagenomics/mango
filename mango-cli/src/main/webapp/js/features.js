@@ -1,6 +1,6 @@
 var featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
 
-var svgContainer = d3.select("body")
+var svgContainer = d3.select("#featArea")
     .append("svg")
     .attr("height", (height+base))
     .attr("width", width);
@@ -193,7 +193,7 @@ function update(newStart, newEnd) {
 }
 
 // Hover box for reads
-var div = d3.select("body")
+var div = d3.select("#featArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);

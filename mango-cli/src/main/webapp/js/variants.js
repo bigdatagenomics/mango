@@ -1,6 +1,6 @@
 var jsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd;
 
-var svgContainer = d3.select("body")
+var svgContainer = d3.select("#varArea")
     .append("svg")
     .attr("height", (height+base))
     .attr("width", width);
@@ -194,7 +194,7 @@ function update(newStart, newEnd) {
 }
 
 // Hover box for reads
-var div = d3.select("body")
+var div = d3.select("#varArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);

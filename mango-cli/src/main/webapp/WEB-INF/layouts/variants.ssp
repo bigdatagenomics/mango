@@ -42,7 +42,7 @@
   </div>
 </nav>
 
-<body>
+<div id = "navigation">
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
     <h2 align="center">current region: ${viewRegion._1}:</h2>
     <br>
@@ -119,7 +119,11 @@
         </li>
     </ul>
     <br>
-</body>
+</div>
+
+<br>
+
+<div id = "varArea"></div>
 
 <br>
 

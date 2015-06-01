@@ -127,6 +127,7 @@
 
 <br>
 
+<body></body>
 <script>
   var readRefName = "${viewRegion._1}";
   var readRegStart = parseInt(${viewRegion._2}, 10);
