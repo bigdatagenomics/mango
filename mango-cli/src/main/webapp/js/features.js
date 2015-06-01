@@ -27,6 +27,7 @@ d3.json(featureJsonLocation, function(error, data) {
                 .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
                 .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
                 .attr("height", (trackHeight-2))
+                .attr("fill", "#6600CC")
                 .on("mouseover", function(d) {
                     div.transition()
                     .duration(200)
@@ -160,6 +161,7 @@ function update(newStart, newEnd) {
                     .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
                     .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
                     .attr("height", (trackHeight-2))
+                    .attr("fill", "#6600CC")
                     .on("mouseover", function(d) {
                         div.transition()
                         .duration(200)
