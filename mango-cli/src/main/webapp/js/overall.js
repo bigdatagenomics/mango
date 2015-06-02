@@ -159,7 +159,7 @@ if (variantsExist === true) {
 }
 
 //Reads
-if (readsExist === false) {
+if (readsExist === true) {
     var svgContainer = d3.select("#readsArea")
         .append("svg")
         .attr("height", (height+base))
