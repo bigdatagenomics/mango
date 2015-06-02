@@ -216,7 +216,7 @@ function update(newStart, newEnd) {
 }
 
 // Hover box for reads
-var div = d3.select("#var")
+var div = d3.select("#varArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
