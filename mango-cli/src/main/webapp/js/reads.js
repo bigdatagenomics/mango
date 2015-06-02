@@ -62,7 +62,7 @@ d3.json(referenceStringLocation, function(error, data) {
 });
 
 
-var svgContainer = d3.select("body")
+var svgContainer = d3.select("#readsArea")
     .append("svg")
     .attr("height", (height+base))
     .attr("width", width);
@@ -307,7 +307,7 @@ function update(newStart, newEnd) {
 }
 
 // // Hover box for reads
-var div = d3.select("body")
+var div = d3.select("#readsArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);

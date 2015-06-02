@@ -61,7 +61,6 @@ d3.json(referenceStringLocation, function(error, data) {
 
 //Features
 if (featuresExist === true) {
-    //Features
     var featureSvgContainer = d3.select("#featArea")
         .append("svg")
         .attr("height", 50)
@@ -105,7 +104,7 @@ if (featuresExist === true) {
 }
 
 //Variants
-if (variantsExist === false) {
+if (variantsExist === true) {
     var varSvgContainer = d3.select("#varArea")
         .append("svg")
         .attr("width", width)
@@ -160,7 +159,7 @@ if (variantsExist === false) {
 }
 
 //Reads
-if (readsExist === true) {
+if (readsExist === false) {
     var svgContainer = d3.select("#readsArea")
         .append("svg")
         .attr("height", (height+base))
@@ -211,8 +210,6 @@ if (readsExist === true) {
 } else {
     document.getElementById("readsArea").innerHTML = "No Reads File Loaded"
 }
-
-
 
 // Try to move very far left
 function moveVeryFarLeft() {
@@ -487,7 +484,7 @@ function update(newStart, newEnd) {
 }
 
 // // Hover box for reads
-var div = d3.select("readsArea")
+var div = d3.select("#readsArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
