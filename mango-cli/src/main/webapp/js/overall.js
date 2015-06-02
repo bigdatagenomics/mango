@@ -220,29 +220,29 @@ function moveVeryFarLeft() {
 
 // Try to move far left
 function moveFarLeft() {
-    var newStart = Math.max(0, viewRegStart - (viewRegEnd-viewRegStart)/2);
-    var newEnd = Math.max(newStart, viewRegEnd - (viewRegEnd-viewRegStart)/2);
+    var newStart = Math.max(0, viewRegStart - Math.floor((viewRegEnd-viewRegStart)/2));
+    var newEnd = Math.max(newStart, viewRegEnd - Math.floor((viewRegEnd-viewRegStart)/2));
     update(newStart, newEnd);
 }
 
 // Try to move left
 function moveLeft() {
-    var newStart = Math.max(0, viewRegStart - (viewRegEnd-viewRegStart)/4);
-    var newEnd = Math.max(newStart, viewRegEnd - (viewRegEnd-viewRegStart)/4);
+    var newStart = Math.max(0, viewRegStart - Math.floor((viewRegEnd-viewRegStart)/4));
+    var newEnd = Math.max(newStart, viewRegEnd - Math.floor((viewRegEnd-viewRegStart)/4));
     update(newStart, newEnd);
 }
 
  // Try to move right
  function moveRight() {
-     var newStart = viewRegStart + (viewRegEnd-viewRegStart)/4;
-     var newEnd = viewRegEnd + (viewRegEnd-viewRegStart)/4;
+     var newStart = viewRegStart + Math.floor((viewRegEnd-viewRegStart)/4);
+     var newEnd = viewRegEnd + Math.floor((viewRegEnd-viewRegStart)/4);
      update(newStart, newEnd);
  }
 
 // Try to move far right
 function moveFarRight() {
-    var newStart = viewRegStart + (viewRegEnd-viewRegStart)/2;
-    var newEnd = viewRegEnd + (viewRegEnd-viewRegStart)/2;
+    var newStart = viewRegStart + Math.floor((viewRegEnd-viewRegStart)/2);
+    var newEnd = viewRegEnd + Math.floor((viewRegEnd-viewRegStart)/2);
     update(newStart, newEnd);
 }
 
@@ -255,15 +255,15 @@ function moveVeryFarRight() {
 
 // Try to zoom in
 function zoomIn() {
-    var newStart = viewRegStart + (viewRegEnd-viewRegStart)/4;
-    var newEnd = viewRegEnd - (viewRegEnd-viewRegStart)/4;
+    var newStart = viewRegStart + Math.floor((viewRegEnd-viewRegStart)/4);
+    var newEnd = viewRegEnd - Math.floor((viewRegEnd-viewRegStart)/4);
     update(newStart, newEnd);
 }
 
 // Try to zoom out
 function zoomOut() {
-    var newStart = Math.max(0, viewRegStart - (viewRegEnd-viewRegStart)/2);
-    var newEnd = viewRegEnd - (viewRegEnd-viewRegStart)/2;
+    var newStart = Math.max(0, viewRegStart - Math.floor((viewRegEnd-viewRegStart)/2));
+    var newEnd = viewRegEnd - Math.floor((viewRegEnd-viewRegStart)/2);
     update(newStart, newEnd);
 }
 

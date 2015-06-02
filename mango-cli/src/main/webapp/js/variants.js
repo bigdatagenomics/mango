@@ -79,29 +79,29 @@ function moveVeryFarLeft() {
 
 // Try to move far left
 function moveFarLeft() {
-    var newStart = Math.max(0, varRegStart - (varRegEnd-varRegStart)/2);
-    var newEnd = Math.max(newStart, varRegEnd - (varRegEnd-varRegStart)/2);
+    var newStart = Math.max(0, varRegStart - Math.floor((varRegEnd-varRegStart)/2));
+    var newEnd = Math.max(newStart, varRegEnd - Math.floor((varRegEnd-varRegStart)/2));
     update(newStart, newEnd);
 }
 
 // Try to move left
 function moveLeft() {
-    var newStart = Math.max(0, varRegStart - (varRegEnd-varRegStart)/4);
-    var newEnd = Math.max(newStart, varRegEnd - (varRegEnd-varRegStart)/4);
+    var newStart = Math.max(0, varRegStart - Math.floor((varRegEnd-varRegStart)/4));
+    var newEnd = Math.max(newStart, varRegEnd - Math.floor((varRegEnd-varRegStart)/4));
     update(newStart, newEnd);
 }
 
  // Try to move right
  function moveRight() {
-     var newStart = varRegStart + (varRegEnd-varRegStart)/4;
-     var newEnd = varRegEnd + (varRegEnd-varRegStart)/4;
+     var newStart = varRegStart + Math.floor((varRegEnd-varRegStart)/4);
+     var newEnd = varRegEnd + Math.floor((varRegEnd-varRegStart)/4);
      update(newStart, newEnd);
  }
 
 // Try to move far right
 function moveFarRight() {
-    var newStart = varRegStart + (varRegEnd-varRegStart)/2;
-    var newEnd = varRegEnd + (varRegEnd-varRegStart)/2;
+    var newStart = varRegStart + Math.floor((varRegEnd-varRegStart)/2);
+    var newEnd = varRegEnd + Math.floor((varRegEnd-varRegStart)/2);
     update(newStart, newEnd);
 }
 
@@ -114,15 +114,15 @@ function moveVeryFarRight() {
 
 // Try to zoom in
 function zoomIn() {
-    var newStart = varRegStart + (varRegEnd-varRegStart)/4;
-    var newEnd = varRegEnd - (varRegEnd-varRegStart)/4;
+    var newStart = varRegStart + Math.floor((varRegEnd-varRegStart)/4);
+    var newEnd = varRegEnd - Math.floor((varRegEnd-varRegStart)/4);
     update(newStart, newEnd);
 }
 
 // Try to zoom out
 function zoomOut() {
-    var newStart = Math.max(0, varRegStart - (varRegEnd-varRegStart)/2);
-    var newEnd = varRegEnd - (varRegEnd-varRegStart)/2;
+    var newStart = Math.max(0, varRegStart - Math.floor((varRegEnd-varRegStart)/2));
+    var newEnd = varRegEnd - Math.floor((varRegEnd-varRegStart)/2);
     update(newStart, newEnd);
 }
 

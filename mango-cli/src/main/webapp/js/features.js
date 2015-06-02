@@ -68,29 +68,29 @@ function moveVeryFarLeft() {
 
 // Try to move far left
 function moveFarLeft() {
-    var newStart = Math.max(0, featureRegStart - (featureRegEnd-featureRegStart)/2);
-    var newEnd = Math.max(newStart, featureRegEnd - (featureRegEnd-featureRegStart)/2);
+    var newStart = Math.max(0, featureRegStart - Math.floor((featureRegEnd-featureRegStart)/2));
+    var newEnd = Math.max(newStart, featureRegEnd - Math.floor((featureRegEnd-featureRegStart)/2));
     update(newStart, newEnd);
 }
 
 // Try to move left
 function moveLeft() {
-    var newStart = Math.max(0, featureRegStart - (featureRegEnd-featureRegStart)/4);
-    var newEnd = Math.max(newStart, featureRegEnd - (featureRegEnd-featureRegStart)/4);
+    var newStart = Math.max(0, featureRegStart - Math.floor((featureRegEnd-featureRegStart)/4));
+    var newEnd = Math.max(newStart, featureRegEnd - Math.floor((featureRegEnd-featureRegStart)/4));
     update(newStart, newEnd);
 }
 
  // Try to move right
  function moveRight() {
-     var newStart = featureRegStart + (featureRegEnd-featureRegStart)/4;
-     var newEnd = featureRegEnd + (featureRegEnd-featureRegStart)/4;
+     var newStart = featureRegStart + Math.floor((featureRegEnd-featureRegStart)/4);
+     var newEnd = featureRegEnd + Math.floor((featureRegEnd-featureRegStart)/4);
      update(newStart, newEnd);
  }
 
 // Try to move far right
 function moveFarRight() {
-    var newStart = featureRegStart + (featureRegEnd-featureRegStart)/2;
-    var newEnd = featureRegEnd + (featureRegEnd-featureRegStart)/2;
+    var newStart = featureRegStart + Math.floor((featureRegEnd-featureRegStart)/2);
+    var newEnd = featureRegEnd + Math.floor((featureRegEnd-featureRegStart)/2);
     update(newStart, newEnd);
 }
 
@@ -103,15 +103,15 @@ function moveVeryFarRight() {
 
 // Try to zoom in
 function zoomIn() {
-    var newStart = featureRegStart + (featureRegEnd-featureRegStart)/4;
-    var newEnd = featureRegEnd - (featureRegEnd-featureRegStart)/4;
+    var newStart = featureRegStart + Math.floor((featureRegEnd-featureRegStart)/4);
+    var newEnd = featureRegEnd - Math.floor((featureRegEnd-featureRegStart)/4);
     update(newStart, newEnd);
 }
 
 // Try to zoom out
 function zoomOut() {
-    var newStart = Math.max(0, featureRegStart - (featureRegEnd-featureRegStart)/2);
-    var newEnd = featureRegEnd - (featureRegEnd-featureRegStart)/2;
+    var newStart = Math.max(0, featureRegStart - Math.floor((featureRegEnd-featureRegStart)/2));
+    var newEnd = featureRegEnd - Math.floor((featureRegEnd-featureRegStart)/2);
     update(newStart, newEnd);
 }
 
