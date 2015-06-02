@@ -1,5 +1,10 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
+
+//Add Region Info
+d3.select("h2")
+    .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
+
 var refContainer = d3.select("#area1")
     .append("svg")
     .attr("width", width)
@@ -66,10 +71,6 @@ var svgContainer = d3.select("#readsArea")
     .append("svg")
     .attr("height", (height+base))
     .attr("width", width);
-
-d3.select("h2")
-    .append("span")
-    .text(readRegStart + "-" + readRegEnd);
 
 d3.json(readJsonLocation,function(error, data) {
     data.forEach(function(d) {
@@ -191,6 +192,10 @@ function update(newStart, newEnd) {
     var numTracks = 0;
     var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
     
+    //Update Region Info
+    d3.select("h2")
+        .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
+
     //Updating Reference
     refContainer.selectAll("g").remove();
 
@@ -251,10 +256,6 @@ function update(newStart, newEnd) {
             d.end = +d.end;
             if (d.track > numTracks) { numTracks = d.track; }
         });
-
-        d3.select("h2")
-          .select("span")
-          .text(readRegStart + "-" + readRegEnd);
 
         height = (numTracks+1) * trackHeight;
 

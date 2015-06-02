@@ -5,9 +5,9 @@ var svgContainer = d3.select("#varArea")
     .attr("height", (height+base))
     .attr("width", width);
 
+//Add Region Info
 d3.select("h2")
-  .append("span")
-  .text(varRegStart + "-" + varRegEnd);
+    .text("current region: " + varRefName + ": "+ varRegStart + "-" + varRegEnd);
 
 d3.json(jsonLocation, function(error, data) {
     data.forEach(function(d) {
@@ -139,6 +139,10 @@ function update(newStart, newEnd) {
     varRegEnd = newEnd;
     jsonLocation = "/variants/" + varRefName + "?start=" + varRegStart + "&end=" + varRegEnd;
     var numTracks = 0;
+    
+    //Update Region Info
+    d3.select("h2")
+        .text("current region: " + varRefName + ": "+ varRegStart + "-" + varRegEnd);
 
     d3.json(jsonLocation, function(error, data) {
         data.forEach(function(d) {
@@ -148,10 +152,6 @@ function update(newStart, newEnd) {
             d.alleles = d.alleles;
             if (d.track > numTracks) { numTracks = d.track; }
         });
-
-        d3.select("h2")
-          .select("span")
-          .text(varRegStart + "-" + varRegEnd);
 
         height = (numTracks+1) * trackHeight;
 

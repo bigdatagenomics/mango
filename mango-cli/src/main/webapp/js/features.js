@@ -5,9 +5,9 @@ var svgContainer = d3.select("#featArea")
     .attr("height", (height+base))
     .attr("width", width);
 
+//Add Region Info
 d3.select("h2")
-  .append("span")
-  .text(featureRegStart + "-" + featureRegEnd);
+    .text("current region: " + featureRefName + ": "+ featureRegStart + "-" + featureRegEnd);
 
 d3.json(featureJsonLocation, function(error, data) {
     data.forEach(function(d) {
@@ -129,6 +129,10 @@ function update(newStart, newEnd) {
     featureJsonLocation = "/features/" + featureRefName + "?start=" + featureRegStart + "&end=" + featureRegEnd;
     var numTracks = 0;
 
+    //Add Region Info
+    d3.select("h2")
+        .text("current region: " + featureRefName + ": "+ featureRegStart + "-" + featureRegEnd);
+    
     d3.json(featureJsonLocation, function(error, data) {
         data.forEach(function(d) {
             d.featureId = d.featureId;
@@ -137,10 +141,6 @@ function update(newStart, newEnd) {
             d.end = +d.end;
             if (d.track > numTracks) { numTracks = d.track; }
         });
-
-        d3.select("h2")
-          .select("span")
-          .text(featureRegStart + "-" + featureRegEnd);
 
         height = (numTracks+1) * trackHeight;
 

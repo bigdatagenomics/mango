@@ -1,9 +1,9 @@
 var maxFreq = 0;
 var jsonLocation = "/freq/" + refName + "?start=" + start + "&end=" + end;
 
+//Add Region Info
 d3.select("h2")
-  .append("span")
-  .text(start + "-" + end);
+    .text("current region: " + refName + ": "+ start + "-" + end);
 
 d3.json(jsonLocation, function(error, data) {
     data.forEach(function(d) {
@@ -138,16 +138,16 @@ function update(newStart, newEnd) {
     jsonLocation = ("/freq/" + refName + "?start=" + start + "&end=" + end);
     maxFreq = 0;
 
+    //Update Region Info
+    d3.select("h2")
+        .text("current region: " + refName + ": "+ start + "-" + end);
+
     d3.json(jsonLocation, function(error, data) {
         data.forEach(function(d) {
             d.base = +d.base;
             d.freq = +d.freq;
             if (d.freq > maxFreq) { maxFreq = d.freq; }
         });
-
-        d3.select("h2")
-            .select("span")
-            .text(start + "-" + end);
 
         // Create the scale for the data
         var dataScale = d3.scale.linear()
