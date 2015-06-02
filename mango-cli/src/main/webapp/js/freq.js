@@ -1,9 +1,9 @@
 var maxFreq = 0;
 var jsonLocation = "/freq/" + refName + "?start=" + start + "&end=" + end;
 
+//Add Region Info
 d3.select("h2")
-  .append("span")
-  .text(start + "-" + end);
+    .text("current region: " + refName + ": "+ start + "-" + end);
 
 d3.json(jsonLocation, function(error, data) {
     data.forEach(function(d) {
@@ -77,29 +77,29 @@ function moveVeryFarLeft() {
 
 // Try to move far left
 function moveFarLeft() {
-    var newStart = Math.max(0, start - (end-start)/2);
-    var newEnd = Math.max(newStart, end - (end-start)/2);
+    var newStart = Math.max(0, start - Math.floor((end-start)/2));
+    var newEnd = Math.max(newStart, end - Math.floor((end-start)/2));
     update(newStart, newEnd);
 }
 
 // Try to move left
 function moveLeft() {
-    var newStart = Math.max(0, start - (end-start)/4);
-    var newEnd = Math.max(newStart, end - (end-start)/4);
+    var newStart = Math.max(0, start - Math.floor((end-start)/4));
+    var newEnd = Math.max(newStart, end - Math.floor((end-start)/4));
     update(newStart, newEnd);
 }
 
  // Try to move right
  function moveRight() {
-     var newStart = start + (end-start)/4;
-     var newEnd = end + (end-start)/4;
+     var newStart = start + Math.floor((end-start)/4);
+     var newEnd = end + Math.floor((end-start)/4);
      update(newStart, newEnd);
  }
 
 // Try to move far right
 function moveFarRight() {
-    var newStart = start + (end-start)/2;
-    var newEnd = end + (end-start)/2;
+    var newStart = start + Math.floor((end-start)/2);
+    var newEnd = end + Math.floor((end-start)/2);
     update(newStart, newEnd);
 }
 
@@ -112,15 +112,15 @@ function moveVeryFarRight() {
 
 // Try to zoom in
 function zoomIn() {
-    var newStart = start + (end-start)/4;
-    var newEnd = end - (end-start)/4;
+    var newStart = start + Math.floor((end-start)/4);
+    var newEnd = end - Math.floor((end-start)/4);
     update(newStart, newEnd);
 }
 
 // Try to zoom out
 function zoomOut() {
-    var newStart = Math.max(0, start - (end-start)/2);
-    var newEnd = end - (end-start)/2;
+    var newStart = Math.max(0, start - Math.floor((end-start)/2));
+    var newEnd = end + Math.floor((end-start)/2);
     update(newStart, newEnd);
 }
 
@@ -138,16 +138,16 @@ function update(newStart, newEnd) {
     jsonLocation = ("/freq/" + refName + "?start=" + start + "&end=" + end);
     maxFreq = 0;
 
+    //Update Region Info
+    d3.select("h2")
+        .text("current region: " + refName + ": "+ start + "-" + end);
+
     d3.json(jsonLocation, function(error, data) {
         data.forEach(function(d) {
             d.base = +d.base;
             d.freq = +d.freq;
             if (d.freq > maxFreq) { maxFreq = d.freq; }
         });
-
-        d3.select("h2")
-            .select("span")
-            .text(start + "-" + end);
 
         // Create the scale for the data
         var dataScale = d3.scale.linear()

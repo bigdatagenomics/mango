@@ -38,13 +38,13 @@ import org.scalatra.ScalatraServlet
 object VizReads extends ADAMCommandCompanion {
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
-  var readsRefName = ""
-  var variantsRefName = ""
-  var featuresRefName = ""
+  var refName = ""
+
   var reads: RDD[AlignmentRecord] = null
   var variants: RDD[Genotype] = null
   var reference: RDD[NucleotideContigFragment] = null
   var features: RDD[Feature] = null
+
   val trackHeight = 10
   val width = 1200
   val height = 400
@@ -130,26 +130,20 @@ case class FeatureJson(featureId: String, featureType: String, start: Long, end:
 case class ReferenceJson(reference: String)
 
 class VizReadsArgs extends Args4jBase with ParquetArgs {
-  @Argument(required = true, metaVar = "READS", usage = "The reads file to view", index = 0)
-  var readPath: String = null
-
-  @Argument(required = true, metaVar = "READS REFNAME", usage = "The reads reference to view", index = 1)
-  var readsRefName: String = null
-
-  @Argument(required = true, metaVar = "VARIANTS", usage = "The variants file to view", index = 2)
-  var variantsPath: String = null
-
-  @Argument(required = true, metaVar = "VARIANTS REFNAME", usage = "The variants reference to view", index = 3)
-  var variantsRefName: String = null
-
-  @Argument(required = true, metaVar = "REFERENCE", usage = "The reference file to view", index = 4)
+  @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = true, metaVar = "FEATURE", usage = "The feature file to view", index = 5)
-  var featurePath: String = null
+  @Args4jOption(required = false, name = "-ref_name", usage = "The name of the reference we're looking at")
+  var refName: String = null
 
-  @Argument(required = true, metaVar = "FEATURE REF NAME", usage = "The feature reference to view", index = 6)
-  var featuresRefName: String = null
+  @Args4jOption(required = false, name = "-read_file", usage = "The reads file to view")
+  var readPath: String = null
+
+  @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
+  var variantsPath: String = null
+
+  @Args4jOption(required = false, name = "-feat_file", usage = "The feature file to view")
+  var featurePath: String = null
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
@@ -157,7 +151,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
-  var viewRegion = ReferenceRegion(VizReads.readsRefName, 0, 100)
+  var viewRegion = ReferenceRegion(VizReads.refName, 0, 100)
 
   get("/?") {
     redirect(url("overall"))
@@ -165,16 +159,26 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/reads") {
     contentType = "text/html"
-    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
-    val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-    val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-    val templateEngine = new TemplateEngine
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-      Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-        "width" -> VizReads.width.toString,
-        "base" -> VizReads.base.toString,
-        "numTracks" -> filteredLayout.numTracks.toString,
-        "trackHeight" -> VizReads.trackHeight.toString))
+    var readsInput = Option(VizReads.reads)
+    readsInput match {
+      case Some(_) => {
+        val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
+        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
+          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+            "width" -> VizReads.width.toString,
+            "base" -> VizReads.base.toString,
+            "numTracks" -> filteredLayout.numTracks.toString,
+            "trackHeight" -> VizReads.trackHeight.toString))
+      }
+      case None => {
+        println("MISSING FILE: No reads file provided")
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
+      }
+    }
   }
 
   get("/reads/:ref") {
@@ -188,26 +192,62 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/overall") {
     contentType = "text/html"
-    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
-    val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-    val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+    var readsInput = Option(VizReads.reads)
+    var variantsInput = Option(VizReads.variants)
+    var featuresInput = Option(VizReads.features)
+    var readsExist: Boolean = false
+    var variantsExist: Boolean = false
+    var featuresExist: Boolean = false
+    var numTracks = "0"
+    readsInput match {
+      case Some(_) => {
+        readsExist = true
+        val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
+        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+        numTracks = filteredLayout.numTracks.toString
+      }
+      case None => readsExist = false
+    }
+    variantsInput match {
+      case Some(_) => variantsExist = true
+      case None    => variantsExist = false
+    }
+    featuresInput match {
+      case Some(_) => featuresExist = true
+      case None    => featuresExist = false
+    }
+
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
         "width" -> VizReads.width.toString,
         "base" -> VizReads.base.toString,
-        "numTracks" -> filteredLayout.numTracks.toString,
-        "trackHeight" -> VizReads.trackHeight.toString))
+        "numTracks" -> numTracks,
+        "trackHeight" -> VizReads.trackHeight.toString,
+        "readsExist" -> readsExist,
+        "variantsExist" -> variantsExist,
+        "featuresExist" -> featuresExist))
   }
 
   get("/freq") {
     contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
-      Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-        "width" -> VizReads.width.toString,
-        "height" -> VizReads.height.toString,
-        "base" -> VizReads.base.toString))
+    var readsInput = Option(VizReads.reads)
+    readsInput match {
+      case Some(_) => {
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
+          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+            "width" -> VizReads.width.toString,
+            "height" -> VizReads.height.toString,
+            "base" -> VizReads.base.toString))
+      }
+      case None => {
+        println("MISSING FILE: No reads file provided")
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofreq.ssp")
+      }
+    }
   }
 
   get("/freq/:ref") {
@@ -219,17 +259,28 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/variants") {
     contentType = "text/html"
-    val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(viewRegion)
-    val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
-    val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
-    val templateEngine = new TemplateEngine
-    val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-      "width" -> VizReads.width.toString,
-      "base" -> VizReads.base.toString,
-      "numTracks" -> filteredGenotypeTrack.numTracks.toString,
-      "trackHeight" -> VizReads.trackHeight.toString)
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-      displayMap)
+    var variantsInput = Option(VizReads.variants)
+    variantsInput match {
+      case Some(_) => {
+        val variantsRDD: RDD[Genotype] = VizReads.variants.filterByOverlappingRegion(viewRegion)
+        val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
+        val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
+        val templateEngine = new TemplateEngine
+        val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+          "width" -> VizReads.width.toString,
+          "base" -> VizReads.base.toString,
+          "numTracks" -> filteredGenotypeTrack.numTracks.toString,
+          "trackHeight" -> VizReads.trackHeight.toString)
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
+          displayMap)
+      }
+      case None => {
+        println("MISSING FILE: No variants file provided")
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/novariants.ssp")
+      }
+    }
+
   }
 
   get("/variants/:ref") {
@@ -243,17 +294,28 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/features") {
     contentType = "text/html"
-    val featureRDD: RDD[Feature] = VizReads.features.filterByOverlappingRegion(viewRegion)
-    val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
-    val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
-    val templateEngine = new TemplateEngine
-    val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-      "width" -> VizReads.width.toString,
-      "base" -> VizReads.base.toString,
-      "numTracks" -> filteredFeatureTrack.numTracks.toString,
-      "trackHeight" -> VizReads.trackHeight.toString)
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
-      displayMap)
+    var featuresInput = Option(VizReads.features)
+    featuresInput match {
+      case Some(_) => {
+        val featureRDD: RDD[Feature] = VizReads.features.filterByOverlappingRegion(viewRegion)
+        val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
+        val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
+        val templateEngine = new TemplateEngine
+        val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+          "width" -> VizReads.width.toString,
+          "base" -> VizReads.base.toString,
+          "numTracks" -> filteredFeatureTrack.numTracks.toString,
+          "trackHeight" -> VizReads.trackHeight.toString)
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
+          displayMap)
+      }
+      case None => {
+        println("MISSING FILE: No features file provided")
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofeatures.ssp")
+      }
+    }
+
   }
   get("/features/:ref") {
     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
@@ -280,23 +342,54 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
 
   override def run(sc: SparkContext, job: Job): Unit = {
     val proj = Projection(contig, readMapped, readName, start, end)
-    if (args.readPath.endsWith(".bam") || args.readPath.endsWith(".sam") || args.readPath.endsWith(".align.adam")) {
-      VizReads.reads = sc.loadAlignments(args.readPath, projection = Some(proj))
-      VizReads.readsRefName = args.readsRefName
-    }
-
-    if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".gt.adam")) {
-      VizReads.variants = sc.loadGenotypes(args.variantsPath, projection = Some(proj))
-      VizReads.variantsRefName = args.variantsRefName
-    }
-
     if (args.referencePath.endsWith(".fa")) {
       VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
+    } else {
+      println("WARNING: invalid reference file")
     }
 
-    if (args.featurePath.endsWith(".bed")) {
-      VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
-      VizReads.featuresRefName = args.featuresRefName
+    val readPath = Option(args.readPath)
+    readPath match {
+      case Some(_) => {
+        if (args.readPath.endsWith(".bam") || args.readPath.endsWith(".sam") || args.readPath.endsWith(".align.adam")) {
+          VizReads.reads = sc.loadAlignments(args.readPath, projection = Some(proj))
+        } else {
+          println("WARNING: Invalid input for reads file")
+        }
+      }
+      case None => println("WARNING: No reads file provided")
+    }
+
+    val refName = Option(args.refName)
+    refName match {
+      case Some(_) => {
+        VizReads.refName = args.refName
+      }
+      case None => println("WARNING: No refname provided")
+    }
+
+    val variantsPath = Option(args.variantsPath)
+    variantsPath match {
+      case Some(_) => {
+        if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".gt.adam")) {
+          VizReads.variants = sc.loadGenotypes(args.variantsPath, projection = Some(proj))
+        } else {
+          println("WARNING: Invalid input for variants file")
+        }
+      }
+      case None => println("WARNING: No variants file provided")
+    }
+
+    val featurePath = Option(args.featurePath)
+    featurePath match {
+      case Some(_) => {
+        if (args.featurePath.endsWith(".bed")) {
+          VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
+        } else {
+          println("WARNING: Invalid input for features file")
+        }
+      }
+      case None => println("WARNING: No features file provided")
     }
 
     val server = new org.eclipse.jetty.server.Server(args.port)

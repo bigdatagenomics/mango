@@ -1,5 +1,10 @@
 var readJsonLocation = "/reads/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
 var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
+
+//Add Region Info
+d3.select("h2")
+    .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
+
 var refContainer = d3.select("#area1")
     .append("svg")
     .attr("width", width)
@@ -62,14 +67,10 @@ d3.json(referenceStringLocation, function(error, data) {
 });
 
 
-var svgContainer = d3.select("body")
+var svgContainer = d3.select("#readsArea")
     .append("svg")
     .attr("height", (height+base))
     .attr("width", width);
-
-d3.select("h2")
-    .append("span")
-    .text(readRegStart + "-" + readRegEnd);
 
 d3.json(readJsonLocation,function(error, data) {
     data.forEach(function(d) {
@@ -129,29 +130,29 @@ function moveVeryFarLeft() {
 
 // Try to move far left
 function moveFarLeft() {
-    var newStart = Math.max(0, readRegStart - (readRegEnd-readRegStart)/2);
-    var newEnd = Math.max(newStart, readRegEnd - (readRegEnd-readRegStart)/2);
+    var newStart = Math.max(0, readRegStart - Math.floor((readRegEnd-readRegStart)/2));
+    var newEnd = Math.max(newStart, readRegEnd - Math.floor((readRegEnd-readRegStart)/2));
     update(newStart, newEnd);
 }
 
 // Try to move left
 function moveLeft() {
-    var newStart = Math.max(0, readRegStart - (readRegEnd-readRegStart)/4);
-    var newEnd = Math.max(newStart, readRegEnd - (readRegEnd-readRegStart)/4);
+    var newStart = Math.max(0, readRegStart - Math.floor((readRegEnd-readRegStart)/4));
+    var newEnd = Math.max(newStart, readRegEnd - Math.floor((readRegEnd-readRegStart)/4));
     update(newStart, newEnd);
 }
 
  // Try to move right
  function moveRight() {
-     var newStart = readRegStart + (readRegEnd-readRegStart)/4;
-     var newEnd = readRegEnd + (readRegEnd-readRegStart)/4;
+     var newStart = readRegStart + Math.floor((readRegEnd-readRegStart)/4);
+     var newEnd = readRegEnd + Math.floor((readRegEnd-readRegStart)/4);
      update(newStart, newEnd);
  }
 
 // Try to move far right
 function moveFarRight() {
-    var newStart = readRegStart + (readRegEnd-readRegStart)/2;
-    var newEnd = readRegEnd + (readRegEnd-readRegStart)/2;
+    var newStart = readRegStart + Math.floor((readRegEnd-readRegStart)/2);
+    var newEnd = readRegEnd + Math.floor((readRegEnd-readRegStart)/2);
     update(newStart, newEnd);
 }
 
@@ -164,15 +165,15 @@ function moveVeryFarRight() {
 
 // Try to zoom in
 function zoomIn() {
-    var newStart = readRegStart + (readRegEnd-readRegStart)/4;
-    var newEnd = readRegEnd - (readRegEnd-readRegStart)/4;
+    var newStart = readRegStart + Math.floor((readRegEnd-readRegStart)/4);
+    var newEnd = readRegEnd - Math.floor((readRegEnd-readRegStart)/4);
     update(newStart, newEnd);
 }
 
 // Try to zoom out
 function zoomOut() {
-    var newStart = Math.max(0, readRegStart - (readRegEnd-readRegStart)/2);
-    var newEnd = readRegEnd - (readRegEnd-readRegStart)/2;
+    var newStart = Math.max(0, readRegStart - Math.floor((readRegEnd-readRegStart)/2));
+    var newEnd = readRegEnd + Math.floor((readRegEnd-readRegStart)/2);
     update(newStart, newEnd);
 }
 
@@ -191,6 +192,10 @@ function update(newStart, newEnd) {
     var numTracks = 0;
     var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegStart + "&end=" + readRegEnd;
     
+    //Update Region Info
+    d3.select("h2")
+        .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
+
     //Updating Reference
     refContainer.selectAll("g").remove();
 
@@ -252,10 +257,6 @@ function update(newStart, newEnd) {
             if (d.track > numTracks) { numTracks = d.track; }
         });
 
-        d3.select("h2")
-          .select("span")
-          .text(readRegStart + "-" + readRegEnd);
-
         height = (numTracks+1) * trackHeight;
 
         // Change dimensions of the SVG container
@@ -307,7 +308,7 @@ function update(newStart, newEnd) {
 }
 
 // // Hover box for reads
-var div = d3.select("body")
+var div = d3.select("#readsArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);

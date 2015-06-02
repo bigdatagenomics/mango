@@ -44,7 +44,7 @@
 
 <div id = "navigation">
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
-    <h2 align="center">current region: ${viewRegion._1}:</h2>
+    <h2 align="center"></h2>
     <br>
     <ul>
         <li>move:</li>
@@ -124,10 +124,9 @@
 <br>
 
 <div id="refArea"></div>
-
+<div id="readsArea"></div>
 <br>
 
-<body></body>
 <script>
   var readRefName = "${viewRegion._1}";
   var readRegStart = parseInt(${viewRegion._2}, 10);

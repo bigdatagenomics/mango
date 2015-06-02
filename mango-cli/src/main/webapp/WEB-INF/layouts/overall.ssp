@@ -3,6 +3,9 @@
 <%@ val base: String %>
 <%@ val trackHeight: String %>
 <%@ val numTracks: String %>
+<%@ val readsExist: Boolean %>
+<%@ val variantsExist: Boolean %>
+<%@ val featuresExist: Boolean %>
 
 <html>
 <head lang="en">
@@ -44,7 +47,7 @@
 
 <div id = "navigation">
     <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
-    <h2 align="center">current region: ${viewRegion._1}:</h2>
+    <h2 align="center"></h2>
     <br>
     <ul>
         <li>move:</li>
@@ -126,24 +129,20 @@
 <div id="refArea"></div>
 <div id="featArea"></div>
 <div id="varArea"></div>
-
-<br>
+<div id="readsArea"></div>
 
 <script>
-  var readRefName = "${viewRegion._1}";
-  var readRegStart = parseInt(${viewRegion._2}, 10);
-  var readRegEnd = parseInt(${viewRegion._3}, 10);
-  var varRefName = "${viewRegion._1}";
-  var varRegStart = parseInt(${viewRegion._2}, 10);
-  var varRegEnd = parseInt(${viewRegion._3}, 10);
-  var featureRefName = "${viewRegion._1}";
-  var featureRegStart = parseInt(${viewRegion._2}, 10);
-  var featureRegEnd = parseInt(${viewRegion._3}, 10);
+  var viewRefName = "${viewRegion._1}";
+  var viewRegStart = parseInt(${viewRegion._2}, 10);
+  var viewRegEnd = parseInt(${viewRegion._3}, 10);
   var width = parseInt(${width}, 10);
   var base = parseInt(${base}, 10);
   var trackHeight = parseInt(${trackHeight}, 10);
   var numTracks = parseInt(${numTracks}, 10);
   var height = (numTracks+1) * trackHeight;
+  var readsExist = ${readsExist}
+  var variantsExist = ${variantsExist}
+  var featuresExist = ${featuresExist}
 </script>
 <script src="js/overall.js"></script>
 </html>
