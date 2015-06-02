@@ -3,6 +3,9 @@
 <%@ val base: String %>
 <%@ val trackHeight: String %>
 <%@ val numTracks: String %>
+<%@ val readsExist: Boolean %>
+<%@ val variantsExist: Boolean %>
+<%@ val featuresExist: Boolean %>
 
 <html>
 <head lang="en">
@@ -126,8 +129,7 @@
 <div id="refArea"></div>
 <div id="featArea"></div>
 <div id="varArea"></div>
-
-<br>
+<div id="readsArea"></div>
 
 <script>
   var readRefName = "${viewRegion._1}";
@@ -144,6 +146,9 @@
   var trackHeight = parseInt(${trackHeight}, 10);
   var numTracks = parseInt(${numTracks}, 10);
   var height = (numTracks+1) * trackHeight;
+  var readsExist = ${readsExist}
+  var variantsExist = ${variantsExist}
+  var featuresExist = ${featuresExist}
 </script>
 <script src="js/overall.js"></script>
 </html>

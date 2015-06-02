@@ -60,144 +60,159 @@ d3.json(referenceStringLocation, function(error, data) {
 });
 
 //Features
-var featureSvgContainer = d3.select("#featArea")
-    .append("svg")
-    .attr("height", 50)
-    .attr("width", width);
+if (featuresExist === true) {
+    //Features
+    var featureSvgContainer = d3.select("#featArea")
+        .append("svg")
+        .attr("height", 50)
+        .attr("width", width);
 
-d3.json(featureJsonLocation, function(error, data) {
-    data.forEach(function(d) {
-        d.featureId = d.featureId;
-        d.featureType = d.featureType;
-        d.start = +d.start;
-        d.end = +d.end;
-        d.track = +d.track;        
+    d3.json(featureJsonLocation, function(error, data) {
+        data.forEach(function(d) {
+            d.featureId = d.featureId;
+            d.featureType = d.featureType;
+            d.start = +d.start;
+            d.end = +d.end;
+            d.track = +d.track;        
+        });
+
+        // Add the rectangles
+        featureSvgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-featureRegStart)/(featureRegEnd-featureRegStart) * width; }))
+                    .attr("y", 30)
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .attr("fill", "#6600CC")
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.featureId)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
     });
-
-    // Add the rectangles
-    featureSvgContainer.selectAll("rect").data(data)
-        .enter()
-            .append("g")
-            .append("rect")
-                .attr("x", (function(d) { return (d.start-featureRegStart)/(featureRegEnd-featureRegStart) * width; }))
-                .attr("y", 30)
-                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(featureRegEnd-featureRegStart))); }))
-                .attr("height", (trackHeight-2))
-                .attr("fill", "#6600CC")
-                .on("mouseover", function(d) {
-                    div.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                    div .html(d.featureId)
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY - 28) + "px");
-                })
-                .on("mouseout", function(d) {
-                    div.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-                });
-});
+} else {
+    document.getElementById("featArea").innerHTML = "No Features File Loaded"
+}
 
 //Variants
-var varSvgContainer = d3.select("#varArea")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", 50);
+if (variantsExist === false) {
+    var varSvgContainer = d3.select("#varArea")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", 50);
 
-d3.json(varJsonLocation, function(error, data) {
-    data.forEach(function(d) {
-        d.contigName = d.contigName;
-        d.start = +d.start;
-        d.end = +d.end;
-        d.track = +d.track;
-        d.alleles = d.alleles;
-        
+    d3.json(varJsonLocation, function(error, data) {
+        data.forEach(function(d) {
+            d.contigName = d.contigName;
+            d.start = +d.start;
+            d.end = +d.end;
+            d.track = +d.track;
+            d.alleles = d.alleles;
+            
+        });
+
+        // Add the rectangles
+        varSvgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-varRegStart)/(varRegEnd-varRegStart) * width; }))
+                    .attr("y", 30)
+                    .attr("fill", function(d) {
+                        if (d.alleles === "Ref / Alt") {
+                            return '#00FFFF'; //CYAN
+                        } else if (d.alleles === "Alt / Alt") {
+                            return '#FF66FF'; //MAGENTA
+                        } else if (d.reference === "Ref / Ref") { 
+                            return '#99FF33'; //NEON GREEN
+                        } else {
+                            return '#FFFF66'; //YELLOW
+                        }
+                    })
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(varRegEnd-varRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.alleles)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
     });
-
-    // Add the rectangles
-    varSvgContainer.selectAll("rect").data(data)
-        .enter()
-            .append("g")
-            .append("rect")
-                .attr("x", (function(d) { return (d.start-varRegStart)/(varRegEnd-varRegStart) * width; }))
-                .attr("y", 30)
-                .attr("fill", function(d) {
-                    if (d.alleles === "Ref / Alt") {
-                        return '#00FFFF'; //CYAN
-                    } else if (d.alleles === "Alt / Alt") {
-                        return '#FF66FF'; //MAGENTA
-                    } else if (d.reference === "Ref / Ref") { 
-                        return '#99FF33'; //NEON GREEN
-                    } else {
-                        return '#FFFF66'; //YELLOW
-                    }
-                })
-                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(varRegEnd-varRegStart))); }))
-                .attr("height", (trackHeight-2))
-                .on("mouseover", function(d) {
-                    div.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                    div .html(d.alleles)
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY - 28) + "px");
-                })
-                .on("mouseout", function(d) {
-                    div.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-                });
-});
+} else {
+    document.getElementById("varArea").innerHTML = "No Variants File Loaded"
+}
 
 //Reads
-var svgContainer = d3.select("body")
-    .append("svg")
-    .attr("height", (height+base))
-    .attr("width", width);
+if (readsExist === true) {
+    var svgContainer = d3.select("#readsArea")
+        .append("svg")
+        .attr("height", (height+base))
+        .attr("width", width);
 
-d3.select("h2")
-    .append("span")
-    .text(readRegStart + "-" + readRegEnd);
+    d3.select("h2")
+        .append("span")
+        .text(readRegStart + "-" + readRegEnd);
 
-d3.json(readJsonLocation,function(error, data) {
-    data.forEach(function(d) {
-        d.readName = d.readName;
-        d.start = +d.start;
-        d.end = +d.end;
-        d.track = +d.track;
+    d3.json(readJsonLocation,function(error, data) {
+        data.forEach(function(d) {
+            d.readName = d.readName;
+            d.start = +d.start;
+            d.end = +d.end;
+            d.track = +d.track;
+        });
+
+        // Add the rectangles
+        svgContainer.selectAll("rect").data(data)
+            .enter()
+                .append("g")
+                .append("rect")
+                    .attr("x", (function(d) { return (d.start-readRegStart)/(readRegEnd-readRegStart) * width; }))
+                    .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
+                    .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(readRegEnd-readRegStart))); }))
+                    .attr("height", (trackHeight-2))
+                    .attr("fill", "steelblue")
+                    .on("mouseover", function(d) {
+                        div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                        div .html(d.readName)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function(d) {
+                        div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    });
     });
 
-    // Add the rectangles
-    svgContainer.selectAll("rect").data(data)
-        .enter()
-            .append("g")
-            .append("rect")
-                .attr("x", (function(d) { return (d.start-readRegStart)/(readRegEnd-readRegStart) * width; }))
-                .attr("y", (function(d) { return height - trackHeight * (d.track+1); }))
-                .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(readRegEnd-readRegStart))); }))
-                .attr("height", (trackHeight-2))
-                .attr("fill", "steelblue")
-                .on("mouseover", function(d) {
-                    div.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                    div .html(d.readName)
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY - 28) + "px");
-                })
-                .on("mouseout", function(d) {
-                    div.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-                });
-});
+    // Add the axis to the container
+    svgContainer.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(0, " + height + ")")
+        .call(xAxis);
+} else {
+    document.getElementById("readsArea").innerHTML = "No Reads File Loaded"
+}
 
-// Add the axis to the container
-svgContainer.append("g")
-    .attr("class", "axis")
-    .attr("transform", "translate(0, " + height + ")")
-    .call(xAxis);
+
 
 // Try to move very far left
 function moveVeryFarLeft() {
@@ -472,7 +487,7 @@ function update(newStart, newEnd) {
 }
 
 // // Hover box for reads
-var div = d3.select("body")
+var div = d3.select("readsArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
