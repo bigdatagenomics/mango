@@ -38,9 +38,7 @@ import org.scalatra.ScalatraServlet
 object VizReads extends ADAMCommandCompanion {
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
-  var readsRefName = ""
-  var variantsRefName = ""
-  var featuresRefName = ""
+  var refName = ""
 
   var reads: RDD[AlignmentRecord] = null
   var variants: RDD[Genotype] = null
@@ -135,23 +133,17 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
+  @Args4jOption(required = false, name = "-ref_name", usage = "The name of the reference we're looking at")
+  var refName: String = null
+
   @Args4jOption(required = false, name = "-read_file", usage = "The reads file to view")
   var readPath: String = null
-
-  @Args4jOption(required = false, name = "-read_ref", usage = "The reads reference to view")
-  var readsRefName: String = null
 
   @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
   var variantsPath: String = null
 
-  @Args4jOption(required = false, name = "-var_ref", usage = "The variants reference to view")
-  var variantsRefName: String = null
-
   @Args4jOption(required = false, name = "-feat_file", usage = "The feature file to view")
   var featurePath: String = null
-
-  @Args4jOption(required = false, name = "-feat_ref", usage = "The feature reference to view")
-  var featuresRefName: String = null
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
@@ -159,7 +151,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
-  var viewRegion = ReferenceRegion(VizReads.readsRefName, 0, 100)
+  var viewRegion = ReferenceRegion(VizReads.refName, 0, 100)
 
   get("/?") {
     redirect(url("overall"))
@@ -326,6 +318,8 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
     val proj = Projection(contig, readMapped, readName, start, end)
     if (args.referencePath.endsWith(".fa")) {
       VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
+    } else {
+      println("WARNING: invalid reference file")
     }
 
     val readPath = Option(args.readPath)
@@ -338,10 +332,10 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case None => println("WARNING: No read file provided")
     }
 
-    val refName = Option(args.readsRefName)
+    val refName = Option(args.refName)
     refName match {
       case Some(_) => {
-        VizReads.readsRefName = args.readsRefName
+        VizReads.refName = args.refName
       }
       case None => println("WARNING: No refname provided")
     }
@@ -351,7 +345,6 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case Some(_) => {
         if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".gt.adam")) {
           VizReads.variants = sc.loadGenotypes(args.variantsPath, projection = Some(proj))
-          VizReads.variantsRefName = args.variantsRefName
         }
       }
       case None => println("WARNING: No variants file provided")
@@ -362,7 +355,6 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case Some(_) => {
         if (args.featurePath.endsWith(".bed")) {
           VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
-          VizReads.featuresRefName = args.featuresRefName
         }
       }
       case None => println("WARNING: No features file provided")
