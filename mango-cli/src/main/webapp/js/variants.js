@@ -122,7 +122,7 @@ function zoomIn() {
 // Try to zoom out
 function zoomOut() {
     var newStart = Math.max(0, varRegStart - Math.floor((varRegEnd-varRegStart)/2));
-    var newEnd = varRegEnd - Math.floor((varRegEnd-varRegStart)/2);
+    var newEnd = varRegEnd + Math.floor((varRegEnd-varRegStart)/2);
     update(newStart, newEnd);
 }
 
