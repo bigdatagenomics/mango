@@ -1,7 +1,4 @@
 <%@ val viewRegion: (String, String, String) %>
-<%@ val width: String %>
-<%@ val base: String %>
-<%@ val trackHeight: String %>
 <%@ val numTracks: String %>
 
 <html>
@@ -131,9 +128,9 @@
   var varRefName = "${viewRegion._1}";
   var varRegStart = parseInt(${viewRegion._2}, 10);
   var varRegEnd = parseInt(${viewRegion._3}, 10);
-  var width = parseInt(${width}, 10);
-  var base = parseInt(${base}, 10);
-  var trackHeight = parseInt(${trackHeight}, 10);
+  var width = window.innerWidth - 50;
+  var base = 50;
+  var trackHeight = 6;
   var numTracks = parseInt(${numTracks}, 10);
   var height = (numTracks+1) * trackHeight;
 </script>

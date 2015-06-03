@@ -5,16 +5,11 @@ var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegS
 d3.select("h2")
     .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
 
-var refContainer = d3.select("#area1")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", 50);
-
 //Reference
 var refContainer = d3.select("#refArea")
     .append("svg")
     .attr("width", width)
-    .attr("height", 50);
+    .attr("height", 30);
 
 
 // Create the scale for the axis
