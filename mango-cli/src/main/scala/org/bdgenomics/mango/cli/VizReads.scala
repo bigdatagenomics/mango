@@ -45,7 +45,7 @@ object VizReads extends ADAMCommandCompanion {
   var reference: RDD[NucleotideContigFragment] = null
   var features: RDD[Feature] = null
 
-  val trackHeight = 10
+  val trackHeight = 6
   val width = 1200
   val height = 400
   val base = 50
