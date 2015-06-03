@@ -211,6 +211,30 @@ if (readsExist === true) {
     document.getElementById("readsArea").innerHTML = "No Reads File Loaded"
 }
 
+//Line for reads
+var lineRect = svgContainer.append("rect").attr({
+    width: width,
+    height: height,
+    fill: "whitesmoke"
+});
+
+var verticalLine = svgContainer.append('line')
+    .attr({
+        'x1': 0,
+        'y1': 0,
+        'x2': 0,
+        'y2': height
+    })
+    .attr("stroke", "#002900")
+    .attr('class', 'verticalLine');
+
+lineRect.on('mousemove', function () {
+    var xPosition = d3.mouse(this)[0];
+    d3.select(".verticalLine").attr("transform", function () {
+        return "translate(" + xPosition + ",0)";
+    });
+});
+
 // Try to move very far left
 function moveVeryFarLeft() {
     var newStart = Math.max(0, viewRegStart - (viewRegEnd-viewRegStart));
