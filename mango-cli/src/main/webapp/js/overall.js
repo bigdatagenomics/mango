@@ -11,7 +11,7 @@ d3.select("h2")
 var refContainer = d3.select("#refArea")
     .append("svg")
     .attr("width", width)
-    .attr("height", 50);
+    .attr("height", 38);
 
 
 // Create the scale for the axis
@@ -67,7 +67,7 @@ d3.json(referenceStringLocation, function(error, data) {
 if (featuresExist === true) {
     var featureSvgContainer = d3.select("#featArea")
         .append("svg")
-        .attr("height", 50)
+        .attr("height", 9)
         .attr("width", width);
 
     d3.json(featureJsonLocation, function(error, data) {
@@ -85,7 +85,7 @@ if (featuresExist === true) {
                 .append("g")
                 .append("rect")
                     .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-                    .attr("y", 30)
+                    .attr("y", 5)
                     .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
                     .attr("height", (trackHeight-2))
                     .attr("fill", "#6600CC")
@@ -112,7 +112,7 @@ if (variantsExist === true) {
     var varSvgContainer = d3.select("#varArea")
         .append("svg")
         .attr("width", width)
-        .attr("height", 50);
+        .attr("height", 9);
 
     d3.json(varJsonLocation, function(error, data) {
         data.forEach(function(d) {
@@ -130,7 +130,7 @@ if (variantsExist === true) {
                 .append("g")
                 .append("rect")
                     .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-                    .attr("y", 30)
+                    .attr("y", 5)
                     .attr("fill", function(d) {
                         if (d.alleles === "Ref / Alt") {
                             return '#00FFFF'; //CYAN
@@ -210,6 +210,30 @@ if (readsExist === true) {
 } else {
     document.getElementById("readsArea").innerHTML = "No Reads File Loaded"
 }
+
+//Line for reads
+var lineRect = svgContainer.append("rect").attr({
+    width: width,
+    height: height,
+    fill: "whitesmoke"
+});
+
+var verticalLine = svgContainer.append('line')
+    .attr({
+        'x1': 0,
+        'y1': 0,
+        'x2': 0,
+        'y2': height
+    })
+    .attr("stroke", "#002900")
+    .attr('class', 'verticalLine');
+
+lineRect.on('mousemove', function () {
+    var xPosition = d3.mouse(this)[0];
+    d3.select(".verticalLine").attr("transform", function () {
+        return "translate(" + xPosition + ",0)";
+    });
+});
 
 // Try to move very far left
 function moveVeryFarLeft() {
@@ -367,7 +391,7 @@ function update(newStart, newEnd) {
                     .append("g")
                     .append("rect")
                         .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-                        .attr("y", 30)
+                        .attr("y", 5)
                         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
                         .attr("height", (trackHeight-2))
                         .attr("fill", "#6600CC")
@@ -407,7 +431,7 @@ function update(newStart, newEnd) {
                     .append("g")
                     .append("rect")
                         .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-                        .attr("y", 30)
+                        .attr("y", 5)
                         .attr("fill", function(d) {
                             if (d.alleles === "Ref / Alt") {
                                 return '#00FFFF'; //CYAN

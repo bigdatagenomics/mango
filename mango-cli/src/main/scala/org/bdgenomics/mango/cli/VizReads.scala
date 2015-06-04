@@ -45,11 +45,6 @@ object VizReads extends ADAMCommandCompanion {
   var reference: RDD[NucleotideContigFragment] = null
   var features: RDD[Feature] = null
 
-  val trackHeight = 10
-  val width = 1200
-  val height = 400
-  val base = 50
-
   def apply(cmdLine: Array[String]): ADAMCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
@@ -168,10 +163,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
         val templateEngine = new TemplateEngine
         templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
           Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-            "width" -> VizReads.width.toString,
-            "base" -> VizReads.base.toString,
-            "numTracks" -> filteredLayout.numTracks.toString,
-            "trackHeight" -> VizReads.trackHeight.toString))
+            "numTracks" -> filteredLayout.numTracks.toString))
       }
       case None => {
         println("MISSING FILE: No reads file provided")
@@ -221,10 +213,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-        "width" -> VizReads.width.toString,
-        "base" -> VizReads.base.toString,
         "numTracks" -> numTracks,
-        "trackHeight" -> VizReads.trackHeight.toString,
         "readsExist" -> readsExist,
         "variantsExist" -> variantsExist,
         "featuresExist" -> featuresExist))
@@ -237,10 +226,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
       case Some(_) => {
         val templateEngine = new TemplateEngine
         templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
-          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-            "width" -> VizReads.width.toString,
-            "height" -> VizReads.height.toString,
-            "base" -> VizReads.base.toString))
+          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
       }
       case None => {
         println("MISSING FILE: No reads file provided")
@@ -267,10 +253,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
         val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
         val templateEngine = new TemplateEngine
         val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "width" -> VizReads.width.toString,
-          "base" -> VizReads.base.toString,
-          "numTracks" -> filteredGenotypeTrack.numTracks.toString,
-          "trackHeight" -> VizReads.trackHeight.toString)
+          "numTracks" -> filteredGenotypeTrack.numTracks.toString)
         templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
           displayMap)
       }
@@ -302,10 +285,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
         val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
         val templateEngine = new TemplateEngine
         val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "width" -> VizReads.width.toString,
-          "base" -> VizReads.base.toString,
-          "numTracks" -> filteredFeatureTrack.numTracks.toString,
-          "trackHeight" -> VizReads.trackHeight.toString)
+          "numTracks" -> filteredFeatureTrack.numTracks.toString)
         templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
           displayMap)
       }

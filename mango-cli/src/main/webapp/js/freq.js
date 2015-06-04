@@ -22,17 +22,15 @@ d3.json(jsonLocation, function(error, data) {
         .domain([0, maxFreq])
         .range([0, height]);
 
-    var freqline = d3.svg.line()
+    var freqArea = d3.svg.area()
         .x(function(d){return base + (d.base-start)/(end-start) * width;})
-        .y(function(d){return dataScale(maxFreq-d.freq);})
-        .interpolate("basis");
+        .y0(height)
+        .y1(function(d){return dataScale(maxFreq-d.freq);})
 
     svgContainer.append("g")
-        .append("svg:path")
-        .attr("d", freqline(data))
-        .style("stroke-width", 2)
-        .style("stroke", "steelblue")
-        .style("fill", "none");
+        .append("path")
+        .attr("d", freqArea(data))
+        .style("fill", "steelblue")
 
     // Create the scale for the x axis
     var xAxisScale = d3.scale.linear()
@@ -154,10 +152,10 @@ function update(newStart, newEnd) {
             .domain([0, maxFreq])
             .range([0, height]);
 
-        var freqline = d3.svg.line()
+        var freqArea = d3.svg.area()
             .x(function(d){return base + (d.base-start)/(end-start) * width;})
-            .y(function(d){return dataScale(maxFreq-d.freq);})
-            .interpolate("basis");
+            .y0(height)
+            .y1(function(d){return dataScale(maxFreq-d.freq);})
 
         // Change dimensions of the SVG container
         var svgContainer = d3.select("svg")
@@ -169,10 +167,8 @@ function update(newStart, newEnd) {
         // Add the path
         svgContainer.append("g")
             .append("path")
-            .attr("d", freqline(data))
-            .style("stroke-width", 2)
-            .style("stroke", "steelblue")
-            .style("fill", "none");
+            .attr("d", freqArea(data))
+            .style("fill", "steelblue")
 
         // Create the scale for the x axis
         var xAxisScale = d3.scale.linear()

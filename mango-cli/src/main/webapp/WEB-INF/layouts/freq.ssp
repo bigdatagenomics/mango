@@ -1,7 +1,4 @@
 <%@ val viewRegion: (String, String, String) %>
-<%@ val width: String %>
-<%@ val height: String %>
-<%@ val base: String %>
 
 <html>
 <head lang="en">
@@ -126,9 +123,9 @@
     var refName = "${viewRegion._1}";
     var start = parseInt(${viewRegion._2}, 10);
     var end = parseInt(${viewRegion._3}, 10);
-    var width = parseInt(${width}, 10);
-    var base = parseInt(${base}, 10);
-    var height = ${height};
+    var width = window.innerWidth - 50;
+    var base = 50;
+    var height = window.innerHeight;
 </script>
 <script src="js/freq.js"></script>
 </html>

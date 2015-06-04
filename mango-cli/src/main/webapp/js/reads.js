@@ -5,16 +5,11 @@ var referenceStringLocation = "/reference/" + readRefName + "?start=" + readRegS
 d3.select("h2")
     .text("current region: " + readRefName + ": "+ readRegStart + "-" + readRegEnd);
 
-var refContainer = d3.select("#area1")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", 50);
-
 //Reference
 var refContainer = d3.select("#refArea")
     .append("svg")
     .attr("width", width)
-    .attr("height", 50);
+    .attr("height", 40);
 
 
 // Create the scale for the axis
@@ -67,6 +62,7 @@ d3.json(referenceStringLocation, function(error, data) {
 });
 
 
+//Adding Reads
 var svgContainer = d3.select("#readsArea")
     .append("svg")
     .attr("height", (height+base))
@@ -103,6 +99,30 @@ d3.json(readJsonLocation,function(error, data) {
                     .duration(500)
                     .style("opacity", 0);
                 });
+});
+
+//Line for reads
+var lineRect = svgContainer.append("rect").attr({
+    width: width,
+    height: height,
+    fill: "whitesmoke"
+});
+
+var verticalLine = svgContainer.append('line')
+    .attr({
+        'x1': 0,
+        'y1': 0,
+        'x2': 0,
+        'y2': height
+    })
+    .attr("stroke", "#002900")
+    .attr('class', 'verticalLine');
+
+lineRect.on('mousemove', function () {
+    var xPosition = d3.mouse(this)[0];
+    d3.select(".verticalLine").attr("transform", function () {
+        return "translate(" + xPosition + ",0)";
+    });
 });
 
 // Create the scale for the axis
