@@ -78,43 +78,22 @@ object VizReads extends ADAMCommandCompanion {
 
   def printJsonFreq(array: Array[AlignmentRecord], region: ReferenceRegion): List[FreqJson] = {
     val freqMap = new java.util.TreeMap[Long, Long]
-    var freqBuffer = new scala.collection.mutable.ListBuffer[FreqJson]
-
-    // initiates map with 0 values
-    var i0 = region.start
-    while (i0 <= region.end) {
-      freqMap.put(i0, 0)
-      i0 += 1
-    }
-
-    // creates a point for each base showing its frequency
-    for (rec <- array) {
-      val aRec = rec.asInstanceOf[AlignmentRecord]
-      var i = aRec.getStart
-      while (i <= aRec.getEnd) {
-        if (i >= region.start && i <= region.end)
-          freqMap.put(i, freqMap(i) + 1)
-        i += 1
-      }
+    var i = region.start.toInt
+    while (i <= region.end.toInt) {
+      val currSubset = array.filter(value => ((value.getStart <= i) && (value.getEnd >= i)))
+      freqMap.put(i, currSubset.length)
+      i = i + 1
     }
 
     // convert to list of FreqJsons
+    var freqBuffer = new scala.collection.mutable.ListBuffer[FreqJson]
     val iter = freqMap.keySet.iterator
     var key = 0L
     while (iter.hasNext) {
       key = iter.next()
       freqBuffer += FreqJson(key, freqMap(key))
     }
-
     freqBuffer.toList
-  }
-
-  def filterByOverlappingRegion(query: ReferenceRegion): RDD[Feature] = {
-    def overlapsQuery(rec: Feature): Boolean =
-      rec.getContig.getContigName.toString == query.referenceName &&
-        rec.getStart < query.end &&
-        rec.getEnd > query.start
-    VizReads.features.filter(overlapsQuery)
   }
 }
 
@@ -299,7 +278,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   }
   get("/features/:ref") {
     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val featureRDD: RDD[Feature] = VizReads.filterByOverlappingRegion(viewRegion)
+    val featureRDD: RDD[Feature] = VizReads.features.filterByOverlappingRegion(viewRegion)
     val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
     val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
     VizReads.printFeatureJson(filteredFeatureTrack)
@@ -324,6 +303,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
     val proj = Projection(contig, readMapped, readName, start, end)
     if (args.referencePath.endsWith(".fa")) {
       VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
+      VizReads.reference.cache()
     } else {
       println("WARNING: invalid reference file")
     }
@@ -333,6 +313,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case Some(_) => {
         if (args.readPath.endsWith(".bam") || args.readPath.endsWith(".sam") || args.readPath.endsWith(".align.adam")) {
           VizReads.reads = sc.loadAlignments(args.readPath, projection = Some(proj))
+          VizReads.reads.cache()
         } else {
           println("WARNING: Invalid input for reads file")
         }
@@ -353,6 +334,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case Some(_) => {
         if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".gt.adam")) {
           VizReads.variants = sc.loadGenotypes(args.variantsPath, projection = Some(proj))
+          VizReads.variants.cache()
         } else {
           println("WARNING: Invalid input for variants file")
         }
@@ -365,6 +347,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case Some(_) => {
         if (args.featurePath.endsWith(".bed")) {
           VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
+          VizReads.features.cache()
         } else {
           println("WARNING: Invalid input for features file")
         }
