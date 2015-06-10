@@ -82,7 +82,9 @@ object VizReads extends ADAMCommandCompanion {
     while (i <= region.end.toInt) {
       val currSubset = array.filter(value => ((value.getStart <= i) && (value.getEnd >= i)))
       freqMap.put(i, currSubset.length)
-      i = i + 1
+      val regionSize = region.end.toInt - region.start.toInt
+      val scale = (regionSize / 500) + 1
+      i = i + scale
     }
 
     // convert to list of FreqJsons
