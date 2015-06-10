@@ -292,7 +292,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     for (base <- splitReference) {
-      tracks += new ReferenceJson(base)
+      tracks += new ReferenceJson(base.toUpperCase())
     }
     tracks.toList
   }
