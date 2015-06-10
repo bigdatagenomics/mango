@@ -55,7 +55,6 @@ object TrackedLayout {
 class OrderedTrackedLayout[T](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] {
   private var trackBuilder = new mutable.ListBuffer[Track]()
   values.toSeq.foreach(findAndAddToTrack)
-  val endfaatt = System.currentTimeMillis
   trackBuilder = trackBuilder.filter(_.records.nonEmpty)
 
   val numTracks = trackBuilder.size

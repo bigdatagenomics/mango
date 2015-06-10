@@ -508,6 +508,10 @@ function update(newStart, newEnd) {
                 .attr("class", "axis")
                 .attr("transform", "translate(0, " + height + ")")
                 .call(xAxis);
+        
+            //update line height
+            lineRect.attr("height", height)
+            verticalLine.attr("y2", height)
         });
     }
 }
