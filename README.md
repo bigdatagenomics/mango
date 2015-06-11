@@ -1,15 +1,15 @@
 #mango
 A set of genomic visualization tools built on top of the [ADAM](https://github.com/bigdatagenomics/adam) genomics processing engine. Apache 2 licensed.
 
-mango visualizes reads, variants, and features using [D3](http://d3js.org/)
+mango visualizes reads, variants, and features using [D3](http://d3js.org/).
 
-![Overall View](https://raw.github.com/erictu/mango/master/images/overall.png)
+![Overall View](https://raw.github.com/bigdatagenomics/mango/master/images/overall.png)
 
-![Frequency View](https://raw.github.com/erictu/mango/master/images/frequency.png)
+![Frequency View](https://raw.github.com/bigdatagenomics/mango/master/images/frequency.png)
 # Getting Started
 
 ## Installation
-You will need to have [Maven](http://maven.apache.org/) installed in order to build ADAM.
+You will need to have [Maven](http://maven.apache.org/) installed in order to build mango.
 
 > **Note:** The default configuration is for Hadoop 2.2.0. If building against a different
 > version of Hadoop, please edit the build configuration in the `<properties>` section of
@@ -46,7 +46,7 @@ Spark assembly has been built with Hive, including Datanucleus jars on classpath
  -var_file VAL                                                   : The variants file to view
  ````
  Now view the mango genomics browser at `localhost:8080` or the port specified:
- ```
+```
 View the visualization at: 8080
 Frequency visualization at: /freq
 Overlapping reads visualization at: /reads
