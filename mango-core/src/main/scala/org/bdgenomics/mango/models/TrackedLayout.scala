@@ -44,10 +44,10 @@ object TrackedLayout {
 
 /**
  * An implementation of TrackedLayout which takes a sequence of tuples of Reference Region and an input type,
- * and lays them out <i>in order</i> (i.e. from first-to-last) in the naive way: for each
- * value, it looks for the track with the lowest index that doesn't already have an overlapping
- * value, and it doesn't use any special data structures (it just does a linear search for each
- * track.)
+ * and lays them out <i>in order</i> (i.e. from first-to-last).
+ * Tracks are laid out by finding the first track in a buffer that does not conflict with
+ * an input ReferenceRegion. After a ReferenceRegion is added to a track, the track is
+ * put at the end of the buffer in an effort to make subsequent searches faster.
  *
  * @param values The set of values (i.e. reads, variants) to lay out in tracks
  * @tparam T the type of value which is to be tracked.
@@ -67,8 +67,13 @@ class OrderedTrackedLayout[T](values: Traversable[(ReferenceRegion, T)]) extends
     val reg = rec._1
     if (reg != null) {
       val track: Option[Track] = trackBuilder.find(track => !track.conflicts(rec))
-      track.map(_ += rec).getOrElse(addTrack(new Track(rec)))
+      track.map(trackval => {
+        trackval += rec
+        trackBuilder -= trackval
+        trackBuilder += trackval
+      }).getOrElse(addTrack(new Track(rec)))
     }
+
   }
 
   private def addTrack(t: Track): Track = {
