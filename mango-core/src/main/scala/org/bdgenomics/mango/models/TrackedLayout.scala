@@ -65,6 +65,7 @@ class OrderedTrackedLayout[T](values: Traversable[(ReferenceRegion, T)]) extends
 
   private def findAndAddToTrack(rec: (ReferenceRegion, T)) {
     val reg = rec._1
+    println(reg)
     if (reg != null) {
       val track: Option[Track] = trackBuilder.find(track => !track.conflicts(rec))
       track.map(trackval => {

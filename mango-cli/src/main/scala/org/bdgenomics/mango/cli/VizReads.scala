@@ -34,25 +34,41 @@ import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.json._
 import org.scalatra.ScalatraServlet
+import parquet.filter2.predicate.FilterPredicate
+import parquet.filter2.dsl.Dsl._
 
 object VizReads extends ADAMCommandCompanion {
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
-  var refName = ""
 
   var reads: RDD[AlignmentRecord] = null
   var variants: RDD[Genotype] = null
   var reference: RDD[NucleotideContigFragment] = null
   var features: RDD[Feature] = null
 
+  var sc: SparkContext = null
+  var referencePath: String = ""
+  var referenceBool: Boolean = false
+  var refName: String = ""
+  var readsPath: String = ""
+  var readsBool: Boolean = false
+  var variantsPath: String = ""
+  var variantsBool: Boolean = false
+  var featuresPath: String = ""
+  var featuresBool: Boolean = false
+
   def apply(cmdLine: Array[String]): ADAMCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
 
   def printTrackJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[TrackJson] = {
+    println("IN TRACK JSON")
+    println(layout.numTracks)
+    println(layout.trackAssignments)
     var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
     for ((rec, track) <- layout.trackAssignments) {
       val aRec = rec._2.asInstanceOf[AlignmentRecord]
+      println(aRec)
       tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, track)
     }
     tracks.toList
@@ -109,17 +125,17 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Args4jOption(required = false, name = "-ref_name", usage = "The name of the reference we're looking at")
+  @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 1)
   var refName: String = null
 
   @Args4jOption(required = false, name = "-read_file", usage = "The reads file to view")
-  var readPath: String = null
+  var readsPath: String = null
 
   @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
   var variantsPath: String = null
 
   @Args4jOption(required = false, name = "-feat_file", usage = "The feature file to view")
-  var featurePath: String = null
+  var featuresPath: String = null
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
@@ -133,12 +149,53 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     redirect(url("overall"))
   }
 
+  // ORIGINAL VERSION
+  // get("/reads") {
+  //   contentType = "text/html"
+  //   var readsInput = Option(VizReads.reads)
+  //   readsInput match {
+  //     case Some(_) => {
+  //       val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
+  //       val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+  //       val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+  //       val templateEngine = new TemplateEngine
+  //       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
+  //         Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+  //           "numTracks" -> filteredLayout.numTracks.toString))
+  //     }
+  //     case None => {
+  //       println("MISSING FILE: No reads file provided")
+  //       val templateEngine = new TemplateEngine
+  //       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
+  //     }
+  //   }
+  // }
+
+  // get("/reads/:ref") {
+  //   contentType = formats("json")
+  //   viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+  //   val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
+  //   val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+  //   val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+  //   VizReads.printTrackJson(filteredLayout)
+  // }
+
+  // NEW VERSION WITH PUSHDOWN PREDICATES
   get("/reads") {
     contentType = "text/html"
-    var readsInput = Option(VizReads.reads)
-    readsInput match {
-      case Some(_) => {
-        val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
+    val templateEngine = new TemplateEngine
+    if (VizReads.readsBool) {
+      if (VizReads.readsPath.endsWith(".adam")) {
+        val pred: FilterPredicate = ((LongColumn("start") > viewRegion.start) && (LongColumn("start") < viewRegion.end))
+        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred))
+        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+        val templateEngine = new TemplateEngine
+        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
+          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+            "numTracks" -> filteredLayout.numTracks.toString))
+      } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
+        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
         val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
         val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
         val templateEngine = new TemplateEngine
@@ -146,21 +203,26 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
           Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
             "numTracks" -> filteredLayout.numTracks.toString))
       }
-      case None => {
-        println("MISSING FILE: No reads file provided")
-        val templateEngine = new TemplateEngine
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
-      }
+    } else {
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
     }
   }
 
   get("/reads/:ref") {
     contentType = formats("json")
     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    val readsRDD: RDD[AlignmentRecord] = VizReads.reads.filterByOverlappingRegion(viewRegion)
-    val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-    val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-    VizReads.printTrackJson(filteredLayout)
+    if (VizReads.readsPath.endsWith(".adam")) {
+      val pred: FilterPredicate = ((LongColumn("start") > viewRegion.start) && (LongColumn("start") < viewRegion.end))
+      val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred))
+      val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+      val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+      VizReads.printTrackJson(filteredLayout)
+    } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
+      val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
+      val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+      val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+      VizReads.printTrackJson(filteredLayout)
+    }
   }
 
   get("/overall") {
@@ -302,20 +364,24 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
   val companion: ADAMCommandCompanion = VizReads
 
   override def run(sc: SparkContext, job: Job): Unit = {
+    VizReads.sc = sc
+
     val proj = Projection(contig, readMapped, readName, start, end)
-    if (args.referencePath.endsWith(".fa")) {
-      VizReads.reference = sc.loadSequence(args.referencePath, projection = Some(proj))
-      VizReads.reference.cache()
+    if (args.referencePath.endsWith(".fa") || args.referencePath.endsWith(".fasta") || args.referencePath.endsWith(".adam")) {
+      VizReads.referencePath = args.referencePath
+      VizReads.referenceBool = true
     } else {
       println("WARNING: invalid reference file")
     }
 
-    val readPath = Option(args.readPath)
-    readPath match {
+    VizReads.refName = args.refName
+
+    val readsPath = Option(args.readsPath)
+    readsPath match {
       case Some(_) => {
-        if (args.readPath.endsWith(".bam") || args.readPath.endsWith(".sam") || args.readPath.endsWith(".align.adam")) {
-          VizReads.reads = sc.loadAlignments(args.readPath, projection = Some(proj))
-          VizReads.reads.cache()
+        if (args.readsPath.endsWith(".bam") || args.readsPath.endsWith(".sam") || args.readsPath.endsWith(".adam")) {
+          VizReads.readsPath = args.readsPath
+          VizReads.readsBool = true
         } else {
           println("WARNING: Invalid input for reads file")
         }
@@ -323,20 +389,12 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case None => println("WARNING: No reads file provided")
     }
 
-    val refName = Option(args.refName)
-    refName match {
-      case Some(_) => {
-        VizReads.refName = args.refName
-      }
-      case None => println("WARNING: No refname provided")
-    }
-
     val variantsPath = Option(args.variantsPath)
     variantsPath match {
       case Some(_) => {
-        if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".gt.adam")) {
-          VizReads.variants = sc.loadGenotypes(args.variantsPath, projection = Some(proj))
-          VizReads.variants.cache()
+        if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".adam")) {
+          VizReads.variantsPath = args.variantsPath
+          VizReads.variantsBool = true
         } else {
           println("WARNING: Invalid input for variants file")
         }
@@ -344,12 +402,12 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
       case None => println("WARNING: No variants file provided")
     }
 
-    val featurePath = Option(args.featurePath)
-    featurePath match {
+    val featuresPath = Option(args.featuresPath)
+    featuresPath match {
       case Some(_) => {
-        if (args.featurePath.endsWith(".bed")) {
-          VizReads.features = sc.loadFeatures(args.featurePath, projection = Some(proj))
-          VizReads.features.cache()
+        if (args.featuresPath.endsWith(".bed") || args.variantsPath.endsWith(".adam")) {
+          VizReads.featuresPath = args.featuresPath
+          VizReads.featuresBool = true
         } else {
           println("WARNING: Invalid input for features file")
         }
