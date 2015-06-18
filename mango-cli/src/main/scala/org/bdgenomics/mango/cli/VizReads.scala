@@ -56,13 +56,9 @@ object VizReads extends ADAMCommandCompanion {
   }
 
   def printTrackJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[TrackJson] = {
-    println("IN TRACK JSON")
-    println(layout.numTracks)
-    println(layout.trackAssignments)
     var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
     for ((rec, track) <- layout.trackAssignments) {
       val aRec = rec._2.asInstanceOf[AlignmentRecord]
-      println(aRec)
       tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, track)
     }
     tracks.toList
@@ -244,7 +240,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     val templateEngine = new TemplateEngine
     if (VizReads.variantsExist) {
       if (VizReads.variantsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("variant") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+        val pred: FilterPredicate = ((LongColumn("variant.start") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
         val variantsRDD: RDD[Genotype] = VizReads.sc.loadParquetGenotypes(VizReads.variantsPath, predicate = Some(pred))
         val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
         val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
@@ -272,7 +268,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     contentType = formats("json")
     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     if (VizReads.variantsPath.endsWith(".adam")) {
-      val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+      val pred: FilterPredicate = ((LongColumn("variant.start") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
       val variantsRDD: RDD[Genotype] = VizReads.sc.loadParquetGenotypes(VizReads.variantsPath, predicate = Some(pred))
       val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
       val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
