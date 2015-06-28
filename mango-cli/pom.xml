@@ -172,6 +172,14 @@
       <artifactId>avro</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-avro</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-scala_2.10</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.seqdoop</groupId>
       <artifactId>hadoop-bam</artifactId>
     </dependency>

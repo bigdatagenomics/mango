@@ -17,9 +17,15 @@
  */
 package org.bdgenomics.mango.cli
 
+import htsjdk.samtools.reference.FastaSequenceIndex
+import htsjdk.samtools.reference.IndexedFastaSequenceFile
+import htsjdk.samtools.reference.ReferenceSequence
+import java.io.File
 import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.{ Logging, SparkContext }
 import org.bdgenomics.adam.models.VariantContext
+import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.rdd.MetricsContext._
 import org.bdgenomics.utils.cli._
@@ -35,12 +41,6 @@ import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
-import parquet.filter2.predicate.FilterPredicate
-import parquet.filter2.dsl.Dsl._
-import htsjdk.samtools.reference.FastaSequenceIndex
-import htsjdk.samtools.reference.IndexedFastaSequenceFile
-import htsjdk.samtools.reference.ReferenceSequence
-import java.io.File
 import scala.reflect.ClassTag
 
 object VizTimers extends Metrics {
