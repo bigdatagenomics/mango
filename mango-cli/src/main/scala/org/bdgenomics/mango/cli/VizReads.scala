@@ -144,7 +144,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     if (VizReads.readsExist) {
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
         val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
@@ -171,7 +171,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     if (VizReads.readsPath.endsWith(".adam")) {
       val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-      val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+      val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
       val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
       val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
       val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
@@ -190,7 +190,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     if (VizReads.readsExist) {
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
         val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
@@ -292,7 +292,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     if (VizReads.featuresExist) {
       if (VizReads.featuresPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
+        val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
         val featureRDD: RDD[Feature] = VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj))
         val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
         val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
@@ -318,7 +318,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     if (VizReads.featuresPath.endsWith(".adam")) {
       val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-      val proj = Projection(FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
+      val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
       val featureRDD: RDD[Feature] = VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj))
       val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
       val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
