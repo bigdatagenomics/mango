@@ -18,7 +18,7 @@
 package org.bdgenomics.mango.cli
 
 import org.apache.hadoop.mapreduce.Job
-import org.apache.spark.SparkContext
+import org.apache.spark.{ Logging, SparkContext }
 import org.bdgenomics.adam.models.VariantContext
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.cli._
@@ -36,7 +36,7 @@ import org.scalatra.ScalatraServlet
 import parquet.filter2.predicate.FilterPredicate
 import parquet.filter2.dsl.Dsl._
 
-object VizReads extends ADAMCommandCompanion {
+object VizReads extends ADAMCommandCompanion with Logging {
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
 
@@ -49,6 +49,7 @@ object VizReads extends ADAMCommandCompanion {
   var variantsExist: Boolean = false
   var featuresPath: String = ""
   var featuresExist: Boolean = false
+  var server: org.eclipse.jetty.server.Server = null
 
   def apply(cmdLine: Array[String]): ADAMCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
@@ -102,6 +103,27 @@ object VizReads extends ADAMCommandCompanion {
     }
     freqBuffer.toList
   }
+
+  def quit() {
+    val thread = new Thread {
+      override def run {
+        try {
+          log.info("Shutting down the server")
+          println("Shutting down the server")
+          server.stop();
+          log.info("Server has stopped")
+          println("Server has stopped")
+        } catch {
+          case e: Exception => {
+            log.info("Error when stopping Jetty server: " + e.getMessage(), e)
+            println("Error when stopping Jetty server: " + e.getMessage(), e)
+          }
+        }
+      }
+    }
+    thread.start()
+  }
+
 }
 
 case class TrackJson(readName: String, start: Long, end: Long, track: Long)
@@ -136,6 +158,10 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/?") {
     redirect(url("overall"))
+  }
+
+  get("/quit") {
+    VizReads.quit()
   }
 
   get("/reads") {
@@ -355,7 +381,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 }
 
-class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizReadsArgs] {
+class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizReadsArgs] with Logging {
   val companion: ADAMCommandCompanion = VizReads
 
   override def run(sc: SparkContext, job: Job): Unit = {
@@ -364,6 +390,7 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
     if (args.referencePath.endsWith(".fa") || args.referencePath.endsWith(".fasta") || args.referencePath.endsWith(".adam")) {
       VizReads.referencePath = args.referencePath
     } else {
+      log.info("WARNING: Invalid reference file")
       println("WARNING: invalid reference file")
     }
 
@@ -376,10 +403,14 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
           VizReads.readsPath = args.readsPath
           VizReads.readsExist = true
         } else {
+          log.info("WARNING: Invalid input for reads file")
           println("WARNING: Invalid input for reads file")
         }
       }
-      case None => println("WARNING: No reads file provided")
+      case None => {
+        log.info("WARNING: No reads file provided")
+        println("WARNING: No reads file provided")
+      }
     }
 
     val variantsPath = Option(args.variantsPath)
@@ -389,10 +420,14 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
           VizReads.variantsPath = args.variantsPath
           VizReads.variantsExist = true
         } else {
+          log.info("WARNING: Invalid input for variants file")
           println("WARNING: Invalid input for variants file")
         }
       }
-      case None => println("WARNING: No variants file provided")
+      case None => {
+        log.info("WARNING: No variants file provided")
+        println("WARNING: No variants file provided")
+      }
     }
 
     val featuresPath = Option(args.featuresPath)
@@ -402,23 +437,28 @@ class VizReads(protected val args: VizReadsArgs) extends ADAMSparkCommand[VizRea
           VizReads.featuresPath = args.featuresPath
           VizReads.featuresExist = true
         } else {
+          log.info("WARNING: Invalid input for features file")
           println("WARNING: Invalid input for features file")
         }
       }
-      case None => println("WARNING: No features file provided")
+      case None => {
+        log.info("WARNING: No features file provided")
+        println("WARNING: No features file provided")
+      }
     }
 
-    val server = new org.eclipse.jetty.server.Server(args.port)
+    VizReads.server = new org.eclipse.jetty.server.Server(args.port)
     val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
-    server.setHandler(handlers)
+    VizReads.server.setHandler(handlers)
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
-    server.start()
+    VizReads.server.start()
     println("View the visualization at: " + args.port)
     println("Frequency visualization at: /freq")
     println("Overlapping reads visualization at: /reads")
     println("Variant visualization at: /variants")
     println("Feature visualization at /features")
     println("Overall visualization at: /overall")
-    server.join()
+    println("Quit at /quit")
+    VizReads.server.join()
   }
 }
