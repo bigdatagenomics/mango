@@ -1,4 +1,6 @@
 #mango
+
+[![Join the chat at https://gitter.im/bigdatagenomics/mango](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bigdatagenomics/mango?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 A set of genomic visualization tools built on top of the [ADAM](https://github.com/bigdatagenomics/adam) genomics processing engine. Apache 2 licensed.
 
 mango visualizes reads, variants, and features using [D3](http://d3js.org/).
