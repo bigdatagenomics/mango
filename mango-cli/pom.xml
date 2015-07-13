@@ -184,14 +184,6 @@
       <artifactId>spark-core_${scala.version.prefix}</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-mllib_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-graphx_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_${scala.version.prefix}</artifactId>
       <scope>test</scope>
