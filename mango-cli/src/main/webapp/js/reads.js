@@ -38,13 +38,13 @@ d3.json(referenceStringLocation, function(error, data) {
             .attr("y", 30)
             .attr("fill", function(d) {
                 if (d.reference === "G") {
-                    return '#296629'; //DARK GREEN
+                    return '#00C000'; //GREEN
                 } else if (d.reference === "C") {
-                    return '#CC2900'; //RED
+                    return '#E00000'; //CRIMSON
                 } else if (d.reference === "A") { 
-                    return '#0066FF'; //BLUE
-                } else {
-                    return '#FF6600'; //ORANGE
+                    return '#5050FF'; //AZURE
+                } else if (d.reference == "T") {
+                    return '#E6E600'; //TWEETY BIRD
                 }
             })
             .attr("width", function(d) {
@@ -245,13 +245,13 @@ function update(newStart, newEnd) {
                 .attr("y", 30)
                 .attr("fill", function(d, i) {
                     if (d.reference === "G") {
-                        return '#296629'; //DARK GREEN
+                        return '#00C000'; //GREEN
                     } else if (d.reference === "C") {
-                        return '#CC2900'; //RED
+                        return '#E00000'; //CRIMSON
                     } else if (d.reference === "A") { 
-                        return '#0066FF'; //BLUE
-                    } else {
-                        return '#FF6600'; //ORANGE
+                        return '#5050FF'; //AZURE
+                    } else if (d.reference == "T") {
+                        return '#E6E600'; //TWEETY BIRD
                     }
                 })
                 .attr("width", function(d) {
