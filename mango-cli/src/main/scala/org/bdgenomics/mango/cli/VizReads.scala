@@ -33,7 +33,7 @@ import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
 import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
-import org.scalatra.json._
+import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
 import parquet.filter2.predicate.FilterPredicate
 import parquet.filter2.dsl.Dsl._
@@ -65,6 +65,7 @@ object VizTimers extends Metrics {
 }
 
 object VizReads extends BDGCommandCompanion with Logging {
+
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
 
@@ -197,12 +198,12 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   var port: Int = 8080
 }
 
-class VizServlet extends ScalatraServlet with JacksonJsonSupport {
-  protected implicit val jsonFormats: Formats = DefaultFormats
+class VizServlet extends ScalatraServlet {
+  implicit val formats = net.liftweb.json.DefaultFormats
   val viewRegion = ReferenceRegion(VizReads.refName, 0, 100)
 
   get("/?") {
-    redirect(url("overall"))
+    redirect("/overall")
   }
 
   get("/quit") {
@@ -240,7 +241,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
-      contentType = formats("json")
+      contentType = "json"
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
@@ -255,12 +256,12 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
         val filteredLayout = VizTimers.MakingTrack.time {
           new OrderedTrackedLayout(collected)
         }
-        VizReads.printTrackJson(filteredLayout)
+        write(VizReads.printTrackJson(filteredLayout))
       } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
         val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
         val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        VizReads.printTrackJson(filteredLayout)
+        write(VizReads.printTrackJson(filteredLayout))
       }
     }
   }
@@ -305,18 +306,18 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/freq/:ref") {
     VizTimers.FreqRequest.time {
-      contentType = formats("json")
+      contentType = "json"
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         val filteredArray = readsRDD.collect()
-        VizReads.printJsonFreq(filteredArray, viewRegion)
+        write(VizReads.printJsonFreq(filteredArray, viewRegion))
       } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
         val filteredArray = readsRDD.collect()
-        VizReads.printJsonFreq(filteredArray, viewRegion)
+        write(VizReads.printJsonFreq(filteredArray, viewRegion))
       }
     }
   }
@@ -353,7 +354,7 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
 
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
-      contentType = formats("json")
+      contentType = "json"
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.variantsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("variant.start") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
@@ -368,12 +369,12 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
         val filteredGenotypeTrack = VizTimers.MakingTrack.time {
           new OrderedTrackedLayout(collected)
         }
-        VizReads.printVariationJson(filteredGenotypeTrack)
+        write(VizReads.printVariationJson(filteredGenotypeTrack))
       } else if (VizReads.variantsPath.endsWith(".vcf")) {
         val variantsRDD: RDD[Genotype] = VizReads.sc.loadGenotypes(VizReads.variantsPath).filterByOverlappingRegion(viewRegion)
         val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
         val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
-        VizReads.printVariationJson(filteredGenotypeTrack)
+        write(VizReads.printVariationJson(filteredGenotypeTrack))
       }
     }
   }
@@ -415,12 +416,12 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
         val featureRDD: RDD[Feature] = VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj))
         val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
         val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
-        VizReads.printFeatureJson(filteredFeatureTrack)
+        write(VizReads.printFeatureJson(filteredFeatureTrack))
       } else if (VizReads.featuresPath.endsWith(".bed")) {
         val featureRDD: RDD[Feature] = VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion)
         val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
         val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
-        VizReads.printFeatureJson(filteredFeatureTrack)
+        write(VizReads.printFeatureJson(filteredFeatureTrack))
       }
     }
   }
@@ -431,10 +432,10 @@ class VizServlet extends ScalatraServlet with JacksonJsonSupport {
       if (VizReads.referencePath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= viewRegion.start) && (LongColumn("fragmentStartPosition") <= viewRegion.end))
         val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))
-        VizReads.printReferenceJson(referenceRDD, viewRegion)
+        write(VizReads.printReferenceJson(referenceRDD, viewRegion))
       } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
         val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
-        VizReads.printReferenceJson(referenceRDD, viewRegion)
+        write(VizReads.printReferenceJson(referenceRDD, viewRegion))
       }
     }
   }

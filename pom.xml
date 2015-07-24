@@ -259,12 +259,12 @@
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
-        <version>8.1.14.v20131031</version>
+        <version>7.6.17.v20150415</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-webapp</artifactId>
-        <version>8.1.14.v20131031</version>
+        <version>7.6.17.v20150415</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
@@ -380,14 +380,14 @@
         <version>1.6.1</version>
       </dependency>
       <dependency>
-        <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-json_2.10</artifactId>
-        <version>2.3.0</version>
+        <groupId>net.liftweb</groupId>
+        <artifactId>lift-json_2.10</artifactId>
+        <version>2.6.2</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
         <artifactId>scalatra_2.10</artifactId>
-        <version>2.3.0</version>
+        <version>2.0.5</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
