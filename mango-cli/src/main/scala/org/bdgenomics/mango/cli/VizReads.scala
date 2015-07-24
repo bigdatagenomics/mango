@@ -37,6 +37,10 @@ import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
 import parquet.filter2.predicate.FilterPredicate
 import parquet.filter2.dsl.Dsl._
+import htsjdk.samtools.reference.FastaSequenceIndex
+import htsjdk.samtools.reference.IndexedFastaSequenceFile
+import htsjdk.samtools.reference.ReferenceSequence
+import java.io.File
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -70,6 +74,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   val commandDescription: String = "Genomic visualization for ADAM"
 
   var sc: SparkContext = null
+  var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var referencePath: String = ""
   var refName: String = ""
   var readsPath: String = ""
@@ -141,6 +146,17 @@ object VizReads extends BDGCommandCompanion with Logging {
   //Prepares reference information in Json format
   def printReferenceJson(rdd: RDD[NucleotideContigFragment], region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
     val referenceString: String = rdd.adamGetReferenceString(region)
+    val splitReference: Array[String] = referenceString.split("")
+    var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
+    for (base <- splitReference) {
+      tracks += new ReferenceJson(base.toUpperCase())
+    }
+    tracks.toList
+  }
+
+  def printIndexedReferenceJson(ifsq: IndexedFastaSequenceFile, region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
+    val refSeq = ifsq.getSubsequenceAt(region.referenceName, region.start, region.end)
+    val referenceString = new String(refSeq.getBases())
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     for (base <- splitReference) {
@@ -434,8 +450,20 @@ class VizServlet extends ScalatraServlet {
         val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))
         write(VizReads.printReferenceJson(referenceRDD, viewRegion))
       } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
-        val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
-        write(VizReads.printReferenceJson(referenceRDD, viewRegion))
+        val idx = new File(VizReads.referencePath + ".fai")
+        if (idx.exists() && !idx.isDirectory()) {
+          VizReads.faWithIndex match {
+            case Some(_) => VizReads.printIndexedReferenceJson(VizReads.faWithIndex.get, viewRegion)
+            case None => {
+              val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(VizReads.referencePath + ".fai"))
+              VizReads.faWithIndex = Some(new IndexedFastaSequenceFile(new File(VizReads.referencePath), faidx))
+              VizReads.printIndexedReferenceJson(VizReads.faWithIndex.get, viewRegion)
+            }
+          }
+        } else {
+          val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
+          VizReads.printReferenceJson(referenceRDD, viewRegion)
+        }
       }
     }
   }
