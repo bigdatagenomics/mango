@@ -41,6 +41,7 @@ import htsjdk.samtools.reference.FastaSequenceIndex
 import htsjdk.samtools.reference.IndexedFastaSequenceFile
 import htsjdk.samtools.reference.ReferenceSequence
 import java.io.File
+import scala.reflect.ClassTag
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -453,16 +454,16 @@ class VizServlet extends ScalatraServlet {
         val idx = new File(VizReads.referencePath + ".fai")
         if (idx.exists() && !idx.isDirectory()) {
           VizReads.faWithIndex match {
-            case Some(_) => VizReads.printIndexedReferenceJson(VizReads.faWithIndex.get, viewRegion)
+            case Some(_) => write(VizReads.printIndexedReferenceJson(VizReads.faWithIndex.get, viewRegion))
             case None => {
               val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(VizReads.referencePath + ".fai"))
               VizReads.faWithIndex = Some(new IndexedFastaSequenceFile(new File(VizReads.referencePath), faidx))
-              VizReads.printIndexedReferenceJson(VizReads.faWithIndex.get, viewRegion)
+              write(VizReads.printIndexedReferenceJson(VizReads.faWithIndex.get, viewRegion))
             }
           }
         } else {
           val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
-          VizReads.printReferenceJson(referenceRDD, viewRegion)
+          write(VizReads.printReferenceJson(referenceRDD, viewRegion))
         }
       }
     }
