@@ -54,24 +54,24 @@ input[type="text"] {
 }
 
 #refArea {
-    border-radius: 25px;
-    border: 1px solid #8AC007;
-    padding: 15px; 
+    border-radius: 5px;
+    border: 1.5px solid #8AC007;
+    padding: 0px; 
 }
 
 #varArea {
-    border-radius: 25px;
-    border: 1px solid #FF9933;
-    padding: 15px; 
+    border-radius: 5px;
+    border: 1.5px solid #FF9933;
+    padding: 1px; 
 }
 
 #featArea {
-    border-radius: 25px;
-    border: 1px solid #FF99CC;
-    padding: 15px; 
+    border-radius: 5px;
+    border: 1.5px solid #FF99CC;
+    padding: 1px; 
 }
 #readsArea {
-    border-radius: 25px;
-    border: 1px solid #996633;
-    padding: 15px; 
+    border-radius: 5px;
+    border: 1.5px solid #996633;
+    padding: 0px; 
 }
