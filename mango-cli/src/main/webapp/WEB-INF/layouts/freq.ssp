@@ -120,12 +120,9 @@
 <br>
 
 <script>
-    var refName = "${viewRegion._1}";
-    var start = parseInt(${viewRegion._2}, 10);
-    var end = parseInt(${viewRegion._3}, 10);
-    var width = window.innerWidth - 50;
-    var base = 50;
-    var height = window.innerHeight;
+    var viewRefName = "${viewRegion._1}";
+    var viewRegStart = parseInt(${viewRegion._2}, 10);
+    var viewRegEnd = parseInt(${viewRegion._3}, 10);
 </script>
 <script src="js/freq.js"></script>
 </html>
