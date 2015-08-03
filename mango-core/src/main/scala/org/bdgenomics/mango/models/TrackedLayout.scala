@@ -23,6 +23,7 @@ import scala.util.control.Breaks._
 import org.apache.spark.rdd.MetricsContext._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.apache.spark.Logging
+import scala.reflect.{ ClassTag, classTag }
 
 object TrackTimers extends Metrics {
   val FindAddTimer = timer("Find and Add to Track")
@@ -68,16 +69,25 @@ object TrackedLayout {
  * @param values The set of values (i.e. reads, variants) to lay out in tracks
  * @tparam T the type of value which is to be tracked.
  */
-class OrderedTrackedLayout[T](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] with Logging {
+class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] with Logging {
   private var trackBuilder = new mutable.ListBuffer[Track]()
   val sequence = values.toSeq
   log.info("Number of values: " + values.size)
 
   TrackTimers.FindAddTimer.time {
     sequence match {
-      case a: Seq[(ReferenceRegion, AlignmentRecord)] => a.foreach(findAndAddToTrack)
-      case f: Seq[(ReferenceRegion, Feature)]         => f.foreach(findAndAddToTrack)
-      case g: Seq[(ReferenceRegion, Genotype)]        => addVariantsToTrack(g.groupBy(_._1))
+      case a: Seq[(ReferenceRegion, AlignmentRecord)] if classTag[T] == classTag[AlignmentRecord] => {
+        a.foreach(findAndAddToTrack)
+      }
+      case f: Seq[(ReferenceRegion, Feature)] if classTag[T] == classTag[Feature] => {
+        f.foreach(findAndAddToTrack)
+      }
+      case g: Seq[(ReferenceRegion, Genotype)] if classTag[T] == classTag[Genotype] => {
+        addVariantsToTrack(g.groupBy(_._1))
+      }
+      case _ => {
+        log.info("No matched types")
+      }
     }
   }
 
