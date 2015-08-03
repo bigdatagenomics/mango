@@ -43,11 +43,26 @@ refContainer.on('mousemove', function () {
       })
 });
 
+// Create the scale for the axis
+var refAxisScale = d3.scale.linear()
+    .domain([viewRegStart, viewRegEnd])
+    .range([0, width]);
+
+// Create the axis
+var refAxis = d3.svg.axis()
+   .scale(refAxisScale);
+
+// Add the axis to the container
+refContainer.append("g")
+    .attr("class", "axis")
+    .call(refAxis);
+
 if (featuresExist === true) {
   var featureSvgContainer = d3.select("#featArea")
     .append("svg")
       .attr("height", featHeight)
       .attr("width", width);
+
   var featVertLine = featureSvgContainer.append('line')
     .attr({
       'x1': 0,
@@ -124,13 +139,13 @@ if (readsExist === true) {
 
 
 //All rendering of data, and everything setting new region parameters, is done here
-render(viewRegStart, viewRegEnd)
+render(viewRegStart, viewRegEnd);
 
 // Functions
 function render(start, end) {
   //Adding Reference rectangles
-  viewRegStart = start
-  viewRegEnd = end
+  viewRegStart = start;
+  viewRegEnd = end;
 
   //Add Region Info
   d3.select("h2")
@@ -141,28 +156,21 @@ function render(start, end) {
   varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
-  // Note: renderingremoves everything on every render, but will be changed it future
-
-  //Reference
-  refContainer.selectAll("g").remove()
-  renderReference()
+  renderReference();
 
   // Features
   if (featuresExist === true) {
-    featureSvgContainer.selectAll("g").remove()
-    renderFeatures()
+    renderFeatures();
   } 
 
   //Variants
   if (variantsExist === true) {
-    varSvgContainer.selectAll("g").remove()
-    renderVariants()
+    renderVariants();
   }
 
   //Reads
   if (readsExist === true) {
-    readsSvgContainer.selectAll("g").remove()
-    renderReads()
+    renderReads();
   }
 
 }
@@ -174,23 +182,39 @@ function renderReference() {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
+  refContainer.select(".axis").remove();
+
+  // Updating Axis
   // Create the scale for the axis
-  var axisScale = d3.scale.linear()
+  var refAxisScale = d3.scale.linear()
       .domain([viewRegStart, viewRegEnd])
       .range([0, width]);
 
   // Create the axis
-  var xAxis = d3.svg.axis()
-     .scale(axisScale);
+  var refAxis = d3.svg.axis()
+     .scale(refAxisScale);
 
   // Add the axis to the container
   refContainer.append("g")
       .attr("class", "axis")
-      .call(xAxis);
+      .call(refAxis);
+
 
   d3.json(referenceStringLocation, function(error, data) {
-    refContainer.selectAll("rect").data(data)
-    .enter()
+
+    var rects = refContainer.selectAll("rect").data(data);
+
+    var modify = rects.transition();
+    modify
+      .attr("x", function(d, i) {
+        return i/(viewRegEnd-viewRegStart) * width;
+      })
+      .attr("width", function(d) {
+        return Math.max(1, width/(viewRegEnd-viewRegStart));
+      });
+
+    var newData = rects.enter();
+    newData
       .append("g")
       .append("rect")
         .attr("x", function(d, i) {
@@ -225,10 +249,13 @@ function renderReference() {
             .duration(500)
             .style("opacity", 0);
           });
+      var removed = rects.exit();
+      removed.remove();
   });
 }
 
 function renderFeatures() {
+
   // Making hover box
   var featDiv = d3.select("#featArea")
     .append("div")
@@ -237,7 +264,14 @@ function renderFeatures() {
 
   d3.json(featureJsonLocation, function(error, data) {
     // Add the rectangles
-    featureSvgContainer.selectAll("rect").data(data)
+    var rects = featureSvgContainer.selectAll("rect").data(data);
+    var modify = rects.transition();
+    modify
+      .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
+
+    var newData = rects.enter();
+    newData
       .enter()
         .append("g")
         .append("rect")
@@ -259,6 +293,8 @@ function renderFeatures() {
             .duration(500)
             .style("opacity", 0);
           });
+      var removed = rects.exit();
+      removed.remove();
     });
 }
 
@@ -273,38 +309,47 @@ function renderVariants() {
   d3.json(varJsonLocation, function(error, data) {
 
     // Add the rectangles
-    varSvgContainer.selectAll("rect").data(data)
-      .enter()
-        .append("g")
-        .append("rect")
-          .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-          .attr("y", 0)
-          .attr("fill", function(d) {
-            if (d.alleles === "Ref / Alt") {
-              return '#00FFFF'; //CYAN
-            } else if (d.alleles === "Alt / Alt") {
-              return '#FF66FF'; //MAGENTA
-            } else if (d.reference === "Ref / Ref") {
-              return '#99FF33'; //NEON GREEN
-            } else {
-              return '#FFFF66'; //YELLOW
-            }
-          })
-          .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-          .attr("height", varHeight)
-          .on("mouseover", function(d) {
-            varDiv.transition()
-            .duration(200)
-            .style("opacity", .9);
-            varDiv.html(d.alleles)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-          })
-          .on("mouseout", function(d) {
-            varDiv.transition()
-            .duration(500)
-            .style("opacity", 0);
-          });
+    var rects = varSvgContainer.selectAll("rect").data(data);
+    
+    var modify = rects.transition();
+    modify
+      .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
+
+    var newData = rects.enter();
+    newData
+      .append("g")
+      .append("rect")
+        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("y", 0)
+        .attr("fill", function(d) {
+          if (d.alleles === "Ref / Alt") {
+            return '#00FFFF'; //CYAN
+          } else if (d.alleles === "Alt / Alt") {
+            return '#FF66FF'; //MAGENTA
+          } else if (d.reference === "Ref / Ref") {
+            return '#99FF33'; //NEON GREEN
+          } else {
+            return '#FFFF66'; //YELLOW
+          }
+        })
+        .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
+        .attr("height", varHeight)
+        .on("mouseover", function(d) {
+          varDiv.transition()
+          .duration(200)
+          .style("opacity", .9);
+          varDiv.html(d.alleles)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+          varDiv.transition()
+          .duration(500)
+          .style("opacity", 0);
+        });
+      var removed = rects.exit();
+      removed.remove();
   });
 }
 
@@ -316,56 +361,67 @@ function renderReads() {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
+
   // Create the scale for the axis
-  var axisScale = d3.scale.linear()
+  var readsAxisScale = d3.scale.linear()
       .domain([viewRegStart, viewRegEnd])
       .range([0, width]);
 
   // Create the axis
-  var xAxis = d3.svg.axis()
-     .scale(axisScale);
+  var readsAxis = d3.svg.axis()
+     .scale(readsAxisScale);
+
+  // Remove current axis to update it
+  readsSvgContainer.select(".axis").remove();
 
   d3.json(readJsonLocation,function(error, data) {
 
-    var numTracks = d3.max(data, function(d) {return d.track})
-    readsHeight = (numTracks+1)*trackHeight
+    var numTracks = d3.max(data, function(d) {return d.track});
+    readsHeight = (numTracks+1)*trackHeight;
 
     // Reset size of svg container
-    readsSvgContainer.attr("height", (readsHeight+ base))
+    readsSvgContainer.attr("height", (readsHeight+ base));
 
-    // Add the rectangles
-    readsSvgContainer.selectAll("rect").data(data)
-      .enter()
-        .append("g")
-        .append("rect")
-          .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-          .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
-          .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-          .attr("height", (trackHeight-2))
-          .attr("fill", "steelblue")
-          .on("mouseover", function(d) {
-            readDiv.transition()
-              .duration(200)
-              .style("opacity", .9);
-            readDiv.html(d.readName)
-              .style("left", (d3.event.pageX) + "px")
-              .style("top", (d3.event.pageY - 28) + "px");
-          })
-          .on("mouseout", function(d) {
-            readDiv.transition()
-            .duration(500)
-            .style("opacity", 0);
-          });
-      
     // Add the axis to the container
     readsSvgContainer.append("g")
       .attr("class", "axis")
       .attr("transform", "translate(0, " + readsHeight + ")")
-      .call(xAxis);
+      .call(readsAxis);
 
     // Update height of vertical guide line
-    readsVertLine.attr("y2", readsHeight)
+    readsVertLine.attr("y2", readsHeight);
 
+    // Add the rectangles
+    var rects = readsSvgContainer.selectAll("rect").data(data);
+    var modify = rects.transition();
+    modify
+      .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
+      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
+    var newData = rects.enter();
+    newData
+      .append("g")
+      .append("rect")
+        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
+        .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
+        .attr("height", (trackHeight-2))
+        .attr("fill", "steelblue")
+        .on("mouseover", function(d) {
+          readDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          readDiv.html(d.readName)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+          readDiv.transition()
+          .duration(500)
+          .style("opacity", 0);
+        });
+    var removed = rects.exit();
+    removed.remove();
   });
 
 
