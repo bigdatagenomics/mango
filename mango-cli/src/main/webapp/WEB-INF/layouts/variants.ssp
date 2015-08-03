@@ -1,5 +1,4 @@
 <%@ val viewRegion: (String, String, String) %>
-<%@ val numTracks: String %>
 
 <html>
 <head lang="en">
@@ -119,20 +118,17 @@
 </div>
 
 <br>
-
-<div id = "varArea"></div>
-
+<div id="refArea"></div>
+<div id="varArea"></div>
 <br>
 
 <script>
-  var varRefName = "${viewRegion._1}";
-  var varRegStart = parseInt(${viewRegion._2}, 10);
-  var varRegEnd = parseInt(${viewRegion._3}, 10);
-  var width = window.innerWidth - 50;
-  var base = 50;
-  var trackHeight = 6;
-  var numTracks = parseInt(${numTracks}, 10);
-  var height = (numTracks+1) * trackHeight;
+  var viewRefName = "${viewRegion._1}";
+  var viewRegStart = parseInt(${viewRegion._2}, 10);
+  var viewRegEnd = parseInt(${viewRegion._3}, 10);
+  var readsExist = false
+  var variantsExist = true
+  var featuresExist = false
 </script>
-<script src="js/variants.js"></script>
+<script src="js/overall.js"></script>
 </html>

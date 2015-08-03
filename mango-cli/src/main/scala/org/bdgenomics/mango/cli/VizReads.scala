@@ -231,25 +231,8 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     if (VizReads.readsExist) {
-      if (VizReads.readsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        val templateEngine = new TemplateEngine
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-            "numTracks" -> filteredLayout.numTracks.toString))
-      } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        val templateEngine = new TemplateEngine
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-          Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-            "numTracks" -> filteredLayout.numTracks.toString))
-      }
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
+        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
     }
@@ -285,26 +268,9 @@ class VizServlet extends ScalatraServlet {
 
   get("/overall") {
     contentType = "text/html"
-    var numTracks = "0"
-    if (VizReads.readsExist) {
-      if (VizReads.readsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        numTracks = filteredLayout.numTracks.toString
-      } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        numTracks = filteredLayout.numTracks.toString
-      }
-    }
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-        "numTracks" -> numTracks,
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
         "featuresExist" -> VizReads.featuresExist))
@@ -343,27 +309,8 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     if (VizReads.variantsExist) {
-      if (VizReads.variantsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("variant.start") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
-        val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
-        val variantsRDD: RDD[Genotype] = VizReads.sc.loadParquetGenotypes(VizReads.variantsPath, predicate = Some(pred), projection = Some(proj))
-        val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
-        val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
-        val templateEngine = new TemplateEngine
-        val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "numTracks" -> filteredGenotypeTrack.numTracks.toString)
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-          displayMap)
-      } else if (VizReads.variantsPath.endsWith(".vcf")) {
-        val variantsRDD: RDD[Genotype] = VizReads.sc.loadGenotypes(VizReads.variantsPath).filterByOverlappingRegion(viewRegion)
-        val trackinput: RDD[(ReferenceRegion, Genotype)] = variantsRDD.keyBy(v => ReferenceRegion(ReferencePosition(v)))
-        val filteredGenotypeTrack = new OrderedTrackedLayout(trackinput.collect())
-        val templateEngine = new TemplateEngine
-        val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "numTracks" -> filteredGenotypeTrack.numTracks.toString)
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-          displayMap)
-      }
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
+        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/novariants.ssp")
     }
@@ -400,25 +347,8 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     if (VizReads.featuresExist) {
-      if (VizReads.featuresPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-        val featureRDD: RDD[Feature] = VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj))
-        val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
-        val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
-        val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "numTracks" -> filteredFeatureTrack.numTracks.toString)
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
-          displayMap)
-      } else if (VizReads.featuresPath.endsWith(".bed")) {
-        val featureRDD: RDD[Feature] = VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion)
-        val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
-        val filteredFeatureTrack = new OrderedTrackedLayout(trackinput.collect())
-        val displayMap = Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "numTracks" -> filteredFeatureTrack.numTracks.toString)
-        templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
-          displayMap)
-      }
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
+        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofeatures.ssp")
     }

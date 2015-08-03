@@ -1,5 +1,4 @@
 <%@ val viewRegion: (String, String, String) %>
-<%@ val numTracks: String %>
 <%@ val readsExist: Boolean %>
 <%@ val variantsExist: Boolean %>
 <%@ val featuresExist: Boolean %>
@@ -127,16 +126,12 @@
 <div id="featArea"></div>
 <div id="varArea"></div>
 <div id="readsArea"></div>
+<br>
 
 <script>
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
-  var width = window.innerWidth - 50;
-  var base = 50;
-  var trackHeight = 6;
-  var numTracks = parseInt(${numTracks}, 10);
-  var height = (numTracks+1) * trackHeight;
   var readsExist = ${readsExist}
   var variantsExist = ${variantsExist}
   var featuresExist = ${featuresExist}
