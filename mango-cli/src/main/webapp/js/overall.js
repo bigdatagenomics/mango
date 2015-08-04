@@ -249,6 +249,7 @@ function renderReference() {
             .duration(500)
             .style("opacity", 0);
           });
+        
       var removed = rects.exit();
       removed.remove();
   });
@@ -265,6 +266,7 @@ function renderFeatures() {
   d3.json(featureJsonLocation, function(error, data) {
     // Add the rectangles
     var rects = featureSvgContainer.selectAll("rect").data(data);
+
     var modify = rects.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -272,27 +274,27 @@ function renderFeatures() {
 
     var newData = rects.enter();
     newData
-      .enter()
-        .append("g")
-        .append("rect")
-          .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-          .attr("y", 0)
-          .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-          .attr("height", featHeight)
-          .attr("fill", "#6600CC")
-          .on("mouseover", function(d) {
-            featDiv.transition()
-            .duration(200)
-            .style("opacity", .9);
-            featDiv.html(d.featureId)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-          })
-          .on("mouseout", function(d) {
-            featDiv.transition()
-            .duration(500)
-            .style("opacity", 0);
-          });
+      .append("g")
+      .append("rect")
+        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("y", 0)
+        .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
+        .attr("height", featHeight)
+        .attr("fill", "#6600CC")
+        .on("mouseover", function(d) {
+          featDiv.transition()
+          .duration(200)
+          .style("opacity", .9);
+          featDiv.html(d.featureId)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+          featDiv.transition()
+          .duration(500)
+          .style("opacity", 0);
+        });
+
       var removed = rects.exit();
       removed.remove();
     });
@@ -348,8 +350,9 @@ function renderVariants() {
           .duration(500)
           .style("opacity", 0);
         });
-      var removed = rects.exit();
-      removed.remove();
+
+    var removed = rects.exit();
+    removed.remove();
   });
 }
 
@@ -360,7 +363,6 @@ function renderReads() {
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
-
 
   // Create the scale for the axis
   var readsAxisScale = d3.scale.linear()
@@ -393,11 +395,13 @@ function renderReads() {
 
     // Add the rectangles
     var rects = readsSvgContainer.selectAll("rect").data(data);
+
     var modify = rects.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
       .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
       .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
+    
     var newData = rects.enter();
     newData
       .append("g")
@@ -406,6 +410,7 @@ function renderReads() {
         .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", (trackHeight-2))
+        .attr("marker-end", "url(#end)")
         .attr("fill", "steelblue")
         .on("mouseover", function(d) {
           readDiv.transition()
@@ -420,11 +425,65 @@ function renderReads() {
           .duration(500)
           .style("opacity", 0);
         });
+    
     var removed = rects.exit();
     removed.remove();
+
+    var arrowHeads = readsSvgContainer.selectAll("path").data(data);
+    var arrowModify = arrowHeads.transition();
+    arrowModify
+      .attr("transform", function(d) { 
+        if (d.readNegativeStrand === true) { // to the right
+          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+          var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+          var xCoord = rectStart + rectWidth;
+          var yCoord = readsHeight - trackHeight * (d.track+1) +1;
+          return "translate(" + xCoord + "," + yCoord + ") rotate(-30)"; 
+        } else if (d.readNegativeStrand === false) { // to the left
+          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+          var xCoord = rectStart;
+          var yCoord = readsHeight - trackHeight * (d.track+1) +1;
+          return "translate(" + xCoord + "," + yCoord + ") rotate(30)"; 
+        }
+      })
+      .style("fill", function(d) {
+        if (d.readNegativeStrand === true) {
+          return "red";
+        } else if (d.readNegativeStrand === false) {
+          return "green";
+        }
+      });
+
+    var newArrows = arrowHeads.enter();
+    newArrows
+      .append("g")
+      .append("path")
+        .attr("d", d3.svg.symbol().type("triangle-up").size(22))
+        .attr("transform", function(d) { 
+          if (d.readNegativeStrand === true) { // to the right
+            var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+            var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+            var xCoord = rectStart + rectWidth;
+            var yCoord = readsHeight - trackHeight * (d.track+1) +1;
+            return "translate(" + xCoord + "," + yCoord + ") rotate(-30)"; 
+          } else if (d.readNegativeStrand === false) { // to the left
+            var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+            var xCoord = rectStart;
+            var yCoord = readsHeight - trackHeight * (d.track+1) +1;
+            return "translate(" + xCoord + "," + yCoord + ") rotate(30)"; 
+          }
+        })
+        .style("fill", function(d) {
+          if (d.readNegativeStrand === true) {
+            return "red";
+          } else if (d.readNegativeStrand === false) {
+            return "green";
+          }
+        });
+    
+    var removedArrows = arrowHeads.exit();
+    removedArrows.remove();
   });
-
-
 }
 
 // Try to move very far left
