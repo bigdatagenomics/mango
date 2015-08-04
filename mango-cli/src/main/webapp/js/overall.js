@@ -199,7 +199,6 @@ function renderReference() {
       .attr("class", "axis")
       .call(refAxis);
 
-
   d3.json(referenceStringLocation, function(error, data) {
 
     var rects = refContainer.selectAll("rect").data(data);
@@ -236,6 +235,16 @@ function renderReference() {
           return Math.max(1, width/(viewRegEnd-viewRegStart));
         })
         .attr("height", refHeight)
+        .on("click", function(d) {
+          refDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          refDiv.html(
+            "Base: " + d.reference + "<br>" +
+            "Position: " + d.position)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        })
         .on("mouseover", function(d) {
           refDiv.transition()
             .duration(200)
@@ -281,6 +290,18 @@ function renderFeatures() {
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", featHeight)
         .attr("fill", "#6600CC")
+        .on("click", function(d) {
+          featDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          featDiv.html(
+            "Feature Id: " + d.featureId + "<br>" +
+            "Feature Type: " + d.featureType + "<br>" +
+            "Start: " + d.start + "<br>" +
+            "End: " + d.end)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        })
         .on("mouseover", function(d) {
           featDiv.transition()
           .duration(200)
@@ -337,13 +358,23 @@ function renderVariants() {
         })
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", varHeight)
+        .on("click", function(d) {
+          varDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          varDiv.html(
+            "Contig: " + d.contigName + "<br>" +
+            "Alleles: " + d.alleles)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        })
         .on("mouseover", function(d) {
           varDiv.transition()
-          .duration(200)
-          .style("opacity", .9);
+            .duration(200)
+            .style("opacity", .9);
           varDiv.html(d.alleles)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
         })
         .on("mouseout", function(d) {
           varDiv.transition()
@@ -412,6 +443,18 @@ function renderReads() {
         .attr("height", (trackHeight-2))
         .attr("marker-end", "url(#end)")
         .attr("fill", "steelblue")
+        .on("click", function(d) {
+          readDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          readDiv.html(
+            "Read Name: " + d.readName + "<br>" +
+            "Start: " + d.start + "<br>" +
+            "End: " + d.end + "<br>" +
+            "Reverse Strand: " + d.readNegativeStrand)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        })
         .on("mouseover", function(d) {
           readDiv.transition()
             .duration(200)
