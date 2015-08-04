@@ -62,16 +62,16 @@ input[type="text"] {
 #varArea {
     border-radius: 5px;
     border: 1.5px solid #FF9933;
-    padding: 1px; 
+    padding: 3px; 
 }
 
 #featArea {
     border-radius: 5px;
     border: 1.5px solid #FF99CC;
-    padding: 1px; 
+    padding: 3px; 
 }
 #readsArea {
     border-radius: 5px;
     border: 1.5px solid #996633;
-    padding: 0px; 
+    padding: 3px; 
 }
