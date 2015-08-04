@@ -149,8 +149,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     val referenceString: String = rdd.adamGetReferenceString(region)
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
+    var positionCount: Long = region.start
     for (base <- splitReference) {
-      tracks += new ReferenceJson(base.toUpperCase())
+      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+      positionCount += 1
     }
     tracks.toList
   }
@@ -160,8 +162,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     val referenceString = new String(refSeq.getBases())
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
+    var positionCount: Long = region.start
     for (base <- splitReference) {
-      tracks += new ReferenceJson(base.toUpperCase())
+      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+      positionCount += 1
     }
     tracks.toList
   }
@@ -193,7 +197,7 @@ case class TrackJson(readName: String, start: Long, end: Long, readNegativeStran
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class FreqJson(base: Long, freq: Long)
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
-case class ReferenceJson(reference: String)
+case class ReferenceJson(reference: String, position: Long)
 
 class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
