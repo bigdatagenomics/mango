@@ -95,7 +95,7 @@ object VizReads extends BDGCommandCompanion with Logging {
     var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
     for (rec <- layout.trackAssignments) {
       val aRec = rec._1._2.asInstanceOf[AlignmentRecord]
-      tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, rec._2)
+      tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, aRec.getReadNegativeStrand, rec._2)
     }
     tracks.toList
   }
@@ -189,7 +189,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
 }
 
-case class TrackJson(readName: String, start: Long, end: Long, track: Long)
+case class TrackJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, track: Long)
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class FreqJson(base: Long, freq: Long)
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
@@ -245,7 +245,7 @@ class VizServlet extends ScalatraServlet {
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.readNegativeStrand)
         val readsRDD: RDD[AlignmentRecord] = VizTimers.LoadParquetFile.time {
           VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         }
