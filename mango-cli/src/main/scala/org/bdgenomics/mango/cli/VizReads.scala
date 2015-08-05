@@ -222,7 +222,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  val viewRegion = ReferenceRegion(VizReads.refName, 0, 100)
+  var viewRegion = ReferenceRegion(VizReads.refName, 0, 100)
 
   get("/?") {
     redirect("/overall")
@@ -247,7 +247,7 @@ class VizServlet extends ScalatraServlet {
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
       contentType = "json"
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand)
@@ -295,7 +295,7 @@ class VizServlet extends ScalatraServlet {
   get("/freq/:ref") {
     VizTimers.FreqRequest.time {
       contentType = "json"
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
@@ -324,7 +324,7 @@ class VizServlet extends ScalatraServlet {
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
       contentType = "json"
-      val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.variantsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("variant.end") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
         val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
@@ -361,7 +361,7 @@ class VizServlet extends ScalatraServlet {
 
   get("/features/:ref") {
     VizTimers.FeatRequest.time {
-      val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.featuresPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
@@ -380,7 +380,7 @@ class VizServlet extends ScalatraServlet {
 
   get("/reference/:ref") {
     VizTimers.RefRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.referencePath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= viewRegion.start) && (LongColumn("fragmentStartPosition") <= viewRegion.end))
         val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))

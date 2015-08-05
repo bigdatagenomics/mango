@@ -16,7 +16,7 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 
 // Global Data
 var refSequence;
-
+var readsData;
 // Svg Containers, and vertical guidance lines and animations set here for all divs
 
 // Svg Containers for refArea (exists is all views)
@@ -45,6 +45,17 @@ refContainer.on('mousemove', function () {
         "x2" : xPosition
       })
 });
+
+//Manages changes when clicking checkboxes
+d3.selectAll("input").on("change", checkboxChange);
+
+function checkboxChange() {
+  if (indelCheck.checked) {
+    renderMismatches(readsData)
+  } else {
+    readsSvgContainer.selectAll(".mismatch").remove()
+  }
+}
 
 // Create the scale for the axis
 var refAxisScale = d3.scale.linear()
@@ -215,6 +226,19 @@ function renderReference() {
       })
       .attr("width", function(d) {
         return Math.max(1, width/(viewRegEnd-viewRegStart));
+      })
+      .attr("fill", function(d) {
+        if (d.reference === "G") {
+          return '#00C000'; //GREEN
+        } else if (d.reference === "C") {
+          return '#E00000'; //CRIMSON
+        } else if (d.reference === "A") {
+          return '#5050FF'; //AZURE
+        } else if (d.reference === "T") {
+          return '#E6E600'; //TWEETY BIRD
+        } else if (d.reference === "N") {
+          return '#FFFFFF'; //WHITE
+        }
       });
 
     var newData = rects.enter();
@@ -416,6 +440,7 @@ function renderReads() {
 
   d3.json(readJsonLocation,function(error, data) {
 
+    readsData = data;
     var numTracks = d3.max(data, function(d) {return d.track});
     readsHeight = (numTracks+1)*trackHeight;
 
@@ -481,7 +506,11 @@ function renderReads() {
     var removed = rects.exit();
     removed.remove();
 
-    renderMismatches(data);
+    if (indelCheck.checked) {
+      renderMismatches(data);
+    } else {
+      readsSvgContainer.selectAll(".mismatch").remove()
+    }
 
     var arrowHeads = readsSvgContainer.selectAll("path").data(data);
     var arrowModify = arrowHeads.transition();
@@ -557,10 +586,8 @@ function renderMismatches(data) {
     var curr = 0;
     var refCurr = d.start;
     var str = d.cigar.match(/(\d+|[^\d]+)/g);
+    
     //Loop through each cigar section
-    if (d.track === 667) {
-      console.log("NOOO");
-    }
     for (var i = 0; i < 2*str.length; i+=2) {
       var misLen = parseInt(str[i]);
       var op = str[i+1];
@@ -601,7 +628,11 @@ function renderMismatches(data) {
   });
 
   //Display M: This is where we compare mismatching pairs
-  renderMCigar(matchCompare)
+  if (mismatchCheck.checked) {
+    renderMCigar(matchCompare)
+  } else {
+    readsSvgContainer.selectAll(".mrect").remove()
+  }
 
   //Display Indels
   var misRects = readsSvgContainer.selectAll(".mismatch").data(misMatchArr);

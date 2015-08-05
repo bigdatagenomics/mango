@@ -115,6 +115,9 @@
                       class="btn btn-danger btn-xs"/>
             </form>
         </li>
+        <label class = "checkbox-inline"><input type="checkbox" id="indelCheck"> Show Indels</label>
+        <label class = "checkbox-inline"><input type="checkbox" id="mismatchCheck"> Show Mismatching Bases</label>
+
     </ul>
     <br>
 </div>
