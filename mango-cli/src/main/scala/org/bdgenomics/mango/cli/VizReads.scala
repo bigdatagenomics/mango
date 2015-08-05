@@ -95,7 +95,7 @@ object VizReads extends BDGCommandCompanion with Logging {
     var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
     for (rec <- layout.trackAssignments) {
       val aRec = rec._1._2.asInstanceOf[AlignmentRecord]
-      tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, aRec.getReadNegativeStrand, rec._2)
+      tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, aRec.getReadNegativeStrand, aRec.getSequence, aRec.getCigar, rec._2)
     }
     tracks.toList
   }
@@ -151,8 +151,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     var positionCount: Long = region.start
     for (base <- splitReference) {
-      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
-      positionCount += 1
+      if (!(base.toUpperCase() == "\n")) {
+        tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+        positionCount += 1
+      }
     }
     tracks.toList
   }
@@ -164,8 +166,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     var positionCount: Long = region.start
     for (base <- splitReference) {
-      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
-      positionCount += 1
+      if (!(base.toUpperCase() == "\n")) {
+        tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+        positionCount += 1
+      }
     }
     tracks.toList
   }
@@ -193,7 +197,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
 }
 
-case class TrackJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, track: Long)
+case class TrackJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class FreqJson(base: Long, freq: Long)
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
@@ -221,7 +225,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  val viewRegion = ReferenceRegion(VizReads.refName, 0, 100)
+  val viewRegion = ReferenceRegion(VizReads.refName, 0, 120)
 
   get("/?") {
     redirect("/overall")
@@ -249,7 +253,7 @@ class VizServlet extends ScalatraServlet {
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.readNegativeStrand)
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.sequence, AlignmentRecordField.cigar)
         val readsRDD: RDD[AlignmentRecord] = VizTimers.LoadParquetFile.time {
           VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         }
