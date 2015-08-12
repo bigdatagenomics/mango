@@ -95,7 +95,8 @@ object VizReads extends BDGCommandCompanion with Logging {
     var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
     for (rec <- layout.trackAssignments) {
       val aRec = rec._1._2.asInstanceOf[AlignmentRecord]
-      tracks += new TrackJson(aRec.getReadName, aRec.getStart, aRec.getEnd, aRec.getReadNegativeStrand, aRec.getSequence, aRec.getCigar, rec._2)
+      // +1 due to null at beginning
+      tracks += new TrackJson(aRec.getReadName, aRec.getStart + 1, aRec.getEnd, aRec.getReadNegativeStrand, aRec.getSequence, aRec.getCigar, rec._2)
     }
     tracks.toList
   }
@@ -147,14 +148,14 @@ object VizReads extends BDGCommandCompanion with Logging {
   //Prepares reference information in Json format
   def printReferenceJson(rdd: RDD[NucleotideContigFragment], region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
     val referenceString: String = rdd.adamGetReferenceString(region)
+    println(region)
+    println(referenceString)
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     var positionCount: Long = region.start
     for (base <- splitReference) {
-      if (!(base.toUpperCase() == "\n")) {
-        tracks += new ReferenceJson(base.toUpperCase(), positionCount)
-        positionCount += 1
-      }
+      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+      positionCount += 1
     }
     tracks.toList
   }
@@ -162,14 +163,15 @@ object VizReads extends BDGCommandCompanion with Logging {
   def printIndexedReferenceJson(ifsq: IndexedFastaSequenceFile, region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
     val refSeq = ifsq.getSubsequenceAt(region.referenceName, region.start, region.end)
     val referenceString = new String(refSeq.getBases())
+    println(region)
+    println(refSeq)
+    println(referenceString)
     val splitReference: Array[String] = referenceString.split("")
     var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
     var positionCount: Long = region.start
     for (base <- splitReference) {
-      if (!(base.toUpperCase() == "\n")) {
-        tracks += new ReferenceJson(base.toUpperCase(), positionCount)
-        positionCount += 1
-      }
+      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+      positionCount += 1
     }
     tracks.toList
   }
@@ -225,7 +227,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  val viewRegion = ReferenceRegion(VizReads.refName, 0, 120)
+  val viewRegion = ReferenceRegion(VizReads.refName, 60, 70)
 
   get("/?") {
     redirect("/overall")

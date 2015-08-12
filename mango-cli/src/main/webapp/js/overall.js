@@ -155,6 +155,7 @@ function render(start, end) {
     .text("current region: " + viewRefName + ": "+ viewRegStart + "-" + viewRegEnd);
 
   readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  readJsonLocation = "/reads/" + "M" + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
