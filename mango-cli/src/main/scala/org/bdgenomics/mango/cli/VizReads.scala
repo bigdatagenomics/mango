@@ -296,7 +296,7 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+        val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         val filteredArray = readsRDD.collect()
@@ -325,7 +325,7 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.variantsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("variant.start") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
+        val pred: FilterPredicate = ((LongColumn("variant.end") >= viewRegion.start) && (LongColumn("variant.start") <= viewRegion.end))
         val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
         val variantsRDD: RDD[Genotype] = VizTimers.LoadParquetFile.time {
           VizReads.sc.loadParquetGenotypes(VizReads.variantsPath, predicate = Some(pred), projection = Some(proj))
@@ -362,7 +362,7 @@ class VizServlet extends ScalatraServlet {
     VizTimers.FeatRequest.time {
       val viewRegion = ReferenceRegion("chr" + params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.featuresPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("start") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+        val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
         val featureRDD: RDD[Feature] = VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj))
         val trackinput: RDD[(ReferenceRegion, Feature)] = featureRDD.keyBy(ReferenceRegion(_))
