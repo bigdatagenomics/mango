@@ -552,28 +552,42 @@ function renderMismatches(data) {
   var misMatchArr = [];
   var matchCompare = []
 
+  //Loop through each read
   data.forEach(function(d) {
     var curr = 0;
     var refCurr = d.start;
     var str = d.cigar.match(/(\d+|[^\d]+)/g);
+    //Loop through each cigar section
     for (var i = 0; i < 2*str.length; i+=2) {
       var misLen = parseInt(str[i]);
       var op = str[i+1];
       if (op === "I") {
-        //Operation, mismatch start on reference, mismatch start on read sequence, length, track 
+        //[Operation, mismatch start on reference, mismatch start on read sequence, length, base sequence, track]
         var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track]; 
         misMatchArr.push(misElem);
       } else if (op === "D") {
         var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
         misMatchArr.push(misElem);
-      } else if (op === "X") { //mismatch
+      } else if (op === "X") {
         var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
         refCurr += misLen;
         misMatchArr.push(misElem);
       } else if (op === "M") {
-        var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
-        refCurr += misLen;
-        matchCompare.push(misElem);
+        //NOTE: Data for alignment matches put into separate array for additional processing
+
+        if (refCurr < viewRegStart) { //Substring and Start of mismatch being displayed are different if read starts before region
+          var lenFromViewReg = misLen - (viewRegStart - refCurr);
+          var relStart = viewRegStart-refCurr; //Start index to get bases aligned to reference
+          var relEnd = Math.min((viewRegEnd - refCurr), misLen); //End index to get bases aligned to reference
+          var misElem = [op, viewRegStart, curr, lenFromViewReg, d.sequence.substring(relStart, relEnd), d.track];
+          refCurr += misLen //Where we are in relation to the reference
+          matchCompare.push(misElem);
+        }
+        else {
+          var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
+          refCurr += misLen;
+          matchCompare.push(misElem);   
+        }
       } else if (op === "N") {
         var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
         misMatchArr.push(misElem);
@@ -582,9 +596,11 @@ function renderMismatches(data) {
     }
 
   });
+
+  //Display M: This is where we compare mismatching pairs
   renderMCigar(matchCompare)
 
-  //Operation, mismatch start on reference, mismatch start on read sequence, length, substring, track 
+  //Display Indels
   var misRects = readsSvgContainer.selectAll(".mismatch").data(misMatchArr);
   var modMisRects = misRects.transition()
     .attr("x", (function(d) { 
@@ -661,6 +677,7 @@ function renderMismatches(data) {
 
 }
 
+//Render mismatching bases for cigar operator
 function renderMCigar(data) {
   // Making hover box
   var misMatchDiv = d3.select("#readsArea")
@@ -668,6 +685,7 @@ function renderMCigar(data) {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
+  //Creates data for all mismatch rectangles
   var rectArr = []
   data.forEach(function(d) {
     var readCount = 0;
@@ -693,6 +711,7 @@ function renderMCigar(data) {
     }
   });
   
+  //Displays rects from the data we just calculated
   var mRects = readsSvgContainer.selectAll(".mrect").data(rectArr);
   var modifiedMRects = mRects.transition()
   modifiedMRects
