@@ -557,6 +557,9 @@ function renderMismatches(data) {
     var refCurr = d.start;
     var str = d.cigar.match(/(\d+|[^\d]+)/g);
     //Loop through each cigar section
+    if (d.track === 667) {
+      console.log("NOOO");
+    }
     for (var i = 0; i < 2*str.length; i+=2) {
       var misLen = parseInt(str[i]);
       var op = str[i+1];
@@ -576,8 +579,8 @@ function renderMismatches(data) {
 
         if (refCurr < viewRegStart) { //Substring and Start of mismatch being displayed are different if read starts before region
           var lenFromViewReg = misLen - (viewRegStart - refCurr);
-          var relStart = viewRegStart-refCurr; //Start index to get bases aligned to reference
-          var relEnd = Math.min((viewRegEnd - refCurr), misLen); //End index to get bases aligned to reference
+          var relStart = curr + (viewRegStart-refCurr); //Start index to get bases aligned to reference
+          var relEnd = Math.min(curr + (viewRegEnd - refCurr), curr + misLen); //End index to get bases aligned to reference
           var misElem = [op, viewRegStart, curr, lenFromViewReg, d.sequence.substring(relStart, relEnd), d.track];
           refCurr += misLen //Where we are in relation to the reference
           matchCompare.push(misElem);
