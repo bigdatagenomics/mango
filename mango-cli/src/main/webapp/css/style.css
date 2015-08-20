@@ -53,6 +53,10 @@ input[type="text"] {
     height: 22px;
 }
 
+.checkbox-inline {
+    margin-left:15px;
+}
+
 #refArea {
     border-radius: 5px;
     border: 1.5px solid #8AC007;
