@@ -263,10 +263,18 @@ class VizServlet extends ScalatraServlet {
         }
         write(VizReads.printTrackJson(filteredLayout))
       } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
-        val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-        write(VizReads.printTrackJson(filteredLayout))
+        val idxFile: File = new File(VizReads.readsPath + ".bai")
+        if (!idxFile.exists()) {
+          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
+          val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+          val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+          write(VizReads.printTrackJson(filteredLayout))
+        } else {
+          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
+          val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+          val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+          write(VizReads.printTrackJson(filteredLayout))
+        }
       }
     }
   }
@@ -303,9 +311,16 @@ class VizServlet extends ScalatraServlet {
         val filteredArray = readsRDD.collect()
         write(VizReads.printJsonFreq(filteredArray, viewRegion))
       } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
-        val filteredArray = readsRDD.collect()
-        write(VizReads.printJsonFreq(filteredArray, viewRegion))
+        val idxFile: File = new File(VizReads.readsPath + ".bai")
+        if (!idxFile.exists()) {
+          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
+          val filteredArray = readsRDD.collect()
+          write(VizReads.printJsonFreq(filteredArray, viewRegion))
+        } else {
+          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
+          val filteredArray = readsRDD.collect()
+          write(VizReads.printJsonFreq(filteredArray, viewRegion))
+        }
       }
     }
   }
