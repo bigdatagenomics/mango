@@ -14,14 +14,15 @@ var svgContainer = d3.select("body")
   .attr("height", (height+base))
   .attr("width", (width+base));
 
-render(viewRegStart, viewRegEnd);
+render(viewRefName, viewRegStart, viewRegEnd);
 
 // Function (accessor function) to return the position for the data that falls just left of the cursor
 var bisectData = d3.bisector(function(d) {
   return d.base;
 }).left;
 
-function render(start, end) {
+function render(refName, start, end) {
+  viewRefName = refName;
   viewRegStart = start;
   viewRegEnd = end;
 
@@ -247,8 +248,13 @@ function zoomOut() {
 
 // Redirect based on form input
 function checkForm(form) {
-  var newStart = Math.max(0, form.start.value);
-  var newEnd = Math.max(newStart, form.end.value);
-  form.reset();
-  render(newStart, newEnd);
+  console.log(form.info.value);
+  var info = form.info.value;
+  var refName = info.split(":")[0];
+  var region = info.split(":")[1].split("-");
+  var newStart = Math.max(0, region[0]);
+  var newEnd = Math.max(newStart, region[1]);
+  console.log(newStart)
+  console.log(newEnd)
+  render(refName, newStart, newEnd);
 }
