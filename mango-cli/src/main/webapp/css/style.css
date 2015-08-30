@@ -51,6 +51,7 @@ div.tooltip {
 
 input[type="text"] {
     height: 22px;
+    padding: 4px 12px;
 }
 
 .checkbox-inline {

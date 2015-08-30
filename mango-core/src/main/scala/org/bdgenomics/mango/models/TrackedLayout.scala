@@ -57,6 +57,20 @@ object TrackedLayout {
     val ref2 = rec2._1
     ref1.overlaps(ref2)
   }
+
+  def overlaps[T](rec1: (ReferenceRegion, T), recs2: Seq[(ReferenceRegion, T)]): Boolean = {
+    val ref1 = rec1._1
+
+    recs2.foreach {
+      rec =>
+      {
+        val ref2 = rec._1
+        if (ref1.overlaps(ref2))
+          return true
+      }
+    }
+    return false
+  }
 }
 
 /**
@@ -77,7 +91,8 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
   TrackTimers.FindAddTimer.time {
     sequence match {
       case a: Seq[(ReferenceRegion, AlignmentRecord)] if classTag[T] == classTag[AlignmentRecord] => {
-        a.foreach(findAndAddToTrack)
+        val readPairs: Map[String, Seq[(ReferenceRegion, T)]] = a.groupBy(_._2.readName)
+        findPairsAndAddToTrack(readPairs)
       }
       case f: Seq[(ReferenceRegion, Feature)] if classTag[T] == classTag[Feature] => {
         f.foreach(findAndAddToTrack)
@@ -117,6 +132,30 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
     }
   }
 
+  private def findPairsAndAddToTrack(readPairs: Map[String, Seq[(ReferenceRegion, T)]]) {
+    readPairs.foreach {
+      p =>
+      {
+        val recs: Seq[(ReferenceRegion, T)] = p._2
+        var track: Option[Track] = TrackTimers.FindConflict.time {
+          trackBuilder.find(track => !track.conflicts(recs))
+        }
+
+        track.getOrElse(addTrack(new Track()))
+          recs.foreach {
+            rec: (ReferenceRegion, T) =>
+            {
+              track.map(trackval => {
+                trackval += rec
+                trackBuilder -= trackval
+                trackBuilder += trackval
+              })
+            }
+          }
+      }
+    }
+  }
+
   private def findAndAddToTrack(rec: (ReferenceRegion, T)) {
     val reg = rec._1
     if (reg != null) {
@@ -139,7 +178,12 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
   class Track(val initial: (ReferenceRegion, T)) {
 
     val records = new mutable.ListBuffer[(ReferenceRegion, T)]()
-    records += initial
+    if (initial != null)
+      records += initial
+
+    def this() {
+      this(null)
+    }
 
     def +=(rec: (ReferenceRegion, T)): Track = {
       records += rec
@@ -148,6 +192,9 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
 
     def conflicts(rec: (ReferenceRegion, T)): Boolean =
       records.exists(r => TrackedLayout.overlaps(r, rec))
+
+    def conflicts(recs: Seq[(ReferenceRegion, T)]): Boolean =
+      records.exists(r => TrackedLayout.overlaps(r, recs))
   }
 
 }
