@@ -42,6 +42,7 @@ import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
 import scala.reflect.ClassTag
+import java.io._
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -99,6 +100,17 @@ object VizReads extends BDGCommandCompanion with Logging {
       tracks += new TrackJson(aRec.getReadName, aRec.getStart + 1, aRec.getEnd, aRec.getReadNegativeStrand, aRec.getSequence, aRec.getCigar, rec._2)
     }
     tracks.toList
+  }
+
+  //Prepares reads information in json format
+  def printGroupPairJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[GroupPairJson] = VizTimers.PrintTrackJsonTimer.time {
+    var groupPairs = new scala.collection.mutable.ListBuffer[GroupPairJson]
+    for (track <- layout.trackBuilder) {
+      for (groupPair <- track.groupPairs) {
+        groupPairs += new GroupPairJson(groupPair.start, groupPair.end, track.idx)
+      }
+    }
+    groupPairs.toList
   }
 
   //Prepares frequency information in Json format
@@ -195,6 +207,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 }
 
 case class TrackJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
+case class GroupPairJson(start: Long, end: Long, track: Long)
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class FreqJson(base: Long, freq: Long)
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
@@ -250,7 +263,7 @@ class VizServlet extends ScalatraServlet {
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand)
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
         val readsRDD: RDD[AlignmentRecord] = VizTimers.LoadParquetFile.time {
           VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         }
@@ -261,7 +274,9 @@ class VizServlet extends ScalatraServlet {
         val filteredLayout = VizTimers.MakingTrack.time {
           new OrderedTrackedLayout(collected)
         }
-        write(VizReads.printTrackJson(filteredLayout))
+        // create json file with both tracks and group pairs
+        val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"groupPairs\": " + write(VizReads.printGroupPairJson(filteredLayout)) + "}"
+        json
       } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
         val idxFile: File = new File(VizReads.readsPath + ".bai")
         if (!idxFile.exists()) {

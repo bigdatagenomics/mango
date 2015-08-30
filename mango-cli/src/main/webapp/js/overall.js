@@ -2,7 +2,6 @@ var readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&en
 var referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 var featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-
 //Configuration Variables
 var width = window.innerWidth - 18;
 var base = 50;
@@ -439,9 +438,10 @@ function renderReads() {
   readsSvgContainer.select(".axis").remove();
 
   d3.json(readJsonLocation,function(error, data) {
+    var readsData = data['tracks'];
+    var pairData = data['groupPairs'];
 
-    readsData = data;
-    var numTracks = d3.max(data, function(d) {return d.track});
+    var numTracks = d3.max(readsData, function(d) {return d.track});
     readsHeight = (numTracks+1)*trackHeight;
 
     // Reset size of svg container
@@ -455,10 +455,8 @@ function renderReads() {
 
     // Update height of vertical guide line
     readsVertLine.attr("y2", readsHeight);
-
-    // Add the rectangles
-    var rects = readsSvgContainer.selectAll(".readrect").data(data);
-
+    //Add the rectangles
+    var rects = readsSvgContainer.selectAll(".readrect").data(readsData);
     var modify = rects.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -507,12 +505,12 @@ function renderReads() {
     removed.remove();
 
     if (indelCheck.checked) {
-      renderMismatches(data);
+      renderMismatches(readsData);
     } else {
       readsSvgContainer.selectAll(".mismatch").remove()
     }
 
-    var arrowHeads = readsSvgContainer.selectAll("path").data(data);
+    var arrowHeads = readsSvgContainer.selectAll("path").data(readsData);
     var arrowModify = arrowHeads.transition();
     arrowModify
       .attr("transform", function(d) { 
@@ -566,7 +564,31 @@ function renderReads() {
     
     var removedArrows = arrowHeads.exit();
     removedArrows.remove();
+
+    numTracks = d3.max(pairData, function(d) {return d.track});
+
+    // Add the lines connecting read pairs
+    var groupLines = readsSvgContainer.selectAll(".readPairs").data(pairData);
+    modify = groupLines.transition();
+    modify
+      .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
+      .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }));
+    newData = groupLines.enter();
+    newData
+      .append("g")
+      .append("line")
+        .attr("class", "readPairs")
+        .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
+        .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
+        .attr("strock-width", "1")
+        .attr("stroke", "steelblue");
     
+    var removedGroupPairs = groupLines.exit();
+    removedGroupPairs.remove();
 
   });
 }
