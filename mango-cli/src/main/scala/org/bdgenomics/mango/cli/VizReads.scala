@@ -42,7 +42,6 @@ import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
 import scala.reflect.ClassTag
-import java.io._
 
 object VizTimers extends Metrics {
   //HTTP requests

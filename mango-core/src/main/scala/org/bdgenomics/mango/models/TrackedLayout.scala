@@ -95,7 +95,7 @@ object TrackedLayout {
 class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] with Logging {
   var trackBuilder = new mutable.ListBuffer[Track]()
   val sequence = values.toSeq
-  var numTracks: Integer = 0
+  var numTracks: Int = 0
   log.info("Number of values: " + values.size)
 
   TrackTimers.FindAddTimer.time {
