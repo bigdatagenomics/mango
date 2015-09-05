@@ -232,6 +232,7 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
       val gConflict: Boolean = groupPairs.exists(g => TrackedLayout.overlapsPair(g, recs))
       return (rConflict || gConflict)
     }
+
   }
 
 }
