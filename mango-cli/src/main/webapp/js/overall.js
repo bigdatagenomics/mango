@@ -439,7 +439,7 @@ function renderReads() {
 
   d3.json(readJsonLocation,function(error, data) {
     var readsData = data['tracks'];
-    var pairData = data['groupPairs'];
+    var pairData = data['matePairs'];
 
     var numTracks = d3.max(readsData, function(d) {return d.track});
     readsHeight = (numTracks+1)*trackHeight;
@@ -568,14 +568,14 @@ function renderReads() {
     numTracks = d3.max(pairData, function(d) {return d.track});
 
     // Add the lines connecting read pairs
-    var groupLines = readsSvgContainer.selectAll(".readPairs").data(pairData);
-    modify = groupLines.transition();
+    var mateLines = readsSvgContainer.selectAll(".readPairs").data(pairData);
+    modify = mateLines.transition();
     modify
       .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
       .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
       .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
       .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }));
-    newData = groupLines.enter();
+    newData = mateLines.enter();
     newData
       .append("g")
       .append("line")
@@ -587,7 +587,7 @@ function renderReads() {
         .attr("strock-width", "1")
         .attr("stroke", "steelblue");
     
-    var removedGroupPairs = groupLines.exit();
+    var removedGroupPairs = mateLines.exit();
     removedGroupPairs.remove();
 
   });
