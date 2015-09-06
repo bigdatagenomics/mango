@@ -49,7 +49,7 @@ trait TrackedLayout[T] {
   def trackAssignments: List[((ReferenceRegion, T), Int)]
 }
 
-class GroupPair(val start: Long, val end: Long) {
+class MatePair(val start: Long, val end: Long) {
 }
 
 object TrackedLayout {
@@ -62,24 +62,20 @@ object TrackedLayout {
 
   def overlaps[T](rec1: (ReferenceRegion, T), recs2: Seq[(ReferenceRegion, T)]): Boolean = {
     val ref1 = rec1._1
-    val recs2List = recs2.toList
-    val start: Long = recs2List.min(Ordering.by((r: (ReferenceRegion, T)) => r._1.start))._1.start
-    val end: Long = recs2List.max(Ordering.by((r: (ReferenceRegion, T)) => r._1.end))._1.end
-    ref1.overlaps(new ReferenceRegion(recs2.last._1.referenceName, start, end))
+    if (recs2.size == 1)
+      ref1.overlaps(recs2.head._1)
+    else {
+      val hull: ReferenceRegion = recs2.map(_._1).reduce((v1, v2) => v1.hull(v2))
+      ref1.overlaps(hull)
+    }
+
   }
 
-  def overlapsPair[T](rec1: GroupPair, recs2: Seq[(ReferenceRegion, T)]): Boolean = {
-    val ref1 = new ReferenceRegion(recs2.last._1.referenceName, rec1.start, rec1.end)
-    recs2.foreach {
-      rec =>
-        {
-          val ref2 = rec._1
-          if (ref1.overlaps(ref2))
-            return true
-        }
-    }
-    return false
+  def overlapsPair[T](rec1: MatePair, recs2: Seq[(ReferenceRegion, T)]): Boolean = {
+    val ref1 = new ReferenceRegion(recs2.head._1.referenceName, rec1.start, rec1.end)
+    recs2.exists(_._1.overlaps(ref1))
   }
+
 }
 
 /**
@@ -163,7 +159,7 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
                 }
               }
           }
-          track.addGroupPair(recs)
+          track.addMatePair(recs)
         }
     }
   }
@@ -191,11 +187,9 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
   class Track(val initial: (ReferenceRegion, T)) {
 
     val records = new mutable.ListBuffer[(ReferenceRegion, T)]()
-    val groupPairs = new mutable.ListBuffer[GroupPair]()
+    val matePairs = new mutable.ListBuffer[MatePair]()
     val idx: Int = numTracks
-
-    if (initial != null)
-      records += initial
+    Option(initial).foreach(i => records += i)
 
     def this() {
       this(null)
@@ -206,21 +200,21 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
       this
     }
 
-    def addGroupPair(recs: Seq[(ReferenceRegion, T)]) {
+    def addMatePair(recs: Seq[(ReferenceRegion, T)]) {
       if (recs.size < 2)
         return
       else if (recs.size == 2)
-        createGroupPair(recs(0), recs(1))
+        createMatePair(recs(0), recs(1))
       else
-        log.info("Warning: Group Pairs do not support > 2 pairs per read")
+        log.warn("Mate Pairs do not support > 2 pairs per read")
     }
 
-    def createGroupPair(rec1: (ReferenceRegion, T), rec2: (ReferenceRegion, T)) {
+    def createMatePair(rec1: (ReferenceRegion, T), rec2: (ReferenceRegion, T)) {
       val start: Long = math.min(rec1._1.end, rec2._1.end)
       val end: Long = math.max(rec1._1.start, rec2._1.start)
 
       if (start < end) {
-        groupPairs += new GroupPair(start, end)
+        matePairs += new MatePair(start, end)
       }
     }
 
@@ -229,7 +223,7 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
 
     def conflicts(recs: Seq[(ReferenceRegion, T)]): Boolean = {
       val rConflict: Boolean = records.exists(r => TrackedLayout.overlaps(r, recs))
-      val gConflict: Boolean = groupPairs.exists(g => TrackedLayout.overlapsPair(g, recs))
+      val gConflict: Boolean = matePairs.exists(g => TrackedLayout.overlapsPair(g, recs))
       return (rConflict || gConflict)
     }
 
