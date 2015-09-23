@@ -418,7 +418,6 @@ function renderVariants() {
 }
 
 function renderReads() {
-
   // Making hover box
   var readDiv = d3.select("#readsArea")
     .append("div")
@@ -438,6 +437,7 @@ function renderReads() {
   readsSvgContainer.select(".axis").remove();
 
   d3.json(readJsonLocation,function(error, data) {
+
     var readsData = data['tracks'];
     var pairData = data['matePairs'];
 
@@ -591,6 +591,7 @@ function renderReads() {
     removedGroupPairs.remove();
 
   });
+
 }
 
 
