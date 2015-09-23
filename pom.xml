@@ -226,10 +226,19 @@
       <id>Apache</id>
       <url>http://people.apache.org/repo/m2-snapshot-repository</url>
     </repository>
+    <repository>
+      <id>SparkPackagesRepo</id>
+      <url>http://dl.bintray.com/spark-packages/maven</url>
+    </repository>
   </repositories>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>amplab</groupId>
+        <artifactId>spark-indexedrdd</artifactId>
+        <version>0.3</version>
+      </dependency>
       <dependency>
         <groupId>com.esotericsoftware.kryo</groupId>
         <artifactId>kryo</artifactId>

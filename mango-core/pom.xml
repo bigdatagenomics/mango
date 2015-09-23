@@ -101,6 +101,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>amplab</groupId>
+      <artifactId>spark-indexedrdd</artifactId>
+      <version>0.3</version>
+    </dependency>
+    <dependency>
       <groupId>com.esotericsoftware.kryo</groupId>
       <artifactId>kryo</artifactId>
     </dependency>
