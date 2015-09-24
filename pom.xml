@@ -17,7 +17,7 @@
   <name>mango: an ADAM-based genomics visualization toolkit</name>
 
   <properties>
-    <adam.version>0.17.1-SNAPSHOT</adam.version>
+    <adam.version>0.17.1</adam.version>
     <avro.version>1.7.6</avro.version>
     <java.version>1.7</java.version>
     <scala.version>2.10.3</scala.version>
@@ -260,12 +260,12 @@
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
-        <version>7.6.17.v20150415</version>
+        <version>8.1.17.v20150415</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-webapp</artifactId>
-        <version>7.6.17.v20150415</version>
+        <version>8.1.17.v20150415</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>

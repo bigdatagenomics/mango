@@ -17,13 +17,15 @@
 # limitations under the License.
 #
 
+set -e
+
 # Figure out where MANGO is installed
 MANGO_REPO="$(cd `dirname $0`/..; pwd)"
 
-CLASSPATH=$("$MANGO_REPO"/bin/compute-mango-classpath.sh)
+CLASSPATH="$(. "$MANGO_REPO"/bin/compute-mango-classpath.sh)"
 
-# list of jars to ship with spark; trim off the first and last from the CLASSPATH
+# list of jars to ship with spark; trim off the first from the CLASSPATH --> this is /etc
 # TODO: brittle? assumes appassembler always puts the $BASE/etc first and the CLI jar last
-MANGO_JARS=$(echo "$CLASSPATH" | tr ":" "," | cut -d "," -f 2- | rev | cut -d "," -f 2- | rev)
+MANGO_JARS="$(echo "$CLASSPATH" | tr ":" "\n" | tail -n +2 | perl -pe 's/\n/,/ unless eof' )"
 
 echo "$MANGO_JARS"
