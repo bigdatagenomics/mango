@@ -46,8 +46,10 @@ object TrackTimers extends Metrics {
  * @tparam T the type of value which is to be tracked.
  */
 trait TrackedLayout[T] {
-  def numTracks: Int
   def trackAssignments: List[((ReferenceRegion, T), Int)]
+}
+
+class MatePair(val start: Long, val end: Long) {
 }
 
 object TrackedLayout {
@@ -57,6 +59,23 @@ object TrackedLayout {
     val ref2 = rec2._1
     ref1.overlaps(ref2)
   }
+
+  def overlaps[T](rec1: (ReferenceRegion, T), recs2: Seq[(ReferenceRegion, T)]): Boolean = {
+    val ref1 = rec1._1
+    if (recs2.size == 1)
+      ref1.overlaps(recs2.head._1)
+    else {
+      val hull: ReferenceRegion = recs2.map(_._1).reduce((v1, v2) => v1.hull(v2))
+      ref1.overlaps(hull)
+    }
+
+  }
+
+  def overlapsPair[T](rec1: MatePair, recs2: Seq[(ReferenceRegion, T)]): Boolean = {
+    val ref1 = new ReferenceRegion(recs2.head._1.referenceName, rec1.start, rec1.end)
+    recs2.exists(_._1.overlaps(ref1))
+  }
+
 }
 
 /**
@@ -70,14 +89,16 @@ object TrackedLayout {
  * @tparam T the type of value which is to be tracked.
  */
 class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] with Logging {
-  private var trackBuilder = new mutable.ListBuffer[Track]()
+  var trackBuilder = new mutable.ListBuffer[Track]()
   val sequence = values.toSeq
+  var numTracks: Int = 0
   log.info("Number of values: " + values.size)
 
   TrackTimers.FindAddTimer.time {
     sequence match {
       case a: Seq[(ReferenceRegion, AlignmentRecord)] if classTag[T] == classTag[AlignmentRecord] => {
-        a.foreach(findAndAddToTrack)
+        val readPairs: Map[String, Seq[(ReferenceRegion, T)]] = a.groupBy(_._2.readName)
+        findPairsAndAddToTrack(readPairs)
       }
       case f: Seq[(ReferenceRegion, Feature)] if classTag[T] == classTag[Feature] => {
         f.foreach(findAndAddToTrack)
@@ -93,12 +114,11 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
 
   trackBuilder = trackBuilder.filter(_.records.nonEmpty)
 
-  val numTracks = trackBuilder.size
   log.info("Number of tracks: " + numTracks)
   val trackAssignments: List[((ReferenceRegion, T), Int)] = TrackTimers.TrackAssignmentsTimer.time {
-    val zippedWithIndex = trackBuilder.toList.zip(0 to numTracks)
+    val zippedWithIndex = trackBuilder.toList
     val flatMapped: List[((ReferenceRegion, T), Int)] = zippedWithIndex.flatMap {
-      case (track: Track, idx: Int) => track.records.map(_ -> idx)
+      case (track: Track) => track.records.map(_ -> track.idx)
     }
     flatMapped
   }
@@ -117,6 +137,33 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
     }
   }
 
+  private def findPairsAndAddToTrack(readPairs: Map[String, Seq[(ReferenceRegion, T)]]) {
+    readPairs.foreach {
+      p =>
+        {
+          val recs: Seq[(ReferenceRegion, T)] = p._2
+          val trackOption: Option[Track] = TrackTimers.FindConflict.time {
+            trackBuilder.find(track => !track.conflicts(recs))
+          }
+          val track: Track = trackOption.getOrElse(addTrack(new Track()))
+
+          recs.foreach {
+            rec: (ReferenceRegion, T) =>
+              {
+                if (!track.conflicts(rec)) {
+                  track += rec
+                  trackBuilder -= track
+                  trackBuilder += track
+                } else {
+                  addTrack(new Track(rec))
+                }
+              }
+          }
+          track.addMatePair(recs)
+        }
+    }
+  }
+
   private def findAndAddToTrack(rec: (ReferenceRegion, T)) {
     val reg = rec._1
     if (reg != null) {
@@ -132,6 +179,7 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
   }
 
   private def addTrack(t: Track): Track = {
+    numTracks += 1
     trackBuilder += t
     t
   }
@@ -139,15 +187,46 @@ class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)
   class Track(val initial: (ReferenceRegion, T)) {
 
     val records = new mutable.ListBuffer[(ReferenceRegion, T)]()
-    records += initial
+    val matePairs = new mutable.ListBuffer[MatePair]()
+    val idx: Int = numTracks
+    Option(initial).foreach(i => records += i)
+
+    def this() {
+      this(null)
+    }
 
     def +=(rec: (ReferenceRegion, T)): Track = {
       records += rec
       this
     }
 
+    def addMatePair(recs: Seq[(ReferenceRegion, T)]) {
+      if (recs.size < 2)
+        return
+      else if (recs.size == 2)
+        createMatePair(recs(0), recs(1))
+      else
+        log.warn("Mate Pairs do not support > 2 pairs per read")
+    }
+
+    def createMatePair(rec1: (ReferenceRegion, T), rec2: (ReferenceRegion, T)) {
+      val start: Long = math.min(rec1._1.end, rec2._1.end)
+      val end: Long = math.max(rec1._1.start, rec2._1.start)
+
+      if (start < end) {
+        matePairs += new MatePair(start, end)
+      }
+    }
+
     def conflicts(rec: (ReferenceRegion, T)): Boolean =
       records.exists(r => TrackedLayout.overlaps(r, rec))
+
+    def conflicts(recs: Seq[(ReferenceRegion, T)]): Boolean = {
+      val rConflict: Boolean = records.exists(r => TrackedLayout.overlaps(r, recs))
+      val gConflict: Boolean = matePairs.exists(g => TrackedLayout.overlapsPair(g, recs))
+      return (rConflict || gConflict)
+    }
+
   }
 
 }

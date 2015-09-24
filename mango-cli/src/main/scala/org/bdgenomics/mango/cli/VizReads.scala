@@ -101,6 +101,17 @@ object VizReads extends BDGCommandCompanion with Logging {
     tracks.toList
   }
 
+  //Prepares reads information in json format
+  def printMatePairJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[MatePairJson] = VizTimers.PrintTrackJsonTimer.time {
+    var matePairs = new scala.collection.mutable.ListBuffer[MatePairJson]
+    for (track <- layout.trackBuilder) {
+      for (matePair <- track.matePairs) {
+        matePairs += new MatePairJson(matePair.start, matePair.end, track.idx)
+      }
+    }
+    matePairs.toList
+  }
+
   //Prepares frequency information in Json format
   def printJsonFreq(array: Array[AlignmentRecord], region: ReferenceRegion): List[FreqJson] = VizTimers.PrintJsonFreqTimer.time {
     val freqMap = new java.util.TreeMap[Long, Long]
@@ -195,6 +206,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 }
 
 case class TrackJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
+case class MatePairJson(start: Long, end: Long, track: Long)
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class FreqJson(base: Long, freq: Long)
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
@@ -250,7 +262,7 @@ class VizServlet extends ScalatraServlet {
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand)
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
         val readsRDD: RDD[AlignmentRecord] = VizTimers.LoadParquetFile.time {
           VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         }
@@ -261,7 +273,9 @@ class VizServlet extends ScalatraServlet {
         val filteredLayout = VizTimers.MakingTrack.time {
           new OrderedTrackedLayout(collected)
         }
-        write(VizReads.printTrackJson(filteredLayout))
+        // create json file with both tracks and mate pairs
+        val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
+        json
       } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
         val idxFile: File = new File(VizReads.readsPath + ".bai")
         if (!idxFile.exists()) {
