@@ -43,6 +43,10 @@ import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
 import scala.reflect.ClassTag
 
+import edu.berkeley.cs.amplab.lazymango.LazyMaterialization
+import com.github.akmorrow13.intervaltree._
+import edu.berkeley.cs.amplab.spark.intervalrdd._
+
 object VizTimers extends Metrics {
   //HTTP requests
   val ReadsRequest = timer("GET reads")
@@ -260,12 +264,20 @@ class VizServlet extends ScalatraServlet {
     VizTimers.ReadsRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      //TODO: place this object somewhere else
+      var lazyMat = LazyMaterialization(VizReads.readsPath, VizReads.sc)
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
         val readsRDD: RDD[AlignmentRecord] = VizTimers.LoadParquetFile.time {
           VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
         }
+
+        //TODO: somehow save the chromosome of the current interval (currently viewRegion.refName, make sure it's chrM and not M or settle on standard notation)
+        //TODO: the person1 flag is just tempoary
+        //get(chr: String, i: Interval[Long], k: String)
+        lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1")
+        //TODO: make this take in the input of LazyMaterialization.get, which is Option[Map[Interval[Long], List[(String, AlignmentRecord)]]]
         val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
         val collected = VizTimers.DoingCollect.time {
           trackinput.collect()
