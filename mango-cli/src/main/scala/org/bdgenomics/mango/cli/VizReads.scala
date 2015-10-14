@@ -276,12 +276,16 @@ class VizServlet extends ScalatraServlet {
         //TODO: somehow save the chromosome of the current interval (currently viewRegion.refName, make sure it's chrM and not M or settle on standard notation)
         //TODO: the person1 flag is just tempoary
         //get(chr: String, i: Interval[Long], k: String)
-        lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1")
+        println(lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1"))
+
         //TODO: make this take in the input of LazyMaterialization.get, which is Option[Map[Interval[Long], List[(String, AlignmentRecord)]]]
+
         val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-        val collected = VizTimers.DoingCollect.time {
+        val collected: Array[(ReferenceRegion, AlignmentRecord)] = VizTimers.DoingCollect.time {
           trackinput.collect()
         }
+
+        //TODO: make this take in a map
         val filteredLayout = VizTimers.MakingTrack.time {
           new OrderedTrackedLayout(collected)
         }
@@ -296,10 +300,23 @@ class VizServlet extends ScalatraServlet {
           val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
           write(VizReads.printTrackJson(filteredLayout))
         } else {
-          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
-          val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
-          val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+          // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of values: 100
+          // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of tracks: 91
+          val getMap = lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1")
+          val input: List[Map[Interval[Long], List[(String, AlignmentRecord)]]] = getMap.toList
+          val convertedInput: List[(String, AlignmentRecord)] = input.flatMap(elem => elem.toArray.flatMap(
+            test => test._2))
+          val correct: List[(ReferenceRegion, AlignmentRecord)] = convertedInput.map(elem => (ReferenceRegion(elem._2), elem._2))
+          println(correct)
+          val filteredLayout = new OrderedTrackedLayout(correct)
           write(VizReads.printTrackJson(filteredLayout))
+
+          // 15/10/13 22:25:06 INFO OrderedTrackedLayout: Number of values: 1074
+          // 15/10/13 22:25:07 INFO OrderedTrackedLayout: Number of tracks: 1006
+          // val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
+          // val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
+          // val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
+          // write(VizReads.printTrackJson(filteredLayout))
         }
       }
     }
