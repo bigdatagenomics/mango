@@ -89,7 +89,9 @@ object VizReads extends BDGCommandCompanion with Logging {
   var referencePath: String = ""
   var refName: String = ""
   var readsPath1: String = ""
+  var samp1Name: String = ""
   var readsPath2: String = ""
+  var samp2Name: String = ""
   var readsExist: Boolean = false
   var variantsPath: String = ""
   var variantsExist: Boolean = false
@@ -286,10 +288,12 @@ class VizServlet extends ScalatraServlet {
       var retJson = ""
       for (elem <- withRefReg) {
         val filteredLayout = new OrderedTrackedLayout(elem._2)
-        retJson += "{ \"sampleId\": " + elem._1 + ", \"data\": " +
+        retJson += "\"" + elem._1 + "\":" +
           "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) +
-          ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}" + "}"
+          ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "},"
       }
+      retJson = retJson.dropRight(1)
+      retJson = "{" + retJson + "}"
       retJson
     }
   }
@@ -299,6 +303,7 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+        "samples" -> (VizReads.samp1Name, VizReads.samp2Name),
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
         "featuresExist" -> VizReads.featuresExist))
@@ -457,6 +462,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       case Some(_) => {
         if (args.readsPath1.endsWith(".bam") || args.readsPath1.endsWith(".sam") || args.readsPath1.endsWith(".adam")) {
           VizReads.readsPath1 = args.readsPath1
+          VizReads.samp1Name = args.samp1Name
           VizReads.readsExist = true
           VizReads.lazyMat.loadSample(args.samp1Name, args.readsPath1)
         } else {
@@ -475,6 +481,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       case Some(_) => {
         if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam") || args.readsPath2.endsWith(".adam")) {
           VizReads.readsPath2 = args.readsPath2
+          VizReads.samp2Name = args.samp2Name
           VizReads.readsExist = true
           VizReads.lazyMat.loadSample(args.samp2Name, args.readsPath2)
         } else {
@@ -527,6 +534,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     VizReads.server.setHandler(handlers)
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
     VizReads.server.start()
+    println("setting lazy mat")
     println("View the visualization at: " + args.port)
     println("Frequency visualization at: /freq")
     println("Overlapping reads visualization at: /reads")
