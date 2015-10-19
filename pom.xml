@@ -269,12 +269,12 @@
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
-        <version>7.6.17.v20150415</version>
+        <version>8.1.17.v20150415</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-webapp</artifactId>
-        <version>7.6.17.v20150415</version>
+        <version>8.1.17.v20150415</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
@@ -354,6 +354,21 @@
         <groupId>com.github.samtools</groupId>
         <artifactId>htsjdk</artifactId>
         <version>${htsjdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.berkeley.cs.amplab</groupId>
+        <artifactId>lazymango_2.10</artifactId>
+        <version>0.1-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.berkeley.cs.amplab</groupId>
+        <artifactId>spark-intervalrdd_2.10</artifactId>
+        <version>0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.akmorrow13</groupId>
+        <artifactId>interval-tree_2.10</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
