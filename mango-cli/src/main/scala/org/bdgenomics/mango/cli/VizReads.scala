@@ -94,6 +94,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var variantsExist: Boolean = false
   var featuresPath: String = ""
   var featuresExist: Boolean = false
+  var lazyMatVR: LazyMaterialization = null
   var server: org.eclipse.jetty.server.Server = null
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
@@ -279,8 +280,9 @@ class VizServlet extends ScalatraServlet {
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       println("view region")
       println(viewRegion)
-      var lazyMat = LazyMaterialization(VizReads.readsPath, VizReads.sc)
-
+      if (VizReads.lazyMatVR == null) {
+        VizReads.lazyMatVR = LazyMaterialization(VizReads.readsPath, VizReads.sc)
+      }
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
@@ -291,7 +293,7 @@ class VizServlet extends ScalatraServlet {
         //TODO: somehow save the chromosome of the current interval (currently viewRegion.refName, make sure it's chrM and not M or settle on standard notation)
         //TODO: the person1 flag is just tempoary
         //get(chr: String, i: Interval[Long], k: String)
-        println(lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1"))
+        // println(lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1"))
 
         //TODO: make this take in the input of LazyMaterialization.get, which is Option[Map[Interval[Long], List[(String, AlignmentRecord)]]]
 
@@ -316,21 +318,22 @@ class VizServlet extends ScalatraServlet {
           // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of values: 100
           // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of tracks: 91
           println("processing bam")
-          val getMap = lazyMat.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1")
+          val getMap = VizReads.lazyMatVR.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1")
           val input: List[Map[Interval[Long], List[(String, AlignmentRecord)]]] = getMap.toList
           val convertedInput: List[(String, AlignmentRecord)] = input.flatMap(elem => elem.toArray.flatMap(
             test => test._2))
           val correct: List[(ReferenceRegion, AlignmentRecord)] = convertedInput.map(elem => (ReferenceRegion(elem._2), elem._2))
           println(correct)
           val filteredLayout = new OrderedTrackedLayout(correct)
-          //val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
-          //json
+          val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
+          // json
           // 15/10/13 22:25:06 INFO OrderedTrackedLayout: Number of values: 1074
           // 15/10/13 22:25:07 INFO OrderedTrackedLayout: Number of tracks: 1006
           // val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
           // val trackinput: RDD[(ReferenceRegion, AlignmentRecord)] = readsRDD.keyBy(ReferenceRegion(_))
           // val filteredLayout = new OrderedTrackedLayout(trackinput.collect())
-          write(VizReads.printTrackJson(filteredLayout))
+          // val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
+          // json
         }
       }
     }
