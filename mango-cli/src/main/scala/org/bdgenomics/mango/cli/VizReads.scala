@@ -100,14 +100,6 @@ object VizReads extends BDGCommandCompanion with Logging {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
 
-  // get block chunk of request
-  def getPartChunk(viewRegion: ReferenceRegion): Interval[Long] = VizTimers.GetPartChunkTimer.time {
-    val start = viewRegion.start / VizReads.blockSize * VizReads.blockSize
-    val end = viewRegion.end / VizReads.blockSize * VizReads.blockSize + (VizReads.blockSize - 1)
-    val interval: Interval[Long] = new Interval(start, end)
-    interval
-  }
-
   //Prepares reads information in json format
   def printTrackJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[TrackJson] = VizTimers.PrintTrackJsonTimer.time {
     var tracks = new scala.collection.mutable.ListBuffer[TrackJson]
@@ -318,15 +310,15 @@ class VizServlet extends ScalatraServlet {
           // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of values: 100
           // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of tracks: 91
           println("processing bam")
-          val getMap = VizReads.lazyMatVR.get("chrM", new Interval(viewRegion.start, viewRegion.end), "person1")
-          val input: List[Map[Interval[Long], List[(String, AlignmentRecord)]]] = getMap.toList
-          val convertedInput: List[(String, AlignmentRecord)] = input.flatMap(elem => elem.toArray.flatMap(
-            test => test._2))
-          val correct: List[(ReferenceRegion, AlignmentRecord)] = convertedInput.map(elem => (ReferenceRegion(elem._2), elem._2))
-          println(correct)
+          val getMap = VizReads.lazyMatVR.get(viewRegion, "person1")
+          val input: List[Map[ReferenceRegion, List[(String, List[AlignmentRecord])]]] = getMap.toList
+          val convertedInput: List[(String, List[AlignmentRecord])] = input.flatMap(elem => elem.flatMap(test => test._2))
+          val justAlignments: List[AlignmentRecord] = convertedInput.map(elem => elem._2).flatten
+          val correct: List[(ReferenceRegion, AlignmentRecord)] = justAlignments.map(elem => (ReferenceRegion(elem), elem))
+          println(correct.size)
           val filteredLayout = new OrderedTrackedLayout(correct)
           val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
-          // json
+          json
           // 15/10/13 22:25:06 INFO OrderedTrackedLayout: Number of values: 1074
           // 15/10/13 22:25:07 INFO OrderedTrackedLayout: Number of tracks: 1006
           // val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
