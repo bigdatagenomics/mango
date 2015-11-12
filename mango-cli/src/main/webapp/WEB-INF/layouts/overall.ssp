@@ -107,7 +107,7 @@
         <li>
             <form name="regForm" method="GET" class="form-inline">
                 region:
-                <input type="text" name="info" size="20" class="form-control" placeholder="refName:start-end">
+                <input type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
                 <input name="Submit button"
                       type="button"
                       value="Submit"

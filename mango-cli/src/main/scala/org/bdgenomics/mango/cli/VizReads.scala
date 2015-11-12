@@ -270,6 +270,9 @@ class VizServlet extends ScalatraServlet {
 
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      val sampleId = params("sample")
+      println("sampleId")
+      println(sampleId)
       println("view region")
       println(viewRegion)
       if (VizReads.lazyMatVR == null) {
@@ -316,6 +319,7 @@ class VizServlet extends ScalatraServlet {
           val justAlignments: List[AlignmentRecord] = convertedInput.map(elem => elem._2).flatten
           val correct: List[(ReferenceRegion, AlignmentRecord)] = justAlignments.map(elem => (ReferenceRegion(elem), elem))
           println(correct.size)
+          println(sampleId)
           val filteredLayout = new OrderedTrackedLayout(correct)
           val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
           json

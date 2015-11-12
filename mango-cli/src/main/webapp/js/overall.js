@@ -1,4 +1,5 @@
-var readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+var sampleId = ""
+var readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
 var referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 var featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
@@ -165,7 +166,7 @@ function render(refName, start, end) {
   d3.select("h2")
     .text("Current Region: " + viewRefName + ":"+ viewRegStart + "-" + viewRegEnd);
 
-  readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
   referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
@@ -903,8 +904,9 @@ function zoomOut() {
 // Redirect based on form input
 function checkForm(form) {
   var info = form.info.value;
-  var refName = info.split(":")[0];
-  var region = info.split(":")[1].split("-");
+  sampleId = info.split(":")[0]
+  var refName = info.split(":")[1];
+  var region = info.split(":")[2].split("-");
   var newStart = Math.max(0, region[0]);
   var newEnd = Math.max(newStart, region[1]);
   render(refName, newStart, newEnd);
