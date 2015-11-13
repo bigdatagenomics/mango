@@ -97,7 +97,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   var featuresExist: Boolean = false
   var lazyMat: LazyMaterialization[AlignmentRecord] = null //TODO: make this generic
   var server: org.eclipse.jetty.server.Server = null
-  var lazyMat: LazyMaterialization = null
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
@@ -529,7 +528,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
     VizReads.server.start()
     println("setting lazy mat")
-    VizReads.lazyMat = LazyMaterialization(VizReads.readsPath, VizReads.sc)
     println("View the visualization at: " + args.port)
     println("Frequency visualization at: /freq")
     println("Overlapping reads visualization at: /reads")
