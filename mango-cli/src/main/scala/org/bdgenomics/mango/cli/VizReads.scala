@@ -286,10 +286,14 @@ class VizServlet extends ScalatraServlet {
       var retJson = ""
       for (elem <- withRefReg) {
         val filteredLayout = new OrderedTrackedLayout(elem._2)
-        retJson += "{ \"sampleId\": " + elem._1 + ", \"data\": " +
+        println(elem._1)
+        retJson += "\"" + elem._1 + "\":" +
           "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) +
-          ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}" + "}"
+          ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "},"
       }
+      retJson = retJson.dropRight(1)
+      retJson = "{" + retJson + "}"
+      println(retJson)
       retJson
     }
   }

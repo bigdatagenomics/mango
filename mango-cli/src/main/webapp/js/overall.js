@@ -438,15 +438,8 @@ function renderReads() {
   readsSvgContainer.select(".axis").remove();
 
   d3.json(readJsonLocation,function(error, data) {
-
-    var readsData = data['tracks'];
-    var pairData = data['matePairs'];
-
-    var numTracks = d3.max(readsData, function(d) {return d.track});
-    readsHeight = (numTracks+1)*trackHeight;
-
-  d3.json(readJsonLocation,function(error, data) {
     console.log(data)
+    samples = ['sample1', 'sample2']
     for (var i = 0; i < samples.length; i++) {
       var readsData = data['tracks'];
       var pairData = data['matePairs'];
@@ -501,46 +494,19 @@ function renderReads() {
           .duration(500)
           .style("opacity", 0);
         });
-    
-    var removed = rects.exit();
-    removed.remove();
+      
+      var removed = rects.exit();
+      removed.remove();
 
-    if (indelCheck.checked) {
-      renderMismatches(readsData);
-    } else {
-      readsSvgContainer.selectAll(".mismatch").remove()
-    }
+      if (indelCheck.checked) {
+        renderMismatches(readsData);
+      } else {
+        readsSvgContainer.selectAll(".mismatch").remove()
+      }
 
-    var arrowHeads = readsSvgContainer.selectAll("path").data(readsData);
-    var arrowModify = arrowHeads.transition();
-    arrowModify
-      .attr("transform", function(d) { 
-        if (d.readNegativeStrand === true) { // to the right
-          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
-          var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
-          var xCoord = rectStart + rectWidth;
-          var yCoord = readsHeight - trackHeight * (d.track+1) +1;
-          return "translate(" + xCoord + "," + yCoord + ") rotate(-30)"; 
-        } else if (d.readNegativeStrand === false) { // to the left
-          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
-          var xCoord = rectStart;
-          var yCoord = readsHeight - trackHeight * (d.track+1) +1;
-          return "translate(" + xCoord + "," + yCoord + ") rotate(30)"; 
-        }
-      })
-      .style("fill", function(d) {
-        if (d.readNegativeStrand === true) {
-          return "red";
-        } else if (d.readNegativeStrand === false) {
-          return "green";
-        }
-      });
-
-    var newArrows = arrowHeads.enter();
-    newArrows
-      .append("g")
-      .append("path")
-        .attr("d", d3.svg.symbol().type("triangle-up").size(22))
+      var arrowHeads = readsSvgContainer.selectAll("path").data(readsData);
+      var arrowModify = arrowHeads.transition();
+      arrowModify
         .attr("transform", function(d) { 
           if (d.readNegativeStrand === true) { // to the right
             var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
@@ -562,37 +528,63 @@ function renderReads() {
             return "green";
           }
         });
-    
-    var removedArrows = arrowHeads.exit();
-    removedArrows.remove();
 
-    numTracks = d3.max(pairData, function(d) {return d.track});
+      var newArrows = arrowHeads.enter();
+      newArrows
+        .append("g")
+        .append("path")
+          .attr("d", d3.svg.symbol().type("triangle-up").size(22))
+          .attr("transform", function(d) { 
+            if (d.readNegativeStrand === true) { // to the right
+              var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+              var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+              var xCoord = rectStart + rectWidth;
+              var yCoord = readsHeight - trackHeight * (d.track+1) +1;
+              return "translate(" + xCoord + "," + yCoord + ") rotate(-30)"; 
+            } else if (d.readNegativeStrand === false) { // to the left
+              var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+              var xCoord = rectStart;
+              var yCoord = readsHeight - trackHeight * (d.track+1) +1;
+              return "translate(" + xCoord + "," + yCoord + ") rotate(30)"; 
+            }
+          })
+          .style("fill", function(d) {
+            if (d.readNegativeStrand === true) {
+              return "red";
+            } else if (d.readNegativeStrand === false) {
+              return "green";
+            }
+          });
+      
+      var removedArrows = arrowHeads.exit();
+      removedArrows.remove();
 
-    // Add the lines connecting read pairs
-    var mateLines = readsSvgContainer.selectAll(".readPairs").data(pairData);
-    modify = mateLines.transition();
-    modify
-      .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
-      .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }));
-    newData = mateLines.enter();
-    newData
-      .append("g")
-      .append("line")
-        .attr("class", "readPairs")
+      numTracks = d3.max(pairData, function(d) {return d.track});
+
+      // Add the lines connecting read pairs
+      var mateLines = readsSvgContainer.selectAll(".readPairs").data(pairData);
+      modify = mateLines.transition();
+      modify
         .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
         .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
         .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-        .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
-        .attr("strock-width", "1")
-        .attr("stroke", "steelblue");
-    
-    var removedGroupPairs = mateLines.exit();
-    removedGroupPairs.remove();
-
+        .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }));
+      newData = mateLines.enter();
+      newData
+        .append("g")
+        .append("line")
+          .attr("class", "readPairs")
+          .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+          .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
+          .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+          .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
+          .attr("strock-width", "1")
+          .attr("stroke", "steelblue");
+      
+      var removedGroupPairs = mateLines.exit();
+      removedGroupPairs.remove();
+    }
   });
-
 }
 
 
