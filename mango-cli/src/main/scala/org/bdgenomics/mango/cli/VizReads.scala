@@ -94,7 +94,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var variantsExist: Boolean = false
   var featuresPath: String = ""
   var featuresExist: Boolean = false
-  var lazyMatVR: LazyMaterialization = null
+  var lazyMat: LazyMaterialization[AlignmentRecord] = null //TODO: make this generic
   var server: org.eclipse.jetty.server.Server = null
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
@@ -275,9 +275,6 @@ class VizServlet extends ScalatraServlet {
       println(sampleId)
       println("view region")
       println(viewRegion)
-      if (VizReads.lazyMatVR == null) {
-        VizReads.lazyMatVR = LazyMaterialization(VizReads.readsPath, VizReads.sc)
-      }
       if (VizReads.readsPath.endsWith(".adam")) {
         val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
         val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
@@ -313,8 +310,7 @@ class VizServlet extends ScalatraServlet {
           // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of values: 100
           // 15/10/13 22:28:08 INFO OrderedTrackedLayout: Number of tracks: 91
           println("processing bam")
-          val getMap = VizReads.lazyMatVR.get(viewRegion, "person1")
-          val input: List[Map[ReferenceRegion, List[(String, List[AlignmentRecord])]]] = getMap.toList
+          val input: List[Map[ReferenceRegion, List[(String, List[AlignmentRecord])]]] = VizReads.lazyMat.get(viewRegion, sampleId).toList
           val convertedInput: List[(String, List[AlignmentRecord])] = input.flatMap(elem => elem.flatMap(test => test._2))
           val justAlignments: List[AlignmentRecord] = convertedInput.map(elem => elem._2).flatten
           val correct: List[(ReferenceRegion, AlignmentRecord)] = justAlignments.map(elem => (ReferenceRegion(elem), elem))
@@ -482,6 +478,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
+    VizReads.lazyMat = LazyMaterialization(sc)
 
     if (args.referencePath.endsWith(".fa") || args.referencePath.endsWith(".fasta") || args.referencePath.endsWith(".adam")) {
       VizReads.referencePath = args.referencePath
@@ -493,13 +490,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     VizReads.refName = args.refName
 
     val readsPath = Option(args.readsPath)
-    // VizReads.lazyMat = LazyMaterialization(readsPath, sc)
 
     readsPath match {
       case Some(_) => {
         if (args.readsPath.endsWith(".bam") || args.readsPath.endsWith(".sam") || args.readsPath.endsWith(".adam")) {
           VizReads.readsPath = args.readsPath
           VizReads.readsExist = true
+          VizReads.lazyMat.loadSample("person1", args.readsPath) // TODO: make this a command line argument
         } else {
           log.info("WARNING: Invalid input for reads file")
           println("WARNING: Invalid input for reads file")

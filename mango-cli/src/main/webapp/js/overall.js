@@ -164,7 +164,7 @@ function render(refName, start, end) {
 
   //Add Region Info
   d3.select("h2")
-    .text("Current Region: " + viewRefName + ":"+ viewRegStart + "-" + viewRegEnd);
+    .text("Current Region: " + sampleId + viewRefName + ":"+ viewRegStart + "-" + viewRegEnd);
 
   readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
   referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;

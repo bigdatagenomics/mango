@@ -358,7 +358,7 @@
       <dependency>
         <groupId>edu.berkeley.cs.amplab</groupId>
         <artifactId>lazymango_2.10</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.1-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>edu.berkeley.cs.amplab</groupId>
