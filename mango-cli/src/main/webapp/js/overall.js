@@ -445,30 +445,30 @@ function renderReads() {
     var numTracks = d3.max(readsData, function(d) {return d.track});
     readsHeight = (numTracks+1)*trackHeight;
 
-    // Reset size of svg container
-    readsSvgContainer.attr("height", (readsHeight+ base));
+  d3.json(readJsonLocation,function(error, data) {
+    console.log(data)
+    for (var i = 0; i < samples.length; i++) {
+      var readsData = data['tracks'];
+      var pairData = data['matePairs'];
 
-    // Add the axis to the container
-    readsSvgContainer.append("g")
-      .attr("class", "axis")
-      .attr("transform", "translate(0, " + readsHeight + ")")
-      .call(readsAxis);
+      var numTracks = d3.max(readsData, function(d) {return d.track});
+      readsHeight = (numTracks+1)*trackHeight;
 
-    // Update height of vertical guide line
-    readsVertLine.attr("y2", readsHeight);
-    //Add the rectangles
-    var rects = readsSvgContainer.selectAll(".readrect").data(readsData);
-    var modify = rects.transition();
-    modify
-      .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
-      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
-    
-    var newData = rects.enter();
-    newData
-      .append("g")
-      .append("rect")
-        .attr("class", "readrect")
+      // Reset size of svg container
+      readsSvgContainer[i].attr("height", (readsHeight+ base));
+
+      // Add the axis to the container
+      readsSvgContainer[i].append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(0, " + readsHeight + ")")
+        .call(readsAxis);
+
+      // Update height of vertical guide line
+      $(".verticalLine").attr("y2", readsHeight);
+      //Add the rectangles
+      var rects = readsSvgContainer[i].selectAll(".readrect").data(readsData);
+      var modify = rects.transition();
+      modify
         .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
         .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
