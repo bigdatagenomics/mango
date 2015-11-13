@@ -88,7 +88,8 @@ object VizReads extends BDGCommandCompanion with Logging {
   var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var referencePath: String = ""
   var refName: String = ""
-  var readsPath: String = ""
+  var readsPath1: String = ""
+  var readsPath2: String = ""
   var readsExist: Boolean = false
   var variantsPath: String = ""
   var variantsExist: Boolean = false
@@ -229,8 +230,17 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 1)
   var refName: String = null
 
-  @Args4jOption(required = false, name = "-read_file", usage = "The reads file to view")
-  var readsPath: String = null
+  @Args4jOption(required = false, name = "-sample1", usage = "The name of the first sample")
+  var samp1Name: String = null
+
+  @Args4jOption(required = false, name = "-read_file1", usage = "The first reads file to view")
+  var readsPath1: String = null
+
+  @Args4jOption(required = false, name = "-sample2", usage = "The name of the second sample")
+  var samp2Name: String = null
+
+  @Args4jOption(required = false, name = "-read_file2", usage = "The second reads file to view")
+  var readsPath2: String = null
 
   @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
   var variantsPath: String = null
@@ -269,14 +279,18 @@ class VizServlet extends ScalatraServlet {
     VizTimers.ReadsRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      val sampleId = params("sample")
-      val input: List[Map[ReferenceRegion, List[(String, List[AlignmentRecord])]]] = VizReads.lazyMat.get(viewRegion, sampleId).toList
+      val sampleIds: List[String] = params("sample").split(",").toList
+      val input: List[Map[ReferenceRegion, List[(String, List[AlignmentRecord])]]] = VizReads.lazyMat.multiget(viewRegion, sampleIds).toList
       val convertedInput: List[(String, List[AlignmentRecord])] = input.flatMap(elem => elem.flatMap(test => test._2))
-      val justAlignments: List[AlignmentRecord] = convertedInput.map(elem => elem._2).flatten
-      val correct: List[(ReferenceRegion, AlignmentRecord)] = justAlignments.map(elem => (ReferenceRegion(elem), elem))
-      val filteredLayout = new OrderedTrackedLayout(correct)
-      val json = "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) + ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}"
-      json
+      val withRefReg: List[(String, List[(ReferenceRegion, AlignmentRecord)])] = convertedInput.map(elem => (elem._1, elem._2.map(t => (ReferenceRegion(t), t))))
+      var retJson = ""
+      for (elem <- withRefReg) {
+        val filteredLayout = new OrderedTrackedLayout(elem._2)
+        retJson += "{ \"sampleId\": " + elem._1 + ", \"data\": " +
+          "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) +
+          ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "}" + "}"
+      }
+      retJson
     }
   }
 
@@ -301,30 +315,30 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/freq/:ref") {
-    VizTimers.FreqRequest.time {
-      contentType = "json"
-      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      if (VizReads.readsPath.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
-        val filteredArray = readsRDD.collect()
-        write(VizReads.printJsonFreq(filteredArray, viewRegion))
-      } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
-        val idxFile: File = new File(VizReads.readsPath + ".bai")
-        if (!idxFile.exists()) {
-          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
-          val filteredArray = readsRDD.collect()
-          write(VizReads.printJsonFreq(filteredArray, viewRegion))
-        } else {
-          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
-          val filteredArray = readsRDD.collect()
-          write(VizReads.printJsonFreq(filteredArray, viewRegion))
-        }
-      }
-    }
-  }
+  // get("/freq/:ref") {
+  //   VizTimers.FreqRequest.time {
+  //     contentType = "json"
+  //     viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+  //     if (VizReads.readsPath.endsWith(".adam")) {
+  //       val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+  //       val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
+  //       val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath, predicate = Some(pred), projection = Some(proj))
+  //       val filteredArray = readsRDD.collect()
+  //       write(VizReads.printJsonFreq(filteredArray, viewRegion))
+  //     } else if (VizReads.readsPath.endsWith(".sam") || VizReads.readsPath.endsWith(".bam")) {
+  //       val idxFile: File = new File(VizReads.readsPath + ".bai")
+  //       if (!idxFile.exists()) {
+  //         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath).filterByOverlappingRegion(viewRegion)
+  //         val filteredArray = readsRDD.collect()
+  //         write(VizReads.printJsonFreq(filteredArray, viewRegion))
+  //       } else {
+  //         val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath, viewRegion)
+  //         val filteredArray = readsRDD.collect()
+  //         write(VizReads.printJsonFreq(filteredArray, viewRegion))
+  //       }
+  //     }
+  //   }
+  // }
 
   get("/variants") {
     contentType = "text/html"
@@ -438,14 +452,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     VizReads.refName = args.refName
 
-    val readsPath = Option(args.readsPath)
-
-    readsPath match {
+    val readsPath1 = Option(args.readsPath1)
+    readsPath1 match {
       case Some(_) => {
-        if (args.readsPath.endsWith(".bam") || args.readsPath.endsWith(".sam") || args.readsPath.endsWith(".adam")) {
-          VizReads.readsPath = args.readsPath
+        if (args.readsPath1.endsWith(".bam") || args.readsPath1.endsWith(".sam") || args.readsPath1.endsWith(".adam")) {
+          VizReads.readsPath1 = args.readsPath1
           VizReads.readsExist = true
-          VizReads.lazyMat.loadSample("person1", args.readsPath) // TODO: make this a command line argument
+          VizReads.lazyMat.loadSample(args.samp1Name, args.readsPath1)
         } else {
           log.info("WARNING: Invalid input for reads file")
           println("WARNING: Invalid input for reads file")
@@ -454,6 +467,24 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       case None => {
         log.info("WARNING: No reads file provided")
         println("WARNING: No reads file provided")
+      }
+    }
+
+    val readsPath2 = Option(args.readsPath2)
+    readsPath2 match {
+      case Some(_) => {
+        if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam") || args.readsPath2.endsWith(".adam")) {
+          VizReads.readsPath2 = args.readsPath2
+          VizReads.readsExist = true
+          VizReads.lazyMat.loadSample(args.samp2Name, args.readsPath2)
+        } else {
+          log.info("WARNING: Invalid input for second reads file")
+          println("WARNING: Invalid input for second reads file")
+        }
+      }
+      case None => {
+        log.info("WARNING: No second reads file provided")
+        println("WARNING: No second reads file provided")
       }
     }
 
