@@ -117,8 +117,11 @@
 </div>
 
 <br>
-<div id="refArea"></div>
-<div id="varArea"></div>
+<div class="graphArea" id="refArea"></div>
+<div class="graphArea" id ="variantViz"</div>
+  <div id="varArea"></div>
+  <div id="varFreqArea"></div>
+</div>
 <br>
 
 <script>
@@ -129,5 +132,6 @@
   var variantsExist = true
   var featuresExist = false
 </script>
-<script src="js/overall.js"></script>
+<script src="js/utilities.js"></script>
+<script src="js/variants.js"></script>
 </html>

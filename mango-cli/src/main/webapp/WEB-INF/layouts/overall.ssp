@@ -126,10 +126,10 @@
 
 <br>
 
-<div id="refArea"></div>
-<div id="featArea"></div>
-<div id="varArea"></div>
-<div id="readsArea"></div>
+<div class="graphArea" id="refArea"></div>
+<div class="graphArea" id="featArea"></div>
+<div class="graphArea" id="varArea"></div>
+<div class="graphArea" id="readsArea"></div>
 <br>
 
 <script>
@@ -142,5 +142,7 @@
   var variantsExist = ${variantsExist};
   var featuresExist = ${featuresExist};
 </script>
+<script src="js/utilities.js"></script>
+<script src="js/reads.js"></script>
 <script src="js/overall.js"></script>
 </html>

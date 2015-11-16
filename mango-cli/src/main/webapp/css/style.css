@@ -61,22 +61,20 @@ input[type="text"] {
 #refArea {
     border-radius: 5px;
     border: 1.5px solid #8AC007;
-    padding: 3px; 
 }
 
 #varArea {
     border-radius: 5px;
     border: 1.5px solid #FF9933;
-    padding: 3px; 
 }
 
 #featArea {
     border-radius: 5px;
     border: 1.5px solid #FF99CC;
-    padding: 3px; 
 }
-#readsArea {
-    padding: 3px; 
+
+.graphArea {
+  padding: 3px;
 }
 
 .sampleReads {
@@ -85,5 +83,5 @@ input[type="text"] {
     height: 50%;
     border-radius: 5px;
     border: 1.5px solid #996633;
-    padding: 3px; 
+    padding: 3px;
 }

@@ -117,8 +117,8 @@
 </div>
 
 <br>
-<div id="refArea"></div>
-<div id="featArea"></div>
+<div class="graphArea" id="refArea"></div>
+<div class="graphArea" id="featArea"></div>
 <br>
 
 <script>
