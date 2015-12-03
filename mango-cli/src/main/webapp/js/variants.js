@@ -93,8 +93,8 @@ function render(refName, start, end) {
 
   //Variants
   if (variantsExist === true) {
-    //renderVariants();
     renderVariantFrequency();
+    renderVariants();
   } else {
     console.log("Error: Variants not loaded");
   }
@@ -102,14 +102,39 @@ function render(refName, start, end) {
 
 function renderVariants() {
 
+  var varSvgContainer = d3.select("#varArea")
+    .append("svg")
+      .attr("width", width)
+      .attr("height", varHeight);
+
+  var varVertLine = varSvgContainer.append('line')
+    .attr({
+      'x1': 0,
+      'y1': 0,
+      'x2': 0,
+      'y2': varHeight
+    })
+    .attr("stroke", "#002900")
+    .attr("class", "verticalLine");
+
+  varSvgContainer.on('mousemove', function () {
+      var xPosition = d3.mouse(this)[0];
+      d3.selectAll(".verticalLine")
+        .attr({
+          "x1" : xPosition,
+          "x2" : xPosition
+        })
+  });
+
   // Making hover box
   var varDiv = d3.select("#varArea")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-  d3.json(varJsonLocation, function(error, data) {
-
+  d3.json(varJsonLocation, function(error, alldata) {
+    if (error) throw error;
+    var data = alldata.variants;
     // Add the rectangles
     var rects = varSvgContainer.selectAll("rect").data(data);
 
@@ -175,6 +200,25 @@ function renderVariantFrequency() {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
+    var varVertLine = varDiv.append('line')
+      .attr({
+        'x1': 0,
+        'y1': 0,
+        'x2': 0,
+        'y2': varHeight
+      })
+      .attr("stroke", "#002900")
+      .attr("class", "verticalLine");
+
+    varDiv.on('mousemove', function () {
+        var xPosition = d3.mouse(this)[0];
+        d3.selectAll(".verticalLine")
+          .attr({
+            "x1" : xPosition,
+            "x2" : xPosition
+          })
+    });
+
   var margin = {top: 20, right: 0, bottom: 30, left: 0},
       height = 200 - margin.top - margin.bottom;
 
@@ -195,9 +239,9 @@ function renderVariantFrequency() {
       .orient("left")
       .ticks(10, "%");
 
-  d3.json(varJsonLocation, function(error, data) {
+  d3.json(varJsonLocation, function(error, alldata) {
     if (error) throw error;
-    console.log(data);
+    var data = alldata.frequencies;
 
     x.domain([viewRegStart, viewRegEnd]);
     y.domain([0, d3.max(data, function(d) { return d.count; })]);

@@ -119,8 +119,9 @@
 <br>
 <div class="graphArea" id="refArea"></div>
 <div class="graphArea" id ="variantViz"</div>
-  <div id="varArea"></div>
   <div id="varFreqArea"></div>
+  <div id="varArea"></div>
+
 </div>
 <br>
 

@@ -101,8 +101,8 @@ function render(refName, start, end) {
   viewRefName = refName
 
   //Add Region Info
-  d3.select("h2")
-    .text("Current Region: " + viewRefName + ":"+ viewRegStart + "-" + viewRegEnd);
+  var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
+  $('#regInput').attr('placeholder', placeholder);
 
   referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;

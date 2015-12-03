@@ -16,11 +16,12 @@
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type = "text/css" href = "css/style.css">
+    <link rel="stylesheet" type = "text/css" href = "css/menu.css">
 
 </head>
 
 <!-- Fixed navbar -->
-<nav class="navbar navbar-default navbar-fixed-top">
+<nav class="navbar navbar-default">
   <div class="container">
     <div class="navbar-header">
       <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -29,10 +30,36 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">mango: Genomic Visualization for ADAM</a>
     </div>
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
+
+        <li class="dropdown">
+          <a href="#" data-toggle="dropdown" class="dropdown-toggle">File</a>
+          <ul class="dropdown-menu" id="menu1">
+            <li><label for="loadFile">Load File</label><input id="loadFile" type="file" style="position: fixed; top: -100em">
+            </li>
+            <li><label for="loadRef">Load Reference</label><input id="loadRef" type="file" style="position: fixed; top: -100em"></li>
+          </ul>
+        </li>
+
+        <li class="dropdown">
+          <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
+          <ul class="dropdown-menu" id="menu1">
+            <li><input type="checkbox" id="indelCheck"><label class="checkbox-inline">Show Indels</label></li>
+            <li><input type="checkbox" id="mismatchCheck"><label class="checkbox-inline">Show Mismatching Bases</label></li>
+          </ul>
+        </li>
+
+        <li class="dropdown">
+          <a href="#" data-toggle="dropdown" class="dropdown-toggle">Tracks</a>
+          <ul class="dropdown-menu" id="menu1" style="min-width:100px">
+            <li><label for="sortTracks">Sort Tracks</label></li>
+            <li><label for="filterTracks">Filter tracks</label></li>
+            <li><label for="groupTracks">Group tracks</label></li>
+          </ul>
+        </li>
+
         <li class="active"><a href="overall">Overall</a></li>
         <li><a href="reads">Reads</a></li>
         <li><a href="variants">Variants</a></li>
@@ -44,9 +71,6 @@
 </nav>
 
 <div id = "navigation">
-    <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
-    <h2 align="center"></h2>
-    <br>
     <ul>
         <li>move:</li>
         <li>
@@ -109,7 +133,7 @@
         <li>
             <form name="regForm" method="GET" class="form-inline">
                 region:
-                <input type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+                <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
                 <input name="Submit button"
                       type="button"
                       value="Submit"
@@ -117,8 +141,6 @@
                       class="btn btn-danger btn-xs"/>
             </form>
         </li>
-        <label class = "checkbox-inline"><input type="checkbox" id="indelCheck"> Show Indels</label>
-        <label class = "checkbox-inline"><input type="checkbox" id="mismatchCheck"> Show Mismatching Bases</label>
 
     </ul>
     <br>

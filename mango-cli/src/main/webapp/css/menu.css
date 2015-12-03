@@ -1,0 +1,11 @@
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+label {
+  font-weight: 300;
+}
+
+.nav-tabs .dropdown-menu, .nav-pills .dropdown-menu, .navbar .dropdown-menu {
+    margin-top: 0;
+}

@@ -196,6 +196,24 @@ function zoomOut() {
   var newEnd = viewRegEnd + Math.floor((viewRegEnd-viewRegStart)/2);
   render(viewRefName, newStart, newEnd);
 }
+var re = /(?:\.([^.]+))?$/;
+
+
+// Upload new file
+$("#loadFile:file").change(function(){
+  var filename = $("#loadFile:file").val();
+  var ext = re.exec(filename)[1];
+
+  if (ext == "bam" || ext == "vcf" || ext == "adam") {
+    samples.push(filename);
+  }
+  
+});
+
+// Upload new reference file
+$("#loadRef:file").change(function(){
+  var filename = $("#loadRef:file").val();
+});
 
 // Redirect based on form input
 function checkForm(form) {

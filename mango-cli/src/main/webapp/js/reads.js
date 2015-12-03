@@ -2,8 +2,13 @@ if (!readsExist) {
   console.log("error: on wrong page")
 }
 
+function filterName(str) {
+  return str.replace("/","")
+}
+
 var sampleId = samp1Name + "," + samp2Name;
-var samples = [samp1Name, samp2Name];
+var rawSamples = [samp1Name, samp2Name];
+var samples = [filterName(samp1Name), filterName(samp2Name)];
 var readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
 
 //Configuration Variables
@@ -127,8 +132,7 @@ function renderReads(sample, i) {
 
   d3.json(readJsonLocation,function(error, ret) {
       var selector = "#" + samples[i];
-      console.log(ret);
-      var data = ret[samples[i]];
+      var data = ret[rawSamples[i]];
       readsData[i] = data['tracks'];
       var pairData = data['matePairs'];
 
