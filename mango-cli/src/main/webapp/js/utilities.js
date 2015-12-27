@@ -1,14 +1,29 @@
-var referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+// Filters invalid characters from string to create javascript descriptor
+function filterName(str,i) {
+  var nStr = str.replace("/","");
+  nStr = nStr + i;
+  i++;
+  return nStr;
+}
 
-// Section Heights
-var refHeight = 38;
+function checkboxChange() {
+  for (var i = 0; i < samples.length; i++) {
+    if (indelCheck.checked) {
+      renderMismatches(readsData[i], samples[i]);
+    } else  {
+      readsSvgContainer[samples[i]].selectAll(".mismatch").remove();
+    }
+    if (coverageCheck.checked) {
+      $(".sampleCoverage").show();
+    } else {
+      $(".sampleCoverage").hide();
+    }
+  }
+}
 
-//Configuration Variables
-var width = window.innerWidth - 18;
-renderReference();
-
-
-function renderReference() {
+function renderReference(viewRefName, viewRegStart, viewRegEnd) {
+  var refHeight = 38;
+  var jsonLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
   // Svg Containers for refArea (exists is all views)
   var refContainer = d3.select("#refArea")
@@ -60,19 +75,31 @@ function renderReference() {
       .attr("class", "axis")
       .call(refAxis);
 
-  d3.json(referenceStringLocation, function(error, data) {
+  d3.json(jsonLocation, function(error, data) {
+      refSequence = data;
+      // render reference for low or high resolution depending on base range
+      if (viewRegEnd - viewRegStart > 100) {
+        renderLowResRef(data, refContainer, refDiv);
+      } else {
+        renderHighResRef(data, refContainer);
+      }
+  });
 
-    refSequence = data
-    var rects = refContainer.selectAll("rect").data(data);
 
-    var modify = rects.transition();
-    modify
+}
+
+// Renders reference at colored base resolution
+function renderLowResRef(data, refContainer, refDiv) {
+
+  var rects = refContainer.selectAll("rect").data(data)
+
+  rects.enter()
+    .append("g")
+    .append("rect")
       .attr("x", function(d, i) {
         return i/(viewRegEnd-viewRegStart) * width;
       })
-      .attr("width", function(d) {
-        return Math.max(1, width/(viewRegEnd-viewRegStart));
-      })
+      .attr("y", 30)
       .attr("fill", function(d) {
         if (d.reference === "G") {
           return '#00C000'; //GREEN
@@ -81,64 +108,76 @@ function renderReference() {
         } else if (d.reference === "A") {
           return '#5050FF'; //AZURE
         } else if (d.reference === "T") {
-          return '#E6E600'; //TWEETY BIRD
+          return '#FFCC00'; //TWEETY BIRD
+        } else if (d.reference === "N") {
+          return '#FFFFFF'; //WHITE
+        }
+      })
+      .attr("width", function(d) {
+        return Math.max(1, width/(viewRegEnd-viewRegStart));
+      })
+      .attr("height", refHeight);
+      // .on("click", function(d) {
+      //   refDiv.transition()
+      //     .duration(200)
+      //     .style("opacity", .9);
+      //   refDiv.html(
+      //     "Base: " + d.reference + "<br>" +
+      //     "Position: " + d.position)
+      //     .style("left", (d3.event.pageX) + "px")
+      //     .style("top", (d3.event.pageY - 28) + "px");
+      // })
+      // .on("mouseover", function(d) {
+      //   refDiv.transition()
+      //     .duration(200)
+      //     .style("opacity", .9);
+      //   refDiv.html(d.reference)
+      //     .style("left", (d3.event.pageX - 10) + "px")
+      //     .style("top", (d3.event.pageY - 30) + "px");
+      // })
+      // .on("mouseout", function(d) {
+      //     refDiv.transition()
+      //     .duration(500)
+      //     .style("opacity", 0);
+      //   });
+
+    var removed = rects.exit();
+    removed.remove();
+}
+
+// Renders reference at per base resolution
+function renderHighResRef(data, refContainer) {
+  var letters = refContainer.selectAll("hrtext")
+                  .data(data)
+
+  var refString = letters.enter()
+                  .append("text");
+
+  refString.attr("y", 30)
+      .attr("x", 0)
+      .attr("dx", function(d, i) {
+             return i/(viewRegEnd-viewRegStart) * width - 5;
+          })
+      .text( function (d) { return d.reference; })
+      .attr("font-family", "Sans-serif")
+      .attr("font-weight", "bold")
+      .attr("font-size", "12px")
+      .attr("fill", function(d) {
+        if (d.reference === "G") {
+          return '#00C000'; //GREEN
+        } else if (d.reference === "C") {
+          return '#E00000'; //CRIMSON
+        } else if (d.reference === "A") {
+          return '#5050FF'; //AZURE
+        } else if (d.reference === "T") {
+          return '#FFCC00'; //TWEETY BIRD
         } else if (d.reference === "N") {
           return '#FFFFFF'; //WHITE
         }
       });
 
-    var newData = rects.enter();
-    newData
-      .append("g")
-      .append("rect")
-        .attr("x", function(d, i) {
-          return i/(viewRegEnd-viewRegStart) * width;
-        })
-        .attr("y", 30)
-        .attr("fill", function(d) {
-          if (d.reference === "G") {
-            return '#00C000'; //GREEN
-          } else if (d.reference === "C") {
-            return '#E00000'; //CRIMSON
-          } else if (d.reference === "A") {
-            return '#5050FF'; //AZURE
-          } else if (d.reference === "T") {
-            return '#E6E600'; //TWEETY BIRD
-          } else if (d.reference === "N") {
-            return '#FFFFFF'; //WHITE
-          }
-        })
-        .attr("width", function(d) {
-          return Math.max(1, width/(viewRegEnd-viewRegStart));
-        })
-        .attr("height", refHeight)
-        .on("click", function(d) {
-          refDiv.transition()
-            .duration(200)
-            .style("opacity", .9);
-          refDiv.html(
-            "Base: " + d.reference + "<br>" +
-            "Position: " + d.position)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-        })
-        .on("mouseover", function(d) {
-          refDiv.transition()
-            .duration(200)
-            .style("opacity", .9);
-          refDiv.html(d.reference)
-            .style("left", (d3.event.pageX - 10) + "px")
-            .style("top", (d3.event.pageY - 30) + "px");
-        })
-        .on("mouseout", function(d) {
-            refDiv.transition()
-            .duration(500)
-            .style("opacity", 0);
-          });
-
-      var removed = rects.exit();
-      removed.remove();
-  });
+    var removed = letters.exit();
+    removed.remove();
 }
 
 // Try to move very far left
@@ -198,7 +237,6 @@ function zoomOut() {
 }
 var re = /(?:\.([^.]+))?$/;
 
-
 // Upload new file
 $("#loadFile:file").change(function(){
   var filename = $("#loadFile:file").val();
@@ -207,7 +245,7 @@ $("#loadFile:file").change(function(){
   if (ext == "bam" || ext == "vcf" || ext == "adam") {
     samples.push(filename);
   }
-  
+
 });
 
 // Upload new reference file

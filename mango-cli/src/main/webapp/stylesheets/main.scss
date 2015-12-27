@@ -1,24 +1,31 @@
+@import 'modules/colors';
+@import 'partials/menu';
+
 body {
-    background: whitesmoke;
+    background-color: whitesmoke;
     font-family: 'Open Sans', sans-serif;
     font-weight:300;
 }
+
 h1 {
     text-align: center;
     margin: 10px 0 0 0;
-    color: #333333;
+    color: $dark-grey;
     font-weight:400;
     text-transform: uppercase;
 }
-.highlight {
-    font-weight:700;
-}
+
 h2 {
     text-align: center;
     margin: 0 0 10px 0;
-    color: #999999;
+    color: $med-grey;
     font-weight:400;
 }
+
+.highlight {
+    font-weight:700;
+}
+
 ul {
     list-style-type: none;
     margin: 0;
@@ -30,16 +37,19 @@ li {
     float: left;
     padding: 0 0 0 5px;
 }
-.axis path,
-.axis line {
+.axis {
+  path, line {
     fill: none;
     stroke: black;
     shape-rendering: crispEdges;
+  }
+
+  text {
+      font-family: sans-serif;
+      font-size: 11px;
+  }
 }
-.axis text {
-    font-family: sans-serif;
-    font-size: 11px;
-}
+
 div.tooltip {
     position: absolute;
     text-align: center;
@@ -60,28 +70,44 @@ input[type="text"] {
 
 #refArea {
     border-radius: 5px;
-    border: 1.5px solid #8AC007;
+    border: 1.5px solid $refBorder;
 }
 
 #varArea {
     border-radius: 5px;
-    border: 1.5px solid #FF9933;
+    border: 1.5px solid $varBorder;
 }
 
 #featArea {
     border-radius: 5px;
-    border: 1.5px solid #FF99CC;
+    border: 1.5px solid $featBorder;
+}
+
+#readsArea {
+  padding: 0px;
 }
 
 .graphArea {
   padding: 3px;
 }
 
-.sampleReads {
-    overflow-y: scroll;
+.coverage-svg {
+  overflow: visible !important;
+}
+
+.samples {
     margin-bottom: 30px;
-    height: 50%;
     border-radius: 5px;
-    border: 1.5px solid #996633;
+    border: 1.5px solid $readBorder;
     padding: 3px;
+}
+
+.sampleCoverage {
+  border-bottom: 1px solid $covBorder;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+}
+
+.sampleReads {
+  overflow-y: scroll;
 }

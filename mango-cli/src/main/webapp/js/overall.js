@@ -1,5 +1,3 @@
-var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-var featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 //Configuration Variables
 var width = window.innerWidth - 18;
 var base = 50;
@@ -14,16 +12,6 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 // Global Data
 var refSequence;
 var readsData;
-
-function checkboxChange() {
-  for (var i = 0; i < samples.length; i++) {
-    if (indelCheck.checked) {
-      renderMismatches(readsData[i], samples[i]);
-    } else {
-      readsSvgContainer[samples[i]].selectAll(".mismatch").remove();
-    }
-  }
-}
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
@@ -98,30 +86,38 @@ function render(refName, start, end) {
   //Adding Reference rectangles
   viewRegStart = start;
   viewRegEnd = end;
-  viewRefName = refName
+  viewRefName = refName;
 
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
   $('#regInput').attr('placeholder', placeholder);
 
-  referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-  varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-  featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  // Reference
+  renderReference(refName, start, end);
 
   // Features
-  if (featuresExist === true) {
-    renderFeatures();
+  if (featuresExist) {
+    renderFeatures(refName, start, end);
   }
 
-  //Variants
-  if (variantsExist === true) {
-    renderVariants();
+  // Variants
+  if (variantsExist) {
+    renderVariants(refName, start, end);
   }
+
+  // Reads and Coverage
+  if (readsExist) {
+    renderReads(refName, start, end);
+    renderCoverage(refName, start, end);
+  }
+
 
 
 }
 
-function renderFeatures() {
+function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
+
+  var featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
   // Making hover box
   var featDiv = d3.select("#featArea")
@@ -178,8 +174,9 @@ function renderFeatures() {
     });
 }
 
-function renderVariants() {
+function renderVariants(viewRefName, viewRegStart, viewRegEnd) {
 
+  var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   // Making hover box
   var varDiv = d3.select("#varArea")
     .append("div")

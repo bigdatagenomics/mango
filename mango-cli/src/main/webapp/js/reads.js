@@ -1,39 +1,15 @@
-if (!readsExist) {
-  console.log("error: on wrong page")
-}
-
-function filterName(str) {
-  return str.replace("/","")
-}
-
-var sampleId = samp1Name + "," + samp2Name;
-var rawSamples = [samp1Name, samp2Name];
-var samples = [filterName(samp1Name), filterName(samp2Name)];
-var readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
-
 //Configuration Variables
 var width = window.innerWidth - 18;
-var base = 50;
+var base = 0;
 var trackHeight = 6;
 var readsHeight = 0; //Default variable: this will change based on number of reads
 
 // Global Data
-var refSequence;
 var readsData = [];
 // Svg Containers, and vertical guidance lines and animations set here for all divs
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
-
-function checkboxChange() {
-  for (var i = 0; i < samples.length; i++) {
-    if (indelCheck.checked) {
-      renderMismatches(readsData[i], samples[i]);
-    } else {
-      readsSvgContainer[samples[i]].selectAll(".mismatch").remove();
-    }
-  }
-}
 
 // Redirect based on form input
 function checkForm(form) {
@@ -43,7 +19,7 @@ function checkForm(form) {
   var region = info.split(":")[2].split("-");
   var newStart = Math.max(0, region[0]);
   var newEnd = Math.max(newStart, region[1]);
-  render(refName, newStart, newEnd);
+  renderReads(refName, newStart, newEnd);
 }
 
 // Create the scale for the axis
@@ -58,8 +34,11 @@ var refAxis = d3.svg.axis()
 var readsSvgContainer = {};
 
 for (var i = 0; i < samples.length; i++) {
-  $("#readsArea").append("<div id=\"" + samples[i] + "\"class=\"sampleReads\"" + "></div>");
-  var selector = "#" + samples[i]
+  $("#readsArea").append("<div id=\"" + samples[i]+ "\" class=\"samples\"></div>");
+  $("#"+samples[i]).append("<div class=\"sampleCoverage\"></div>");
+  $("#"+samples[i]).append("<div class=\"sampleReads\"></div>");
+
+  var selector = "#" + samples[i] + ">.sampleReads";
   readsSvgContainer[samples[i]] = d3.select(selector)
     .append("svg")
       .attr("height", (readsHeight+base))
@@ -86,30 +65,22 @@ for (var i = 0; i < samples.length; i++) {
 }
 
 
-//All rendering of data, and everything setting new region parameters, is done here
-render(viewRefName, viewRegStart, viewRegEnd);
-
 // Functions
-function render(refName, start, end) {
+function renderReads(refName, start, end) {
   //Adding Reference rectangles
   viewRegStart = start;
   viewRegEnd = end;
-  viewRefName = refName
+  viewRefName = refName;
 
-  //Add Region Info
-  d3.select("h2")
-    .text("Current Region: " + sampleId + viewRefName + ":"+ viewRegStart + "-" + viewRegEnd);
-
-  readJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
-  referenceStringLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
 
   for (var i = 0; i < samples.length; i++) {
-    renderReads(samples[i], i);
+    renderJsonReads(readsJsonLocation, samples[i], i);
   }
 
 }
 
-function renderReads(sample, i) {
+function renderJsonReads(readsJsonLocation, sample, i) {
   var readDiv = [];
 
   // Making hover box
@@ -128,10 +99,10 @@ function renderReads(sample, i) {
      .scale(readsAxisScale);
 
   // Remove current axis to update it
-  readsSvgContainer[samples[i]].select(".axis").remove();
+  readsSvgContainer[sample].select(".axis").remove();
 
-  d3.json(readJsonLocation,function(error, ret) {
-      var selector = "#" + samples[i];
+  d3.json(readsJsonLocation,function(error, ret) {
+      var selector = "#" + sample;
       var data = ret[rawSamples[i]];
       readsData[i] = data['tracks'];
       var pairData = data['matePairs'];
@@ -140,10 +111,10 @@ function renderReads(sample, i) {
       readsHeight = (numTracks+1)*trackHeight;
 
       // Reset size of svg container
-      readsSvgContainer[samples[i]].attr("height", (readsHeight+ base));
+      readsSvgContainer[sample].attr("height", (readsHeight+ base));
 
       // Add the axis to the container
-      readsSvgContainer[samples[i]].append("g")
+      readsSvgContainer[sample].append("g")
         .attr("class", "axis")
         .attr("transform", "translate(0, " + readsHeight + ")")
         .call(readsAxis);
@@ -152,7 +123,7 @@ function renderReads(sample, i) {
       $(".verticalLine").attr("y2", readsHeight);
 
       //Add the rectangles
-      var rects = readsSvgContainer[samples[i]].selectAll(".readrect").data(readsData[i]);
+      var rects = readsSvgContainer[sample].selectAll(".readrect").data(readsData[i]);
       var modify = rects.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -203,10 +174,10 @@ function renderReads(sample, i) {
       if (indelCheck.checked) {
         renderMismatches(readsData[i], samples[i]);
       } else {
-        readsSvgContainer[samples[i]].selectAll(".mismatch").remove()
+        readsSvgContainer[sample].selectAll(".mismatch").remove()
       }
 
-      var arrowHeads = readsSvgContainer[samples[i]].selectAll("path").data(readsData[i]);
+      var arrowHeads = readsSvgContainer[sample].selectAll("path").data(readsData[i]);
       var arrowModify = arrowHeads.transition();
       arrowModify
         .attr("transform", function(d) {
@@ -288,7 +259,6 @@ function renderReads(sample, i) {
 
   });
 }
-
 
 function renderMismatches(data, sample) {
   var selector = "#" + sample;

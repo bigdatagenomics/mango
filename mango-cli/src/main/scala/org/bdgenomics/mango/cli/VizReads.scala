@@ -293,8 +293,10 @@ class VizServlet extends ScalatraServlet {
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
       contentType = "json"
+      println(params)
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val sampleIds: List[String] = params("sample").split(",").toList
+      println(sampleIds)
       val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
 
       val withRefReg: List[(String, Array[(ReferenceRegion, AlignmentRecord)])] = input.toList.map(elem => (elem._1, elem._2.map(t => (ReferenceRegion(t), t))))
@@ -327,7 +329,8 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     if (VizReads.readsExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
+        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+          "samples" -> (VizReads.samp1Name, VizReads.samp2Name)))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofreq.ssp")
     }
@@ -337,24 +340,20 @@ class VizServlet extends ScalatraServlet {
     VizTimers.FreqRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      if (VizReads.readsPath1.endsWith(".adam")) {
-        val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
-        val proj = Projection(AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end)
-        val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadParquetAlignments(VizReads.readsPath1, predicate = Some(pred), projection = Some(proj))
-        val filteredArray = readsRDD.collect()
-        write(VizReads.printJsonFreq(filteredArray, viewRegion))
-      } else if (VizReads.readsPath1.endsWith(".sam") || VizReads.readsPath1.endsWith(".bam")) {
-        val idxFile: File = new File(VizReads.readsPath1 + ".bai")
-        if (!idxFile.exists()) {
-          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadBam(VizReads.readsPath1).filterByOverlappingRegion(viewRegion)
-          val filteredArray = readsRDD.collect()
-          write(VizReads.printJsonFreq(filteredArray, viewRegion))
-        } else {
-          val readsRDD: RDD[AlignmentRecord] = VizReads.sc.loadIndexedBam(VizReads.readsPath1, viewRegion)
-          val filteredArray = readsRDD.collect()
-          write(VizReads.printJsonFreq(filteredArray, viewRegion))
-        }
+      println(params)
+      val sampleIds: List[String] = params("sample").split(",").toList
+      println(sampleIds)
+      val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
+
+      var retJson = ""
+      for (elem <- input) {
+        retJson += "\"" + elem._1 + "\":" +
+          write(VizReads.printJsonFreq(elem._2, viewRegion)) + ","
       }
+      retJson = retJson.dropRight(1)
+      retJson = "{" + retJson + "}"
+      println(retJson)
+      retJson
     }
   }
 

@@ -11,12 +11,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Overall Visualization for Mango">
     <meta name="author" content="Eric Tu">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="resources/js/jquery.min.js"></script>
+    <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type = "text/css" href = "css/style.css">
-    <link rel="stylesheet" type = "text/css" href = "css/menu.css">
+    <link rel="stylesheet" type = "text/css" href = "stylesheets/main.css">
 
 </head>
 
@@ -46,8 +45,12 @@
         <li class="dropdown">
           <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
           <ul class="dropdown-menu" id="menu1">
-            <li><input type="checkbox" id="indelCheck"><label class="checkbox-inline">Show Indels</label></li>
-            <li><input type="checkbox" id="mismatchCheck"><label class="checkbox-inline">Show Mismatching Bases</label></li>
+            <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck">
+            <li><label for="indelCheck">Indels</label></li>
+            <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck">
+            <li><label for="mismatchCheck">Mismatching Bases</label></li>
+            <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
+            <li><label for="coverageCheck">Coverage</label></li>
           </ul>
         </li>
 
@@ -148,13 +151,16 @@
 
 <br>
 
+
 <div class="graphArea" id="refArea"></div>
 <div class="graphArea" id="featArea"></div>
 <div class="graphArea" id="varArea"></div>
 <div class="graphArea" id="readsArea"></div>
 <br>
 
+<script src="js/utilities.js"></script>
 <script>
+  <!-- Define Global Variables -->
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
@@ -163,8 +169,17 @@
   var readsExist = ${readsExist};
   var variantsExist = ${variantsExist};
   var featuresExist = ${featuresExist};
+  var refSequence = null;
+  
+  var i = 0;
+  var sampleId = samp1Name + "," + samp2Name;
+  var rawSamples = [samp1Name, samp2Name];
+  var samples = [filterName(samp1Name,0), filterName(samp2Name,1)];
+  var width = window.innerWidth - 18;
+
 </script>
-<script src="js/utilities.js"></script>
+
 <script src="js/reads.js"></script>
+<script src="js/freq.js"></script>
 <script src="js/overall.js"></script>
 </html>
