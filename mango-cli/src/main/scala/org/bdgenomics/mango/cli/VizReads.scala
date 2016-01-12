@@ -301,6 +301,7 @@ class VizServlet extends ScalatraServlet {
       val sampleIds: List[String] = params("sample").split(",").toList
       val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
       val fileMap = VizReads.readsData.getFileMap()
+
       val withRefReg: List[(String, Array[(ReferenceRegion, AlignmentRecord)])] = input.toList.map(elem => (elem._1, elem._2.map(t => (ReferenceRegion(t), t))))
       var retJson = ""
       for (elem <- withRefReg) {
