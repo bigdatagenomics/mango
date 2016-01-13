@@ -12,8 +12,10 @@
     <meta name="description" content="Overall Visualization for Mango">
     <meta name="author" content="Eric Tu">
     <script src="resources/js/jquery.min.js"></script>
+    <script src="resources/js/jquery-ui.min.js"></script>
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
+    <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type = "text/css" href = "stylesheets/main.css">
 
@@ -64,10 +66,7 @@
         </li>
 
         <li class="active"><a href="overall">Overall</a></li>
-        <li><a href="reads">Reads</a></li>
-        <li><a href="variants">Variants</a></li>
-        <li><a href="features">Features</a></li>
-        <li><a href="freq">Frequency</a></li>
+        <li><a href="variants">Variant Frequency</a></li>
       </ul>
     </div><!--/.nav-collapse -->
   </div>
@@ -152,9 +151,9 @@
 <br>
 
 
-<div class="graphArea" id="refArea"></div>
-<div class="graphArea" id="featArea"></div>
-<div class="graphArea" id="varArea"></div>
+<div class="row graphArea" id="refArea"></div>
+<div class="row graphArea" id="featArea"></div>
+<div class="row graphArea" id="varArea"></div>
 <div class="graphArea" id="readsArea"></div>
 <br>
 
@@ -170,7 +169,7 @@
   var variantsExist = ${variantsExist};
   var featuresExist = ${featuresExist};
   var refSequence = null;
-  
+
   var i = 0;
   var sampleId = samp1Name + "," + samp2Name;
   var rawSamples = [samp1Name, samp2Name];
@@ -178,8 +177,11 @@
   var width = window.innerWidth - 18;
 
 </script>
-
 <script src="js/reads.js"></script>
 <script src="js/freq.js"></script>
+<script src="js/variants.js"></script>
+<script src="js/reference.js"></script>
 <script src="js/overall.js"></script>
+<script src="js/resizeable.js"></script>
+
 </html>

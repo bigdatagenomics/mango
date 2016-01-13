@@ -1,9 +1,17 @@
 // Global Variables
 var maxFreq = 0;
-var width = window.innerWidth - 18;
+var covWidth = $(".sampleCoverage").width();
 var height = 100;
 
 var svgContainer = {};
+for (var i = 0; i < samples.length; i++) {
+  var selector = "#" + samples[i] + ">.col-md-10>.sampleCoverage";
+  svgContainer[samples[i]] = d3.select(selector)
+    .append("svg")
+      .attr("class", "coverage-svg")
+      .attr("height", (height))
+      .attr("width", width);
+}
 
 // Function (accessor function) to return the position for the data that falls just left of the cursor
 var bisectData = d3.bisector(function(d) {
@@ -14,16 +22,8 @@ function renderCoverage(refName, start, end) {
   viewRefName = refName;
   viewRegStart = start;
   viewRegEnd = end;
-
   var covLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
   for (var i = 0; i < samples.length; i++) {
-    var selector = "#" + samples[i] + ">.sampleCoverage";
-    svgContainer[samples[i]] = d3.select(selector)
-      .append("svg")
-        .attr("class", "coverage-svg")
-        .attr("height", (height))
-        .attr("width", width);
-
     renderJsonCoverage(covLocation, i);
   }
 }
@@ -62,7 +62,6 @@ function renderJsonCoverage(jsonLocation, i) {
       .append("path")
       .attr("d", freqArea(data))
       .style("fill", "#B8B8B8");
-
     svgContainer[samples[i]].append("rect")
       .attr("width", width)
       .attr("x", 0)

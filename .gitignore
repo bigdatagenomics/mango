@@ -19,10 +19,8 @@ project/boot/
 project/plugins/project/
 parquettest.sh
 out.txt
-src/main/webapp/stylesheets/main.css*
-src/main/webapp/resources/*
-scripts/*
-
+stylesheets/main.css
+stylesheets/main.css.map
 # Scala-IDE specific
 .scala_dependencies
 .worksheet

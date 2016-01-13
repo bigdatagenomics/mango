@@ -1,17 +1,11 @@
 var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-//Configuration Variables
-var width = window.innerWidth - 18;
+$("#varArea").append("<div class=\"col-md-2\"></div>");
+$("#varArea").append("<div class=\"col-md-10\"></div>");
 
 // Section Heights
 var refHeight = 38;
 var varHeight = 10;
 var freqHeight = 200;
-
-// Svg Containers for refArea (exists is all views)
-var refContainer = d3.select("#refArea")
-  .append("svg")
-    .attr("width", width)
-    .attr("height", refHeight);
 
 
 // Svg container for variant frequency
@@ -20,9 +14,41 @@ var svg = d3.select("#varFreqArea")
     .attr("width", width)
     .attr("height", freqHeight);
 
+// Functions
+function renderVariants(refName, start, end) {
+  //Adding Reference rectangles
+  viewRegStart = start;
+  viewRegEnd = end;
+  viewRefName = refName;
 
-// Mousemove for ref containers
-refContainer.on('mousemove', function () {
+  renderJsonVariants();
+
+}
+function renderVariantFrequency(refName, start, end) {
+  //Adding Reference rectangles
+  viewRegStart = start;
+  viewRegEnd = end;
+  viewRefName = refName;
+
+  renderVariantFrequency();
+
+}
+var varSvgContainer = d3.select("#varArea>.col-md-10")
+  .append("svg")
+    .attr("width", width)
+    .attr("height", varHeight);
+
+var varVertLine = varSvgContainer.append('line')
+  .attr({
+    'x1': 0,
+    'y1': 0,
+    'x2': 0,
+    'y2': varHeight
+  })
+  .attr("stroke", "#002900")
+  .attr("class", "verticalLine");
+
+varSvgContainer.on('mousemove', function () {
     var xPosition = d3.mouse(this)[0];
     d3.selectAll(".verticalLine")
       .attr({
@@ -31,122 +57,31 @@ refContainer.on('mousemove', function () {
       })
 });
 
-// Create the scale for the axis
-var refAxisScale = d3.scale.linear()
-    .domain([viewRegStart, viewRegEnd])
-    .range([0, width]);
-
-// Create the axis
-var refAxis = d3.svg.axis()
-   .scale(refAxisScale);
-
-// Add the axis to the container
-refContainer.append("g")
-    .attr("class", "axis")
-    .call(refAxis);
-
-//All rendering of data, and everything setting new region parameters, is done here
-render(viewRefName, viewRegStart, viewRegEnd);
-
-// Functions
-function render(refName, start, end) {
-  //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName
-
-  //Add Region Info
-  d3.select("h2")
-    .text("Current Region: " + viewRefName + ":"+ viewRegStart + "-" + viewRegEnd);
+// Making hover box
+var varDiv = d3.select("#varArea>.col-md-10")
+  .append("div")
+  .attr("class", "tooltip")
+  .style("opacity", 0);
 
 
-  renderReference();
-
-  // Svg Containers, and vertical guidance lines and animations set here for all divs
-
-  // Svg Containers for refArea (exists in all views)
-  var refContainer = d3.select("#refArea")
-    .append("svg")
-      .attr("width", width)
-      .attr("height", refHeight);
-
-  // Vertical Guidance Line for refContainer
-  var refVertLine = refContainer.append('line')
-    .attr({
-      'x1': 0,
-      'y1': 0,
-      'x2': 0,
-      'y2': refHeight
-    })
-    .attr("stroke", "#002900")
-    .attr("class", "verticalLine");
-
-  // Mousemove for ref containers
-  refContainer.on('mousemove', function () {
-      var xPosition = d3.mouse(this)[0];
-      d3.selectAll(".verticalLine")
-        .attr({
-          "x1" : xPosition,
-          "x2" : xPosition
-        })
-  });
-
-  //Variants
-  if (variantsExist === true) {
-    renderVariantFrequency();
-    renderVariants();
-  } else {
-    console.log("Error: Variants not loaded");
-  }
-}
-
-function renderVariants() {
-
-  var varSvgContainer = d3.select("#varArea")
-    .append("svg")
-      .attr("width", width)
-      .attr("height", varHeight);
-
-  var varVertLine = varSvgContainer.append('line')
-    .attr({
-      'x1': 0,
-      'y1': 0,
-      'x2': 0,
-      'y2': varHeight
-    })
-    .attr("stroke", "#002900")
-    .attr("class", "verticalLine");
-
-  varSvgContainer.on('mousemove', function () {
-      var xPosition = d3.mouse(this)[0];
-      d3.selectAll(".verticalLine")
-        .attr({
-          "x1" : xPosition,
-          "x2" : xPosition
-        })
-  });
-
-  // Making hover box
-  var varDiv = d3.select("#varArea")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
+function renderJsonVariants() {
 
   d3.json(varJsonLocation, function(error, alldata) {
     if (error) throw error;
     var data = alldata.variants;
     // Add the rectangles
-    var rects = varSvgContainer.selectAll("rect").data(data);
+    var variants = varSvgContainer.selectAll(".variant").data(data);
 
-    var modify = rects.transition();
+    var modify = variants.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
       .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
 
-    var newData = rects.enter();
+    var newData = variants.enter();
     newData
       .append("g")
       .append("rect")
+        .attr("class", "variant")
         .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
         .attr("y", 0)
         .attr("fill", function(d) {
@@ -169,16 +104,16 @@ function renderVariants() {
           varDiv.html(
             "Contig: " + d.contigName + "<br>" +
             "Alleles: " + d.alleles)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
+            .style("left", d3.mouse(this)[0] + "px")
+            .style("top", "-4px");
         })
         .on("mouseover", function(d) {
           varDiv.transition()
             .duration(200)
             .style("opacity", .9);
           varDiv.html(d.alleles)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
+            .style("left", d3.mouse(this)[0] +  "px")
+            .style("top", "-4px");
         })
         .on("mouseout", function(d) {
           varDiv.transition()
@@ -186,11 +121,10 @@ function renderVariants() {
           .style("opacity", 0);
         });
 
-    var removed = rects.exit();
+    var removed = variants.exit();
     removed.remove();
   });
 }
-
 
 function renderVariantFrequency() {
 

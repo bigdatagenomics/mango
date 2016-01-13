@@ -115,6 +115,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     tracks.toList
   }
 
+  def printStringJson(str: String): String = {
+    return str
+  }
+
   //Prepares reads information in json format
   def printMatePairJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[MatePairJson] = VizTimers.PrintTrackJsonTimer.time {
     var matePairs = new scala.collection.mutable.ListBuffer[MatePairJson]
@@ -293,18 +297,17 @@ class VizServlet extends ScalatraServlet {
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
       contentType = "json"
-      println(params)
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val sampleIds: List[String] = params("sample").split(",").toList
-      println(sampleIds)
       val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
-
+      val fileMap = VizReads.readsData.getFileMap()
       val withRefReg: List[(String, Array[(ReferenceRegion, AlignmentRecord)])] = input.toList.map(elem => (elem._1, elem._2.map(t => (ReferenceRegion(t), t))))
       var retJson = ""
       for (elem <- withRefReg) {
         val filteredLayout = new OrderedTrackedLayout(elem._2)
         retJson += "\"" + elem._1 + "\":" +
-          "{ \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) +
+          "{ \"filename\": " + write(VizReads.printStringJson(fileMap(elem._1))) +
+          ", \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) +
           ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "},"
       }
       retJson = retJson.dropRight(1)
@@ -340,9 +343,7 @@ class VizServlet extends ScalatraServlet {
     VizTimers.FreqRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      println(params)
       val sampleIds: List[String] = params("sample").split(",").toList
-      println(sampleIds)
       val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
 
       var retJson = ""
@@ -352,7 +353,6 @@ class VizServlet extends ScalatraServlet {
       }
       retJson = retJson.dropRight(1)
       retJson = "{" + retJson + "}"
-      println(retJson)
       retJson
     }
   }

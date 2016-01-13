@@ -1,5 +1,5 @@
 //Configuration Variables
-var width = window.innerWidth - 18;
+var width = $(".sampleReads").width();
 var base = 50;
 var trackHeight = 6;
 
@@ -50,32 +50,6 @@ if (featuresExist === true) {
       })
   });
 
-}
-
-if (variantsExist === true) {
-  var varSvgContainer = d3.select("#varArea")
-    .append("svg")
-      .attr("width", width)
-      .attr("height", varHeight);
-
-  var varVertLine = varSvgContainer.append('line')
-    .attr({
-      'x1': 0,
-      'y1': 0,
-      'x2': 0,
-      'y2': varHeight
-    })
-    .attr("stroke", "#002900")
-    .attr("class", "verticalLine");
-
-  varSvgContainer.on('mousemove', function () {
-      var xPosition = d3.mouse(this)[0];
-      d3.selectAll(".verticalLine")
-        .attr({
-          "x1" : xPosition,
-          "x2" : xPosition
-        })
-  });
 }
 
 //All rendering of data, and everything setting new region parameters, is done here
@@ -172,71 +146,4 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
       var removed = rects.exit();
       removed.remove();
     });
-}
-
-function renderVariants(viewRefName, viewRegStart, viewRegEnd) {
-
-  var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-  // Making hover box
-  var varDiv = d3.select("#varArea")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
-
-  d3.json(varJsonLocation, function(error, data) {
-
-    // Add the rectangles
-    var rects = varSvgContainer.selectAll("rect").data(data);
-
-    var modify = rects.transition();
-    modify
-      .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
-
-    var newData = rects.enter();
-    newData
-      .append("g")
-      .append("rect")
-        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-        .attr("y", 0)
-        .attr("fill", function(d) {
-          if (d.alleles === "Ref / Alt") {
-            return '#00FFFF'; //CYAN
-          } else if (d.alleles === "Alt / Alt") {
-            return '#FF66FF'; //MAGENTA
-          } else if (d.reference === "Ref / Ref") {
-            return '#99FF33'; //NEON GREEN
-          } else {
-            return '#FFFF66'; //YELLOW
-          }
-        })
-        .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-        .attr("height", varHeight)
-        .on("click", function(d) {
-          varDiv.transition()
-            .duration(200)
-            .style("opacity", .9);
-          varDiv.html(
-            "Contig: " + d.contigName + "<br>" +
-            "Alleles: " + d.alleles)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-        })
-        .on("mouseover", function(d) {
-          varDiv.transition()
-            .duration(200)
-            .style("opacity", .9);
-          varDiv.html(d.alleles)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-        })
-        .on("mouseout", function(d) {
-          varDiv.transition()
-          .duration(500)
-          .style("opacity", 0);
-        });
-
-    var removed = rects.exit();
-    removed.remove();
-  });
 }
