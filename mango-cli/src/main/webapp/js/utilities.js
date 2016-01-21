@@ -9,8 +9,15 @@ function filterName(str,i) {
 // calulates reads track height based on viewing range
 function getTrackHeight() {
   var range = viewRegEnd - viewRegStart;
-  var trackHeight = Math.max(2, -0.000012 * range + 14);
-  return Math.round(trackHeight);
+  var baseHeight = 14;
+
+  if (range <= 1000)  {
+    return baseHeight;
+  } else if (range > 1000 && range < 10000)  {
+    return baseHeight - 7;
+  } else {
+    return 2;
+  }
 }
 
 function checkboxChange() {

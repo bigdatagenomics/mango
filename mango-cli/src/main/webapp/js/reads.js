@@ -74,8 +74,6 @@ function renderReads(refName, start, end) {
 
 function renderJsonReads(readsJsonLocation, sample, i) {
 
-
-
   d3.json(readsJsonLocation,function(error, ret) {
       // render reads for low or high resolution depending on base range
       if (viewRegEnd - viewRegStart > 100) {
@@ -155,17 +153,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", (readTrackHeight-1))
-        .style("fill", function(d) {
-          if (isHighRes) {
-            if (d.readNegativeStrand === true) {
-              return "#ffcccc";
-            } else if (d.readNegativeStrand === false) {
-              return "#d9f2d9";
-            }
-          } else {
-            return "grey";
-          }
-        })
+        .style("fill", "#B8B8B8")
           .on("click", function(d) {
             readDiv[i].transition()
               .duration(200)
@@ -194,165 +182,119 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
             .style("opacity", 0);
           });
 
-        // displays sequence bases
-        var region = viewRegEnd -viewRegStart;
-          newData
-            .append("g")
-            .append("text")
-              .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-              .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
-              .attr("dy", 11)
-              .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-              .attr("height", (readTrackHeight-1))
-              .attr("font-family", "Sans-serif")
-              .attr("font-weight", "bold")
-              .attr("font-size", "12px")
-              .style("letter-spacing", function(d) {return ((width - (region*12))/region) + "px";})
-              .text((function(d) {return d.sequence; }))
-              .on("click", function(d) {
-                readDiv[i].transition()
-                  .duration(200)
-                  .style("opacity", .9);
-                readDiv[i].html(
-                  "Read Name: " + d.readName + "<br>" +
-                  "Start: " + d.start + "<br>" +
-                  "End: " + d.end + "<br>" +
-                  "Cigar:" + d.cigar + "<br>" +
-                  "Track: " + d.track + "<br>" +
-                  "Reverse Strand: " + d.readNegativeStrand)
-                  .style("left", (d3.event.pageX) + "px")
-                  .style("top", (d3.event.pageY - yOffset) + "px");
-              })
-              .on("mouseover", function(d) {
-                readDiv[i].transition()
-                  .duration(200)
-                  .style("opacity", .9);
-                readDiv[i].html(d.readName)
-                  .style("left", (d3.event.pageX) + "px")
-                  .style("top", (d3.event.pageY - yOffset) + "px");
-              })
-              .on("mouseout", function(d) {
-                readDiv[i].transition()
-                .duration(500)
-                .style("opacity", 0);
-              });
-
-
         var removed = rects.exit();
         removed.remove();
 
-        if (!isHighRes) {
-          // white background for arrows
-          var arrowBkgds = readsSvgContainer[sample].selectAll(".bkgd").data(readsData[i]);
-          var bkgdsModify = arrowBkgds.transition();
-          bkgdsModify
-          .attr('points', function(d) {
-            var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width - 1;
-            var height = readTrackHeight - 2;
-            var yCoord = readsHeight - readTrackHeight * (d.track + 1);
-            if (d.readNegativeStrand === true) { // to the right
-              var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
-              var xCoord = rectStart + rectWidth + 1;
-              return ((xCoord - height) + ' ' + yCoord + ","
-                  + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
-                  + (xCoord+1) + ' ' + (yCoord + readTrackHeight) + ","
-                  + (xCoord+1) + ' ' + yCoord + ","
-                  + (xCoord - height) + ' ' + yCoord);
-            } else if (d.readNegativeStrand === false) { // to the left
-              return ((rectStart + height) + ' ' + yCoord + ","
-                  + (rectStart + height) + ' ' + (yCoord + readTrackHeight) + ","
-                  + rectStart + ' ' + (yCoord + readTrackHeight) + ","
-                  + rectStart + ' ' + yCoord + ","
-                  + (rectStart + height) + ' ' + yCoord);
-            }
+        // white background for arrows
+        var arrowBkgds = readsSvgContainer[sample].selectAll(".bkgd").data(readsData[i]);
+        var bkgdsModify = arrowBkgds.transition();
+        bkgdsModify
+        .attr('points', function(d) {
+          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width - 1;
+          var height = readTrackHeight - 2;
+          var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+          if (d.readNegativeStrand === true) { // to the right
+            var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+            var xCoord = rectStart + rectWidth + 1;
+            return ((xCoord - height) + ' ' + yCoord + ","
+                + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
+                + (xCoord+1) + ' ' + (yCoord + readTrackHeight) + ","
+                + (xCoord+1) + ' ' + yCoord + ","
+                + (xCoord - height) + ' ' + yCoord);
+          } else if (d.readNegativeStrand === false) { // to the left
+            return ((rectStart + height) + ' ' + yCoord + ","
+                + (rectStart + height) + ' ' + (yCoord + readTrackHeight) + ","
+                + rectStart + ' ' + (yCoord + readTrackHeight) + ","
+                + rectStart + ' ' + yCoord + ","
+                + (rectStart + height) + ' ' + yCoord);
+          }
+          });
+
+        var newBkgds = arrowBkgds.enter();
+        newBkgds
+            .append("g")
+            .append("polyline")
+              .attr("class", "bkgd")
+              .attr('points', function(d) {
+                var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width - 1;
+                var height = readTrackHeight - 2;
+                var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+                if (d.readNegativeStrand === true) { // to the right
+                  var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+                  var xCoord = rectStart + rectWidth + 1;
+                  return ((xCoord - height) + ' ' + yCoord + ","
+                      + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
+                      + (xCoord+1) + ' ' + (yCoord + readTrackHeight) + ","
+                      + (xCoord+1) + ' ' + yCoord + ","
+                      + (xCoord - height) + ' ' + yCoord);
+                } else if (d.readNegativeStrand === false) { // to the left
+                  return ((rectStart + height) + ' ' + yCoord + ","
+                      + (rectStart + height) + ' ' + (yCoord + readTrackHeight) + ","
+                      + rectStart + ' ' + (yCoord + readTrackHeight) + ","
+                      + rectStart + ' ' + yCoord + ","
+                      + (rectStart + height) + ' ' + yCoord);
+                }
+              }).style("fill", "white");
+
+        var removedBkgds = arrowBkgds.exit();
+        removedBkgds.remove();
+
+        var arrowHeads = readsSvgContainer[sample].selectAll(".arrow").data(readsData[i]);
+        var arrowModify = arrowHeads.transition();
+        arrowModify
+        .attr('points', function(d) {
+          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+          var height = readTrackHeight - 2;
+          var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+          if (d.readNegativeStrand === true) { // to the right
+            var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+            var xCoord = rectStart + rectWidth;
+            return ((xCoord - height) + ' ' + yCoord + ","
+                + (xCoord - height) + ' ' + (yCoord + height+1) + ","
+                + xCoord + ' ' + (yCoord + height/2) + ","
+                + (xCoord - height) + ' ' + yCoord);
+          } else if (d.readNegativeStrand === false) { // to the left
+            var xCoord = rectStart - 1;
+            return ((xCoord + height) + ' ' + yCoord + ","
+                + (xCoord + height) + ' ' + (yCoord + height + 1) + ","
+                + xCoord + ' ' + (yCoord + height/2) + ","
+                + (xCoord + height) + ' ' + yCoord );
+          }
+          });
+
+        var newArrows = arrowHeads.enter();
+        newArrows
+            .append("g")
+            .append("polyline")
+              .attr("class", "arrow")
+              .attr('points', function(d) {
+                var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+                var height = readTrackHeight - 2;
+                var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+                if (d.readNegativeStrand === true) { // to the right
+                  var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+                  var xCoord = rectStart + rectWidth;
+                  return ((xCoord - height) + ' ' + yCoord + ","
+                      + (xCoord - height) + ' ' + (yCoord + height+1) + ","
+                      + xCoord + ' ' + (yCoord + height/2) + ","
+                      + (xCoord - height) + ' ' + yCoord);
+                } else if (d.readNegativeStrand === false) { // to the left
+                  var xCoord = rectStart - 1;
+                  return ((xCoord + height) + ' ' + yCoord + ","
+                      + (xCoord + height) + ' ' + (yCoord + height + 1) + ","
+                      + xCoord + ' ' + (yCoord + height/2) + ","
+                      + (xCoord + height) + ' ' + yCoord );
+                }
+              }).style("fill", function(d) {
+                if (d.readNegativeStrand === true) {
+                  return "red";
+                } else if (d.readNegativeStrand === false) {
+                  return "green";
+                }
             });
 
-          var newBkgds = arrowBkgds.enter();
-          newBkgds
-              .append("g")
-              .append("polyline")
-                .attr("class", "bkgd")
-                .attr('points', function(d) {
-                  var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width - 1;
-                  var height = readTrackHeight - 2;
-                  var yCoord = readsHeight - readTrackHeight * (d.track + 1);
-                  if (d.readNegativeStrand === true) { // to the right
-                    var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
-                    var xCoord = rectStart + rectWidth + 1;
-                    return ((xCoord - height) + ' ' + yCoord + ","
-                        + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
-                        + (xCoord+1) + ' ' + (yCoord + readTrackHeight) + ","
-                        + (xCoord+1) + ' ' + yCoord + ","
-                        + (xCoord - height) + ' ' + yCoord);
-                  } else if (d.readNegativeStrand === false) { // to the left
-                    return ((rectStart + height) + ' ' + yCoord + ","
-                        + (rectStart + height) + ' ' + (yCoord + readTrackHeight) + ","
-                        + rectStart + ' ' + (yCoord + readTrackHeight) + ","
-                        + rectStart + ' ' + yCoord + ","
-                        + (rectStart + height) + ' ' + yCoord);
-                  }
-                }).style("fill", "white");
-
-          var removedBkgds = arrowBkgds.exit();
-          removedBkgds.remove();
-
-          var arrowHeads = readsSvgContainer[sample].selectAll(".arrow").data(readsData[i]);
-          var arrowModify = arrowHeads.transition();
-          arrowModify
-          .attr('points', function(d) {
-            var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
-            var height = readTrackHeight - 2;
-            var yCoord = readsHeight - readTrackHeight * (d.track + 1);
-            if (d.readNegativeStrand === true) { // to the right
-              var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
-              var xCoord = rectStart + rectWidth;
-              return ((xCoord - height) + ' ' + yCoord + ","
-                  + (xCoord - height) + ' ' + (yCoord + height+1) + ","
-                  + xCoord + ' ' + (yCoord + height/2) + ","
-                  + (xCoord - height) + ' ' + yCoord);
-            } else if (d.readNegativeStrand === false) { // to the left
-              var xCoord = rectStart - 1;
-              return ((xCoord + height) + ' ' + yCoord + ","
-                  + (xCoord + height) + ' ' + (yCoord + height + 1) + ","
-                  + xCoord + ' ' + (yCoord + height/2) + ","
-                  + (xCoord + height) + ' ' + yCoord );
-            }
-            });
-
-          var newArrows = arrowHeads.enter();
-          newArrows
-              .append("g")
-              .append("polyline")
-                .attr("class", "arrow")
-                .attr('points', function(d) {
-                  var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
-                  var height = readTrackHeight - 2;
-                  var yCoord = readsHeight - readTrackHeight * (d.track + 1);
-                  if (d.readNegativeStrand === true) { // to the right
-                    var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
-                    var xCoord = rectStart + rectWidth;
-                    return ((xCoord - height) + ' ' + yCoord + ","
-                        + (xCoord - height) + ' ' + (yCoord + height+1) + ","
-                        + xCoord + ' ' + (yCoord + height/2) + ","
-                        + (xCoord - height) + ' ' + yCoord);
-                  } else if (d.readNegativeStrand === false) { // to the left
-                    var xCoord = rectStart - 1;
-                    return ((xCoord + height) + ' ' + yCoord + ","
-                        + (xCoord + height) + ' ' + (yCoord + height + 1) + ","
-                        + xCoord + ' ' + (yCoord + height/2) + ","
-                        + (xCoord + height) + ' ' + yCoord );
-                  }
-                }).style("fill", function(d) {
-                  if (d.readNegativeStrand === true) {
-                    return "red";
-                  } else if (d.readNegativeStrand === false) {
-                    return "green";
-                  }
-              });
-
-          var removedArrows = arrowHeads.exit();
-          removedArrows.remove();
-        }
+        var removedArrows = arrowHeads.exit();
+        removedArrows.remove();
 
         numTracks = d3.max(pairData, function(d) {return d.track});
 

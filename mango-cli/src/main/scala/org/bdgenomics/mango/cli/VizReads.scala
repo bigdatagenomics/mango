@@ -248,14 +248,8 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 1)
   var refName: String = null
 
-  @Args4jOption(required = false, name = "-sample1", usage = "The name of the first sample")
-  var samp1Name: String = null
-
   @Args4jOption(required = false, name = "-read_file1", usage = "The first reads file to view")
   var readsPath1: String = null
-
-  @Args4jOption(required = false, name = "-sample2", usage = "The name of the second sample")
-  var samp2Name: String = null
 
   @Args4jOption(required = false, name = "-read_file2", usage = "The second reads file to view")
   var readsPath2: String = null
@@ -299,7 +293,9 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val sampleIds: List[String] = params("sample").split(",").toList
+      println(sampleIds)
       val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
+      println(input)
       val fileMap = VizReads.readsData.getFileMap()
       val withRefReg: List[(String, Array[(ReferenceRegion, AlignmentRecord)])] = input.toList.map(elem => (elem._1, elem._2.map(t => (ReferenceRegion(t), t))))
       var retJson = ""
@@ -312,6 +308,7 @@ class VizServlet extends ScalatraServlet {
       }
       retJson = retJson.dropRight(1)
       retJson = "{" + retJson + "}"
+      println(retJson)
       retJson
     }
   }
@@ -473,9 +470,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       case Some(_) => {
         if (args.readsPath1.endsWith(".bam") || args.readsPath1.endsWith(".sam") || args.readsPath1.endsWith(".adam")) {
           VizReads.readsPath1 = args.readsPath1
-          VizReads.samp1Name = args.samp1Name
           VizReads.readsExist = true
-          VizReads.readsData.loadSample(args.samp1Name, args.readsPath1)
+          VizReads.samp1Name = VizReads.sc.loadBam(args.readsPath1).first.recordGroupSample
+          VizReads.readsData.loadSample(VizReads.samp1Name, args.readsPath1)
         } else {
           log.info("WARNING: Invalid input for reads file")
           println("WARNING: Invalid input for reads file")
@@ -492,9 +489,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       case Some(_) => {
         if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam") || args.readsPath2.endsWith(".adam")) {
           VizReads.readsPath2 = args.readsPath2
-          VizReads.samp2Name = args.samp2Name
           VizReads.readsExist = true
-          VizReads.readsData.loadSample(args.samp2Name, args.readsPath2)
+          VizReads.samp2Name = VizReads.sc.loadBam(args.readsPath1).first.recordGroupSample
+          VizReads.readsData.loadSample(VizReads.samp2Name, args.readsPath2)
         } else {
           log.info("WARNING: Invalid input for second reads file")
           println("WARNING: Invalid input for second reads file")
