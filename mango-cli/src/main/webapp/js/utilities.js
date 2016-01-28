@@ -16,14 +16,14 @@ function getTrackHeight() {
   } else if (range > 1000 && range < 10000)  {
     return baseHeight - 7;
   } else {
-    return 2;
+    return 4;
   }
 }
 
 function checkboxChange() {
   for (var i = 0; i < samples.length; i++) {
     if (indelCheck.checked) {
-      renderMismatches(readsData[i], samples[i]);
+      renderMismatches(sampleData[i].mismatches, samples[i]);
     } else  {
       readsSvgContainer[samples[i]].selectAll(".mismatch").remove();
     }

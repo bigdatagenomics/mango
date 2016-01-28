@@ -5,7 +5,7 @@ var readsSelector = "col-md-10";
 var yOffset = 175;
 
 // Global Data
-var readsData = [];
+var sampleData = [];
 // Svg Containers, and vertical guidance lines and animations set here for all divs
 
 //Manages changes when clicking checkboxes
@@ -110,8 +110,10 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         readsSvgContainer[sample].select(".axis").remove();
 
         var selector = "#" + sample;
-        readsData[i] = data['tracks'];
-        var pairData = data['matePairs'];
+        sampleData[i] = [];
+        sampleData[i].reads = data['tracks'];
+        sampleData[i].mismatches = data['misMatches'];
+        sampleData[i].pairs = data['matePairs'];
 
         // print file name
         // TODO: this should not be redrawn every page load
@@ -119,7 +121,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         var filename = data['filename'];
         $("#" + samples[i] + ">." + fileSelector).append("<div class='fixed-title'>" + filename + "</div>");
 
-        var numTracks = d3.max(readsData[i], function(d) {return d.track});
+        var numTracks = d3.max(sampleData[i].reads, function(d) {return d.track});
         readsHeight = (numTracks+1)*readTrackHeight;
 
         // Reset size of svg container
@@ -135,7 +137,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         $(".verticalLine").attr("y2", readsHeight);
 
         //Add the rectangles
-        var rects = readsSvgContainer[sample].selectAll(".readrect").data(readsData[i]);
+        var rects = readsSvgContainer[sample].selectAll(".readrect").data(sampleData[i].reads);
         var modify = rects.transition();
 
       modify
@@ -186,7 +188,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         removed.remove();
 
         // white background for arrows
-        var arrowBkgds = readsSvgContainer[sample].selectAll(".bkgd").data(readsData[i]);
+        var arrowBkgds = readsSvgContainer[sample].selectAll(".bkgd").data(sampleData[i].reads);
         var bkgdsModify = arrowBkgds.transition();
         bkgdsModify
         .attr('points', function(d) {
@@ -239,7 +241,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         var removedBkgds = arrowBkgds.exit();
         removedBkgds.remove();
 
-        var arrowHeads = readsSvgContainer[sample].selectAll(".arrow").data(readsData[i]);
+        var arrowHeads = readsSvgContainer[sample].selectAll(".arrow").data(sampleData[i].reads);
         var arrowModify = arrowHeads.transition();
         arrowModify
         .attr('points', function(d) {
@@ -296,10 +298,10 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         var removedArrows = arrowHeads.exit();
         removedArrows.remove();
 
-        numTracks = d3.max(pairData, function(d) {return d.track});
+        numTracks = d3.max(sampleData[i].pairs, function(d) {return d.track});
 
         // Add the lines connecting read pairs
-        var mateLines = readsSvgContainer[samples[i]].selectAll(".readPairs").data(pairData);
+        var mateLines = readsSvgContainer[samples[i]].selectAll(".readPairs").data(sampleData[i].pairs);
         modify = mateLines.transition();
         modify
           .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -322,14 +324,14 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
       removedGroupPairs.remove();
 
       if (indelCheck.checked) {
-        renderMismatches(readsData[i], samples[i]);
+        renderMismatches(sampleData[i].mismatches, samples[i]);
       } else {
         readsSvgContainer[sample].selectAll(".mismatch").remove()
       }
 }
 
 
-function renderMismatches(data, sample) {
+function renderMismatches(misMatch, sample) {
   var readTrackHeight = getTrackHeight();
   var selector = "#" + sample;
   var misMatchDiv = d3.select(selector)
@@ -337,78 +339,25 @@ function renderMismatches(data, sample) {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-  var misMatchArr = [];
-  var matchCompare = []
-
-  //Loop through each read
-  data.forEach(function(d) {
-    var curr = 0;
-    var refCurr = d.start;
-    var str = d.cigar.match(/(\d+|[^\d]+)/g);
-
-    //Loop through each cigar section
-    for (var i = 0; i < 2*str.length; i+=2) {
-      var misLen = parseInt(str[i]);
-      var op = str[i+1];
-      if (op === "I") {
-        //[Operation, mismatch start on reference, mismatch start on read sequence, length, base sequence, track]
-        var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
-        misMatchArr.push(misElem);
-      } else if (op === "D") {
-        var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
-        misMatchArr.push(misElem);
-      } else if (op === "X") {
-        var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
-        refCurr += misLen;
-        misMatchArr.push(misElem);
-      } else if (op === "M") {
-        //NOTE: Data for alignment matches put into separate array for additional processing
-
-        if (refCurr < viewRegStart) { //Substring and Start of mismatch being displayed are different if read starts before region
-          var lenFromViewReg = misLen - (viewRegStart - refCurr);
-          var relStart = curr + (viewRegStart-refCurr); //Start index to get bases aligned to reference
-          var relEnd = Math.min(curr + (viewRegEnd - refCurr), curr + misLen); //End index to get bases aligned to reference
-          var misElem = [op, viewRegStart, curr, lenFromViewReg, d.sequence.substring(relStart, relEnd), d.track];
-          refCurr += misLen //Where we are in relation to the reference
-          matchCompare.push(misElem);
-        }
-        else { //Regular case where start of read begins after region
-          var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
-          refCurr += misLen;
-          matchCompare.push(misElem);
-        }
-      } else if (op === "N") {
-        var misElem = [op, refCurr, curr, misLen, d.sequence.substring(curr, curr+misLen), d.track];
-        misMatchArr.push(misElem);
-      }
-      curr += misLen;
-    }
-
-  });
-
   //Display M: This is where we compare mismatching pairs
   if (mismatchCheck.checked) {
+    var matchCompare = misMatch.filter((function (el) {
+      return el.op == "M"
+    }));
     renderMCigar(matchCompare, sample)
   } else {
     readsSvgContainer[sample].selectAll(".mrect").remove()
   }
-
   //Display Indels
-  var misRects = readsSvgContainer[sample].selectAll(".mismatch").data(misMatchArr);
+  var misMatchData = misMatch.filter((function (el) {
+    return el.op != "M"
+  }));
+
+  var misRects = readsSvgContainer[sample].selectAll(".mismatch").data(misMatchData);
   var modMisRects = misRects.transition()
     .attr("x", (function(d) {
-      return (d[1]-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-    .attr("y", (function(d) { return readsHeight - (readTrackHeight * (d[5]+1)); }))
-    .attr("width", (function(d) {
-      if (d[0] === "I") {
-        return 5;
-      } else if (d[0] === "D") {
-        return 5;
-      } else if (d[0] === "N") {
-        return 5;
-      }
-      return Math.max(1,(d[3])*(width/(viewRegEnd-viewRegStart)));
-    }));
+      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+    .attr("y", (function(d) { return readsHeight - (readTrackHeight * (d.track+1)); }));
 
   var newMisRects = misRects.enter();
   newMisRects
@@ -416,24 +365,20 @@ function renderMismatches(data, sample) {
     .append("rect")
       .attr("class", "mismatch")
       .attr("x", (function(d) {
-        return (d[1]-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("y", (function(d) { return readsHeight - (readTrackHeight * (d[5]+1)); }))
+        return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("y", (function(d) { return readsHeight - (readTrackHeight * (d.track+1)); }))
       .attr("width", (function(d) {
-        if (d[0] === "I") {
-          return 5;
-        } else if (d[0] === "D") {
-          return 5;
-        } else if (d[0] === "N") {
+        if (d.op == "I" || d.op == "D" || d.op == "N") {
           return 5;
         }
-        return Math.max(1,(d[3])*(width/(viewRegEnd-viewRegStart))); }))
+        return Math.max(1,(d.end)*(width/(viewRegEnd-viewRegStart))); }))
       .attr("height", (readTrackHeight-1))
       .attr("fill", function(d) {
-        if (d[0] === "I") {
+        if (d.op == "I") {
           return "pink";
-        } else if (d[0] === "D") {
+        } else if (d.op == "D") {
           return "black";
-        } else if (d[0] === "N") {
+        } else if (d.op == "N") {
           return "gray";
         }
       })
@@ -442,12 +387,12 @@ function renderMismatches(data, sample) {
           .duration(200)
           .style("opacity", .9);
         misMatchDiv.html(
-          "Operation: " + d[0] + "<br>" +
-          "Ref Start: " + d[1] + "<br>" +
-          "Read Start: " + d[2] + "<br>" +
-          "Length:" + d[3] + "<br>" +
-          "Sequence: " + d[4] + "<br>" +
-          "Track: " + d[5])
+          "Operation: " + d.op + "<br>" +
+          "Ref Start: " + d.refCurr + "<br>" +
+          "Read Start: " + d.start + "<br>" +
+          "Length:" + d.end + "<br>" +
+          "Sequence: " + d.sequence + "<br>" +
+          "Track: " + d.track)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - yOffset) + "px");
       })
@@ -455,7 +400,15 @@ function renderMismatches(data, sample) {
         misMatchDiv.transition()
           .duration(200)
           .style("opacity", .9);
-        misMatchDiv.html(d)
+          var text;
+          if (d.op == "I") {
+            text = "Insertion";
+          } else if (d.op == "D") {
+            text = "Deletion";
+          } else if (d.op == "N") {
+            text = "Skipped";
+          }
+        misMatchDiv.html(text)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - yOffset) + "px");
       })
@@ -482,51 +435,41 @@ function renderMCigar(data, sample) {
 
   //Creates data for all mismatch rectangles
   //[Operation, mismatch start on reference, mismatch start on read sequence, length, base sequence, track]
+  //
+  // var rectArr = []
+  // data.forEach(function(d) {
+  //   var readCount = 0;
+  //   var sequence = d[4]
+  //   readCount+=1
+  //   posCount = 0;
+  //   var limit = Math.min(d[3], viewRegEnd-d[1])
+  //   for (var j = 0; j < limit; j++) {
+  //     var currPos = d[1] + j;
+  //     var currBase = sequence[j];
+  //     var refIndex = currPos - viewRegStart;
+  //     var refElem = refSequence[refIndex];
+  //     posCount +=1
+  //     var refBase = refElem.reference;
+  //     if (String(currBase) === String(refBase)) {
+  //     } else {
+  //       var x = refIndex/(viewRegEnd-viewRegStart)* width;
+  //       var y = readsHeight - trackHeight * (d[5]+1);
+  //       var rectElem = [x, y, currBase, refBase];
+  //       rectArr.push(rectElem);
+  //     }
+  //   }
+  // });
 
-  var rectArr = []
-  data.forEach(function(d) {
-    var readCount = 0;
-    var sequence = d[4]
-    readCount+=1
-    posCount = 0;
-    var limit = Math.min(d[3], viewRegEnd-d[1])
-    for (var j = 0; j < limit; j++) {
-      var currPos = d[1] + j;
-      var currBase = sequence[j];
-      var refIndex = currPos - viewRegStart;
-      var refElem = refSequence[refIndex];
-      posCount +=1
-      var refBase = refElem.reference;
-      if (String(currBase) === String(refBase)) {
-      } else {
-        var x = refIndex/(viewRegEnd-viewRegStart)* width;
-        var y = readsHeight - readTrackHeight * (d[5]+1);
-        var rectElem = [x, y, currBase, refBase];
-        rectArr.push(rectElem);
-      }
-    }
-  });
+  // /* STOP REMOVE */
 
   //Displays rects from the data we just calculated
-  var mRects = readsSvgContainer[sample].selectAll(".mrect").data(rectArr);
+  var mRects = readsSvgContainer[sample].selectAll(".mrect").data(data);
   var modifiedMRects = mRects.transition()
   modifiedMRects
-    .attr("x", function(d) { return d[0]})
-    .attr("y", function(d) { return d[1]})
-    .attr("fill", function(d) {
-      currBase = d[2];
-      if (currBase === "G") {
-        return '#00C000'; //GREEN
-      } else if (currBase === "C") {
-        return '#E00000'; //CRIMSON
-      } else if (currBase === "A") {
-        return '#5050FF'; //AZURE
-      } else if (currBase === "T") {
-        return '#E6E600'; //TWEETY BIRD
-      } else if (currBase === "N") {
-        return 'black'; //WHITE
-      }
-    })
+    .attr("x", (function(d) {
+      console.log(refCurr)
+      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+    .attr("y", function(d) { return d.refCurr})
     .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)));
 
   var newMRects = mRects.enter();
@@ -534,12 +477,13 @@ function renderMCigar(data, sample) {
     .append("g")
     .append("rect")
     .attr("class", "mrect")
-    .attr("x", function(d) { return d[0]})
-    .attr("y", function(d) { return d[1]})
+    .attr("x", (function(d) {
+      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+    .attr("y", function(d) { return readsHeight - (readTrackHeight * (d.track+1));})
     .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
     .attr("height", (readTrackHeight-1))
     .attr("fill", function(d) {
-      currBase = d[2];
+      currBase = d.sequence;
       if (currBase === "G") {
         return '#00C000'; //GREEN
       } else if (currBase === "C") {
@@ -557,8 +501,8 @@ function renderMCigar(data, sample) {
         .duration(200)
         .style("opacity", .9);
       misMatchDiv.html(
-        "Ref Base: " + d[3] + "<br>" +
-        "Base: " + d[2])
+        "Ref Base: " + d.end + "<br>" +
+        "Base: " + d.sequence)
         .style("left", (d3.event.pageX) + "px")
         .style("top", (d3.event.pageY - yOffset) + "px");
     })
@@ -567,8 +511,8 @@ function renderMCigar(data, sample) {
         .duration(200)
         .style("opacity", .9);
       misMatchDiv.html(
-        "Ref Base: " + d[3] + "<br>" +
-        "Base: " + d[2])
+        "Ref Base: " + d.end + "<br>" +
+        "Base: " + d.sequence)
         .style("left", (d3.event.pageX) + "px")
         .style("top", (d3.event.pageY - yOffset) + "px");
     })

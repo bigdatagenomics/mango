@@ -11,7 +11,7 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 
 // Global Data
 var refSequence;
-var readsData;
+var sampleData;
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);

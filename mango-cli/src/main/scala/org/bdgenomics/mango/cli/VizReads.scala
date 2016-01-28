@@ -33,7 +33,7 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.mango.models._
+import org.bdgenomics.mango.layout._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Fragment, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
@@ -44,7 +44,7 @@ import org.scalatra.ScalatraServlet
 import scala.reflect.ClassTag
 import scala.collection.mutable.ListBuffer
 
-import edu.berkeley.cs.amplab.lazymango.LazyMaterialization
+import org.bdgenomics.mango.models.LazyMaterialization
 import com.github.akmorrow13.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
 
@@ -115,11 +115,20 @@ object VizReads extends BDGCommandCompanion with Logging {
     tracks.toList
   }
 
+  //Prepares reads information in json format
+  def printMisMatchJson(mismatches: List[MisMatch]): List[MisMatchJson] = VizTimers.PrintTrackJsonTimer.time {
+    var tracks = new scala.collection.mutable.ListBuffer[MisMatchJson]
+    for (rec <- mismatches) {
+      tracks += new MisMatchJson(rec.op, rec.refCurr, rec.start, rec.end, rec.sequence, rec.track)
+    }
+    tracks.toList
+  }
+
   def printStringJson(str: String): String = {
     return str
   }
 
-  //Prepares reads information in json format
+  //Prepares mate pair information in json format
   def printMatePairJson(layout: OrderedTrackedLayout[AlignmentRecord]): List[MatePairJson] = VizTimers.PrintTrackJsonTimer.time {
     var matePairs = new scala.collection.mutable.ListBuffer[MatePairJson]
     for (track <- layout.trackBuilder) {
@@ -233,6 +242,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 }
 
 case class TrackJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
+case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, track: Long)
 case class MatePairJson(start: Long, end: Long, track: Long)
 case class VariationJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class SampleVariationJson(sampleId: String, variationJson: VariationJson)
@@ -293,22 +303,22 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val sampleIds: List[String] = params("sample").split(",").toList
-      println(sampleIds)
       val input: Map[String, Array[AlignmentRecord]] = VizReads.readsData.multiget(viewRegion, sampleIds)
-      println(input)
       val fileMap = VizReads.readsData.getFileMap()
       val withRefReg: List[(String, Array[(ReferenceRegion, AlignmentRecord)])] = input.toList.map(elem => (elem._1, elem._2.map(t => (ReferenceRegion(t), t))))
       var retJson = ""
       for (elem <- withRefReg) {
         val filteredLayout = new OrderedTrackedLayout(elem._2)
+        //val mismatchLayout = VariantLayout.getMisMatches(filteredLayout)
+        val mismatchLayout = null
         retJson += "\"" + elem._1 + "\":" +
           "{ \"filename\": " + write(VizReads.printStringJson(fileMap(elem._1))) +
           ", \"tracks\": " + write(VizReads.printTrackJson(filteredLayout)) +
+          ", \"misMatches\": " + write(VizReads.printMisMatchJson(mismatchLayout)) +
           ", \"matePairs\": " + write(VizReads.printMatePairJson(filteredLayout)) + "},"
       }
       retJson = retJson.dropRight(1)
       retJson = "{" + retJson + "}"
-      println(retJson)
       retJson
     }
   }
