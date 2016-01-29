@@ -23,7 +23,7 @@ function getTrackHeight() {
 function checkboxChange() {
   for (var i = 0; i < samples.length; i++) {
     if (indelCheck.checked) {
-      renderMismatches(sampleData[i].mismatches, samples[i]);
+      renderMismatches(sampleData[i].mismatches, sampleData[i].indels, samples[i]);
     } else  {
       readsSvgContainer[samples[i]].selectAll(".mismatch").remove();
     }

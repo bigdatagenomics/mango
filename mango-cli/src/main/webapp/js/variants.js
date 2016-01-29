@@ -67,6 +67,7 @@ var varDiv = d3.select("#varArea>.col-md-10")
 function renderJsonVariants() {
 
   d3.json(varJsonLocation, function(error, alldata) {
+    console.log(alldata);
     if (error) throw error;
     var data = alldata.variants;
     // Add the rectangles

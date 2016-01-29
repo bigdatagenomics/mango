@@ -112,7 +112,8 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         var selector = "#" + sample;
         sampleData[i] = [];
         sampleData[i].reads = data['tracks'];
-        sampleData[i].mismatches = data['misMatches'];
+        sampleData[i].mismatches = data['mismatches'];
+        sampleData[i].indels = data['indels'];
         sampleData[i].pairs = data['matePairs'];
 
         // print file name
@@ -324,14 +325,14 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
       removedGroupPairs.remove();
 
       if (indelCheck.checked) {
-        renderMismatches(sampleData[i].mismatches, samples[i]);
+        renderMismatches(sampleData[i].mismatches, sampleData[i].indels, samples[i]);
       } else {
         readsSvgContainer[sample].selectAll(".mismatch").remove()
       }
 }
 
 
-function renderMismatches(misMatch, sample) {
+function renderMismatches(mismatches, indels, sample) {
   var readTrackHeight = getTrackHeight();
   var selector = "#" + sample;
   var misMatchDiv = d3.select(selector)
@@ -341,19 +342,12 @@ function renderMismatches(misMatch, sample) {
 
   //Display M: This is where we compare mismatching pairs
   if (mismatchCheck.checked) {
-    var matchCompare = misMatch.filter((function (el) {
-      return el.op == "M"
-    }));
-    renderMCigar(matchCompare, sample)
+    renderMCigar(mismatches, sample)
   } else {
     readsSvgContainer[sample].selectAll(".mrect").remove()
   }
-  //Display Indels
-  var misMatchData = misMatch.filter((function (el) {
-    return el.op != "M"
-  }));
 
-  var misRects = readsSvgContainer[sample].selectAll(".mismatch").data(misMatchData);
+  var misRects = readsSvgContainer[sample].selectAll(".mismatch").data(indels);
   var modMisRects = misRects.transition()
     .attr("x", (function(d) {
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -433,41 +427,12 @@ function renderMCigar(data, sample) {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-  //Creates data for all mismatch rectangles
-  //[Operation, mismatch start on reference, mismatch start on read sequence, length, base sequence, track]
-  //
-  // var rectArr = []
-  // data.forEach(function(d) {
-  //   var readCount = 0;
-  //   var sequence = d[4]
-  //   readCount+=1
-  //   posCount = 0;
-  //   var limit = Math.min(d[3], viewRegEnd-d[1])
-  //   for (var j = 0; j < limit; j++) {
-  //     var currPos = d[1] + j;
-  //     var currBase = sequence[j];
-  //     var refIndex = currPos - viewRegStart;
-  //     var refElem = refSequence[refIndex];
-  //     posCount +=1
-  //     var refBase = refElem.reference;
-  //     if (String(currBase) === String(refBase)) {
-  //     } else {
-  //       var x = refIndex/(viewRegEnd-viewRegStart)* width;
-  //       var y = readsHeight - trackHeight * (d[5]+1);
-  //       var rectElem = [x, y, currBase, refBase];
-  //       rectArr.push(rectElem);
-  //     }
-  //   }
-  // });
-
-  // /* STOP REMOVE */
 
   //Displays rects from the data we just calculated
   var mRects = readsSvgContainer[sample].selectAll(".mrect").data(data);
   var modifiedMRects = mRects.transition()
   modifiedMRects
     .attr("x", (function(d) {
-      console.log(refCurr)
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
     .attr("y", function(d) { return d.refCurr})
     .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)));
@@ -501,7 +466,7 @@ function renderMCigar(data, sample) {
         .duration(200)
         .style("opacity", .9);
       misMatchDiv.html(
-        "Ref Base: " + d.end + "<br>" +
+        "Ref Base: " + d.refBase + "<br>" +
         "Base: " + d.sequence)
         .style("left", (d3.event.pageX) + "px")
         .style("top", (d3.event.pageY - yOffset) + "px");
@@ -511,7 +476,7 @@ function renderMCigar(data, sample) {
         .duration(200)
         .style("opacity", .9);
       misMatchDiv.html(
-        "Ref Base: " + d.end + "<br>" +
+        "Ref Base: " + d.refBase + "<br>" +
         "Base: " + d.sequence)
         .style("left", (d3.event.pageX) + "px")
         .style("top", (d3.event.pageY - yOffset) + "px");

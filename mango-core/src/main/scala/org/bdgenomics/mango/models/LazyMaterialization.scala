@@ -34,7 +34,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.avro.specific.SpecificRecord
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDDFunctions
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment, Contig }
@@ -42,12 +42,12 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, Genotyp
 import scala.collection.mutable.ListBuffer
 import collection.mutable.HashMap
 
-class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extends Serializable with Logging {
+class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long) extends Serializable with Logging {
 
   var dict: SequenceDictionary = null
 
-  def this(sc: SparkContext) = {
-    this(sc, 1000)
+  def this(sc: SparkContext, partitions: Int) = {
+    this(sc, partitions, 1000)
   }
 
   def setDictionary(filePath: String) {
@@ -58,12 +58,16 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
     if (isAlignmentRecord) {
       dict = sc.adamDictionaryLoad[AlignmentRecord](filePath)
     } else if (isGenotype) {
-      val projection = Projection(GenotypeField.variant)
-      val projected: RDD[Genotype] = sc.loadParquet[Genotype](filePath, None, projection = Some(projection))
-      val recs: RDD[SequenceRecord] = projected.map(rec => SequenceRecord(rec.getVariant.getContig.getContigName, (rec.getVariant.end - rec.getVariant.start)))
-      dict = recs.aggregate(SequenceDictionary())(
-        (dict: SequenceDictionary, rec: SequenceRecord) => dict + rec,
-        (dict1: SequenceDictionary, dict2: SequenceDictionary) => dict1 ++ dict2)
+      // TODO: this takes forever
+      // val projection = Projection(GenotypeField.variant)
+      // val projected: RDD[Genotype] = sc.loadParquet[Genotype](filePath, None, projection = Some(projection))
+      // val recs: RDD[SequenceRecord] = projected.map(rec => SequenceRecord(rec.getVariant.getContig.getContigName, (rec.getVariant.end - rec.getVariant.start)))
+      // dict = recs.aggregate(SequenceDictionary())(
+      //   (dict: SequenceDictionary, rec: SequenceRecord) => dict + rec,
+      //   (dict1: SequenceDictionary, dict2: SequenceDictionary) => dict1 ++ dict2)
+      dict = new SequenceDictionary(Vector(SequenceRecord("20", 25000000L),
+        SequenceRecord("chrM", 2000L),
+        SequenceRecord("chr3", 2000L)))
     }
   }
 
@@ -80,13 +84,12 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
 
   def getFileMap(): HashMap[String, String] = fileMap
 
-  // TODO: could merge into 1 interval tree with nodes storing (chr, list(keys)). Storing the booleans is a waste of space
   private var bookkeep: HashMap[String, IntervalTree[ReferenceRegion, String]] = new HashMap()
 
   var intRDD: IntervalRDD[ReferenceRegion, T] = null
 
   /*
-  * Logs key and region values in a bookkeeping structure
+  * Logs key and region values in a bookkeeping structure per chromosome
   */
   private def rememberValues(region: ReferenceRegion, ks: List[String]) = {
     if (bookkeep.contains(region.referenceName)) {
@@ -98,7 +101,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
     }
   }
 
-  def loadadam(region: ReferenceRegion, fp: String): RDD[T] = {
+  def loadadam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
     val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
     val isVariant = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
     val isFeature = classOf[Feature].isAssignableFrom(classTag[T].runtimeClass)
@@ -107,41 +110,42 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
     if (isAlignmentRecord) {
       val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
       val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
-      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).asInstanceOf[RDD[T]]
+      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     } else if (isVariant) {
       val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end))
       val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
-      sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj)).asInstanceOf[RDD[T]]
+      sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     } else if (isFeature) {
       val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
       val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).asInstanceOf[RDD[T]]
+      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     } else if (isNucleotideFrag) {
-      val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-      sc.loadParquetFragments(fp, predicate = Some(pred)).asInstanceOf[RDD[T]]
+      // val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
+      // sc.loadParquetFragments(fp, predicate = Some(pred)).map(r => (ReferenceRegion(r).get, r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+      null // TODO
     } else {
       log.warn("Generic type not supported")
       null
     }
   }
 
-  def loadFromBam(region: ReferenceRegion, fp: String): RDD[T] = {
+  def loadFromBam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
     val idxFile: File = new File(fp + ".bai")
     if (!idxFile.exists()) {
-      sc.loadBam(fp).rdd.filterByOverlappingRegion(region).asInstanceOf[RDD[T]]
+      sc.loadBam(fp).rdd.filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     } else {
-      sc.loadIndexedBam(fp, region).asInstanceOf[RDD[T]]
+      sc.loadIndexedBam(fp, region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     }
   }
 
-  private def loadReference(region: ReferenceRegion, fp: String): RDD[T] = {
+  private def loadReference(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
     // TODO
-    nullØ
+    null
   }
 
-  def loadFromFile(region: ReferenceRegion, ks: List[String]): RDD[T] = {
-    var ret: RDD[T] = null
-    var load: RDD[T] = null
+  def loadFromFile(region: ReferenceRegion, ks: List[String]): RDD[(ReferenceRegion, T)] = {
+    var ret: RDD[(ReferenceRegion, T)] = null
+    var load: RDD[(ReferenceRegion, T)] = null
 
     for (k <- ks) {
       if (!fileMap.containsKey(k)) {
@@ -158,9 +162,9 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
       } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
         load = loadFromBam(region, fp)
       } else if (fp.endsWith(".vcf")) {
-        load = sc.loadGenotypes(fp).filterByOverlappingRegion(region).asInstanceOf[RDD[T]]
+        load = sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
       } else if (fp.endsWith(".bed")) {
-        load = sc.loadFeatures(fp).filterByOverlappingRegion(region).asInstanceOf[RDD[T]]
+        load = sc.loadFeatures(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
       } else if (fp.endsWith(".fa") || fp.endsWith(".fasta")) {
         load = loadReference(region, fp)
       } else {
@@ -175,8 +179,8 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
     ret
   }
 
-  def get(region: ReferenceRegion, k: String): List[T] = {
-    multiget(region, List(k)).toList.map(elem => elem._2).flatten
+  def get(region: ReferenceRegion, k: String): IntervalRDD[ReferenceRegion, T] = {
+    multiget(region, List(k))
   }
 
   /* If the RDD has not been initialized, initialize it to the first get request
@@ -185,12 +189,12 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
 	* Otherwise call put on the sections of data that don't exist
 	* Here, ks, is an option of list of personids (String)
 	*/
-  def multiget(region: ReferenceRegion, ks: List[String]): Map[String, Array[T]] = {
+  def multiget(region: ReferenceRegion, ks: List[String]): IntervalRDD[ReferenceRegion, T] = {
 
     val matRegion: ReferenceRegion = getChunk(region)
     if (intRDD == null) {
-      //  load all data from keys
-      val rdd: RDD[(ReferenceRegion, T)] = loadFromFile(matRegion, ks).map(r => (region, r)).partitionBy(GenomicRegionPartitioner(10, dict))
+      // load all data from keys
+      val rdd: RDD[(ReferenceRegion, T)] = loadFromFile(matRegion, ks).partitionBy(GenomicRegionPartitioner(partitions, dict)) // this line is an issue
       intRDD = IntervalRDD(rdd)
       rememberValues(matRegion, ks)
     } else {
@@ -210,7 +214,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
         }
       }
     }
-    filterByRegionAndKey(region, ks)
+    intRDD.filterByInterval(region)
   }
 
   /* Transparent to the user, should only be called by get if IntervalRDD.get does not return data
@@ -218,7 +222,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
 	* Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
 	*/
   private def put(region: ReferenceRegion, ks: List[String]) = {
-    val rdd: Array[(ReferenceRegion, T)] = loadFromFile(region, ks).map(r => (region, r)).collect
+    val rdd: RDD[(ReferenceRegion, T)] = loadFromFile(region, ks).partitionBy(GenomicRegionPartitioner(partitions, dict))
     intRDD = intRDD.multiput(rdd)
     rememberValues(region, ks)
   }
@@ -244,32 +248,17 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, chunkSize: Long) extend
     regions.toList
   }
 
-  private def filterByRegionAndKey(region: ReferenceRegion, ks: List[String]): Map[String, Array[T]] = {
-
-    val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
-    val isGenotype = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
-
-    if (isAlignmentRecord) {
-      intRDD.asInstanceOf[IntervalRDD[ReferenceRegion, AlignmentRecord]].filterByRegion(region).collect.filter(ReferenceRegion(_).overlaps(region)).groupBy(_.recordGroupSample).asInstanceOf[Map[String, Array[T]]]
-    } else if (isGenotype)
-      intRDD.asInstanceOf[IntervalRDD[ReferenceRegion, Genotype]].filterByRegion(region).collect.groupBy(_.sampleId).asInstanceOf[Map[String, Array[T]]]
-    else {
-      log.warn("type not supported")
-      null
-    }
-  }
-
 }
 
 case class UnsupportedFileException(message: String) extends Exception(message)
 
 object LazyMaterialization {
 
-  def apply[T: ClassTag](sc: SparkContext): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc)
+  def apply[T: ClassTag](sc: SparkContext, partitions: Int): LazyMaterialization[T] = {
+    new LazyMaterialization[T](sc, partitions)
   }
 
-  def apply[T: ClassTag](sc: SparkContext, chunkSize: Long): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, chunkSize)
+  def apply[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
+    new LazyMaterialization[T](sc, partitions, chunkSize)
   }
 }

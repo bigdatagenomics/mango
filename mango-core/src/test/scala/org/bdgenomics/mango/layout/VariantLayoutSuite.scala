@@ -65,12 +65,11 @@ class VariantLayoutSuite extends FunSuite {
       .setReadMapped(true)
       .build
 
-    val reference = "ATCAAAA"
-
-    val results = VariantLayout.alignMatchesToRead(read, reference)
+    val reference = "NATCAAAA"
+    val region = new ReferenceRegion("chr", 1, 10)
+    val results = VariantLayout.alignMatchesToRead(read, reference, region)
     assert(results.size == 1)
-    assert(results.head.op == "M" && results.head.start == 4 && results.head.refCurr == 4 && results.head.end == 5 && results.head.sequence == "C")
-
+    assert(results.head.op == "M" && results.head.start == 4 && results.head.refCurr == 5 && results.head.end == 5 && results.head.sequence == "C" && results.head.refBase == "A")
   }
 
   test("identify 3 mismatches on a read") {
@@ -82,12 +81,12 @@ class VariantLayoutSuite extends FunSuite {
       .setReadMapped(true)
       .build
 
-    val reference = "ATCAAAACC"
-
-    val results = VariantLayout.alignMatchesToRead(read, reference)
-    assert(results(0).op == "M" && results(0).start == 4 && results(0).refCurr == 4 && results(0).end == 5 && results(0).sequence == "C")
-    assert(results(1).op == "M" && results(1).start == 8 && results(1).refCurr == 8 && results(1).end == 9 && results(1).sequence == "T")
-    assert(results(2).op == "M" && results(2).start == 9 && results(2).refCurr == 9 && results(2).end == 10 && results(2).sequence == "G")
+    val reference = "NATCAAAACC"
+    val region = new ReferenceRegion("chr", 1, 10)
+    val results = VariantLayout.alignMatchesToRead(read, reference, region)
+    assert(results(0).op == "M" && results(0).start == 4 && results(0).refCurr == 5 && results(0).end == 5 && results(0).sequence == "C")
+    assert(results(1).op == "M" && results(1).start == 8 && results(1).refCurr == 9 && results(1).end == 9 && results(1).sequence == "T")
+    assert(results(2).op == "M" && results(2).start == 9 && results(2).refCurr == 10 && results(2).end == 10 && results(2).sequence == "G")
   }
 
   test("identify mismatches on a read with insertion") {
@@ -98,14 +97,12 @@ class VariantLayoutSuite extends FunSuite {
       .setReadMapped(true)
       .build
 
-    val reference = "ATCAAAA"
+    val reference = "NATCAAAA"
+    val region = new ReferenceRegion("chr", 1, 10)
+    val results = VariantLayout.alignMatchesToRead(read, reference, region)
 
-    val results = VariantLayout.alignMatchesToRead(read, reference)
-
-    println(results)
     assert(results.size == 1)
-
-    assert(results.head.op == "M" && results.head.start == 5 && results.head.refCurr == 4 && results.head.end == 6 && results.head.sequence == "C")
+    assert(results.head.op == "M" && results.head.start == 5 && results.head.refCurr == 5 && results.head.end == 6 && results.head.sequence == "C")
   }
 
   test("identify mismatches on a read with deletion") {
@@ -116,13 +113,46 @@ class VariantLayoutSuite extends FunSuite {
       .setReadMapped(true)
       .build
 
-    val reference = "GATCAAAA"
+    val reference = "NGATCAAAA"
+    val region = new ReferenceRegion("chr", 1, 10)
+    val results = VariantLayout.alignMatchesToRead(read, reference, region)
 
-    val results = VariantLayout.alignMatchesToRead(read, reference)
-
-    println(results)
     assert(results.size == 1)
-
-    assert(results.head.op == "M" && results.head.start == 4 && results.head.refCurr == 5 && results.head.end == 5 && results.head.sequence == "C")
+    assert(results.head.op == "M" && results.head.start == 4 && results.head.refCurr == 6 && results.head.end == 5 && results.head.sequence == "C")
   }
+
+  test("find mismatches with overlapping reference") {
+
+    val read = AlignmentRecord.newBuilder()
+      .setStart(1L)
+      .setCigar("9M")
+      .setSequence("TTTTTTAAT")
+      .setReadMapped(true)
+      .build
+
+    val reference = "AAAA"
+    val region = new ReferenceRegion("chr", 8, 12)
+    val results = VariantLayout.alignMatchesToRead(read, reference, region)
+
+    assert(results.size == 1)
+    assert(results.head.op == "M" && results.head.start == 9 && results.head.refCurr == 10 && results.head.end == 10 && results.head.sequence == "T")
+
+  }
+
+  test("get complement of reference") {
+
+    val reference = "TGCTTTAAT"
+    val complement = VariantLayout.complement(reference)
+    assert(complement == "ACGAAATTA")
+
+  }
+
+  test("get complement of longer reference") {
+
+    val reference = "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGATAATTGTATCCCATAAACACAAAGGTTTGGTCCTGGCCTTATAATTAATTA"
+    val complement = VariantLayout.complement(reference)
+    assert(complement == "CAATTACATCGAATTATTGTTTCGTTTCGTGACTTTTACGAATCTACCTATTAACATAGGGTATTTGTGTTTCCAAACCAGGACCGGAATATTAATTAAT")
+
+  }
+
 }

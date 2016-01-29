@@ -17,9 +17,11 @@
  */
 package org.bdgenomics.mango.layout
 import org.bdgenomics.adam.models.ReferenceRegion
+import edu.berkeley.cs.amplab.spark.intervalrdd._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import scala.collection.mutable
 import scala.util.control.Breaks._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.rdd.MetricsContext._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.apache.spark.Logging
@@ -49,8 +51,7 @@ trait TrackedLayout[T] {
   def trackAssignments: List[((ReferenceRegion, T), Int)]
 }
 
-class MatePair(val start: Long, val end: Long) {
-}
+class MatePair(val start: Long, val end: Long)
 
 object TrackedLayout {
 
@@ -68,7 +69,6 @@ object TrackedLayout {
       val hull: ReferenceRegion = recs2.map(_._1).reduce((v1, v2) => v1.hull(v2))
       ref1.overlaps(hull)
     }
-
   }
 
   def overlapsPair[T](rec1: MatePair, recs2: Seq[(ReferenceRegion, T)]): Boolean = {
@@ -88,11 +88,10 @@ object TrackedLayout {
  * @param values The set of values (i.e. reads, variants) to lay out in tracks
  * @tparam T the type of value which is to be tracked.
  */
-class OrderedTrackedLayout[T: ClassTag](values: Traversable[(ReferenceRegion, T)]) extends TrackedLayout[T] with Logging {
+class OrderedTrackedLayout[T: ClassTag](values: RDD[(ReferenceRegion, T)]) extends TrackedLayout[T] with Logging {
   var trackBuilder = new mutable.ListBuffer[Track]()
-  val sequence = values.toSeq
+  val sequence = values.collect.toSeq
   var numTracks: Int = 0
-  log.info("Number of values: " + values.size)
 
   TrackTimers.FindAddTimer.time {
     sequence match {
