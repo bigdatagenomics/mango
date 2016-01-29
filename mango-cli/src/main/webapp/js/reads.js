@@ -65,21 +65,21 @@ function renderReads(refName, start, end) {
   viewRefName = refName;
 
   var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
+  renderJsonReads(readsJsonLocation);
 
-  for (var i = 0; i < samples.length; i++) {
-    renderJsonReads(readsJsonLocation, samples[i], i);
-  }
 
 }
 
-function renderJsonReads(readsJsonLocation, sample, i) {
+function renderJsonReads(readsJsonLocation) {
 
   d3.json(readsJsonLocation,function(error, ret) {
-      // render reads for low or high resolution depending on base range
-      if (viewRegEnd - viewRegStart > 100) {
-        renderReadsByResolution(false, ret[rawSamples[i]], sample, i);
-      } else {
-        renderReadsByResolution(true,ret[rawSamples[i]], sample, i);
+      for (var i = 0; i < samples.length; i++) {
+        // render reads for low or high resolution depending on base range
+        if (viewRegEnd - viewRegStart > 100) {
+          renderReadsByResolution(false, ret[rawSamples[i]], samples[i], i);
+        } else {
+          renderReadsByResolution(true,ret[rawSamples[i]], samples[i], i);
+        }
       }
 
   });
@@ -365,7 +365,7 @@ function renderMismatches(mismatches, indels, sample) {
         if (d.op == "I" || d.op == "D" || d.op == "N") {
           return 5;
         }
-        return Math.max(1,(d.end)*(width/(viewRegEnd-viewRegStart))); }))
+        return Math.max(1,(d.end - d.start)*(width/(viewRegEnd-viewRegStart))); }))
       .attr("height", (readTrackHeight-1))
       .attr("fill", function(d) {
         if (d.op == "I") {
@@ -384,7 +384,7 @@ function renderMismatches(mismatches, indels, sample) {
           "Operation: " + d.op + "<br>" +
           "Ref Start: " + d.refCurr + "<br>" +
           "Read Start: " + d.start + "<br>" +
-          "Length:" + d.end + "<br>" +
+          "Length:" + (d.end - d.start) + "<br>" +
           "Sequence: " + d.sequence + "<br>" +
           "Track: " + d.track)
           .style("left", (d3.event.pageX) + "px")

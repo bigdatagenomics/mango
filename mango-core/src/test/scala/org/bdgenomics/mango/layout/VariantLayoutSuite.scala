@@ -17,141 +17,82 @@
 
 package org.bdgenomics.mango.layout
 
-import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig, Feature, Genotype, Variant }
 import org.scalatest.FunSuite
-
+import org.bdgenomics.mango.layout._
+import org.apache.spark.TaskContext
+import org.bdgenomics.adam.util.ADAMFunSuite
+import org.scalatest._
+import org.apache.spark.{ SparkConf, Logging, SparkContext }
+import org.apache.spark.TaskContext
+import org.apache.spark.rdd.RDD
+import org.scalatest.FunSuite
+import org.bdgenomics.adam.util.ADAMFunSuite
+import org.bdgenomics.adam.rdd.ADAMContext._
 import scala.collection.mutable.ListBuffer
 
-class VariantLayoutSuite extends FunSuite {
+class VariantLayoutSuite extends ADAMFunSuite {
 
-  test("correctly identify location of indels on read at beginning") {
-
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("1I6M")
-      .setSequence("GATCCAAA")
-      .setReadMapped(true)
+  sparkTest("test correct json format of 2 non overlapping variants") {
+    val variant1 = Genotype.newBuilder
+      .setVariant(Variant.newBuilder.setStart(5).setEnd(6).setContig(Contig.newBuilder().setContigName("contigName").build()).build)
+      .setSampleId("SAMPLE")
       .build
 
-    val results = VariantLayout.alignIndelsToRead(read)
-    assert(results.size == 1)
-    assert(results.head.op == "I" && results.head.start == 1 && results.head.refCurr == 1 && results.head.end == 2 && results.head.sequence == "G")
-
-  }
-
-  test("correctly identify location of indels on read in middle") {
-
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("4M1I3M")
-      .setSequence("GATCCAAA")
-      .setReadMapped(true)
+    val variant2 = Genotype.newBuilder
+      .setVariant(Variant.newBuilder.setStart(9).setEnd(10).setContig(Contig.newBuilder().setContigName("contigName").build()).build)
+      .setSampleId("SAMPLE")
       .build
 
-    val results = VariantLayout.alignIndelsToRead(read)
-    assert(results.size == 1)
-    assert(results.head.op == "I" && results.head.start == 5 && results.head.refCurr == 5 && results.head.end == 6 && results.head.sequence == "C")
+    val variants: List[Genotype] = List(variant1, variant2)
+
+    val rdd: RDD[(ReferenceRegion, Genotype)] = sc.parallelize(variants, 1).keyBy(v => ReferenceRegion(ReferencePosition(v)))
+    val json: List[VariantJson] = VariantLayout(rdd).variants
+
+    assert(json.size == 2)
+    assert(json.map(r => r.track).distinct.size == 1)
 
   }
 
-  test("identify 1 mismatch on a read") {
-
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("6M")
-      .setSequence("ATCCAAA")
-      .setReadMapped(true)
+  sparkTest("test correct json format of 2 overlapping variants") {
+    val variant1 = Genotype.newBuilder
+      .setVariant(Variant.newBuilder.setStart(5).setEnd(6).setContig(Contig.newBuilder().setContigName("contigName").build()).build)
+      .setSampleId("NA12878")
       .build
 
-    val reference = "NATCAAAA"
-    val region = new ReferenceRegion("chr", 1, 10)
-    val results = VariantLayout.alignMatchesToRead(read, reference, region)
-    assert(results.size == 1)
-    assert(results.head.op == "M" && results.head.start == 4 && results.head.refCurr == 5 && results.head.end == 5 && results.head.sequence == "C" && results.head.refBase == "A")
-  }
-
-  test("identify 3 mismatches on a read") {
-
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("9M")
-      .setSequence("ATCCAAATG")
-      .setReadMapped(true)
+    val variant2 = Genotype.newBuilder
+      .setVariant(Variant.newBuilder.setStart(5).setEnd(6).setContig(Contig.newBuilder().setContigName("contigName2").build()).build)
+      .setSampleId("NA12877")
       .build
 
-    val reference = "NATCAAAACC"
-    val region = new ReferenceRegion("chr", 1, 10)
-    val results = VariantLayout.alignMatchesToRead(read, reference, region)
-    assert(results(0).op == "M" && results(0).start == 4 && results(0).refCurr == 5 && results(0).end == 5 && results(0).sequence == "C")
-    assert(results(1).op == "M" && results(1).start == 8 && results(1).refCurr == 9 && results(1).end == 9 && results(1).sequence == "T")
-    assert(results(2).op == "M" && results(2).start == 9 && results(2).refCurr == 10 && results(2).end == 10 && results(2).sequence == "G")
+    val variants: List[Genotype] = List(variant1, variant2)
+
+    val rdd: RDD[(ReferenceRegion, Genotype)] = sc.parallelize(variants).keyBy(v => ReferenceRegion(ReferencePosition(v)))
+    val json: List[VariantJson] = VariantLayout(rdd).variants
+
+    assert(json.size == 2)
+    assert(json.map(r => r.track).distinct.size == 2)
+
   }
 
-  test("identify mismatches on a read with insertion") {
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("1I6M")
-      .setSequence("GATCCAAA")
-      .setReadMapped(true)
+  sparkTest("test correct json format for variant frequency") {
+    val variant1 = Genotype.newBuilder
+      .setVariant(Variant.newBuilder.setStart(5).setEnd(6).setContig(Contig.newBuilder().setContigName("contigName").build()).build)
+      .setSampleId("NA12878")
       .build
 
-    val reference = "NATCAAAA"
-    val region = new ReferenceRegion("chr", 1, 10)
-    val results = VariantLayout.alignMatchesToRead(read, reference, region)
-
-    assert(results.size == 1)
-    assert(results.head.op == "M" && results.head.start == 5 && results.head.refCurr == 5 && results.head.end == 6 && results.head.sequence == "C")
-  }
-
-  test("identify mismatches on a read with deletion") {
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("1M1D6M")
-      .setSequence("GTCCAAA")
-      .setReadMapped(true)
+    val variant2 = Genotype.newBuilder
+      .setVariant(Variant.newBuilder.setStart(5).setEnd(6).setContig(Contig.newBuilder().setContigName("contigName").build()).build)
+      .setSampleId("NA12877")
       .build
 
-    val reference = "NGATCAAAA"
-    val region = new ReferenceRegion("chr", 1, 10)
-    val results = VariantLayout.alignMatchesToRead(read, reference, region)
+    val variants: List[Genotype] = List(variant1, variant2)
 
-    assert(results.size == 1)
-    assert(results.head.op == "M" && results.head.start == 4 && results.head.refCurr == 6 && results.head.end == 5 && results.head.sequence == "C")
-  }
-
-  test("find mismatches with overlapping reference") {
-
-    val read = AlignmentRecord.newBuilder()
-      .setStart(1L)
-      .setCigar("9M")
-      .setSequence("TTTTTTAAT")
-      .setReadMapped(true)
-      .build
-
-    val reference = "AAAA"
-    val region = new ReferenceRegion("chr", 8, 12)
-    val results = VariantLayout.alignMatchesToRead(read, reference, region)
-
-    assert(results.size == 1)
-    assert(results.head.op == "M" && results.head.start == 9 && results.head.refCurr == 10 && results.head.end == 10 && results.head.sequence == "T")
-
-  }
-
-  test("get complement of reference") {
-
-    val reference = "TGCTTTAAT"
-    val complement = VariantLayout.complement(reference)
-    assert(complement == "ACGAAATTA")
-
-  }
-
-  test("get complement of longer reference") {
-
-    val reference = "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGATAATTGTATCCCATAAACACAAAGGTTTGGTCCTGGCCTTATAATTAATTA"
-    val complement = VariantLayout.complement(reference)
-    assert(complement == "CAATTACATCGAATTATTGTTTCGTTTCGTGACTTTTACGAATCTACCTATTAACATAGGGTATTTGTGTTTCCAAACCAGGACCGGAATATTAATTAAT")
+    val rdd: RDD[(ReferenceRegion, Genotype)] = sc.parallelize(variants).keyBy(v => ReferenceRegion(ReferencePosition(v)))
+    val json: List[VariantFreqJson] = VariantLayout(rdd).freq
+    assert(json.size == 1)
 
   }
 

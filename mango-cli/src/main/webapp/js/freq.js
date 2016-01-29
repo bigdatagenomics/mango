@@ -23,15 +23,17 @@ function renderCoverage(refName, start, end) {
   viewRegStart = start;
   viewRegEnd = end;
   var covLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
-  for (var i = 0; i < samples.length; i++) {
-    renderJsonCoverage(covLocation, i);
-  }
+
+  d3.json(covLocation, function(error, data) {
+    for (var i = 0; i < samples.length; i++) {
+      renderJsonCoverage(data, i);
+    }
+  });
 }
 
-function renderJsonCoverage(jsonLocation, i) {
+function renderJsonCoverage(data, i) {
   // Removes at first to update frequency graph
 
-  d3.json(jsonLocation, function(error, data) {
     data = data[rawSamples[i]];
 
     maxFreq = d3.max(data, function(d) {return d.freq});
@@ -158,6 +160,4 @@ function renderJsonCoverage(jsonLocation, i) {
             yAxisScale(d.freq) + ")")
         .attr("x2", width + width);
     }
-
-  });
 }

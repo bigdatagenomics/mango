@@ -42,7 +42,7 @@ import scala.collection.mutable.ListBuffer
 import java.io.File
 import org.scalatest.FunSuite
 
-class LazyMaterializationSuite extends LazyFunSuite {
+class LazyMaterializationSuite extends ADAMFunSuite {
 
   def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): Long = {
     sc.loadIndexedBam(file, viewRegion).count

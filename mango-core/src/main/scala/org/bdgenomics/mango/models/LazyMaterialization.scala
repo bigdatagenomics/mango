@@ -51,7 +51,6 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
   }
 
   def setDictionary(filePath: String) {
-
     val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
     val isGenotype = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
 
@@ -143,40 +142,32 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     null
   }
 
-  def loadFromFile(region: ReferenceRegion, ks: List[String]): RDD[(ReferenceRegion, T)] = {
-    var ret: RDD[(ReferenceRegion, T)] = null
-    var load: RDD[(ReferenceRegion, T)] = null
-
-    for (k <- ks) {
-      if (!fileMap.containsKey(k)) {
-        log.error("Key not in FileMap")
-        null
-      }
-      val fp = fileMap(k)
-      if (!(new File(fp)).exists()) {
-        log.warn("File path for sample " + k + " not loaded")
-        null
-      }
-      if (fp.endsWith(".adam")) {
-        load = loadadam(region, fp)
-      } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
-        load = loadFromBam(region, fp)
-      } else if (fp.endsWith(".vcf")) {
-        load = sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-      } else if (fp.endsWith(".bed")) {
-        load = sc.loadFeatures(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-      } else if (fp.endsWith(".fa") || fp.endsWith(".fasta")) {
-        load = loadReference(region, fp)
-      } else {
-        throw UnsupportedFileException("File type not supported")
-      }
-      if (ret == null) {
-        ret = load
-      } else {
-        ret = ret.union(load)
-      }
+  def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, T)] = {
+    var data: RDD[(ReferenceRegion, T)] = null
+    if (!fileMap.containsKey(k)) {
+      log.error("Key not in FileMap")
+      null
     }
-    ret
+    val fp = fileMap(k)
+    if (!(new File(fp)).exists()) {
+      log.warn("File path for sample " + k + " not loaded")
+      null
+    }
+    if (fp.endsWith(".adam")) {
+      data = loadadam(region, fp)
+    } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
+      data = loadFromBam(region, fp)
+    } else if (fp.endsWith(".vcf")) {
+      data = sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+    } else if (fp.endsWith(".bed")) {
+      data = sc.loadFeatures(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+    } else if (fp.endsWith(".fa") || fp.endsWith(".fasta")) {
+      data = loadReference(region, fp)
+    } else {
+      throw UnsupportedFileException("File type not supported")
+      data
+    }
+    data.partitionBy(GenomicRegionPartitioner(partitions, dict))
   }
 
   def get(region: ReferenceRegion, k: String): IntervalRDD[ReferenceRegion, T] = {
@@ -191,29 +182,25 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
 	*/
   def multiget(region: ReferenceRegion, ks: List[String]): IntervalRDD[ReferenceRegion, T] = {
 
+    // TODO: combine the 2 functions below (getChunk and partitionChunk)
     val matRegion: ReferenceRegion = getChunk(region)
-    if (intRDD == null) {
-      // load all data from keys
-      val rdd: RDD[(ReferenceRegion, T)] = loadFromFile(matRegion, ks).partitionBy(GenomicRegionPartitioner(partitions, dict)) // this line is an issue
-      intRDD = IntervalRDD(rdd)
-      rememberValues(matRegion, ks)
-    } else {
-      val regions = partitionChunk(matRegion)
-      for (r <- regions) {
-        try {
-          val found = bookkeep(r.referenceName).search(r).toList
-          val notFound: List[String] = found.filterNot(found.contains(_))
-          if (notFound.length > 0) {
-            put(r, notFound)
-          }
-        } catch {
-          case ex: NoSuchElementException => {
-            log.warn("File not found in bookkeep")
-            null
-          }
+    val regions = partitionChunk(matRegion)
+
+    // TODO: you should use a diff here instead of calling put multiple times for each key
+    for (r <- regions) {
+      try {
+        val found = bookkeep(r.referenceName).search(r).toList
+        val notFound: List[String] = found.filterNot(found.contains(_))
+        if (notFound.length > 0) {
+          put(r, notFound)
+        }
+      } catch {
+        case ex: NoSuchElementException => {
+          put(region, ks)
         }
       }
     }
+    //  }
     intRDD.filterByInterval(region)
   }
 
@@ -222,8 +209,13 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
 	* Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
 	*/
   private def put(region: ReferenceRegion, ks: List[String]) = {
-    val rdd: RDD[(ReferenceRegion, T)] = loadFromFile(region, ks).partitionBy(GenomicRegionPartitioner(partitions, dict))
-    intRDD = intRDD.multiput(rdd)
+    ks.map(k => {
+      if (intRDD == null) {
+        intRDD = IntervalRDD(loadFromFile(region, k))
+      } else {
+        intRDD.multiput(loadFromFile(region, k))
+      }
+    })
     rememberValues(region, ks)
   }
 
