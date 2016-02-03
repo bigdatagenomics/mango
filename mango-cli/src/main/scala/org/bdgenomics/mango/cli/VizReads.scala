@@ -20,6 +20,7 @@ package org.bdgenomics.mango.cli
 import htsjdk.samtools.reference.FastaSequenceIndex
 import htsjdk.samtools.reference.IndexedFastaSequenceFile
 import htsjdk.samtools.reference.ReferenceSequence
+import htsjdk.samtools.{ SAMRecord, SAMReadGroupRecord, SamReader, SamReaderFactory }
 import java.io.File
 import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.{ Logging, SparkContext }
@@ -386,10 +387,16 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     val readsPath1 = Option(args.readsPath1)
     readsPath1 match {
       case Some(_) => {
-        if (args.readsPath1.endsWith(".bam") || args.readsPath1.endsWith(".sam") || args.readsPath1.endsWith(".adam")) {
-          VizReads.readsPath1 = args.readsPath1
-          VizReads.readsExist = true
-          VizReads.samp1Name = VizReads.sc.loadBam(args.readsPath1).first.recordGroupSample
+        VizReads.readsPath1 = args.readsPath1
+        VizReads.readsExist = true
+        if (args.readsPath1.endsWith(".bam") || args.readsPath1.endsWith(".sam")) {
+          val srf: SamReaderFactory = SamReaderFactory.make()
+          val samReader: SamReader = srf.open(new File(args.readsPath1))
+          val rec: SAMRecord = samReader.iterator().next()
+          VizReads.samp1Name = rec.getReadGroup().getSample()
+          VizReads.readsData.loadSample(VizReads.samp1Name, args.readsPath1)
+        } else if (args.readsPath1.endsWith(".adam")) {
+          VizReads.samp1Name = VizReads.sc.loadParquetAlignments(args.readsPath1).first.recordGroupSample
           VizReads.readsData.loadSample(VizReads.samp1Name, args.readsPath1)
         } else {
           log.info("WARNING: Invalid input for reads file")
@@ -405,10 +412,16 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     val readsPath2 = Option(args.readsPath2)
     readsPath2 match {
       case Some(_) => {
-        if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam") || args.readsPath2.endsWith(".adam")) {
-          VizReads.readsPath2 = args.readsPath2
-          VizReads.readsExist = true
-          VizReads.samp2Name = VizReads.sc.loadBam(args.readsPath1).first.recordGroupSample
+        VizReads.readsPath2 = args.readsPath2
+        VizReads.readsExist = true
+        if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam")) {
+          val srf: SamReaderFactory = SamReaderFactory.make()
+          val samReader: SamReader = srf.open(new File(args.readsPath2))
+          val rec: SAMRecord = samReader.iterator().next()
+          VizReads.samp2Name = rec.getReadGroup().getSample()
+          VizReads.readsData.loadSample(VizReads.samp2Name, args.readsPath2)
+        } else if (args.readsPath2.endsWith(".adam")) {
+          VizReads.samp2Name = VizReads.sc.loadParquetAlignments(args.readsPath2).first.recordGroupSample
           VizReads.readsData.loadSample(VizReads.samp2Name, args.readsPath2)
         } else {
           log.info("WARNING: Invalid input for second reads file")
