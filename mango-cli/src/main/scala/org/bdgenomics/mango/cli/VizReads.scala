@@ -46,7 +46,7 @@ import scala.reflect.ClassTag
 import scala.collection.mutable.ListBuffer
 
 import org.bdgenomics.mango.models.LazyMaterialization
-import com.github.akmorrow13.intervaltree._
+import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
 
 // TODO: remove

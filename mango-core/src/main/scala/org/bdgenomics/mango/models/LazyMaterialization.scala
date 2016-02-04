@@ -18,7 +18,7 @@ package org.bdgenomics.mango.models
 
 import java.io.File
 
-import com.github.akmorrow13.intervaltree._
+import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
 import scala.reflect.{ classTag, ClassTag }
 import org.apache.parquet.filter2.predicate.FilterPredicate

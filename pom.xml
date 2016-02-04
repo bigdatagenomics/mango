@@ -351,12 +351,12 @@
         <version>${htsjdk.version}</version>
       </dependency>
       <dependency>
-        <groupId>edu.berkeley.cs.amplab</groupId>
+        <groupId>com.github.erictu</groupId>
         <artifactId>spark-intervalrdd_2.10</artifactId>
         <version>0.1-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>com.github.akmorrow13</groupId>
+        <groupId>com.github.erictu</groupId>
         <artifactId>interval-tree_2.10</artifactId>
         <version>0.1-SNAPSHOT</version>
       </dependency>
