@@ -1,11 +1,7 @@
 *.class
 *.log
 .DS_Store
-*.bam*
-*.adam*
-*.vcf*
-*.fa*
-*.bed*
+*.DS_Store
 
 # sbt specific
 .cache/

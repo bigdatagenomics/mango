@@ -1,1 +1,0 @@
-bin/mango-submit ./workfiles/mm10_chrM.fa chrM 10 -read_file1 ./workfiles/mouse_chrM.bam -read_file2 ./workfiles/mouse_chrM.bam  -var_file ./workfiles/truetest.vcf.adam -feat_file ./workfiles/smalltest.bed
