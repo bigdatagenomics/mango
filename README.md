@@ -56,4 +56,6 @@ Using SPARK_SUBMIT=/Applications/spark-1.4.1-bin-hadoop2.4/bin/spark-submit
 ```
 View the visualization at: 8080
 Variant Frequency visualization at: /variants
+Quit at: /quit
+
 ```

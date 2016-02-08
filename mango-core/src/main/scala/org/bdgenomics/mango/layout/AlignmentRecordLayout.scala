@@ -17,15 +17,14 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.Logging
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import org.apache.spark.{ Logging, SparkContext }
+import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 import org.bdgenomics.adam.models.ReferenceRegion
 import scala.collection.JavaConversions._
-import org.apache.spark.rdd.RDD
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.SparkContext._
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object AlignmentRecordLayout extends Logging {
   //Prepares alignment information in Json format
@@ -77,5 +76,4 @@ object MatePairJson {
 case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
 case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String, track: Long)
 case class MatePairJson(val start: Long, val end: Long, track: Long)
-
 case class ReadTrack(val sample: String, val records: List[ReadJson], val matePairs: List[MatePairJson], val mismatches: List[MisMatchJson])

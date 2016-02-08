@@ -16,11 +16,10 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.File
-
+import collection.mutable.HashMap
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import scala.reflect.{ classTag, ClassTag }
+import java.io.File
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.Dependency
@@ -38,9 +37,8 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition, Sequence
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment, Contig }
-
 import scala.collection.mutable.ListBuffer
-import collection.mutable.HashMap
+import scala.reflect.{ classTag, ClassTag }
 
 class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long) extends Serializable with Logging {
 

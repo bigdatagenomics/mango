@@ -17,15 +17,14 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.Logging
-import scala.collection.mutable.ListBuffer
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Variant, Genotype }
-import org.bdgenomics.adam.models.ReferenceRegion
-import org.apache.spark.rdd.RDD
 import org.apache.spark.{ Logging, SparkContext }
+import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext._
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.models.VariantContext
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Variant, Genotype }
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 
 object VariantLayout extends Logging {
 

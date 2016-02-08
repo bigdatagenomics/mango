@@ -19,7 +19,7 @@ package org.bdgenomics.mango.models
 
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import scala.reflect.ClassTag
+import java.io.File
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.Dependency
@@ -29,18 +29,16 @@ import org.apache.spark.SparkContext
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
+import org.bdgenomics.adam.cli.DictionaryCommand
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDDFunctions
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceRecord, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
-
-import org.bdgenomics.adam.cli.DictionaryCommand
-
-import scala.collection.mutable.ListBuffer
-import java.io.File
 import org.scalatest.FunSuite
+import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
 
 class LazyMaterializationSuite extends ADAMFunSuite {
 

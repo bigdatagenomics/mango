@@ -17,6 +17,8 @@
  */
 package org.bdgenomics.mango.cli
 
+import com.github.erictu.intervaltree._
+import edu.berkeley.cs.amplab.spark.intervalrdd._
 import htsjdk.samtools.reference.FastaSequenceIndex
 import htsjdk.samtools.reference.IndexedFastaSequenceFile
 import htsjdk.samtools.reference.ReferenceSequence
@@ -35,6 +37,7 @@ import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.mango.layout._
+import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Fragment, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
@@ -44,13 +47,6 @@ import net.liftweb.json.Serialization.write
 import org.scalatra.ScalatraServlet
 import scala.reflect.ClassTag
 import scala.collection.mutable.ListBuffer
-
-import org.bdgenomics.mango.models.LazyMaterialization
-import com.github.erictu.intervaltree._
-import edu.berkeley.cs.amplab.spark.intervalrdd._
-
-// TODO: remove
-import org.bdgenomics.adam.rdd.read.realignment._
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -105,6 +101,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
+
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
@@ -122,9 +119,9 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   def getReference(region: ReferenceRegion): String = {
     if (VizReads.referencePath.endsWith(".adam")) {
-      //val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-      //val referenceRDD: RDD[Fragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))
-      //referenceRDD.adamGetReferenceString(region)
+      val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
+      val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
+      referenceRDD.adamGetReferenceString(region)
     } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
       val idx = new File(VizReads.referencePath + ".fai")
       if (idx.exists() && !idx.isDirectory()) {
@@ -478,11 +475,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
     VizReads.server.start()
     println("View the visualization at: " + args.port)
-    println("Frequency visualization at: /freq")
-    println("Overlapping reads visualization at: /reads")
-    println("Variant visualization at: /variants")
-    println("Feature visualization at: /features")
-    println("Overall visualization at: /overall")
+    println("Variant Frequency visualization at: /variants")
     println("Quit at: /quit")
     VizReads.server.join()
   }

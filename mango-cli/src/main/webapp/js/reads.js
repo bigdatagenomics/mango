@@ -488,5 +488,4 @@ function renderMCigar(data, sample) {
       });
     var removedMRects = mRects.exit();
     removedMRects.remove()
-
 }
