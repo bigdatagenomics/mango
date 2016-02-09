@@ -1,11 +1,7 @@
 *.class
 *.log
 .DS_Store
-*.bam*
-*.adam*
-*.vcf*
-*.fa*
-*.bed*
+*.DS_Store
 
 # sbt specific
 .cache/
@@ -19,7 +15,8 @@ project/boot/
 project/plugins/project/
 parquettest.sh
 out.txt
-
+stylesheets/main.css
+stylesheets/main.css.map
 # Scala-IDE specific
 .scala_dependencies
 .worksheet

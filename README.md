@@ -5,9 +5,11 @@ A set of genomic visualization tools built on top of the [ADAM](https://github.c
 
 mango visualizes reads, variants, and features using [D3](http://d3js.org/).
 
-![Overall View](https://raw.github.com/bigdatagenomics/mango/master/images/overall.png)
+mango uses [IntervalRDDs](https://github.com/akmorrow13/spark-intervalrdd) to perform fast indexed lookups on interval-keyed data. 
 
-![Frequency View](https://raw.github.com/bigdatagenomics/mango/master/images/frequency.png)
+![Overall View](https://raw.github.com/bigdatagenomics/mango/master/images/Overall.png)
+
+![Long Ranged Views](https://raw.github.com/bigdatagenomics/mango/master/images/Long_Ranged_Views.png)
 # Getting Started
 
 ## Installation
@@ -27,13 +29,16 @@ mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appas
 
 Run the mango-submit script as follows:
 ```
-bin/mango-submit REFERENCE_FILE.fa -read_file READS_FILE.bam -ref_name REFERENCE NAME -var_file VARIANTS_FILE.vcf -feat_file FEATURES_FILE.bed
+bin/mango-submit REFERENCE_FILE.fa REFERNECE_NAME PART_COUNT -read_file1 READS_FILE.bam -read_file2 READS_FILE2.bam -var_file VARIANTS_FILE.vcf -feat_file FEATURES_FILE.bed
 ```
+Note that the script above visualizes the reads data for two samples at the same time.
 For help launching the script, run `bin/mango-submit -h`
 ````
 $ bin/mango-submit -h
-Spark assembly has been built with Hive, including Datanucleus jars on classpath
+Using SPARK_SUBMIT=/Applications/spark-1.4.1-bin-hadoop2.4/bin/spark-submit
  reference                                                       : The reference file to view, required
+ ref_name                                                        : The name of the reference we're looking at
+ part_count                                                      : The number of partitions
  -feat_file VAL                                                  : The feature file to view
  -h (-help, --help, -?)                                          : Print help
  -parquet_block_size N                                           : Parquet block size (default = 128mb)
@@ -43,16 +48,14 @@ Spark assembly has been built with Hive, including Datanucleus jars on classpath
  -parquet_page_size N                                            : Parquet page size (default = 1mb)
  -port N                                                         : The port to bind to for visualization. The default is 8080.
  -print_metrics                                                  : Print metrics to the log on completion
- -read_file VAL                                                  : The reads file to view
- -ref_name VAL                                                   : The name of the reference we're looking at
+ -read_file1 VAL                                                 : The first reads file to view
+ -read_file2 VAL                                                 : The second reads file to view
  -var_file VAL                                                   : The variants file to view
  ````
  Now view the mango genomics browser at `localhost:8080` or the port specified:
 ```
 View the visualization at: 8080
-Frequency visualization at: /freq
-Overlapping reads visualization at: /reads
-Variant visualization at: /variants
-Feature visualization at /features
-Overall visualization at: /overall
+Variant Frequency visualization at: /variants
+Quit at: /quit
+
 ```

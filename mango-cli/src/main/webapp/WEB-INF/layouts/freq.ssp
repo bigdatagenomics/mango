@@ -1,4 +1,5 @@
 <%@ val viewRegion: (String, String, String) %>
+<%@ val samples: (String, String) %>
 
 <html>
 <head lang="en">
@@ -122,6 +123,8 @@
     var viewRefName = "${viewRegion._1}";
     var viewRegStart = parseInt(${viewRegion._2}, 10);
     var viewRegEnd = parseInt(${viewRegion._3}, 10);
+    var samp1Name = "${samples._1}";
+    var samp2Name = "${samples._2}";
 </script>
 <script src="js/freq.js"></script>
 </html>

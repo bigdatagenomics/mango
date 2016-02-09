@@ -8,7 +8,7 @@
     <version>7</version>
     <relativePath/>
   </parent>
-  
+
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.bdgenomics.mango</groupId>
   <artifactId>mango-parent</artifactId>
@@ -17,14 +17,14 @@
   <name>mango: an ADAM-based genomics visualization toolkit</name>
 
   <properties>
-    <adam.version>0.17.1</adam.version>
-    <avro.version>1.7.6</avro.version>
+    <adam.version>0.18.3-SNAPSHOT</adam.version>
+    <avro.version>1.7.7</avro.version>
     <java.version>1.7</java.version>
-    <scala.version>2.10.3</scala.version>
+    <scala.version>2.10.4</scala.version>
     <scala.version.prefix>2.10</scala.version.prefix>
     <spark.version>1.2.0</spark.version>
     <parquet.version>1.8.1</parquet.version>
-    <utils.version>0.2.2</utils.version>
+    <utils.version>0.2.3</utils.version>
     <htsjdk.version>1.133</htsjdk.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
     <hadoop.version>2.2.0</hadoop.version>
@@ -226,6 +226,10 @@
       <id>Apache</id>
       <url>http://people.apache.org/repo/m2-snapshot-repository</url>
     </repository>
+    <repository>
+      <id>SparkPackagesRepo</id>
+      <url>http://dl.bintray.com/spark-packages/maven</url>
+    </repository>
   </repositories>
 
   <dependencyManagement>
@@ -243,7 +247,7 @@
       <dependency>
         <groupId>org.bdgenomics.bdg-formats</groupId>
         <artifactId>bdg-formats</artifactId>
-        <version>0.4.0</version>
+        <version>0.7.0</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.mango</groupId>
@@ -345,6 +349,16 @@
         <groupId>com.github.samtools</groupId>
         <artifactId>htsjdk</artifactId>
         <version>${htsjdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.erictu</groupId>
+        <artifactId>spark-intervalrdd_2.10</artifactId>
+        <version>0.1-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.erictu</groupId>
+        <artifactId>interval-tree_2.10</artifactId>
+        <version>0.1-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>

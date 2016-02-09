@@ -7,11 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Variants Visualization for Mango">
     <meta name="author" content="Eric Tu">
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="resources/js/jquery.min.js"></script>
+    <script src="resources/js/jquery-ui.min.js"></script>
+    <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
+    <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type = "text/css" href = "css/style.css">
-
+    <link rel="stylesheet" type = "text/css" href = "stylesheets/main.css">
 </head>
 
 <!-- Fixed navbar -->
@@ -24,23 +26,17 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">mango: Genomic Visualization for ADAM</a>
     </div>
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li><a href="overall">Overall</a></li>
-        <li><a href="reads">Reads</a></li>
-        <li class="active"><a href="variants">Variants</a></li>
-        <li><a href="features">Features</a></li>
-        <li><a href="freq">Frequency</a></li>
+        <li class="active"><a href="variants">Variant Frequency</a></li>
       </ul>
     </div><!--/.nav-collapse -->
   </div>
 </nav>
 
 <div id = "navigation">
-    <h1><span class='highlight'>mango:</span> Genome visualization for <span class='highlight'>ADAM</span></h1>
-    <h2 align="center"></h2>
     <br>
     <ul>
         <li>move:</li>
@@ -117,17 +113,22 @@
 </div>
 
 <br>
-<div id="refArea"></div>
-<div id="varArea"></div>
+<div class="graphArea" id="refArea"></div>
+<div class="graphArea" id ="variantViz"</div>
+  <div id="varFreqArea"></div>
+  <div id="varArea"></div>
+</div>
 <br>
 
 <script>
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
-  var readsExist = false
-  var variantsExist = true
-  var featuresExist = false
+  var width = window.innerWidth - 18;
 </script>
-<script src="js/overall.js"></script>
+<script src="js/utilities.js"></script>
+<script src="js/variants.js"></script>
+<script>
+  renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
+</script>
 </html>
