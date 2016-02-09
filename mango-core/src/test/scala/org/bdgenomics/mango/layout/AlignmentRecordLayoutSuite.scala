@@ -38,16 +38,22 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
   sparkTest("test correct matePairs") {
 
     val read1 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setStart(1)
+      .setEnd(6)
+      .setRecordGroupSample("Sample")
       .setReadName("read")
       .setEnd(5)
       .setSequence("AAAAT")
       .build
 
     val read2 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setStart(7)
+      .setEnd(11)
+      .setRecordGroupSample("Sample")
       .setReadName("read")
       .setEnd(10)
       .setSequence("AAAAT")
@@ -59,7 +65,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val reference = "NAAAAA"
 
     val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
-    alignmentData.foreach(r => println(r.matePairs))
+    assert(alignmentData.head.matePairs.length == 1)
   }
 
 }
