@@ -7,9 +7,9 @@ mango visualizes reads, variants, and features using [D3](http://d3js.org/).
 
 mango uses [IntervalRDDs](https://github.com/akmorrow13/spark-intervalrdd) to perform fast indexed lookups on interval-keyed data. 
 
-![Overall View](https://raw.github.com/bigdatagenomics/mango/master/images/Overall.png)
+![Overall View](https://raw.github.com/bigdatagenomics/mango/master/images/overall.png)
 
-![Long Ranged Views](https://raw.github.com/bigdatagenomics/mango/master/images/Long_Ranged_Views.png)
+![Long Ranged Views](https://raw.github.com/bigdatagenomics/mango/master/images/long_ranged.png)
 # Getting Started
 
 ## Installation
