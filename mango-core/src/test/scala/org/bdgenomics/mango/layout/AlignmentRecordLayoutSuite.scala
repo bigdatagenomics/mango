@@ -1,13 +1,12 @@
-/**
- * Licensed to Big Data Genomics (BDG) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The BDG licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.bdgenomics.mango.layout
 
 import org.bdgenomics.adam.models.ReferenceRegion
@@ -40,9 +40,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read1 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
+      .setRecordGroupSample("Sample")
       .setStart(1)
       .setEnd(6)
-      .setRecordGroupSample("Sample")
       .setReadName("read")
       .setEnd(5)
       .setSequence("AAAAT")
@@ -52,8 +52,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setStart(7)
-      .setEnd(11)
       .setRecordGroupSample("Sample")
+      .setEnd(11)
       .setReadName("read")
       .setEnd(10)
       .setSequence("AAAAT")
@@ -61,6 +61,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
+    println()
     val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read2), 1).keyBy(ReferenceRegion(_))
     val reference = "NAAAAA"
 

@@ -120,10 +120,17 @@ class TrackedLayout[T: ClassTag](values: Iterator[(ReferenceRegion, T)]) extends
       p =>
         {
           val recs: List[(ReferenceRegion, T)] = p._2
-          val trackOption: Option[TrackBuffer[T]] = TrackTimers.FindConflict.time {
+          val track: Option[TrackBuffer[T]] = TrackTimers.FindConflict.time {
             trackBuilder.find(track => !track.conflictsPair(recs))
           }
-          val track: TrackBuffer[T] = trackOption.getOrElse(addTrack(new TrackBuffer[T](recs)))
+          // TODO: is this adding the track if a track is found?
+          track.map(trackval => {
+            trackval.records ++= recs
+            trackBuilder -= trackval
+            trackBuilder += trackval
+          }).getOrElse(addTrack(new TrackBuffer[T](recs)))
+
+          //  val track: TrackBuffer[T] = trackOption.getOrElse(addTrack(new TrackBuffer[T](recs)))
         }
     }
   }
@@ -150,13 +157,22 @@ class TrackedLayout[T: ClassTag](values: Iterator[(ReferenceRegion, T)]) extends
 
 object Track {
   def apply[T: ClassTag](trackBuffer: TrackBuffer[T]): Track[T] = {
-    new Track[T](trackBuffer.records.toList)
+    new Track[T](trackBuffer.sample, trackBuffer.records.toList)
   }
 }
 
-case class Track[T](records: List[(ReferenceRegion, T)])
+case class Track[T](sample: Option[String], records: List[(ReferenceRegion, T)])
 
 case class TrackBuffer[T: ClassTag](val recs: List[(ReferenceRegion, T)]) extends Logging {
+
+  val sample: Option[String] = recs match {
+    case a: List[(ReferenceRegion, AlignmentRecord)] if classTag[T] == classTag[AlignmentRecord] => {
+      Option(a.head._2.recordGroupSample)
+    }
+    case _ => {
+      None
+    }
+  }
 
   val records = new mutable.ListBuffer[(ReferenceRegion, T)]()
   records ++= recs
@@ -176,10 +192,12 @@ case class TrackBuffer[T: ClassTag](val recs: List[(ReferenceRegion, T)]) extend
   // check if there are conflicting records in all tracks which would conflict
   // with both records and their mate pairs. this is used for AlignmentRecord data
   def conflictsPair(recs: Seq[(ReferenceRegion, T)]): Boolean = {
+    assert(sample != None)
     val start = recs.map(rec => rec._1.start).min
     val end = recs.map(rec => rec._1.end).max
+    val groupedSample = recs.head._2.asInstanceOf[AlignmentRecord].recordGroupSample
     val tempRegion = new ReferenceRegion(recs.head._1.referenceName, start, end)
-    records.exists(r => r._1.overlaps(tempRegion))
+    sample.get != groupedSample || records.exists(r => r._1.overlaps(tempRegion))
   }
 
 }

@@ -17,28 +17,34 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext._
+import org.apache.spark.Logging
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 import org.bdgenomics.adam.models.ReferenceRegion
 import scala.collection.JavaConversions._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{ Logging, SparkContext }
+import org.apache.spark.SparkContext._
+import org.bdgenomics.utils.instrumentation.Metrics
+
+object AlignmentLayoutTimers extends Metrics {
+  val AlignmentLayout = timer("collect and filter alignment records")
+}
 
 object AlignmentRecordLayout extends Logging {
   //Prepares alignment information in Json format
   def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion, sampleIds: List[String]): List[ReadTrack] = {
     val readTracks = new mutable.ListBuffer[ReadTrack]()
+    val tracks = rdd.mapPartitions(TrackedLayout(_)).groupBy(_.sample).collect
 
-    for (sample <- sampleIds) {
-      val sampleData = rdd.filter(_._2.recordGroupSample == sample)
-      val tracks = sampleData.mapPartitions(TrackedLayout(_)).collect.zipWithIndex
-      // tracks is list(Track[T], idx)
-      val matePairs = tracks.flatMap(r => MatePairJson(r._1, r._2))
-      val mismatches = tracks.flatMap(r => MisMatchJson(r._1, r._2, reference, region))
-      val reads = tracks.flatMap(r => ReadJson(r._1, r._2))
-      readTracks += new ReadTrack(sample, reads.toList, matePairs.toList, mismatches.toList)
+    for (track <- tracks) {
+      val sample = track._1
+      val indexedTrack = track._2.zipWithIndex
+      val matePairs = indexedTrack.flatMap(r => MatePairJson(r._1, r._2))
+      val mismatches = indexedTrack.flatMap(r => MisMatchJson(r._1, r._2, reference, region))
+      val reads = indexedTrack.flatMap(r => ReadJson(r._1, r._2))
+      readTracks += new ReadTrack(sample.get, reads.toList, matePairs.toList, mismatches.toList)
     }
     readTracks.toList
   }
@@ -76,4 +82,5 @@ object MatePairJson {
 case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
 case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String, track: Long)
 case class MatePairJson(val start: Long, val end: Long, track: Long)
+
 case class ReadTrack(val sample: String, val records: List[ReadJson], val matePairs: List[MatePairJson], val mismatches: List[MisMatchJson])

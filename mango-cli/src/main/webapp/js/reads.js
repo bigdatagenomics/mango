@@ -115,6 +115,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         sampleData[i].mismatches = data['mismatches'];
         sampleData[i].indels = data['indels'];
         sampleData[i].pairs = data['matePairs'];
+        console.log(sampleData[i].reads.length);
 
         // print file name
         // TODO: this should not be redrawn every page load

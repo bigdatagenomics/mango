@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.mango.cli
 
-import com.github.erictu.intervaltree._
-import edu.berkeley.cs.amplab.spark.intervalrdd._
 import htsjdk.samtools.reference.FastaSequenceIndex
 import htsjdk.samtools.reference.IndexedFastaSequenceFile
 import htsjdk.samtools.reference.ReferenceSequence
@@ -37,7 +35,6 @@ import org.bdgenomics.adam.models.ReferencePosition
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Fragment, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
@@ -48,11 +45,16 @@ import org.scalatra.ScalatraServlet
 import scala.reflect.ClassTag
 import scala.collection.mutable.ListBuffer
 
+import org.bdgenomics.mango.models.LazyMaterialization
+import com.github.akmorrow13.intervaltree._
+import edu.berkeley.cs.amplab.spark.intervalrdd._
+
 object VizTimers extends Metrics {
   //HTTP requests
   val ReadsRequest = timer("GET reads")
   val FreqRequest = timer("GET frequency")
   val VarRequest = timer("GET variants")
+  val VarFreqRequest = timer("Get variant frequency")
   val FeatRequest = timer("GET features")
   val RefRequest = timer("GET reference")
 
@@ -68,10 +70,6 @@ object VizTimers extends Metrics {
   //Generating Json
   val MakingTrack = timer("Making Track")
   val DoingCollect = timer("Doing Collect")
-  val PrintTrackJsonTimer = timer("JSON printTrackJson")
-  val PrintJsonFreqTimer = timer("JSON printJsonFreq")
-  val PrintVariationJsonTimer = timer("JSON printVariationJson")
-  val PrintFeatureJsonTimer = timer("JSON printFeatureJson")
   val PrintReferenceTimer = timer("JSON get reference string")
 }
 
@@ -89,10 +87,11 @@ object VizReads extends BDGCommandCompanion with Logging {
   var referencePath: String = ""
   var refName: String = ""
   var partitionCount: Int = 0
-  var readsPath1: String = ""
-  var samp1Name: String = ""
-  var readsPath2: String = ""
-  var samp2Name: String = ""
+  var readsPaths: List[String] = null
+  // var samp1Name: String = ""
+  // var readsPath2: String = ""
+  // var samp2Name: String = ""
+  var sampNames: List[String] = null
   var readsExist: Boolean = false
   var variantsPath: String = ""
   var variantsExist: Boolean = false
@@ -101,7 +100,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
-
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
@@ -119,9 +117,9 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   def getReference(region: ReferenceRegion): String = {
     if (VizReads.referencePath.endsWith(".adam")) {
-      val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-      val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
-      referenceRDD.adamGetReferenceString(region)
+      // val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
+      // val referenceRDD: RDD[Fragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))
+      // referenceRDD.adamGetReferenceString(region)
     } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
       val idx = new File(VizReads.referencePath + ".fai")
       if (idx.exists() && !idx.isDirectory()) {
@@ -179,11 +177,8 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 2)
   var partitionCount: Int = 0
 
-  @Args4jOption(required = false, name = "-read_file1", usage = "The first reads file to view")
-  var readsPath1: String = null
-
-  @Args4jOption(required = false, name = "-read_file2", usage = "The second reads file to view")
-  var readsPath2: String = null
+  @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
+  var readsPaths: String = null
 
   @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
   var variantsPath: String = null
@@ -213,7 +208,7 @@ class VizServlet extends ScalatraServlet {
     if (VizReads.readsExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
         Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "samples" -> (VizReads.samp1Name, VizReads.samp2Name)))
+          "samples" -> (VizReads.sampNames.mkString(","))))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
     }
@@ -228,7 +223,6 @@ class VizServlet extends ScalatraServlet {
       val data: RDD[(ReferenceRegion, AlignmentRecord)] = VizReads.readsData.multiget(viewRegion, sampleIds).toRDD
       val reference = VizReads.getReference(viewRegion)
       val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
-
       val fileMap = VizReads.readsData.getFileMap()
       var retJson = ""
 
@@ -252,7 +246,7 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-        "samples" -> (VizReads.samp1Name, VizReads.samp2Name),
+        "samples" -> (VizReads.sampNames.mkString(",")),
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
         "featuresExist" -> VizReads.featuresExist))
@@ -264,7 +258,7 @@ class VizServlet extends ScalatraServlet {
     if (VizReads.readsExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
         Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "samples" -> (VizReads.samp1Name, VizReads.samp2Name)))
+          "samples" -> (VizReads.sampNames.mkString(","))))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofreq.ssp")
     }
@@ -306,12 +300,27 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val variantRDD: RDD[(ReferenceRegion, Genotype)] = VizReads.variantData.get(viewRegion, "callset1").toRDD
-      val variationJson = VariantLayout(variantRDD)
-      val retJson =
-        "\"variants\": " + write(variationJson.variants) +
-          ", \"frequencies\": " + write(variationJson.freq)
-      val ret = "{" + retJson + "}"
-      ret
+      write(VariantLayout(variantRDD))
+    }
+  }
+
+  get("/variantfreq") {
+    contentType = "text/html"
+    val templateEngine = new TemplateEngine
+    if (VizReads.variantsExist) {
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
+        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
+    } else {
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/novariants.ssp")
+    }
+  }
+
+  get("/variantfreq/:ref") {
+    VizTimers.VarFreqRequest.time {
+      contentType = "json"
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      val variantRDD: RDD[(ReferenceRegion, Genotype)] = VizReads.variantData.get(viewRegion, "callset1").toRDD
+      write(VariantFreqLayout(variantRDD))
     }
   }
 
@@ -381,55 +390,58 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     VizReads.refName = args.refName
 
-    val readsPath1 = Option(args.readsPath1)
-    readsPath1 match {
+    val readsPaths = Option(args.readsPaths)
+    readsPaths match {
       case Some(_) => {
-        VizReads.readsPath1 = args.readsPath1
+        VizReads.readsPaths = args.readsPaths.split(",").toList
+        println(VizReads.readsPaths)
         VizReads.readsExist = true
-        if (args.readsPath1.endsWith(".bam") || args.readsPath1.endsWith(".sam")) {
-          val srf: SamReaderFactory = SamReaderFactory.make()
-          val samReader: SamReader = srf.open(new File(args.readsPath1))
-          val rec: SAMRecord = samReader.iterator().next()
-          VizReads.samp1Name = rec.getReadGroup().getSample()
-          VizReads.readsData.loadSample(VizReads.samp1Name, args.readsPath1)
-        } else if (args.readsPath1.endsWith(".adam")) {
-          VizReads.samp1Name = VizReads.sc.loadParquetAlignments(args.readsPath1).first.recordGroupSample
-          VizReads.readsData.loadSample(VizReads.samp1Name, args.readsPath1)
-        } else {
-          log.info("WARNING: Invalid input for reads file")
-          println("WARNING: Invalid input for reads file")
+        var sampNamesBuffer = new scala.collection.mutable.ListBuffer[String]
+        for (readsPath <- VizReads.readsPaths) {
+          if (readsPath.endsWith(".bam") || readsPath.endsWith(".sam")) {
+            val srf: SamReaderFactory = SamReaderFactory.make()
+            val samReader: SamReader = srf.open(new File(readsPath))
+            val rec: SAMRecord = samReader.iterator().next()
+            val sample = rec.getReadGroup().getSample()
+            sampNamesBuffer += sample
+            VizReads.readsData.loadSample(sample, readsPath)
+          } else if (readsPath.endsWith(".adam")) {
+            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
+          } else {
+            log.info("WARNING: Invalid input for reads file")
+            println("WARNING: Invalid input for reads file")
+          }
         }
-      }
-      case None => {
+        VizReads.sampNames = sampNamesBuffer.toList
+      } case None => {
         log.info("WARNING: No reads file provided")
         println("WARNING: No reads file provided")
       }
     }
 
-    val readsPath2 = Option(args.readsPath2)
-    readsPath2 match {
-      case Some(_) => {
-        VizReads.readsPath2 = args.readsPath2
-        VizReads.readsExist = true
-        if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam")) {
-          val srf: SamReaderFactory = SamReaderFactory.make()
-          val samReader: SamReader = srf.open(new File(args.readsPath2))
-          val rec: SAMRecord = samReader.iterator().next()
-          VizReads.samp2Name = rec.getReadGroup().getSample()
-          VizReads.readsData.loadSample(VizReads.samp2Name, args.readsPath2)
-        } else if (args.readsPath2.endsWith(".adam")) {
-          VizReads.samp2Name = VizReads.sc.loadParquetAlignments(args.readsPath2).first.recordGroupSample
-          VizReads.readsData.loadSample(VizReads.samp2Name, args.readsPath2)
-        } else {
-          log.info("WARNING: Invalid input for second reads file")
-          println("WARNING: Invalid input for second reads file")
-        }
-      }
-      case None => {
-        log.info("WARNING: No second reads file provided")
-        println("WARNING: No second reads file provided")
-      }
-    }
+    // val readsPath2 = Option(args.readsPath2)
+    // readsPath2 match {
+    //   case Some(_) => {
+    //     VizReads.readsPath2 = args.readsPath2
+    //     VizReads.readsExist = true
+    //     if (args.readsPath2.endsWith(".bam") || args.readsPath2.endsWith(".sam")) {
+    //       val srf: SamReaderFactory = SamReaderFactory.make()
+    //       val samReader: SamReader = srf.open(new File(args.readsPath2))
+    //       val rec: SAMRecord = samReader.iterator().next()
+    //       VizReads.samp2Name = rec.getReadGroup().getSample()
+    //       VizReads.readsData.loadSample(VizReads.samp2Name, args.readsPath2)
+    //     } else if (args.readsPath2.endsWith(".adam")) {
+    //       VizReads.samp1Name = VizReads.readsData.loadADAMSample(args.readsPath2)
+    //     } else {
+    //       log.info("WARNING: Invalid input for second reads file")
+    //       println("WARNING: Invalid input for second reads file")
+    //     }
+    //   }
+    //   case None => {
+    //     log.info("WARNING: No second reads file provided")
+    //     println("WARNING: No second reads file provided")
+    //   }
+    // }
 
     val variantsPath = Option(args.variantsPath)
     variantsPath match {
@@ -475,7 +487,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
     VizReads.server.start()
     println("View the visualization at: " + args.port)
-    println("Variant Frequency visualization at: /variants")
+    println("Variant visualization at: /variants")
+    println("Overall visualization at: /overall")
     println("Quit at: /quit")
     VizReads.server.join()
   }

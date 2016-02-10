@@ -33,8 +33,8 @@ import org.apache.spark.Logging
 import org.apache.spark.storage.StorageLevel
 import org.apache.avro.specific.SpecificRecord
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
-import org.bdgenomics.adam.rdd.read.AlignmentRecordRDDFunctions
-import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition, SequenceDictionary, SequenceRecord }
+import org.bdgenomics.adam.rdd.read.{ AlignedReadRDD, AlignmentRecordRDD, AlignmentRecordRDDFunctions }
+import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition, RecordGroupDictionary, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment, Contig }
@@ -70,11 +70,22 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
   }
 
   // Stores location of sample at a given filepath
-  def loadSample(k: String, filePath: String) {
+  def loadSample(sampleId: String, filePath: String) {
     if (dict == null) {
       setDictionary(filePath)
     }
-    fileMap += ((k, filePath))
+    fileMap += ((sampleId, filePath))
+  }
+
+  def loadADAMSample(filePath: String): String = {
+    // TODO: remove this hardcode
+    val region = ReferenceRegion("chrM", 0, 1000)
+    val items: (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
+    dict = items._2
+    val sample = items._3.recordGroups.head.sample
+    fileMap += ((sample, filePath))
+    intRDD = IntervalRDD(items._1.partitionBy(GenomicRegionPartitioner(partitions, dict)))
+    return sample
   }
 
   // Keeps track of sample ids and corresponding files
@@ -99,7 +110,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     }
   }
 
-  def loadadam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
+  def loadadam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = {
     val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
     val isVariant = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
     val isFeature = classOf[Feature].isAssignableFrom(classTag[T].runtimeClass)
@@ -107,23 +118,26 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
 
     if (isAlignmentRecord) {
       val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
-      val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired)
-      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+      val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+      val alignedReadRDD: AlignmentRecordRDD = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
+      (alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]], alignedReadRDD.sequences, alignedReadRDD.recordGroups)
     } else if (isVariant) {
       val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end))
       val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
-      sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+      val d = sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+      (d, null, null)
     } else if (isFeature) {
       val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
       val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+      val d = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+      (d, null, null)
     } else if (isNucleotideFrag) {
       // val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
       // sc.loadParquetFragments(fp, predicate = Some(pred)).map(r => (ReferenceRegion(r).get, r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-      null // TODO
+      (null, null, null) // TODO
     } else {
       log.warn("Generic type not supported")
-      null
+      (null, null, null)
     }
   }
 
@@ -153,7 +167,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
       null
     }
     if (fp.endsWith(".adam")) {
-      data = loadadam(region, fp)
+      data = loadadam(region, fp)._1
     } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
       data = loadFromBam(region, fp)
     } else if (fp.endsWith(".vcf")) {
@@ -195,11 +209,10 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
         }
       } catch {
         case ex: NoSuchElementException => {
-          put(region, ks)
+          put(r, ks)
         }
       }
     }
-    //  }
     intRDD.filterByInterval(region)
   }
 

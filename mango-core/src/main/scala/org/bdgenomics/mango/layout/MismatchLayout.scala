@@ -66,9 +66,9 @@ object MismatchLayout extends Logging {
               }
             } catch {
               case iobe: StringIndexOutOfBoundsException => {
-                log.warn("Record Sequence " + rec.sequence + " at index " + recIdx)
-                log.warn(" Reference Sequence " + ref + " at index " + refIdx)
-                log.warn("Cigar" + rec.cigar)
+                // log.warn("Record Sequence " + rec.sequence + " at index " + recIdx)
+                // log.warn(" Reference Sequence " + ref + " at index " + refIdx)
+                // log.warn("Cigar" + rec.cigar)
               }
               case e: Exception => log.warn(e.toString)
             }

@@ -3,10 +3,7 @@
 var refHeight = 38;
 var width = $(".sampleReads").width();
 
-$("#refArea").append("<div class=\"col-md-2\"></div>");
-$("#refArea").append("<div class=\"col-md-10\"></div>");
-
-var refContainer = d3.select("#refArea>.col-md-10")
+var refContainer = d3.select("#refArea")
   .append("svg")
   .attr("width", width)
   .attr("height", refHeight);

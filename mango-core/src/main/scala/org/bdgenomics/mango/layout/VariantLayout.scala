@@ -29,22 +29,24 @@ import scala.collection.mutable.ListBuffer
 object VariantLayout extends Logging {
 
   // Prepares variant information in Json format
-  def apply(rdd: RDD[(ReferenceRegion, Genotype)]): VariationJson = {
+  def apply(rdd: RDD[(ReferenceRegion, Genotype)]): List[VariantJson] = {
+    val trackedData = rdd.mapPartitions(TrackedLayout(_)).collect
+    val variantData = trackedData.zipWithIndex
+    variantData.flatMap(r => VariantJson(r._1.records, r._2)).toList
+  }
+}
 
-    // calculate variant frequency
+// calculate variant frequency
+object VariantFreqLayout extends Logging {
+  def apply(rdd: RDD[(ReferenceRegion, Genotype)]): List[VariantFreqJson] = {
     val variantFreq = rdd.countByKey
     var freqJson = new ListBuffer[VariantFreqJson]
     for (rec <- variantFreq) {
       freqJson += VariantFreqJson(rec._1.referenceName, rec._1.start, rec._1.end, rec._2)
     }
-
-    // get variants in json format
-    val trackedData = rdd.mapPartitions(TrackedLayout(_)).collect
-    val variantData = trackedData.zipWithIndex
-    val variantJson = variantData.flatMap(r => VariantJson(r._1.records, r._2)).toList
-
-    new VariationJson(variantJson, freqJson.toList)
+    freqJson.toList
   }
+
 }
 
 object VariantJson {
@@ -55,6 +57,6 @@ object VariantJson {
 }
 
 // tracked json objects for genotype visual data
-case class VariationJson(variants: List[VariantJson], freq: List[VariantFreqJson])
+// case class VariationJson(variants: List[VariantJson], freq: List[VariantFreqJson])
 case class VariantJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
 case class VariantFreqJson(contigName: String, start: Long, end: Long, count: Long)
