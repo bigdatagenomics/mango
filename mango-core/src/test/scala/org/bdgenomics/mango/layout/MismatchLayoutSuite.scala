@@ -110,4 +110,97 @@ class MismatchLayoutSuite extends FunSuite {
     assert(results.head.sequence == "A")
   }
 
+  test("check whether alignmentrecord and reference have the same sequence") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("7M")
+      .setStart(1)
+      .setEnd(6)
+      .setSequence("GGCTTA")
+      .build
+
+    val reference = "NGGCTTAAAA"
+    val region = new ReferenceRegion("chr", 1, 10)
+
+    val m = MismatchLayout.matchesReference(read, reference, region)
+    assert(m == true)
+  }
+
+  test("assert alignmentrecord and reference have different sequences") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("7M")
+      .setStart(1)
+      .setEnd(6)
+      .setSequence("AGCCTTA")
+      .build
+
+    val reference = "NGGCTTAAAA"
+    val region = new ReferenceRegion("chr", 2, 10)
+
+    val m = MismatchLayout.matchesReference(read, reference, region)
+    assert(m == false)
+  }
+
+  test("check whether alignmentrecord and reference have same sequence when read is shifted left") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("7M")
+      .setStart(1)
+      .setEnd(9)
+      .setSequence("AAAGGCTTA")
+      .build
+
+    val reference = "NGGCTTAAA"
+    val region = new ReferenceRegion("chr", 4, 12)
+
+    val m = MismatchLayout.matchesReference(read, reference, region)
+    assert(m == true)
+  }
+
+  // shifted right
+  test("check whether alignmentrecord and reference have same sequence when read is shifted right") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("7M")
+      .setStart(7)
+      .setEnd(12)
+      .setSequence("TTCGAT")
+      .build
+
+    val reference = "NGGCTTCG"
+    val region = new ReferenceRegion("chr", 4, 11)
+
+    val m = MismatchLayout.matchesReference(read, reference, region)
+    assert(m == true)
+  }
+
+  // // read inside Reference
+  // test("check whether alignmentrecord and reference comparison when read is smaller than reference") {
+  //   val read = AlignmentRecord.newBuilder
+  //     .setCigar("7M")
+  //     .setStart(4)
+  //     .setEnd(6)
+  //     .setSequence("TTT")
+  //     .build
+
+  //   val reference = "NAATTTAAA"
+  //   val region = new ReferenceRegion("chr", 1, 10)
+
+  //   val m = MismatchLayout.matchesReference(read, reference, region)
+  //   assert(m == true)
+  // }
+
+  // reference inside read
+  test("check whether alignmentrecord and reference comparison when reference is smaller than read") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("7M")
+      .setStart(11)
+      .setEnd(20)
+      .setSequence("AAATTTAAAA")
+      .build
+
+    val reference = "NTT"
+    val region = new ReferenceRegion("chr", 14, 16)
+
+    val m = MismatchLayout.matchesReference(read, reference, region)
+    assert(m == true)
+  }
+
 }

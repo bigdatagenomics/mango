@@ -31,6 +31,10 @@ object MismatchLayout extends Logging {
     alignMismatchesToRead(record, reference, region)
   }
 
+  /*
+   * Finds and returns all indels and mismatches of a given alignment record from an overlapping reference string.
+   * Must take into account overlapping regions that are not covered by both the reference and record sequence.
+  */
   def alignMismatchesToRead(rec: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatch] = {
     var ref: String =
       if (rec.readNegativeStrand) {
@@ -89,6 +93,59 @@ object MismatchLayout extends Logging {
         }
     }
     misMatches.toList
+  }
+
+  /*
+   * From a given alignment record and an overlapping reference, determine whether the overlapping
+   * sections of both sequences are the same. Must trim the start and end of either the record
+   * sequence or reference string before comparing.
+  */
+  def matchesReference(rec: AlignmentRecord, reference: String, region: ReferenceRegion): Boolean = {
+    val ref = {
+      if (rec.readNegativeStrand)
+        complement(reference)
+      else
+        reference
+    }
+
+    val seqLength = (rec.end - rec.start).toInt
+    var recStart = 0
+    var refStart = 0
+    var recEnd = 0
+    var refEnd = 0
+
+    if (rec.start < region.start) {
+      refStart = 0
+      recStart = (region.start - rec.start).toInt
+    } else if (rec.start > region.start) {
+      refStart = (rec.start - region.start).toInt
+      recStart = 0
+    } else {
+      refStart = 0
+      recStart = 0
+    }
+
+    if (rec.end < region.end) {
+      val endDiff = (region.end - rec.end).toInt
+      refEnd = ref.length - endDiff
+      recEnd = seqLength
+    } else if (rec.end > region.end) {
+      val endDiff = (rec.end - region.end).toInt // 34
+      refEnd = ref.length
+      recEnd = seqLength - endDiff
+    } else {
+      refEnd = ref.length
+      recEnd = seqLength
+    }
+
+    val sequence = rec.sequence.substring(recStart, recEnd)
+    val refSegment: String = reference.substring(refStart + 1, refEnd)
+    println(refSegment, sequence)
+    refSegment == sequence
+  }
+
+  def containsIndels(rec: AlignmentRecord): Boolean = {
+    rec.cigar.contains("I") || rec.cigar.contains("D")
   }
 
   def complement(sequence: String): String = {

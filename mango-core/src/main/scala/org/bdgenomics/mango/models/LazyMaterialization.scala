@@ -77,9 +77,9 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     fileMap += ((sampleId, filePath))
   }
 
-  def loadADAMSample(filePath: String): String = {
+  def loadADAMSample(filePath: String, refName: String): String = {
     // TODO: remove this hardcode
-    val region = ReferenceRegion("chrM", 0, 1000)
+    val region = ReferenceRegion(refName, 0, chunkSize - 1)
     val items: (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
     dict = items._2
     val sample = items._3.recordGroups.head.sample
@@ -203,7 +203,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     for (r <- regions) {
       try {
         val found = bookkeep(r.referenceName).search(r).toList
-        val notFound: List[String] = found.filterNot(found.contains(_))
+        val notFound: List[String] = ks.filterNot(found.contains(_))
         if (notFound.length > 0) {
           put(r, notFound)
         }
@@ -225,7 +225,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
       if (intRDD == null) {
         intRDD = IntervalRDD(loadFromFile(region, k))
       } else {
-        intRDD.multiput(loadFromFile(region, k))
+        intRDD = intRDD.multiput(loadFromFile(region, k))
       }
     })
     rememberValues(region, ks)
