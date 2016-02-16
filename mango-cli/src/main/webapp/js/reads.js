@@ -23,9 +23,9 @@ var refAxis = d3.svg.axis()
 var readsSvgContainer = {};
 
 for (var i = 0; i < samples.length; i++) {
-  $("#readsArea").append("<div id=\"" + samples[i]+ "\" class=\"row samples resize-vertical\"></div>");
-  $("#"+samples[i]).append("<div class=\"" + fileSelector +"\"></div>");
-  $("#"+samples[i]).append("<div class=\"" + readsSelector + "\"></div>");
+  $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"row samples resize-vertical\"></div>");
+  $("#"+samples[i]).append("<div class=\"" + fileSelector +" \"></div>");
+  $("#"+samples[i]).append("<div class=\"" + readsSelector + " graphArea\"></div>");
   $("#"+samples[i] + ">.col-md-10").append("<div class=\"sampleCoverage\"></div>");
   $("#"+samples[i] + ">.col-md-10").append("<div class=\"sampleReads\"></div>");
   var width = $(".sampleReads").width();
@@ -74,11 +74,15 @@ function renderJsonReads(readsJsonLocation) {
 
   d3.json(readsJsonLocation,function(error, ret) {
       for (var i = 0; i < samples.length; i++) {
-        // render reads for low or high resolution depending on base range
-        if (viewRegEnd - viewRegStart > 100) {
-          renderReadsByResolution(false, ret[rawSamples[i]], samples[i], i);
+        if (!jQuery.isEmptyObject(ret)) {
+          // render reads for low or high resolution depending on base range
+          if (viewRegEnd - viewRegStart > 100) {
+            renderReadsByResolution(false, ret[rawSamples[i]], samples[i], i);
+          } else {
+            renderReadsByResolution(true,ret[rawSamples[i]], samples[i], i);
+          }
         } else {
-          renderReadsByResolution(true,ret[rawSamples[i]], samples[i], i);
+          console.log("no reads to display");
         }
       }
 
@@ -115,7 +119,6 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         sampleData[i].mismatches = data['mismatches'];
         sampleData[i].indels = data['indels'];
         sampleData[i].pairs = data['matePairs'];
-        console.log(sampleData[i].reads.length);
 
         // print file name
         // TODO: this should not be redrawn every page load

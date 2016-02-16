@@ -108,12 +108,14 @@ object MismatchLayout extends Logging {
         reference
     }
 
-    val seqLength = (rec.end - rec.start).toInt
+    val seqLength = rec.sequence.length
+    val modifiedEnd = rec.start + seqLength
     var recStart = 0
     var refStart = 0
     var recEnd = 0
     var refEnd = 0
 
+    // get substring start value for reference and record
     if (rec.start < region.start) {
       refStart = 0
       recStart = (region.start - rec.start).toInt
@@ -125,12 +127,13 @@ object MismatchLayout extends Logging {
       recStart = 0
     }
 
-    if (rec.end < region.end) {
-      val endDiff = (region.end - rec.end).toInt
+    // get substring end value for reference and record
+    if (modifiedEnd < region.end) {
+      val endDiff = (region.end - modifiedEnd).toInt
       refEnd = ref.length - endDiff
       recEnd = seqLength
-    } else if (rec.end > region.end) {
-      val endDiff = (rec.end - region.end).toInt // 34
+    } else if (modifiedEnd > region.end) {
+      val endDiff = (modifiedEnd - region.end).toInt
       refEnd = ref.length
       recEnd = seqLength - endDiff
     } else {
@@ -138,10 +141,27 @@ object MismatchLayout extends Logging {
       recEnd = seqLength
     }
 
-    val sequence = rec.sequence.substring(recStart, recEnd)
     val refSegment: String = reference.substring(refStart + 1, refEnd)
-    println(refSegment, sequence)
-    refSegment == sequence
+    val sequence = rec.sequence.substring(recStart, recEnd)
+    pairWiseCompare(refSegment, sequence)
+
+  }
+
+  def pairWiseCompare(s1: String, s2: String): Boolean = {
+    if (s1.contains("N") || s2.contains("N")) {
+      for (i <- 0 to s1.length - 1) {
+        val c1 = s1(i)
+        val c2 = s2(i)
+        if (c1 != 'N' && c2 != 'N') {
+          if (s1.charAt(i) != s2.charAt(i)) {
+            return false
+          }
+        }
+      }
+      true
+    } else {
+      s1 == s2
+    }
   }
 
   def containsIndels(rec: AlignmentRecord): Boolean = {

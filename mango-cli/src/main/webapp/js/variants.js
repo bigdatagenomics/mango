@@ -5,7 +5,7 @@ var varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegSta
 var refHeight = 38;
 var varHeight = 10;
 var freqHeight = 200;
-var width = $("#varArea").width();
+var width = $("#varArea").width() - barWidth;
 
 
 // Svg container for variant frequency

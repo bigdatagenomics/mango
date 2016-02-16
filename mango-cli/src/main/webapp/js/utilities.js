@@ -1,4 +1,7 @@
 // Filters invalid characters from string to create javascript descriptor
+
+var barWidth = 21;
+
 function filterNames(arr) {
   var filteredArr = [];
   for (var i = 0; i < arr.length; i++) {

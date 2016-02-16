@@ -150,10 +150,16 @@
 
 <br>
 
+<div class="row top">
+  <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
+</div>
+<div class="row top">
+  <div class="col-md-10 graphArea" id="featArea" style="float:right"></div>
+</div>
+<div class="row top">
+  <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
+</div>
 
-<div class="row col-md-10 graphArea" id="refArea" style="float:right"></div>
-<div class="row col-md-10 graphArea" id="featArea" style="float:right"></div>
-<div class="row col-md-10 graphArea" id="varArea" style="float:right"></div>
 <div class="graphArea" id="readsArea"></div>
 <br>
 
@@ -170,7 +176,6 @@
 
   var sampleId = "${samples}";
   var rawSamples = sampleId.split(",").unique(); // distinct
-  console.log(rawSamples)
   var samples = filterNames(rawSamples);
   var width = window.innerWidth - 18;
 

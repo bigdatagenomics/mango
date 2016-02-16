@@ -195,22 +195,21 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
 	*/
   def multiget(region: ReferenceRegion, ks: List[String]): IntervalRDD[ReferenceRegion, T] = {
 
-    // TODO: combine the 2 functions below (getChunk and partitionChunk)
-    val matRegion: ReferenceRegion = getChunk(region)
-    val regions = partitionChunk(matRegion)
+    val regionsOpt = getMaterializedRegions(region, ks)
 
-    // TODO: you should use a diff here instead of calling put multiple times for each key
-    for (r <- regions) {
-      try {
-        val found = bookkeep(r.referenceName).search(r).toList
-        val notFound: List[String] = ks.filterNot(found.contains(_))
-        if (notFound.length > 0) {
-          put(r, notFound)
+    regionsOpt match {
+      case Some(_) => {
+        for (r <- regionsOpt.get) {
+          try {
+            put(r, ks)
+          } catch {
+            case ex: NoSuchElementException => {
+              put(r, ks)
+            }
+          }
         }
-      } catch {
-        case ex: NoSuchElementException => {
-          put(r, ks)
-        }
+      } case None => {
+
       }
     }
     intRDD.filterByInterval(region)
@@ -231,27 +230,54 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     rememberValues(region, ks)
   }
 
-  // get block chunk of request
-  private def getChunk(region: ReferenceRegion): ReferenceRegion = {
+  /**
+   * gets materialized regions that are not yet loaded into the bookkeeping structure
+   *
+   * @param region that to be searched over
+   * @param keys in which region is searched over. these are sample IDs
+   * @return List of materialied and merged reference regions not found in bookkeeping structure
+   */
+  def getMaterializedRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
     val start = region.start / chunkSize * chunkSize
     val end = region.end / chunkSize * chunkSize + (chunkSize - 1)
-    new ReferenceRegion(region.referenceName, start, end)
+    getMissingRegions(new ReferenceRegion(region.referenceName, start, end), ks)
   }
 
-  // get block chunk of request
-  private def partitionChunk(region: ReferenceRegion): List[ReferenceRegion] = {
+  /**
+   * generates a list of reference regions that were not found in bookkeeping structure
+   *
+   * @param region that is divided into chunks and searched for in bookkeeping structure
+   * @param keys in which region is searched over. these are sample IDs
+   * @return List of reference regions not found in bookkeeping structure
+   */
+  def getMissingRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
     var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
     var start = region.start / chunkSize * chunkSize
     var end = start + (chunkSize - 1)
 
     while (start <= region.end) {
-      regions += new ReferenceRegion(region.referenceName, start, end)
+      val r = new ReferenceRegion(region.referenceName, start, end)
+      val size = {
+        try {
+          bookkeep(r.referenceName).search(r).length
+        } catch {
+          case ex: NoSuchElementException => 0
+        }
+      }
+      if (size < ks.size) {
+        regions += r
+      }
       start += chunkSize
       end += chunkSize
     }
-    regions.toList
-  }
 
+    if (regions.size < 1) {
+      None
+    } else {
+      LazyMaterialization.mergeRegions(Option(regions.toList))
+    }
+
+  }
 }
 
 case class UnsupportedFileException(message: String) extends Exception(message)
@@ -264,5 +290,39 @@ object LazyMaterialization {
 
   def apply[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
     new LazyMaterialization[T](sc, partitions, chunkSize)
+  }
+
+  /**
+   * generates a list of closely overlapping regions, counting for gaps in the list
+   *
+   * @note For example, given a list of regions with ranges (0, 999), (1000, 1999) and (3000, 3999)
+   * This function will consolidate adjacent regions and output (0, 1999), (3000, 3999)
+   *
+   * @note Requires that list region is ordered
+   *
+   * @param Option of list of regions to merge
+   * @return Option of list of merged adjacent regions
+   */
+  def mergeRegions(regionsOpt: Option[List[ReferenceRegion]]): Option[List[ReferenceRegion]] = {
+    regionsOpt match {
+      case Some(_) => {
+        val regions = regionsOpt.get
+        var rmerged: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
+        rmerged += regions.head
+        for (r2 <- regions) {
+          if (r2 != regions.head) {
+            val r1 = rmerged.last
+            if (r1.end == r2.start - 1) {
+              rmerged -= r1
+              rmerged += r1.hull(r2)
+            } else {
+              rmerged += r2
+            }
+          }
+        }
+        Option(rmerged.toList)
+      }
+      case None => None
+    }
   }
 }
