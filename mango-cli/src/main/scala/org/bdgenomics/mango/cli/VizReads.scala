@@ -265,6 +265,7 @@ class VizServlet extends ScalatraServlet {
   get("/freq/:ref") {
     VizTimers.FreqRequest.time {
       contentType = "json"
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val region = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val sampleIds: List[String] = params("sample").split(",").toList
       val data: RDD[AlignmentRecord] = VizReads.readsData.multiget(viewRegion, sampleIds).toRDD.map(r => r._2)
@@ -334,6 +335,7 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/features/:ref") {
+    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     VizTimers.FeatRequest.time {
       val region = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val featureRDD: Option[RDD[Feature]] = {
