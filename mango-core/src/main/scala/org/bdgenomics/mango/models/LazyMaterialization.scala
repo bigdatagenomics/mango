@@ -78,11 +78,11 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
   }
 
   def loadADAMSample(filePath: String, refName: String): String = {
-    // TODO: remove this hardcode
     val region = ReferenceRegion(refName, 0, chunkSize - 1)
     val items: (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
     dict = items._2
     val sample = items._3.recordGroups.head.sample
+    rememberValues(region, List(sample))
     fileMap += ((sample, filePath))
     intRDD = IntervalRDD(items._1.partitionBy(GenomicRegionPartitioner(partitions, dict)))
     return sample

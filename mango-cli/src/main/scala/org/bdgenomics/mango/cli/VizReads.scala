@@ -215,16 +215,10 @@ class VizServlet extends ScalatraServlet {
       val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
       val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
       val sampleIds: List[String] = params("sample").split(",").toList
-      val highRes = viewRegion.end - viewRegion.start < 10000
       val reference = VizReads.getReference(region)
 
-      val data: RDD[(ReferenceRegion, AlignmentRecord)] = {
-        if (highRes) {
-          VizReads.readsData.multiget(viewRegion, sampleIds)
-        } else {
-          VizReads.readsData.multiget(viewRegion, sampleIds).filter(r => !(MismatchLayout.matchesReference(r._2, reference, region)))
-        }
-      }.toRDD
+      val data: RDD[(ReferenceRegion, AlignmentRecord)] =
+        VizReads.readsData.multiget(viewRegion, sampleIds).toRDD
 
       val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
       val fileMap = VizReads.readsData.getFileMap()
