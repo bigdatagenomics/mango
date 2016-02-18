@@ -220,22 +220,26 @@ class VizServlet extends ScalatraServlet {
       val data: RDD[(ReferenceRegion, AlignmentRecord)] =
         VizReads.readsData.multiget(viewRegion, sampleIds).toRDD
 
-      val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
+      val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(data, reference, region, sampleIds)
+      val freqData: Map[String, List[FreqJson]] = FrequencyLayout(data.map(_._2), region, sampleIds)
       val fileMap = VizReads.readsData.getFileMap()
-      var retJson = ""
+      var readRetJson: String = ""
 
-      for (sampleData <- alignmentData) {
-        val sample = sampleData.sample
-        retJson += "\"" + sample + "\":" +
+      for (sample <- sampleIds) {
+        val sampleData = alignmentData.get(sample)
+        readRetJson += "\"" + sample + "\":" +
           "{ \"filename\": " + write(fileMap(sample)) +
-          ", \"tracks\": " + write(sampleData.records) +
-          ", \"indels\": " + write(sampleData.mismatches.filter(_.op != "M")) +
-          ", \"mismatches\": " + write(sampleData.mismatches.filter(_.op == "M")) +
-          ", \"matePairs\": " + write(sampleData.matePairs) + "},"
+          ", \"tracks\": " + write(sampleData.get.records) +
+          ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+          ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+          ", \"matePairs\": " + write(sampleData.get.matePairs) +
+          ", \"freq\": " + write(freqData.get(sample)) + "},"
       }
-      retJson = retJson.dropRight(1)
-      retJson = "{" + retJson + "}"
-      retJson
+      readRetJson = readRetJson.dropRight(1)
+      readRetJson = "{" + readRetJson + "}"
+      println(readRetJson)
+      readRetJson
+
     }
   }
 
