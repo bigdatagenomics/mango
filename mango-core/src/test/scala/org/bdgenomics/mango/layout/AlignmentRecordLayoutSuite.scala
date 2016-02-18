@@ -63,7 +63,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val reference = "NAAAAA"
 
     val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
-    assert(alignmentData.head.matePairs.length == 1)
+    assert(alignmentData.head._2.matePairs.length == 1)
   }
 
   sparkTest("test mate pairs do not overlap for multiple pairs") {
@@ -115,8 +115,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
     val result = alignmentData.head
-    assert(result.matePairs.length == 2)
-    assert(result.matePairs.filter(_.track == 0).length == 1)
+    assert(result._2.matePairs.length == 2)
+    assert(result._2.matePairs.filter(_.track == 0).length == 1)
   }
 
   sparkTest("test mate pairs do not overlap in interspersed pattern") {
@@ -168,8 +168,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
     val result = alignmentData.head
-    assert(result.matePairs.length == 2)
-    assert(result.matePairs.filter(_.track == 0).length == 1)
+    assert(result._2.matePairs.length == 2)
+    assert(result._2.matePairs.filter(_.track == 0).length == 1)
   }
 
 }
