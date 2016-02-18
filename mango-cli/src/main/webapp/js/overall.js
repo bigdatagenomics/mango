@@ -56,7 +56,7 @@ if (featuresExist === true) {
 render(viewRefName, viewRegStart, viewRegEnd);
 
 // Functions
-function render(refName, start, end) {
+function render(refName, start, end, quality) {
   //Adding Reference rectangles
   viewRegStart = start;
   viewRegEnd = end;
@@ -81,11 +81,8 @@ function render(refName, start, end) {
 
   // Reads and Coverage
   if (readsExist) {
-    renderReads(refName, start, end);
+    renderReads(refName, start, end, quality);
   }
-
-
-
 }
 
 function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {

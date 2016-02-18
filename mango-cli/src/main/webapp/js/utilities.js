@@ -136,17 +136,6 @@ function checkForm(form) {
   var region = info.split(":")[1].split("-");
   var newStart = Math.max(0, region[0]);
   var newEnd = Math.max(newStart, region[1]);
-  render(refName, newStart, newEnd);
+  var quality = info.split(":")[2];
+  render(refName, newStart, newEnd, quality);
 }
-
-function checkFormVariants(form) {
-  var info = form.info.value;
-  var refName = info.split(":")[0];
-  var region = info.split(":")[1].split("-");
-  var newStart = Math.max(0, region[0]);
-  var newEnd = Math.max(newStart, region[1]);
-  renderVariantFrequency(refName, newStart, newEnd);
-  renderVariants(refName, newStart, newEnd);
-  renderReference(refName, newStart, newEnd);
-}
-
