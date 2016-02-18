@@ -62,7 +62,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 0L, 1000L)
 
-    var results = lazyMat.get(region, sample)
+    var results = lazyMat.get(region, sample).get
     var lazySize = results.count
     val dataSize = getDataCountFromBamFile(bamFile, region)
     assert(dataSize == lazySize)
@@ -76,12 +76,36 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val region = new ReferenceRegion("chrM", 0L, 100L)
     lazyMat.loadSample(sample1, bamFile)
     lazyMat.loadSample(sample2, bamFile)
-    val results1 = lazyMat.get(region, sample1)
+    val results1 = lazyMat.get(region, sample1).get
     val lazySize1 = results1.count
 
-    val results2 = lazyMat.get(region, sample2)
+    val results2 = lazyMat.get(region, sample2).get
     val lazySize2 = results2.count
     assert(lazySize1 == getDataCountFromBamFile(bamFile, region))
+  }
+
+  sparkTest("Fetch region out of bounds") {
+    val sample1 = "person1"
+
+    var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
+    val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
+    lazyMat.loadSample(sample1, bamFile)
+    val results = lazyMat.get(bigRegion, sample1).get
+    val lazySize = results.count
+
+    val smRegion = new ReferenceRegion("chrM", 0L, 19299L)
+    assert(lazySize == getDataCountFromBamFile(bamFile, smRegion))
+  }
+
+  sparkTest("Fetch region whose name is not yet loaded") {
+    val sample1 = "person1"
+
+    var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
+    val bigRegion = new ReferenceRegion("M", 0L, 20000L)
+    lazyMat.loadSample(sample1, bamFile)
+    val results = lazyMat.get(bigRegion, sample1)
+
+    assert(results == None)
   }
 
   sparkTest("Get data for variants") {
@@ -90,7 +114,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     var lazyMat = LazyMaterialization[Genotype](sc, 10)
     lazyMat.loadSample(callset, vcfFile)
 
-    val results = lazyMat.get(region, callset)
+    val results = lazyMat.get(region, callset).get
     assert(results.count == 3)
 
   }

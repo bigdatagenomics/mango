@@ -43,7 +43,7 @@ object AlignmentRecordLayout extends Logging {
    * @param sampleIds: List of sample identifiers to be rendered
    * @return List of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion, sampleIds: List[String]): List[ReadTrack] = {
+  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion, sampleIds: List[String]): List[ReadTrack] = {
     val readTracks = new ListBuffer[ReadTrack]()
     val highRes = region.end - region.start < 10000
 
@@ -76,7 +76,7 @@ object AlignmentRecordLayout extends Logging {
    * @param region: ReferenceRegion to be viewed
    * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion): Iterator[ReadsTrack] = {
+  def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion): Iterator[ReadsTrack] = {
     new AlignmentRecordLayout(iter).collect(reference, region)
   }
 }
@@ -111,7 +111,7 @@ class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRecord)]
     }
   }
 
-  def collect(reference: String, region: ReferenceRegion): Iterator[ReadsTrack] =
+  def collect(reference: Option[String], region: ReferenceRegion): Iterator[ReadsTrack] =
     trackBuilder.map(t => Track(t, reference, region)).toIterator
 }
 
