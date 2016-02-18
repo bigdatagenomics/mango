@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.bdgenomics.mango.models
 
 import com.github.erictu.intervaltree._
@@ -92,6 +93,25 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val results = lazyMat.get(region, callset)
     assert(results.count == 3)
 
+  }
+
+  sparkTest("Merge Regions") {
+    val r1 = new ReferenceRegion("chr1", 0, 999)
+    val r2 = new ReferenceRegion("chr1", 1000, 1999)
+
+    val merged = LazyMaterialization.mergeRegions(Option(List(r1, r2))).get
+    assert(merged.size == 1)
+    assert(merged.head.start == 0 && merged.head.end == 1999)
+  }
+
+  sparkTest("Merge Regions with gap") {
+    val r1 = new ReferenceRegion("chr1", 0, 999)
+    val r2 = new ReferenceRegion("chr1", 1000, 1999)
+    val r3 = new ReferenceRegion("chr1", 3000, 3999)
+
+    val merged = LazyMaterialization.mergeRegions(Option(List(r1, r2, r3))).get
+    assert(merged.size == 2)
+    assert(merged.head.end == 1999 && merged.last.end == 3999)
   }
 
 }

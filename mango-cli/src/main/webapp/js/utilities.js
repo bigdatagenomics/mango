@@ -1,10 +1,31 @@
 // Filters invalid characters from string to create javascript descriptor
-function filterName(str,i) {
-  var nStr = str.replace("/","");
-  nStr = nStr + i;
-  i++;
-  return nStr;
+
+var barWidth = 21;
+
+function filterNames(arr) {
+  var filteredArr = [];
+  for (var i = 0; i < arr.length; i++) {
+    filteredArr[i] = arr[i].replace("/","");
+  }
+  return filteredArr;
 }
+
+Array.prototype.contains = function(v) {
+  for(var i = 0; i < this.length; i++) {
+      if(this[i] === v) return true;
+  }
+  return false;
+};
+
+Array.prototype.unique = function() {
+    var arr = [];
+    for(var i = 0; i < this.length; i++) {
+        if(!arr.contains(this[i])) {
+            arr.push(this[i]);
+        }
+    }
+    return arr;
+};
 
 // calulates reads track height based on viewing range
 function getTrackHeight() {

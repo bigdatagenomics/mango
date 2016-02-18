@@ -126,8 +126,8 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
             "Feature Type: " + d.featureType + "<br>" +
             "Start: " + d.start + "<br>" +
             "End: " + d.end)
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
+            .style("left", (d3.event.pageX - 200) + "px")
+            .style("top", (d3.event.pageY - 200) + "px");
         })
         .on("mouseover", function(d) {
           featDiv.transition()

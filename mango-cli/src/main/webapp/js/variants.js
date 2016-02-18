@@ -1,11 +1,11 @@
 var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-$("#varArea").append("<div class=\"col-md-2\"></div>");
-$("#varArea").append("<div class=\"col-md-10\"></div>");
+var varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
 // Section Heights
 var refHeight = 38;
 var varHeight = 10;
 var freqHeight = 200;
+var width = $("#varArea").width() - barWidth;
 
 
 // Svg container for variant frequency
@@ -33,7 +33,7 @@ function renderVariantFrequency(refName, start, end) {
   renderVariantFrequency();
 
 }
-var varSvgContainer = d3.select("#varArea>.col-md-10")
+var varSvgContainer = d3.select("#varArea")
   .append("svg")
     .attr("width", width)
     .attr("height", varHeight);
@@ -58,7 +58,7 @@ varSvgContainer.on('mousemove', function () {
 });
 
 // Making hover box
-var varDiv = d3.select("#varArea>.col-md-10")
+var varDiv = d3.select("#varArea")
   .append("div")
   .attr("class", "tooltip")
   .style("opacity", 0);
@@ -66,10 +66,8 @@ var varDiv = d3.select("#varArea>.col-md-10")
 
 function renderJsonVariants() {
 
-  d3.json(varJsonLocation, function(error, alldata) {
-    console.log(alldata);
+  d3.json(varJsonLocation, function(error, data) {
     if (error) throw error;
-    var data = alldata.variants;
     // Add the rectangles
     var variants = varSvgContainer.selectAll(".variant").data(data);
 
@@ -128,7 +126,6 @@ function renderJsonVariants() {
 }
 
 function renderVariantFrequency() {
-
   // Making hover box
   var varDiv = d3.select("#varFreqArea")
     .append("div")
@@ -174,10 +171,8 @@ function renderVariantFrequency() {
       .orient("left")
       .ticks(10, "%");
 
-  d3.json(varJsonLocation, function(error, alldata) {
+  d3.json(varFreqJsonLocation, function(error, data) {
     if (error) throw error;
-    var data = alldata.frequencies;
-
     x.domain([viewRegStart, viewRegEnd]);
     y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
@@ -210,7 +205,7 @@ function renderVariantFrequency() {
             .duration(200)
             .style("opacity", .9);
           varDiv.html("Samples with variant: " + d.count)
-            .style("left", (d3.event.pageX) + "px")
+            .style("left", (d3.event.pageX - 220) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
         })
         .on("mouseout", function(d) {
@@ -219,5 +214,4 @@ function renderVariantFrequency() {
           .style("opacity", 0);
         });
   });
-
 }

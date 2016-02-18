@@ -42,7 +42,6 @@ class FrequencyLayoutSuite extends FunSuite {
     }
 
     val freq = FrequencyLayout(records.toIterator, region).toList
-    println(freq)
     assert(freq.contains(("sample1", 5, 5)))
     assert(freq.contains(("sample1", 9, 7)))
 

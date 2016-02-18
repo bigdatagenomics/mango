@@ -95,16 +95,16 @@ input[type="text"] {
 .coverage-svg {
   overflow: visible !important; }
 
-.row {
-  margin-left: 0px;
-  margin-right: 0px; }
-
 .samples {
   border-radius: 5px;
   border: 1.5px solid #996633;
-  padding: 3px; }
+  padding: 3px;
+  padding-bottom: 8px; }
   .samples .col-md-10 {
     overflow-x: hidden; }
+
+.row.top {
+  margin-right: 15px; }
 
 .sampleCoverage {
   border-bottom: 1px solid #e7e7e7;

@@ -25,6 +25,7 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.reflect.{ ClassTag, classTag }
 import scala.util.control.Breaks._
 
@@ -39,6 +40,7 @@ object TrackTimers extends Metrics {
   val GetIndexTimer = timer("Get Index Timer")
   val ConflictTimer = timer("Conflict Timer")
 }
+
 /**
  * A TrackedLayout is an assignment of values of some type T (which presumably are mappable to
  * a reference genome or other linear coordinate space) to 'tracks' -- that is, to integers,
@@ -48,12 +50,7 @@ object TrackTimers extends Metrics {
  *
  * @tparam T the type of value which is to be tracked.
  */
-
 object TrackedLayout {
-
-  def apply[T: ClassTag](values: Iterator[(ReferenceRegion, T)]): Iterator[Track[T]] = {
-    new TrackedLayout[T](values).trackAssignments
-  }
 
   def overlaps[T](rec1: (ReferenceRegion, T), rec2: (ReferenceRegion, T)): Boolean = {
     val ref1 = rec1._1
@@ -73,113 +70,21 @@ object TrackedLayout {
 }
 
 /**
- * An implementation of TrackedLayout which takes a sequence of tuples of Reference Region and an input type,
- * and lays them out <i>in order</i> (i.e. from first-to-last).
- * Tracks are laid out by finding the first track in a buffer that does not conflict with
- * an input ReferenceRegion. After a ReferenceRegion is added to a track, the track is
- * put at the end of the buffer in an effort to make subsequent searches faster.
+ * Abstract TrackedLayout is an assignment of values of some type T to nonoverlapping tracks
  *
- * @param values The set of values (i.e. reads, variants) to lay out in tracks
+ *
  * @tparam T the type of value which is to be tracked.
+ * @tparam U the TrackBuffer type to be created, dependent on T
  */
-class TrackedLayout[T: ClassTag](values: Iterator[(ReferenceRegion, T)]) extends Logging {
-  val sequence = values.toList
-  var trackBuilder = new mutable.ListBuffer[TrackBuffer[T]]()
+abstract class TrackedLayout[T, U <: TrackBuffer[T]] {
 
-  TrackTimers.FindAddTimer.time {
-    sequence match {
-      case a: List[(ReferenceRegion, AlignmentRecord)] if classTag[T] == classTag[AlignmentRecord] => {
-        val readPairs: Map[String, List[(ReferenceRegion, T)]] = a.groupBy(_._2.readName)
-        findPairsAndAddToTrack(readPairs)
-      }
-      case f: List[(ReferenceRegion, Feature)] if classTag[T] == classTag[Feature] => {
-        f.foreach(findAndAddToTrack)
-      }
-      case g: List[(ReferenceRegion, Genotype)] if classTag[T] == classTag[Genotype] => {
-        val data = g.groupBy(_._2.sampleId)
-        addVariantsToTrack(data)
-      }
-      case _ => {
-        log.info("No matched types")
-      }
-    }
-  }
+  def sequence: List[(ReferenceRegion, T)]
+  def trackBuilder: ListBuffer[U]
 
-  trackBuilder = trackBuilder.filter(_.records.nonEmpty)
-  val trackAssignments: Iterator[Track[T]] =
-    trackBuilder.map(t => Track(t)).toIterator
+  def addTracks
 
-  private def addVariantsToTrack(recs: Map[String, List[(ReferenceRegion, T)]]) {
-    for (rec <- recs) {
-      trackBuilder += TrackBuffer[T](rec._2)
-    }
-  }
-
-  private def findPairsAndAddToTrack(readPairs: Map[String, List[(ReferenceRegion, T)]]) {
-    readPairs.foreach {
-      p =>
-        {
-          val recs: List[(ReferenceRegion, T)] = p._2
-          val trackOption: Option[TrackBuffer[T]] = TrackTimers.FindConflict.time {
-            trackBuilder.find(track => !track.conflictsPair(recs))
-          }
-          val track: TrackBuffer[T] = trackOption.getOrElse(addTrack(new TrackBuffer[T](recs)))
-        }
-    }
-  }
-
-  private def findAndAddToTrack(rec: (ReferenceRegion, T)) {
-    val reg = rec._1
-    if (reg != null) {
-      val track: Option[TrackBuffer[T]] = TrackTimers.FindConflict.time {
-        trackBuilder.find(track => !track.conflicts(rec))
-      }
-      track.map(trackval => {
-        trackval += rec
-        trackBuilder -= trackval
-        trackBuilder += trackval
-      }).getOrElse(addTrack(new TrackBuffer[T](rec)))
-    }
-  }
-
-  private def addTrack(t: TrackBuffer[T]): TrackBuffer[T] = {
+  def addTrack(t: U): U = {
     trackBuilder += t
     t
   }
-}
-
-object Track {
-  def apply[T: ClassTag](trackBuffer: TrackBuffer[T]): Track[T] = {
-    new Track[T](trackBuffer.records.toList)
-  }
-}
-
-case class Track[T](records: List[(ReferenceRegion, T)])
-
-case class TrackBuffer[T: ClassTag](val recs: List[(ReferenceRegion, T)]) extends Logging {
-
-  val records = new mutable.ListBuffer[(ReferenceRegion, T)]()
-  records ++= recs
-
-  def this(rec: (ReferenceRegion, T)) {
-    this(List(rec))
-  }
-
-  def +=(rec: (ReferenceRegion, T)): TrackBuffer[T] = {
-    records += rec
-    this
-  }
-
-  def conflicts(rec: (ReferenceRegion, T)): Boolean =
-    records.exists(r => TrackedLayout.overlaps(r, rec))
-
-  // check if there are conflicting records in all tracks which would conflict
-  // with both records and their mate pairs. this is used for AlignmentRecord data
-  def conflictsPair(recs: Seq[(ReferenceRegion, T)]): Boolean = {
-    val start = recs.map(rec => rec._1.start).min
-    val end = recs.map(rec => rec._1.end).max
-    val tempRegion = new ReferenceRegion(recs.head._1.referenceName, start, end)
-    records.exists(r => r._1.overlaps(tempRegion))
-  }
-
 }

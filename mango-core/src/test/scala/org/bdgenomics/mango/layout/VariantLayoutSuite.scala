@@ -49,7 +49,7 @@ class VariantLayoutSuite extends ADAMFunSuite {
     val variants: List[Genotype] = List(variant1, variant2)
 
     val rdd: RDD[(ReferenceRegion, Genotype)] = sc.parallelize(variants, 1).keyBy(v => ReferenceRegion(ReferencePosition(v)))
-    val json: List[VariantJson] = VariantLayout(rdd).variants
+    val json: List[VariantJson] = VariantLayout(rdd)
 
     assert(json.size == 2)
     assert(json.map(r => r.track).distinct.size == 1)
@@ -70,7 +70,7 @@ class VariantLayoutSuite extends ADAMFunSuite {
     val variants: List[Genotype] = List(variant1, variant2)
 
     val rdd: RDD[(ReferenceRegion, Genotype)] = sc.parallelize(variants).keyBy(v => ReferenceRegion(ReferencePosition(v)))
-    val json: List[VariantJson] = VariantLayout(rdd).variants
+    val json: List[VariantJson] = VariantLayout(rdd)
 
     assert(json.size == 2)
     assert(json.map(r => r.track).distinct.size == 2)
@@ -91,7 +91,7 @@ class VariantLayoutSuite extends ADAMFunSuite {
     val variants: List[Genotype] = List(variant1, variant2)
 
     val rdd: RDD[(ReferenceRegion, Genotype)] = sc.parallelize(variants).keyBy(v => ReferenceRegion(ReferencePosition(v)))
-    val json: List[VariantFreqJson] = VariantLayout(rdd).freq
+    val json: List[VariantFreqJson] = VariantFreqLayout(rdd)
     assert(json.size == 1)
 
   }

@@ -1,5 +1,5 @@
 <%@ val viewRegion: (String, String, String) %>
-<%@ val samples: (String, String) %>
+<%@ val samples: String %>
 <%@ val readsExist: Boolean %>
 <%@ val variantsExist: Boolean %>
 <%@ val featuresExist: Boolean %>
@@ -150,10 +150,16 @@
 
 <br>
 
+<div class="row top">
+  <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
+</div>
+<div class="row top">
+  <div class="col-md-10 graphArea" id="featArea" style="float:right"></div>
+</div>
+<div class="row top">
+  <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
+</div>
 
-<div class="row graphArea" id="refArea"></div>
-<div class="row graphArea" id="featArea"></div>
-<div class="row graphArea" id="varArea"></div>
 <div class="graphArea" id="readsArea"></div>
 <br>
 
@@ -163,17 +169,14 @@
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
-  var samp1Name = "${samples._1}";
-  var samp2Name = "${samples._2}";
   var readsExist = ${readsExist};
   var variantsExist = ${variantsExist};
   var featuresExist = ${featuresExist};
   var refSequence = null;
 
-  var i = 0;
-  var sampleId = samp1Name + "," + samp2Name;
-  var rawSamples = [samp1Name, samp2Name];
-  var samples = [filterName(samp1Name,0), filterName(samp2Name,1)];
+  var sampleId = "${samples}";
+  var rawSamples = sampleId.split(",").unique(); // distinct
+  var samples = filterNames(rawSamples);
   var width = window.innerWidth - 18;
 
 </script>

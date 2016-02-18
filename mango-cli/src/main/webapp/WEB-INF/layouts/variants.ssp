@@ -115,8 +115,9 @@
 <br>
 <div class="graphArea" id="refArea"></div>
 <div class="graphArea" id ="variantViz"</div>
-  <div id="varFreqArea"></div>
-  <div id="varArea"></div>
+<div id="varFreqArea" class="col-md-10" style="float:right"></div>
+<div id="varArea" class="col-md-10" style="float:right"></div>
+
 </div>
 <br>
 
@@ -124,11 +125,14 @@
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
+
   var width = window.innerWidth - 18;
+
 </script>
 <script src="js/utilities.js"></script>
 <script src="js/variants.js"></script>
 <script>
   renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
+  renderVariants(viewRefName, viewRegStart, viewRegEnd);
 </script>
 </html>

@@ -1,14 +1,12 @@
 // Filters invalid characters from string to create javascript descriptor
 // Svg Containers for refArea (exists is all views)
 var refHeight = 38;
-var width = $(".sampleReads").width();
+var refWidth = $(".col-md-10.graphArea").width();
+console.log(refWidth)
 
-$("#refArea").append("<div class=\"col-md-2\"></div>");
-$("#refArea").append("<div class=\"col-md-10\"></div>");
-
-var refContainer = d3.select("#refArea>.col-md-10")
+var refContainer = d3.select("#refArea")
   .append("svg")
-  .attr("width", width)
+  .attr("width", refWidth)
   .attr("height", refHeight);
 
 function renderReference(viewRefName, viewRegStart, viewRegEnd) {
@@ -47,7 +45,7 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
   // Create the scale for the axis
   var refAxisScale = d3.scale.linear()
       .domain([viewRegStart, viewRegEnd])
-      .range([0, width]);
+      .range([0, refWidth]);
 
   // Create the axis
   var refAxis = d3.svg.axis()
@@ -83,10 +81,10 @@ function renderLowResRef(data, refContainer, refDiv) {
   var modify = rects.transition();
   modify
     .attr("x", function(d, i) {
-      return i/(viewRegEnd-viewRegStart) * width;
+      return i/(viewRegEnd-viewRegStart) * refWidth;
     })
     .attr("width", function(d) {
-      return Math.max(1, width/(viewRegEnd-viewRegStart));
+      return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
     })
     .attr("fill", function(d) {
       if (d.reference === "G") {
@@ -98,7 +96,7 @@ function renderLowResRef(data, refContainer, refDiv) {
       } else if (d.reference === "T") {
         return '#E6E600'; //TWEETY BIRD
       } else if (d.reference === "N") {
-        return '#FFFFFF'; //WHITE
+        return '#000000'; //BLACK
       }
     });
 
@@ -108,7 +106,7 @@ function renderLowResRef(data, refContainer, refDiv) {
     .append("rect")
       .attr("class", "refrect")
       .attr("x", function(d, i) {
-        return i/(viewRegEnd-viewRegStart) * width;
+        return i/(viewRegEnd-viewRegStart) * refWidth;
       })
       .attr("y", 30)
       .attr("fill", function(d) {
@@ -121,11 +119,11 @@ function renderLowResRef(data, refContainer, refDiv) {
         } else if (d.reference === "T") {
           return '#FFCC00'; //TWEETY BIRD
         } else if (d.reference === "N") {
-          return '#FFFFFF'; //WHITE
+          return '#000000'; //BLACK
         }
       })
       .attr("width", function(d) {
-        return Math.max(1, width/(viewRegEnd-viewRegStart));
+        return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
       })
       .attr("height", refHeight)
       .on("click", function(d) {
@@ -166,7 +164,7 @@ function renderHighResRef(data, refContainer) {
   modify
       .attr("x", 0)
       .attr("dx", function(d, i) {
-             return i/(viewRegEnd-viewRegStart) * width - 5;
+             return i/(viewRegEnd-viewRegStart) * refWidth - 5;
           })
       .text( function (d) { return d.reference; })
       .attr("fill", function(d) {
@@ -179,7 +177,7 @@ function renderHighResRef(data, refContainer) {
         } else if (d.reference === "T") {
           return '#FFCC00'; //TWEETY BIRD
         } else if (d.reference === "N") {
-          return '#FFFFFF'; //WHITE
+          return '#000000'; //BLACK
         }
       });
 
@@ -190,7 +188,7 @@ function renderHighResRef(data, refContainer) {
       .attr("y", 30)
       .attr("x", 0)
       .attr("dx", function(d, i) {
-             return i/(viewRegEnd-viewRegStart) * width - 5;
+             return i/(viewRegEnd-viewRegStart) * refWidth - 5;
           })
       .text( function (d) { return d.reference; })
       .attr("font-family", "Sans-serif")
@@ -206,7 +204,7 @@ function renderHighResRef(data, refContainer) {
         } else if (d.reference === "T") {
           return '#FFCC00'; //TWEETY BIRD
         } else if (d.reference === "N") {
-          return '#FFFFFF'; //WHITE
+          return '#000000'; //BLACK
         }
       });
 

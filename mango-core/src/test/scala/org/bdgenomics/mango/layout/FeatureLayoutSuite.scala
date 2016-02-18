@@ -52,7 +52,6 @@ class FeatureLayoutSuite extends ADAMFunSuite {
 
     val rdd: RDD[Feature] = sc.parallelize(features)
     val json: List[FeatureJson] = FeatureLayout(rdd)
-    println(json)
 
     assert(json.size == 2)
     assert(json.map(r => r.track).distinct.size == 2)

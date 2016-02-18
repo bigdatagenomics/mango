@@ -26,11 +26,28 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object MismatchLayout extends Logging {
-
+  /**
+   * An implementation of MismatchLayout which takes in an alignmentRecord, reference and region
+   * and finds all indels and mismatches
+   *
+   * @param record: AlignmentRecord
+   * @param reference: reference string used to calculate mismatches
+   * @param region: ReferenceRegion to be viewed
+   * @return List of MisMatches
+   */
   def apply(record: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatch] = {
     alignMismatchesToRead(record, reference, region)
   }
 
+  /**
+   * Finds and returns all indels and mismatches of a given alignment record from an overlapping reference string.
+   * Must take into account overlapping regions that are not covered by both the reference and record sequence.
+   *
+   * @param record: AlignmentRecord
+   * @param reference: reference string used to calculate mismatches
+   * @param region: ReferenceRegion to be viewed
+   * @return List of MisMatches
+   */
   def alignMismatchesToRead(rec: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatch] = {
     var ref: String =
       if (rec.readNegativeStrand) {
@@ -66,9 +83,9 @@ object MismatchLayout extends Logging {
               }
             } catch {
               case iobe: StringIndexOutOfBoundsException => {
-                log.warn("Record Sequence " + rec.sequence + " at index " + recIdx)
-                log.warn(" Reference Sequence " + ref + " at index " + refIdx)
-                log.warn("Cigar" + rec.cigar)
+                // log.warn("Record Sequence " + rec.sequence + " at index " + recIdx)
+                // log.warn(" Reference Sequence " + ref + " at index " + refIdx)
+                // log.warn("Cigar" + rec.cigar)
               }
               case e: Exception => log.warn(e.toString)
             }
@@ -91,6 +108,22 @@ object MismatchLayout extends Logging {
     misMatches.toList
   }
 
+  /**
+   * Determines weather a given AlignmentRecord contains indels using its cigar
+   *
+   * @param record: AlignmentRecord
+   * @return Boolean whether record contains any indels
+   */
+  def containsIndels(rec: AlignmentRecord): Boolean = {
+    rec.cigar.contains("I") || rec.cigar.contains("D")
+  }
+
+  /**
+   * Calculates the genetic complement of a strand
+   *
+   * @param sequence: genetic string
+   * @return String: complement of sequence
+   */
   def complement(sequence: String): String = {
     sequence.map {
       case 'A' => 'T'
@@ -103,8 +136,35 @@ object MismatchLayout extends Logging {
   }
 
   private def getPosition(idx: Long, start: Long): Int = (idx - start).toInt
-
 }
 
-// temporary objects for alignmentrecord visual data
+object MisMatchJson {
+
+  /**
+   * An implementation of MismatchJson which converts a list of Mismatches into MisMatch Json
+   *
+   * @param recs The list of MisMatches to lay out in json
+   * @param track js track number
+   * @return List of MisMatch Json objects
+   */
+  def apply(recs: List[MisMatch], track: Int): List[MisMatchJson] = {
+    recs.map(rec => MisMatchJson(rec, track))
+  }
+
+  /**
+   * An implementation of MismatchJson which converts a single Mismatch into MisMatch Json
+   *
+   * @param recs The single MisMatch to lay out in json
+   * @param track js track number
+   * @return List of MisMatch Json objects
+   */
+  def apply(rec: MisMatch, track: Int): MisMatchJson = {
+    new MisMatchJson(rec.op, rec.refCurr, rec.start, rec.end, rec.sequence, rec.refBase, track)
+  }
+}
+
+// tracked MisMatch Json Object
+case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String, track: Long)
+
+// untracked Mismatch Json Object
 case class MisMatch(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String)

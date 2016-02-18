@@ -94,19 +94,19 @@ input[type="text"] {
   overflow: visible !important;
 }
 
-.row {
-  margin-left: 0px;
-  margin-right: 0px;
-}
-
 .samples {
     border-radius: 5px;
     border: 1.5px solid $readBorder;
     padding: 3px;
+    padding-bottom: 8px;
 
     .col-md-10 {
       overflow-x: hidden;
     }
+}
+
+.row.top {
+  margin-right: 15px;
 }
 
 .sampleCoverage {

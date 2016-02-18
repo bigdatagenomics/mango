@@ -40,9 +40,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read1 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
+      .setRecordGroupSample("Sample")
       .setStart(1)
       .setEnd(6)
-      .setRecordGroupSample("Sample")
       .setReadName("read")
       .setEnd(5)
       .setSequence("AAAAT")
@@ -52,8 +52,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setStart(7)
-      .setEnd(11)
       .setRecordGroupSample("Sample")
+      .setEnd(11)
       .setReadName("read")
       .setEnd(10)
       .setSequence("AAAAT")
@@ -61,6 +61,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
+    println()
     val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read2), 1).keyBy(ReferenceRegion(_))
     val reference = "NAAAAA"
 
