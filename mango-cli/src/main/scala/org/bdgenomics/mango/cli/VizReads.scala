@@ -19,7 +19,7 @@ package org.bdgenomics.mango.cli
 
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile, ReferenceSequence }
+import htsjdk.samtools.reference.{ FastaSequenceIndex, FastaSequenceFile, IndexedFastaSequenceFile, ReferenceSequence }
 import htsjdk.samtools.{ SAMRecord, SAMReadGroupRecord, SamReader, SamReaderFactory }
 import java.io.File
 import net.liftweb.json.Serialization.write
@@ -33,7 +33,7 @@ import org.bdgenomics.utils.cli._
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, VariantContext }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Fragment, Genotype, GenotypeAllele, NucleotideContigFragment }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.instrumentation.Metrics
@@ -54,7 +54,6 @@ object VizTimers extends Metrics {
   val RefRequest = timer("GET reference")
 
   //RDD operations
-  var LoadParquetFile = timer("Loading from Parquet")
   val ReadsRDDTimer = timer("RDD Reads operations")
   val FreqRDDTimer = timer("RDD Freq operations")
   val VarRDDTimer = timer("RDD Var operations")
@@ -108,32 +107,34 @@ object VizReads extends BDGCommandCompanion with Logging {
   }
 
   def getReference(region: ReferenceRegion): String = {
-    // TODO: write in terms of reference functions from samtools in contig
     val end: Long = Math.min(region.end, VizReads.readsData.dict(region.referenceName).get.length)
     if (VizReads.referencePath.endsWith(".adam")) {
-      // val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-      // val referenceRDD: RDD[Fragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))
-      // referenceRDD.adamGetReferenceString(region)
+      val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
+      val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
+      referenceRDD.adamGetReferenceString(region)
     } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
       val idx = new File(VizReads.referencePath + ".fai")
       if (idx.exists() && !idx.isDirectory()) {
         VizReads.faWithIndex match {
           case Some(_) => {
             val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
-            return new String(bases)
+            new String(bases)
           }
           case None => {
             val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(VizReads.referencePath + ".fai"))
             VizReads.faWithIndex = Some(new IndexedFastaSequenceFile(new File(VizReads.referencePath), faidx))
             val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
-            return new String(bases)
+            new String(bases)
           }
         }
-      } else {
-        log.warn("reference file type ", VizReads.referencePath, " not supported")
+      } else { //No fasta index provided
+        val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
+        referenceRDD.adamGetReferenceString(region)
       }
+    } else {
+      log.warn("reference file type ", VizReads.referencePath, " not supported")
+      new String("")
     }
-    null
   }
 
   //Correctly shuts down the server
