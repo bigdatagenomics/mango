@@ -51,7 +51,7 @@ object AlignmentRecordLayout extends Logging {
       if (highRes) {
         rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).collect.groupBy(_.sample)
       } else {
-        rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).filter(_.misMatches.isEmpty).collect.groupBy(_.sample)
+        rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).filter(!_.misMatches.isEmpty).collect.groupBy(_.sample)
       }
     }
 
