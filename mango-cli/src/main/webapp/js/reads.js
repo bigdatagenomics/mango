@@ -120,6 +120,9 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         sampleData[i].indels = data['indels'];
         sampleData[i].pairs = data['matePairs'];
 
+        // Renders Reads Frequency
+        renderJsonCoverage(data['freq'], i)
+        
         // print file name
         // TODO: this should not be redrawn every page load
         $("#" + samples[i] + ">." + fileSelector + ">.fixed-title").remove();

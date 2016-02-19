@@ -66,7 +66,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val reference = "NAAAAA"
 
     val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
-    assert(alignmentData.head.matePairs.length == 1)
+    assert(alignmentData.head._2.matePairs.length == 1)
   }
 
 }
