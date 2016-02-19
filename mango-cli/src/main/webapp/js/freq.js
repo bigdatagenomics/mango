@@ -18,26 +18,10 @@ var bisectData = d3.bisector(function(d) {
   return d.base;
 }).left;
 
-function renderCoverage(refName, start, end) {
-  viewRefName = refName;
-  viewRegStart = start;
-  viewRegEnd = end;
-  var covLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
-
-  d3.json(covLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
-      return;
-    }
-    for (var i = 0; i < samples.length; i++) {
-      renderJsonCoverage(data, i);
-    }
-  });
-}
-
 function renderJsonCoverage(data, i) {
   // Removes at first to update frequency graph
 
-    data = data[rawSamples[i]];
+    // data = data[rawSamples[i]];
 
     maxFreq = d3.max(data, function(d) {return d.freq});
 

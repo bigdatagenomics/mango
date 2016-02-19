@@ -279,53 +279,6 @@ class VizServlet extends ScalatraServlet {
         "featuresExist" -> VizReads.featuresExist))
   }
 
-  get("/freq") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (VizReads.readsExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "samples" -> (VizReads.sampNames.mkString(","))))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofreq.ssp")
-    }
-  }
-
-  get("/freq/:ref") {
-    VizTimers.FreqRequest.time {
-      contentType = "json"
-      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
-      dictOpt match {
-        case Some(_) => {
-          val region = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-          val sampleIds: List[String] = params("sample").split(",").toList
-          val dataOpt = VizReads.readsData.multiget(viewRegion, sampleIds)
-          dataOpt match {
-            case Some(_) => {
-              val data: RDD[AlignmentRecord] = dataOpt.get.toRDD.map(r => r._2)
-              val freqData = data.mapPartitions(FrequencyLayout(_, region)).collect
-              var retJson = ""
-              for (sample <- sampleIds) {
-                val sampleData = freqData.filter(_._1 == sample).map(r => FreqJson(r._2, r._3))
-                retJson += "\"" + sample + "\":" +
-                  write(sampleData) + ","
-              }
-              retJson = retJson.dropRight(1)
-              retJson = "{" + retJson + "}"
-              retJson
-            }
-            case None => "{}"
-          }
-
-        } case None => {
-          "{}"
-        }
-      }
-
-    }
-  }
-
   get("/variants") {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
