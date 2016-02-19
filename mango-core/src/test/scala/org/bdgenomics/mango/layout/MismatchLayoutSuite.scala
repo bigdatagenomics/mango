@@ -17,15 +17,36 @@
  */
 package org.bdgenomics.mango.layout
 
+import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile, ReferenceSequence }
+import java.io.File
+import org.apache.spark.rdd.RDD
+import org.apache.spark._
+import org.apache.spark.SparkContext
+import org.apache.spark.TaskContext
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.scalatest.FunSuite
 import org.bdgenomics.mango.layout._
+import org.scalatest.FunSuite
 
 import scala.collection.mutable.ListBuffer
 
-class MismatchLayoutSuite extends FunSuite {
+class MismatchLayoutSuite extends ADAMFunSuite {
+
+  def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): RDD[AlignmentRecord] = {
+    sc.loadIndexedBam(file, viewRegion)
+  }
+
+  def getReference(region: ReferenceRegion): String = {
+    val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(referencePath + ".fai"))
+    val faWithIndex = new IndexedFastaSequenceFile(new File(referencePath), faidx)
+    val bases = faWithIndex.getSubsequenceAt(region.referenceName, region.start, region.end).getBases
+    return new String(bases)
+  }
+
+  val bamFile = "./src/test/resources/mouse_chrM.bam"
+  val referencePath = "./src/test/resources/mouse_chrM.fasta"
 
   test("find 1 mismatch in read") {
     val read = AlignmentRecord.newBuilder

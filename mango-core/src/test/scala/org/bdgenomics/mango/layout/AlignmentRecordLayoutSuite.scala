@@ -115,7 +115,6 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
     val result = alignmentData.head
-    println(result)
     assert(result.matePairs.length == 2)
     assert(result.matePairs.filter(_.track == 0).length == 1)
   }
@@ -169,7 +168,6 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
     val result = alignmentData.head
-    println(result)
     assert(result.matePairs.length == 2)
     assert(result.matePairs.filter(_.track == 0).length == 1)
   }
