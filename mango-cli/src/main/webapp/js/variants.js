@@ -20,6 +20,7 @@ function renderVariants(refName, start, end) {
   viewRegStart = start;
   viewRegEnd = end;
   viewRefName = refName;
+  console.log(refName)
 
   renderJsonVariants();
 
