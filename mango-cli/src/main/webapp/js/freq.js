@@ -25,6 +25,9 @@ function renderCoverage(refName, start, end) {
   var covLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
 
   d3.json(covLocation, function(error, data) {
+    if (jQuery.isEmptyObject(data)) {
+      return;
+    }
     for (var i = 0; i < samples.length; i++) {
       renderJsonCoverage(data, i);
     }

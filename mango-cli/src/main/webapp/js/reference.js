@@ -2,7 +2,6 @@
 // Svg Containers for refArea (exists is all views)
 var refHeight = 38;
 var refWidth = $(".col-md-10.graphArea").width();
-console.log(refWidth)
 
 var refContainer = d3.select("#refArea")
   .append("svg")
@@ -58,18 +57,32 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
 
   d3.json(jsonLocation, function(error, data) {
 
-      refSequence = data;
+    toggleReferenceDependencies(data);
 
-      // render reference for low or high resolution depending on base range
-      if (viewRegEnd - viewRegStart > 100) {
-        renderLowResRef(data, refContainer, refDiv);
-      } else {
-        renderHighResRef(data, refContainer);
-      }
+    refSequence = data;
+
+    // render reference for low or high resolution depending on base range
+    if (viewRegEnd - viewRegStart > 100) {
+      renderLowResRef(data, refContainer, refDiv);
+    } else {
+      renderHighResRef(data, refContainer);
+    }
   });
 
 
 }
+
+/**
+* Toggles DOM elements based on whether reference is provided
+*/
+function toggleReferenceDependencies(data) {
+  if (data.length == 0) {
+    $(".refDependancy").addClass("refDisabled");
+  } else {
+    $(".refDependancy").removeClass("refDisabled");
+  }
+}
+
 
 // Renders reference at colored base resolution
 function renderLowResRef(data, refContainer, refDiv) {

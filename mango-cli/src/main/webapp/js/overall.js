@@ -100,9 +100,10 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
     .style("opacity", 0);
 
   d3.json(featureJsonLocation, function(error, data) {
-    // Add the rectangles
+    if (jQuery.isEmptyObject(data)) {
+      return;
+    }
     var rects = featureSvgContainer.selectAll("rect").data(data);
-
     var modify = rects.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))

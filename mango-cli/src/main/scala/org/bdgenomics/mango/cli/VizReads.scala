@@ -80,7 +80,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   var sc: SparkContext = null
   var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var referencePath: String = ""
-  var refName: String = ""
   var partitionCount: Int = 0
   var readsPaths: List[String] = null
   var sampNames: List[String] = null
@@ -181,10 +180,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 1)
-  var refName: String = null
-
-  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 2)
+  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 1)
   var partitionCount: Int = 0
 
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
@@ -202,7 +198,11 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  var viewRegion = ReferenceRegion(VizReads.refName, 1, 100)
+  var viewRegion = ReferenceRegion("chr", 1, 100)
+
+  get("/init") {
+    write(VizReads.readsData.dict)
+  }
 
   get("/?") {
     redirect("/overall")
@@ -257,10 +257,10 @@ class VizServlet extends ScalatraServlet {
               retJson = "{" + retJson + "}"
               retJson
             } case None => {
-              "{}"
+              write("")
             }
           }
-        } case None => "{}"
+        } case None => write("")
       }
 
     }
@@ -298,18 +298,24 @@ class VizServlet extends ScalatraServlet {
         case Some(_) => {
           val region = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
           val sampleIds: List[String] = params("sample").split(",").toList
-          val data: RDD[AlignmentRecord] = VizReads.readsData.multiget(viewRegion, sampleIds).get.toRDD.map(r => r._2)
-          val freqData = data.mapPartitions(FrequencyLayout(_, region)).collect
-
-          var retJson = ""
-          for (sample <- sampleIds) {
-            val sampleData = freqData.filter(_._1 == sample).map(r => FreqJson(r._2, r._3))
-            retJson += "\"" + sample + "\":" +
-              write(sampleData) + ","
+          val dataOpt = VizReads.readsData.multiget(viewRegion, sampleIds)
+          dataOpt match {
+            case Some(_) => {
+              val data: RDD[AlignmentRecord] = dataOpt.get.toRDD.map(r => r._2)
+              val freqData = data.mapPartitions(FrequencyLayout(_, region)).collect
+              var retJson = ""
+              for (sample <- sampleIds) {
+                val sampleData = freqData.filter(_._1 == sample).map(r => FreqJson(r._2, r._3))
+                retJson += "\"" + sample + "\":" +
+                  write(sampleData) + ","
+              }
+              retJson = retJson.dropRight(1)
+              retJson = "{" + retJson + "}"
+              retJson
+            }
+            case None => "{}"
           }
-          retJson = retJson.dropRight(1)
-          retJson = "{" + retJson + "}"
-          retJson
+
         } case None => {
           "{}"
         }
@@ -339,7 +345,7 @@ class VizServlet extends ScalatraServlet {
           val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
           write(VariantLayout(variantRDD))
         } case None => {
-          write("{}")
+          write("")
         }
       }
 
@@ -367,7 +373,7 @@ class VizServlet extends ScalatraServlet {
           val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
           write(VariantFreqLayout(variantRDD))
         } case None => {
-          write("{}")
+          write("")
         }
       }
     }
@@ -438,8 +444,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       println("WARNING: Invalid reference file")
     }
 
-    VizReads.refName = args.refName
-
     val readsPaths = Option(args.readsPaths)
     readsPaths match {
       case Some(_) => {
@@ -455,7 +459,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             sampNamesBuffer += sample
             VizReads.readsData.loadSample(sample, readsPath)
           } else if (readsPath.endsWith(".adam")) {
-            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath, VizReads.refName)
+            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
           } else {
             log.info("WARNING: Invalid input for reads file")
             println("WARNING: Invalid input for reads file")

@@ -77,8 +77,8 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     fileMap += ((sampleId, filePath))
   }
 
-  def loadADAMSample(filePath: String, refName: String): String = {
-    val region = ReferenceRegion(refName, 0, chunkSize - 1)
+  def loadADAMSample(filePath: String): String = {
+    val region = ReferenceRegion("new", 0, chunkSize - 1)
     val items: (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
     dict = items._2
     val sample = items._3.recordGroups.head.sample
