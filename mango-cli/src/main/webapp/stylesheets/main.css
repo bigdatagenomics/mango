@@ -146,3 +146,8 @@ input[type="text"] {
 
 .col-md-10 {
   border-left: 1px solid #e7e7e7; }
+
+.refDisabled {
+  pointer-events: none;
+  cursor: default;
+  color: grey; }

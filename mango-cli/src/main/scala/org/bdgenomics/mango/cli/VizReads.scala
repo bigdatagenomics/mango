@@ -19,7 +19,7 @@ package org.bdgenomics.mango.cli
 
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile, ReferenceSequence }
+import htsjdk.samtools.reference.{ FastaSequenceIndex, FastaSequenceFile, IndexedFastaSequenceFile, ReferenceSequence }
 import htsjdk.samtools.{ SAMRecord, SAMReadGroupRecord, SamReader, SamReaderFactory }
 import java.io.File
 import net.liftweb.json.Serialization.write
@@ -33,7 +33,7 @@ import org.bdgenomics.utils.cli._
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, VariantContext }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Fragment, Genotype, GenotypeAllele, NucleotideContigFragment }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.instrumentation.Metrics
@@ -54,7 +54,6 @@ object VizTimers extends Metrics {
   val RefRequest = timer("GET reference")
 
   //RDD operations
-  var LoadParquetFile = timer("Loading from Parquet")
   val ReadsRDDTimer = timer("RDD Reads operations")
   val FreqRDDTimer = timer("RDD Freq operations")
   val VarRDDTimer = timer("RDD Var operations")
@@ -80,7 +79,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   var sc: SparkContext = null
   var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var referencePath: String = ""
-  var refName: String = ""
   var partitionCount: Int = 0
   var readsPaths: List[String] = null
   var sampNames: List[String] = null
@@ -97,43 +95,59 @@ object VizReads extends BDGCommandCompanion with Logging {
   }
 
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
-    val splitReference: Array[String] = getReference(region).split("")
-    var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
-    var positionCount: Long = region.start
-    for (base <- splitReference) {
-      tracks += new ReferenceJson(base.toUpperCase(), positionCount)
-      positionCount += 1
-    }
-    tracks.toList
-  }
-
-  def getReference(region: ReferenceRegion): String = {
-    // TODO: write in terms of reference functions from samtools in contig
-    val end: Long = Math.min(region.end, VizReads.readsData.dict(region.referenceName).get.length)
-    if (VizReads.referencePath.endsWith(".adam")) {
-      // val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-      // val referenceRDD: RDD[Fragment] = VizReads.sc.loadParquetFragments(VizReads.referencePath, predicate = Some(pred))
-      // referenceRDD.adamGetReferenceString(region)
-    } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
-      val idx = new File(VizReads.referencePath + ".fai")
-      if (idx.exists() && !idx.isDirectory()) {
-        VizReads.faWithIndex match {
-          case Some(_) => {
-            val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
-            return new String(bases)
-          }
-          case None => {
-            val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(VizReads.referencePath + ".fai"))
-            VizReads.faWithIndex = Some(new IndexedFastaSequenceFile(new File(VizReads.referencePath), faidx))
-            val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
-            return new String(bases)
-          }
+    val splitReferenceOpt: Option[String] = getReference(region)
+    splitReferenceOpt match {
+      case Some(_) => {
+        val splitReference = splitReferenceOpt.get.split("")
+        var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
+        var positionCount: Long = region.start
+        for (base <- splitReference) {
+          tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+          positionCount += 1
         }
-      } else {
-        log.warn("reference file type ", VizReads.referencePath, " not supported")
+        tracks.toList
+      } case None => {
+        List()
       }
     }
-    null
+
+  }
+
+  def getReference(region: ReferenceRegion): Option[String] = {
+    val seqRecord = VizReads.readsData.dict(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val end: Long = Math.min(region.end, seqRecord.get.length)
+        if (VizReads.referencePath.endsWith(".adam")) {
+          val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
+          val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
+          Option(referenceRDD.adamGetReferenceString(region))
+        } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta")) {
+          val idx = new File(VizReads.referencePath + ".fai")
+          if (idx.exists() && !idx.isDirectory()) {
+            VizReads.faWithIndex match {
+              case Some(_) => {
+                val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
+                Option(new String(bases))
+              }
+              case None => {
+                val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(VizReads.referencePath + ".fai"))
+                VizReads.faWithIndex = Some(new IndexedFastaSequenceFile(new File(VizReads.referencePath), faidx))
+                val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
+                Option(new String(bases))
+              }
+            }
+          } else { //No fasta index provided
+            val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
+            Option(referenceRDD.adamGetReferenceString(region))
+          }
+        } else {
+          log.warn("reference file type ", VizReads.referencePath, " not supported")
+          None
+        }
+      }
+      case None => None
+    }
   }
 
   //Correctly shuts down the server
@@ -165,10 +179,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = true, metaVar = "ref_name", usage = "The name of the reference we're looking at", index = 1)
-  var refName: String = null
-
-  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 2)
+  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 1)
   var partitionCount: Int = 0
 
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
@@ -186,7 +197,11 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  var viewRegion = ReferenceRegion(VizReads.refName, 1, 100)
+  var viewRegion = ReferenceRegion("chr", 1, 100)
+
+  get("/init") {
+    write(VizReads.readsData.dict)
+  }
 
   get("/?") {
     redirect("/overall")
@@ -212,30 +227,42 @@ class VizServlet extends ScalatraServlet {
     VizTimers.ReadsRequest.time {
       contentType = "json"
       viewRegion = new ReferenceRegion(params("ref").toString, params("start").toLong, params("end").toLong)
-      val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
-      val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
-      val sampleIds: List[String] = params("sample").split(",").toList
-      val reference = VizReads.getReference(region)
+      val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
+      dictOpt match {
+        case Some(_) => {
+          val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
+          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val reference = VizReads.getReference(region)
 
-      val data: RDD[(ReferenceRegion, AlignmentRecord)] =
-        VizReads.readsData.multiget(viewRegion, sampleIds).toRDD
+          val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
+          dataOption match {
+            case Some(_) => {
+              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
+              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(data, reference, region, sampleIds)
+              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(data.map(_._2), region, sampleIds)
+              val fileMap = VizReads.readsData.getFileMap()
+              var readRetJson: String = ""
 
-      val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
-      val fileMap = VizReads.readsData.getFileMap()
-      var retJson = ""
-
-      for (sampleData <- alignmentData) {
-        val sample = sampleData.sample
-        retJson += "\"" + sample + "\":" +
-          "{ \"filename\": " + write(fileMap(sample)) +
-          ", \"tracks\": " + write(sampleData.records) +
-          ", \"indels\": " + write(sampleData.mismatches.filter(_.op != "M")) +
-          ", \"mismatches\": " + write(sampleData.mismatches.filter(_.op == "M")) +
-          ", \"matePairs\": " + write(sampleData.matePairs) + "},"
+              for (sample <- sampleIds) {
+                val sampleData = alignmentData.get(sample)
+                readRetJson += "\"" + sample + "\":" +
+                  "{ \"filename\": " + write(fileMap(sample)) +
+                  ", \"tracks\": " + write(sampleData.get.records) +
+                  ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+                  ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+                  ", \"matePairs\": " + write(sampleData.get.matePairs) +
+                  ", \"freq\": " + write(freqData.get(sample)) + "},"
+              }
+              readRetJson = readRetJson.dropRight(1)
+              readRetJson = "{" + readRetJson + "}"
+              readRetJson
+            } case None => {
+              write("")
+            }
+          }
+        } case None => write("")
       }
-      retJson = retJson.dropRight(1)
-      retJson = "{" + retJson + "}"
-      retJson
     }
   }
 
@@ -248,39 +275,6 @@ class VizServlet extends ScalatraServlet {
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
         "featuresExist" -> VizReads.featuresExist))
-  }
-
-  get("/freq") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (VizReads.readsExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/freq.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "samples" -> (VizReads.sampNames.mkString(","))))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofreq.ssp")
-    }
-  }
-
-  get("/freq/:ref") {
-    VizTimers.FreqRequest.time {
-      contentType = "json"
-      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      val region = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      val sampleIds: List[String] = params("sample").split(",").toList
-      val data: RDD[AlignmentRecord] = VizReads.readsData.multiget(viewRegion, sampleIds).toRDD.map(r => r._2)
-      val freqData = data.mapPartitions(FrequencyLayout(_, region)).collect
-
-      var retJson = ""
-      for (sample <- sampleIds) {
-        val sampleData = freqData.filter(_._1 == sample).map(r => FreqJson(r._2, r._3))
-        retJson += "\"" + sample + "\":" +
-          write(sampleData) + ","
-      }
-      retJson = retJson.dropRight(1)
-      retJson = "{" + retJson + "}"
-      retJson
-    }
   }
 
   get("/variants") {
@@ -298,8 +292,16 @@ class VizServlet extends ScalatraServlet {
     VizTimers.VarRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      val variantRDD: RDD[(ReferenceRegion, Genotype)] = VizReads.variantData.get(viewRegion, "callset1").toRDD
-      write(VariantLayout(variantRDD))
+      val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
+      variantRDDOption match {
+        case Some(_) => {
+          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
+          write(VariantLayout(variantRDD))
+        } case None => {
+          write("")
+        }
+      }
+
     }
   }
 
@@ -318,8 +320,15 @@ class VizServlet extends ScalatraServlet {
     VizTimers.VarFreqRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      val variantRDD: RDD[(ReferenceRegion, Genotype)] = VizReads.variantData.get(viewRegion, "callset1").toRDD
-      write(VariantFreqLayout(variantRDD))
+      val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
+      variantRDDOption match {
+        case Some(_) => {
+          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
+          write(VariantFreqLayout(variantRDD))
+        } case None => {
+          write("")
+        }
+      }
     }
   }
 
@@ -388,8 +397,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       println("WARNING: Invalid reference file")
     }
 
-    VizReads.refName = args.refName
-
     val readsPaths = Option(args.readsPaths)
     readsPaths match {
       case Some(_) => {
@@ -405,7 +412,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             sampNamesBuffer += sample
             VizReads.readsData.loadSample(sample, readsPath)
           } else if (readsPath.endsWith(".adam")) {
-            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath, VizReads.refName)
+            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
           } else {
             log.info("WARNING: Invalid input for reads file")
             println("WARNING: Invalid input for reads file")

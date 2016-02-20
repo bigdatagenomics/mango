@@ -77,8 +77,8 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     fileMap += ((sampleId, filePath))
   }
 
-  def loadADAMSample(filePath: String, refName: String): String = {
-    val region = ReferenceRegion(refName, 0, chunkSize - 1)
+  def loadADAMSample(filePath: String): String = {
+    val region = ReferenceRegion("new", 0, chunkSize - 1)
     val items: (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
     dict = items._2
     val sample = items._3.recordGroups.head.sample
@@ -162,6 +162,11 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
       null
     }
     val fp = fileMap(k)
+    val file: File = new File(fp)
+    if (!file.exists()) {
+      log.error("File does not exist")
+      return sc.emptyRDD[(ReferenceRegion, T)]
+    }
     if (!(new File(fp)).exists()) {
       log.warn("File path for sample " + k + " not loaded")
       null
@@ -183,7 +188,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     data.partitionBy(GenomicRegionPartitioner(partitions, dict))
   }
 
-  def get(region: ReferenceRegion, k: String): IntervalRDD[ReferenceRegion, T] = {
+  def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, T]] = {
     multiget(region, List(k))
   }
 
@@ -193,41 +198,57 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
 	* Otherwise call put on the sections of data that don't exist
 	* Here, ks, is an option of list of personids (String)
 	*/
-  def multiget(region: ReferenceRegion, ks: List[String]): IntervalRDD[ReferenceRegion, T] = {
-
+  def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, T]] = {
+    val seqRecord = dict(region.referenceName)
     val regionsOpt = getMaterializedRegions(region, ks)
-
-    regionsOpt match {
+    seqRecord match {
       case Some(_) => {
-        for (r <- regionsOpt.get) {
-          try {
-            put(r, ks)
-          } catch {
-            case ex: NoSuchElementException => {
+        regionsOpt match {
+          case Some(_) => {
+            for (r <- regionsOpt.get) {
               put(r, ks)
             }
+          } case None => {
+            // DO NOTHING
           }
         }
+        // TODO: return data to multiget instead of making subsequent call to RDD
+        Option(intRDD.filterByInterval(region))
       } case None => {
-
+        None
       }
     }
-    intRDD.filterByInterval(region)
   }
 
-  /* Transparent to the user, should only be called by get if IntervalRDD.get does not return data
-	* Fetches the data from disk, using predicates and range filtering
-	* Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
-	*/
+  /**
+   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
+   * Fetches the data from disk, using predicates and range filtering
+   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
+   *
+   * @param region ReferenceRegion in which data is retreived
+   * @param keys to be retreived
+   */
   private def put(region: ReferenceRegion, ks: List[String]) = {
-    ks.map(k => {
-      if (intRDD == null) {
-        intRDD = IntervalRDD(loadFromFile(region, k))
-      } else {
-        intRDD = intRDD.multiput(loadFromFile(region, k))
+    val seqRecord = dict(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val end =
+          Math.min(region.end, seqRecord.get.length)
+        val start = Math.min(region.start, end)
+        val reg = new ReferenceRegion(region.referenceName, start, end)
+        ks.map(k => {
+          val data = loadFromFile(reg, k)
+          if (intRDD == null) {
+            intRDD = IntervalRDD(data)
+          } else {
+            intRDD = intRDD.multiput(data)
+          }
+        })
+        rememberValues(region, ks)
       }
-    })
-    rememberValues(region, ks)
+      case None => {
+      }
+    }
   }
 
   /**

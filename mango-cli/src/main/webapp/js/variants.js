@@ -20,7 +20,8 @@ function renderVariants(refName, start, end) {
   viewRegStart = start;
   viewRegEnd = end;
   viewRefName = refName;
-
+  varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   renderJsonVariants();
 
 }
@@ -67,10 +68,13 @@ var varDiv = d3.select("#varArea")
 function renderJsonVariants() {
 
   d3.json(varJsonLocation, function(error, data) {
+    if (jQuery.isEmptyObject(data)) {
+      return;
+    }
     if (error) throw error;
+
     // Add the rectangles
     var variants = varSvgContainer.selectAll(".variant").data(data);
-
     var modify = variants.transition();
     modify
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -172,6 +176,9 @@ function renderVariantFrequency() {
       .ticks(10, "%");
 
   d3.json(varFreqJsonLocation, function(error, data) {
+    if (jQuery.isEmptyObject(data)) {
+      return;
+    }
     if (error) throw error;
     x.domain([viewRegStart, viewRegEnd]);
     y.domain([0, d3.max(data, function(d) { return d.count; })]);

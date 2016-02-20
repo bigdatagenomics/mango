@@ -1,12 +1,5 @@
 jQuery(function($) {
-
-  // allows divs to be vertically resized at bottom
-  // $('.resize-vertical').resizable({
-  //   handles: 's',
-  //   minHeight: 200,
-  //   ghost: true
-  // });
-
+  
   $(".resize-vertical")
     .wrap('<div/>')
       .css({'overflow':'hidden'})

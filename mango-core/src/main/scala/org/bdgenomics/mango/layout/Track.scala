@@ -73,7 +73,7 @@ object Track {
    * @param trackBuffer: Mutable listbuffer of ReadsTrackBuffer
    * @return List of ReadsTracks
    */
-  def apply(trackBuffer: ReadsTrackBuffer, reference: String, region: ReferenceRegion): ReadsTrack = {
+  def apply(trackBuffer: ReadsTrackBuffer, reference: Option[String], region: ReferenceRegion): ReadsTrack = {
     new ReadsTrack(trackBuffer.records.toList, trackBuffer.sample, reference, region)
   }
 }
@@ -94,12 +94,14 @@ case class GenericTrack[T: ClassTag](records: List[(ReferenceRegion, T)]) extend
  * @param reference: String of referenceregion to compare records to
  * @param region: ReferenceRegion tracks are viewed over
  */
-class ReadsTrack(recs: List[(ReferenceRegion, AlignmentRecord)], sampOpt: Option[String], reference: String, region: ReferenceRegion) extends Track[AlignmentRecord] {
+class ReadsTrack(recs: List[(ReferenceRegion, AlignmentRecord)], sampOpt: Option[String], reference: Option[String], region: ReferenceRegion) extends Track[AlignmentRecord] {
 
   val sample = sampOpt.get
   val records = recs
   val matePairs: List[MatePair] = getMatePairs
   val misMatches: List[MisMatch] = getMisMatches
+
+  getMisMatches
 
   def getMatePairs(): List[MatePair] = {
     val pairs = records.groupBy(_._2.readName).filter(_._2.size == 2).map(_._2)
@@ -108,7 +110,13 @@ class ReadsTrack(recs: List[(ReferenceRegion, AlignmentRecord)], sampOpt: Option
   }
 
   def getMisMatches: List[MisMatch] = {
-    records.flatMap(r => MismatchLayout(r._2, reference, region))
+    reference match {
+      case Some(_) => {
+        records.flatMap(r => MismatchLayout(r._2, reference.get, region))
+      } case None => {
+        List[MisMatch]()
+      }
+    }
   }
 
 }
@@ -145,6 +153,9 @@ case class ReadsTrackBuffer(recs: List[(ReferenceRegion, AlignmentRecord)]) exte
     val end = recs.map(rec => rec._1.end).max
     val groupedSample = recs.head._2.recordGroupSample
     val tempRegion = new ReferenceRegion(recs.head._1.referenceName, start, end)
-    sample.get != groupedSample || records.exists(r => r._1.overlaps(tempRegion))
+
+    val pairs = records.toList.groupBy(_._2.readName).map(_._2)
+    val aggregatedPairs = pairs.map(p => ReferenceRegion(p.head._1.referenceName, p.map(rec => rec._1.start).min, p.map(rec => rec._1.end).max))
+    sample.get != groupedSample || aggregatedPairs.exists(r => r.overlaps(tempRegion))
   }
 }

@@ -43,15 +43,15 @@ object AlignmentRecordLayout extends Logging {
    * @param sampleIds: List of sample identifiers to be rendered
    * @return List of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion, sampleIds: List[String]): List[ReadTrack] = {
-    val readTracks = new ListBuffer[ReadTrack]()
+  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion, sampleIds: List[String]): Map[String, SampleTrack] = {
+    val sampleTracks = new ListBuffer[(String, SampleTrack)]()
     val highRes = region.end - region.start < 10000
 
-    val tracks = {
+    val tracks: Map[String, Array[ReadsTrack]] = {
       if (highRes) {
         rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).collect.groupBy(_.sample)
       } else {
-        rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).filter(_.misMatches.isEmpty).collect.groupBy(_.sample)
+        rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).filter(!_.misMatches.isEmpty).collect.groupBy(_.sample)
       }
     }
 
@@ -61,10 +61,11 @@ object AlignmentRecordLayout extends Logging {
         val matePairs = indexedTrack.flatMap(r => MatePairJson(r._1.matePairs, r._2))
         val mismatches = indexedTrack.flatMap(r => MisMatchJson(r._1.misMatches, r._2))
         val reads = indexedTrack.flatMap(r => ReadJson(r._1.records, r._2))
-        readTracks += new ReadTrack(sample, reads.toList, matePairs.toList, mismatches.toList)
+        val sampleTrack = new SampleTrack(reads.toList, matePairs.toList, mismatches.toList)
+        sampleTracks += Tuple2(sample, sampleTrack)
       }
     }
-    readTracks.toList
+    sampleTracks.toMap
   }
 
   /**
@@ -76,7 +77,7 @@ object AlignmentRecordLayout extends Logging {
    * @param region: ReferenceRegion to be viewed
    * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion): Iterator[ReadsTrack] = {
+  def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion): Iterator[ReadsTrack] = {
     new AlignmentRecordLayout(iter).collect(reference, region)
   }
 }
@@ -111,7 +112,7 @@ class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRecord)]
     }
   }
 
-  def collect(reference: String, region: ReferenceRegion): Iterator[ReadsTrack] =
+  def collect(reference: Option[String], region: ReferenceRegion): Iterator[ReadsTrack] =
     trackBuilder.map(t => Track(t, reference, region)).toIterator
 }
 
@@ -147,7 +148,7 @@ case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand
 case class MatePairJson(val start: Long, val end: Long, track: Long)
 
 // complete json object of reads data containing matepairs and mismatches
-case class ReadTrack(val sample: String, val records: List[ReadJson], val matePairs: List[MatePairJson], val mismatches: List[MisMatchJson])
+case class SampleTrack(val records: List[ReadJson], val matePairs: List[MatePairJson], val mismatches: List[MisMatchJson])
 
 // untracked json classes
 case class MatePair(start: Long, end: Long)

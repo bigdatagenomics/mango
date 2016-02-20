@@ -48,9 +48,9 @@
           <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
           <ul class="dropdown-menu" id="menu1">
             <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck">
-            <li><label for="indelCheck">Indels</label></li>
+            <li class="refDependancy"><label for="indelCheck">Indels</label></li>
             <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck">
-            <li><label for="mismatchCheck">Mismatching Bases</label></li>
+            <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
             <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
             <li><label for="coverageCheck">Coverage</label></li>
           </ul>

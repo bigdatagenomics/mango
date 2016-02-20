@@ -44,7 +44,6 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setStart(1)
       .setEnd(6)
       .setReadName("read")
-      .setEnd(5)
       .setSequence("AAAAT")
       .build
 
@@ -55,18 +54,122 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setRecordGroupSample("Sample")
       .setEnd(11)
       .setReadName("read")
-      .setEnd(10)
       .setSequence("AAAAT")
       .build
 
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
-    println()
     val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read2), 1).keyBy(ReferenceRegion(_))
     val reference = "NAAAAA"
 
-    val alignmentData = AlignmentRecordLayout(data, reference, region, sampleIds)
-    assert(alignmentData.head.matePairs.length == 1)
+    val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
+    assert(alignmentData.head._2.matePairs.length == 1)
+  }
+
+  sparkTest("test mate pairs do not overlap for multiple pairs") {
+
+    val read1 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1)
+      .setEnd(6)
+      .setReadName("read1")
+      .setSequence("AAAAT")
+      .build
+
+    val read2 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("10M")
+      .setStart(30)
+      .setRecordGroupSample("Sample")
+      .setEnd(40)
+      .setReadName("read1")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val read3 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(9)
+      .setEnd(14)
+      .setReadName("read2")
+      .setSequence("AAAAT")
+      .build
+
+    val read4 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("10M")
+      .setStart(18)
+      .setRecordGroupSample("Sample")
+      .setEnd(28)
+      .setReadName("read2")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 40)
+    val sampleIds: List[String] = List("Sample")
+    val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read3, read2, read4), 1).keyBy(ReferenceRegion(_))
+    val reference = "NAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+    val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
+    val result = alignmentData.head
+    assert(result._2.matePairs.length == 2)
+    assert(result._2.matePairs.filter(_.track == 0).length == 1)
+  }
+
+  sparkTest("test mate pairs do not overlap in interspersed pattern") {
+
+    val read1 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1)
+      .setEnd(6)
+      .setReadName("read1")
+      .setSequence("AAAAT")
+      .build
+
+    val read2 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("10M")
+      .setStart(30)
+      .setRecordGroupSample("Sample")
+      .setEnd(40)
+      .setReadName("read1")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val read3 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(9)
+      .setEnd(14)
+      .setReadName("read2")
+      .setSequence("AAAAT")
+      .build
+
+    val read4 = AlignmentRecord.newBuilder
+      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setCigar("6M")
+      .setStart(42)
+      .setRecordGroupSample("Sample")
+      .setEnd(48)
+      .setReadName("read2")
+      .setSequence("AAAAAA")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 48)
+    val sampleIds: List[String] = List("Sample")
+    val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read3, read2, read4), 1).keyBy(ReferenceRegion(_))
+    val reference = "NAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+    val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
+    val result = alignmentData.head
+    assert(result._2.matePairs.length == 2)
+    assert(result._2.matePairs.filter(_.track == 0).length == 1)
   }
 
 }
