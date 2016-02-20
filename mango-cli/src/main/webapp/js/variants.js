@@ -20,8 +20,8 @@ function renderVariants(refName, start, end) {
   viewRegStart = start;
   viewRegEnd = end;
   viewRefName = refName;
-  console.log(refName)
-
+  varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   renderJsonVariants();
 
 }

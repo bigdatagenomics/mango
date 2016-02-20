@@ -122,7 +122,7 @@ object VizReads extends BDGCommandCompanion with Logging {
           val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
           val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
           Option(referenceRDD.adamGetReferenceString(region))
-        } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta") || VizReads.referencePath.endsWith(".adam")) {
+        } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta")) {
           val idx = new File(VizReads.referencePath + ".fai")
           if (idx.exists() && !idx.isDirectory()) {
             VizReads.faWithIndex match {
