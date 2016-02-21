@@ -24,14 +24,10 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord }
 object AlignmentRecordFilter {
 
   //Applies quality filter to (reference region, alignment records), returns the RDD
-  def filterByRecord(data: RDD[(ReferenceRegion, AlignmentRecord)], quality: Double): RDD[(ReferenceRegion, AlignmentRecord)] = {
-    if (quality <= 0.0) return data
-    return data.filter(r => r._2.getMapq >= quality)
+  def filterByRecordQuality(data: RDD[(ReferenceRegion, AlignmentRecord)], quality: String): RDD[(ReferenceRegion, AlignmentRecord)] = {
+    val minimumQuality: Double = try { quality.toDouble } catch { case _ => 0 }
+    if (minimumQuality <= 0.0) return data
+    return data.filter(r => r._2.getMapq() >= minimumQuality)
   }
 
-  //Applies the quality filter to (alignment records)
-  def filterByRecordOnly(data: RDD[(AlignmentRecord)], quality: Double): RDD[(AlignmentRecord)] = {
-    if (quality <= 0.0) return data
-    return data.filter(r => r.getMapq >= quality)
-  }
 }

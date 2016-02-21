@@ -228,29 +228,42 @@ class VizServlet extends ScalatraServlet {
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
       contentType = "json"
-      viewRegion = new ReferenceRegion(params("ref").toString, params("start").toLong, params("end").toLong)
-      val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
-      val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
-      val quality = params("quality")
-      var qualityFilter = 0.0
-      if (!quality.isEmpty) qualityFilter = quality.toDouble
-      val sampleIds: List[String] = params("sample").split(",").toList
-      val data: RDD[(ReferenceRegion, AlignmentRecord)] =
-        VizReads.readsData.multiget(viewRegion, sampleIds).toRDD
-      val filteredData = AlignmentRecordFilter.filterByRecord(data, qualityFilter)
-      val reference = VizReads.getReference(region)
-      val alignmentData = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
-      val fileMap = VizReads.readsData.getFileMap()
-      var retJson = ""
+      val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
+      dictOpt match {
+        case Some(_) => {
+          val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
+          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val reference = VizReads.getReference(region)
+          val readQuality = params.getOrElse("quality", "0")
 
-      for (sampleData <- alignmentData) {
-        val sample = sampleData.sample
-        retJson += "\"" + sample + "\":" +
-          "{ \"filename\": " + write(fileMap(sample)) +
-          ", \"tracks\": " + write(sampleData.records) +
-          ", \"indels\": " + write(sampleData.mismatches.filter(_.op != "M")) +
-          ", \"mismatches\": " + write(sampleData.mismatches.filter(_.op == "M")) +
-          ", \"matePairs\": " + write(sampleData.matePairs) + "},"
+          val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
+          dataOption match {
+            case Some(_) => {
+              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
+              val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
+              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
+              val fileMap = VizReads.readsData.getFileMap()
+              var readRetJson: String = ""
+              for (sample <- sampleIds) {
+                val sampleData = alignmentData.get(sample)
+                readRetJson += "\"" + sample + "\":" +
+                  "{ \"filename\": " + write(fileMap(sample)) +
+                  ", \"tracks\": " + write(sampleData.get.records) +
+                  ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+                  ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+                  ", \"matePairs\": " + write(sampleData.get.matePairs) +
+                  ", \"freq\": " + write(freqData.get(sample)) + "},"
+              }
+              readRetJson = readRetJson.dropRight(1)
+              readRetJson = "{" + readRetJson + "}"
+              readRetJson
+            } case None => {
+              write("")
+            }
+          }
+        } case None => write("")
       }
     }
   }

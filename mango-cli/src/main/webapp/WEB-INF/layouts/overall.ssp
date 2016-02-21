@@ -136,22 +136,13 @@
             <form name="regForm" method="GET" class="form-inline">
                 region:
                 <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+                mapping quality:
+                <input type="text" name="quality" size="20" class="form-control" placeholder="0">
                 <input name="Submit button"
                       type="button"
                       value="Submit"
                       onclick="checkForm(this.form)"
                       class="btn btn-danger btn-xs"/>
-            </form>
-        </li>
-        <li>
-            <form name="qualityForm" method="GET" class="form-inline">
-            Quality:
-            <input type="text" name="quality" size="20" class="form-control" placeholder="refName:start-end">
-                <input name="Submit button"
-                    type="button"
-                    value="Submit"
-                    onclick="checkForm(this.form)"
-                    class="btn btn-danger btn-xs"/>
             </form>
         </li>
     </ul>
