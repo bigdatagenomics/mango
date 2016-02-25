@@ -178,7 +178,6 @@
   var rawSamples = sampleId.split(",").unique(); // distinct
   var samples = filterNames(rawSamples);
   var width = window.innerWidth - 18;
-
 </script>
 <script src="js/reads.js"></script>
 <script src="js/freq.js"></script>
