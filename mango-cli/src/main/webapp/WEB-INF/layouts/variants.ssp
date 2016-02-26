@@ -17,7 +17,7 @@
 </head>
 
 <!-- Fixed navbar -->
-<nav class="navbar navbar-default navbar-fixed-top">
+<nav class="navbar navbar-default">
   <div class="container">
     <div class="navbar-header">
       <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -37,86 +37,91 @@
 </nav>
 
 <div id = "navigation">
-    <br>
-    <ul>
-        <li>move:</li>
-        <li>
-            <input name="Move very far left button"
-              type="button"
-              value="<<<"
-              onclick="moveVeryFarLeft()"
-              class="btn btn-primary btn-xs"/>
-        </li>
-        <li>
-            <input name="Move far left button"
-              type="button"
-              value="<<"
-              onclick="moveFarLeft()"
-              class="btn btn-primary btn-xs"/>
-        </li>
-        <li>
-            <input name="Move left button"
-              type="button"
-              value="<"
-              onclick="moveLeft()"
-              class="btn btn-primary btn-xs"/>
-        </li>
-        <li>
-            <input name="Move right button"
-              type="button"
-              value=">"
-              onclick="moveRight()"
-              class="btn btn-info btn-xs"/>
-        </li>
-        <li>
-            <input name="Move far right button"
-              type="button"
-              value=">>"
-              onclick="moveFarRight()"
-              class="btn btn-info btn-xs"/>
-        </li>
-        <li>
-            <input name="Move very far right button"
-              type="button"
-              value=">>>"
-              onclick="moveVeryFarRight()"
-              class="btn btn-info btn-xs"/>
-        </li>
-        <li>zoom:</li>
-        <li>
-            <input name="Zoom in button"
-              type="button"
-              value="++"
-              onclick="zoomIn()"
-              class="btn btn-warning btn-xs"/>
-        </li>
-        <li>
-            <input name="Zoom out button"
-              type="button"
-              value="--"
-              onclick="zoomOut()"
-              class="btn btn-warning btn-xs"/>
-        </li>
-        <li>
-            <form name="regForm" method="GET" class="form-inline">
-                region:
-                <input type="text" name="info" size="20" class="form-control" placeholder="refName:start-end">
-                <input name="Submit button"
-                      type="button"
-                      value="Submit"
-                      onclick="checkForm(this.form)"
-                      class="btn btn-danger btn-xs"/>
-            </form>
-        </li>
-    </ul>
-    <br>
+  <br>
+  <ul>
+      <li>move:</li>
+      <li>
+          <input name="Move very far left button"
+            type="button"
+            value="<<<"
+            onclick="moveVeryFarLeft()"
+            class="btn btn-primary btn-xs"/>
+      </li>
+      <li>
+          <input name="Move far left button"
+            type="button"
+            value="<<"
+            onclick="moveFarLeft()"
+            class="btn btn-primary btn-xs"/>
+      </li>
+      <li>
+          <input name="Move left button"
+            type="button"
+            value="<"
+            onclick="moveLeft()"
+            class="btn btn-primary btn-xs"/>
+      </li>
+      <li>
+          <input name="Move right button"
+            type="button"
+            value=">"
+            onclick="moveRight()"
+            class="btn btn-info btn-xs"/>
+      </li>
+      <li>
+          <input name="Move far right button"
+            type="button"
+            value=">>"
+            onclick="moveFarRight()"
+            class="btn btn-info btn-xs"/>
+      </li>
+      <li>
+          <input name="Move very far right button"
+            type="button"
+            value=">>>"
+            onclick="moveVeryFarRight()"
+            class="btn btn-info btn-xs"/>
+      </li>
+      <li>zoom:</li>
+      <li>
+          <input name="Zoom in button"
+            type="button"
+            value="++"
+            onclick="zoomIn()"
+            class="btn btn-warning btn-xs"/>
+      </li>
+      <li>
+          <input name="Zoom out button"
+            type="button"
+            value="--"
+            onclick="zoomOut()"
+            class="btn btn-warning btn-xs"/>
+      </li>
+      <li>
+          <form name="regForm" method="GET" class="form-inline">
+              region:
+              <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+              <input name="Submit button"
+                    type="button"
+                    value="Submit"
+                    onclick="checkFormVariants(this.form)"
+                    class="btn btn-danger btn-xs"/>
+          </form>
+      </li>
+  </ul>
+  <br>
 </div>
-
 <br>
-<div class="graphArea" id="refArea"></div>
-<div class="graphArea" id ="variantViz"</div>
-<div id="varFreqArea" class="col-md-10" style="float:right"></div>
-<div id="varArea" class="col-md-10" style="float:right"></div>
+
+<div class="row top">
+  <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
+</div>
+<div class="row top">
+  <div class="col-md-10 graphArea" id="varFreqArea" style="float:right"></div>
+</div>
+<div class="row top">
+  <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
+</div>
 
 </div>
 <br>
@@ -125,14 +130,14 @@
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
-
   var width = window.innerWidth - 18;
-
 </script>
 <script src="js/utilities.js"></script>
 <script src="js/variants.js"></script>
+<script src="js/reference.js"></script>
 <script>
   renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
   renderVariants(viewRefName, viewRegStart, viewRegEnd);
+  renderReference(viewRefName, viewRegStart, viewRegEnd);
 </script>
 </html>
