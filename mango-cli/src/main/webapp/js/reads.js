@@ -58,14 +58,16 @@ for (var i = 0; i < samples.length; i++) {
 }
 
 // Functions
-function renderReads(refName, start, end) {
-  //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
+function renderReads(refName, start, end, quality) {
+    quality = quality || 0
+    //Adding Reference rectangles
+    viewRegStart = start;
+    viewRegEnd = end;
+    viewRefName = refName;
 
-  var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId;
-  renderJsonReads(readsJsonLocation);
+    var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId
+        + "&quality=" + quality;
+    renderJsonReads(readsJsonLocation);
 
 
 }

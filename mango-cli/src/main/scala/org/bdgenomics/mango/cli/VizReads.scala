@@ -29,6 +29,7 @@ import org.apache.spark.SparkContext._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.rdd.RDD
+import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, VariantContext }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
@@ -52,6 +53,7 @@ object VizTimers extends Metrics {
   val VarFreqRequest = timer("Get variant frequency")
   val FeatRequest = timer("GET features")
   val RefRequest = timer("GET reference")
+  val AlignmentRequest = timer("GET alignment")
 
   //RDD operations
   val ReadsRDDTimer = timer("RDD Reads operations")
@@ -224,9 +226,8 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/reads/:ref") {
-    VizTimers.ReadsRequest.time {
+    VizTimers.AlignmentRequest.time {
       contentType = "json"
-      viewRegion = new ReferenceRegion(params("ref").toString, params("start").toLong, params("end").toLong)
       val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
       dictOpt match {
         case Some(_) => {
@@ -234,16 +235,17 @@ class VizServlet extends ScalatraServlet {
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
           val reference = VizReads.getReference(region)
+          val readQuality = params.getOrElse("quality", "0")
 
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
-              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(data, reference, region, sampleIds)
-              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(data.map(_._2), region, sampleIds)
+              val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
+              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
               val fileMap = VizReads.readsData.getFileMap()
               var readRetJson: String = ""
-
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
                 readRetJson += "\"" + sample + "\":" +
@@ -369,8 +371,10 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/reference/:ref") {
-    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    write(VizReads.printReferenceJson(viewRegion))
+    VizTimers.RefRequest.time {
+      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      write(VizReads.printReferenceJson(viewRegion))
+    }
   }
 }
 
