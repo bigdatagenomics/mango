@@ -131,8 +131,8 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
           .duration(200)
           .style("opacity", .9);
           featDiv.html(d.featureId)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
+          .style("left", (d3.event.pageX - 200) + "px")
+          .style("top", (d3.event.pageY - 200) + "px");
         })
         .on("mouseout", function(d) {
           featDiv.transition()

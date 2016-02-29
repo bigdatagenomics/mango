@@ -147,6 +147,8 @@ object VizReads extends BDGCommandCompanion with Logging {
           log.warn("reference file type ", VizReads.referencePath, " not supported")
           None
         }
+      } case None => {
+        None
       }
       case None => None
     }
@@ -432,13 +434,15 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     val variantsPath = Option(args.variantsPath)
     variantsPath match {
       case Some(_) => {
-        if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".adam")) {
+        if (args.variantsPath.endsWith(".vcf")) {
           VizReads.variantsPath = args.variantsPath
           // TODO: remove hardcode for callset1
           VizReads.variantData.loadSample("callset1", VizReads.variantsPath)
           VizReads.variantsExist = true
           VizReads.testRDD2 = VizReads.sc.loadParquetGenotypes(args.variantsPath)
           VizReads.testRDD2.cache()
+        } else if (args.variantsPath.endsWith(".adam")) {
+          VizReads.readsData.loadADAMSample(VizReads.variantsPath)
         } else {
           log.info("WARNING: Invalid input for variants file")
           println("WARNING: Invalid input for variants file")
