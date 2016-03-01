@@ -10,6 +10,8 @@
     <script src="resources/js/jquery.min.js"></script>
     <script src="resources/js/jquery-ui.min.js"></script>
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
+    <script src="js/jquery.autocomplete.min.js"></script>
+    <script src="js/autocomplete.js"></script>
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
@@ -97,16 +99,18 @@
             onclick="zoomOut()"
             class="btn btn-warning btn-xs"/>
       </li>
-      <li>
-          <form name="regForm" method="GET" class="form-inline">
-              region:
-              <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
-              <input name="Submit button"
-                    type="button"
-                    value="Submit"
-                    onclick="checkFormVariants(this.form)"
-                    class="btn btn-danger btn-xs"/>
+      <li> 
+        <div id="searchfield">
+          region:
+          <form id="regForm" name="regForm" method="GET" class="form-inline">
+          <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+          <input name="Submit button"
+                type="button"
+                value="Submit"
+                onclick="checkFormVariants(this.form)"
+                class="btn btn-danger btn-xs"/>
           </form>
+        </div><!-- @end #searchfield -->
       </li>
   </ul>
   <br>
