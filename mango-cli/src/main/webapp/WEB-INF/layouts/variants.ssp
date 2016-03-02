@@ -99,19 +99,25 @@
             onclick="zoomOut()"
             class="btn btn-warning btn-xs"/>
       </li>
-      <li> 
-        <div id="searchfield">
-          region:
-          <form id="regForm" name="regForm" method="GET" class="form-inline">
-          <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+        <li>
+        <form id="regForm" name="regForm" method="GET" class="form-inline">
+        region:
+        <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+        </li>
+        <li>
+          mapping quality:
+        </li>
+        <li>
+          <input type="range" name="quality" id="quality" min="0" max="10">
+        </li>
+        <li>
           <input name="Submit button"
                 type="button"
                 value="Submit"
                 onclick="checkFormVariants(this.form)"
                 class="btn btn-danger btn-xs"/>
           </form>
-        </div><!-- @end #searchfield -->
-      </li>
+        </li>
   </ul>
   <br>
 </div>
