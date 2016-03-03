@@ -183,7 +183,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 1)
+  @Args4jOption(required = false, name = "-repartition", usage = "The number of partitions")
   var partitionCount: Int = 0
 
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
@@ -392,14 +392,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
-    val partitionCount = Option(args.partitionCount)
-    partitionCount match {
-      case Some(_) => {
-        VizReads.partitionCount = partitionCount.get
-      } case None => {
-        VizReads.partitionCount = 10
-      }
-    }
+
+    VizReads.partitionCount =
+      if (args.partitionCount <= 0)
+        VizReads.sc.defaultParallelism
+      else
+        args.partitionCount
+
     VizReads.readsData = LazyMaterialization(sc, VizReads.partitionCount)
     VizReads.variantData = LazyMaterialization(sc, VizReads.partitionCount)
 
