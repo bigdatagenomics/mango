@@ -50,7 +50,7 @@ class FrequencyLayout(array: Iterator[AlignmentRecord], region: ReferenceRegion)
   var i = region.start
 
   while (i <= region.end) {
-    val currSubset = records.filter(value => ((value.getStart <= i) && (value.getEnd >= i))).groupBy(_.recordGroupSample)
+    val currSubset = records.filter(value => ((value.getStart <= i) && (value.getEnd >= i))).groupBy(_.getRecordGroupSample)
     currSubset.foreach(p => freqBuffer += ((p._1, i, p._2.length)))
     i = i + 1
   }

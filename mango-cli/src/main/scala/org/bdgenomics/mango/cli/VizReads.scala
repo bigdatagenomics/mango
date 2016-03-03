@@ -250,13 +250,20 @@ class VizServlet extends ScalatraServlet {
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
-                readRetJson += "\"" + sample + "\":" +
-                  "{ \"filename\": " + write(fileMap(sample)) +
-                  ", \"tracks\": " + write(sampleData.get.records) +
-                  ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
-                  ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
-                  ", \"matePairs\": " + write(sampleData.get.matePairs) +
-                  ", \"freq\": " + write(freqData.get(sample)) + "},"
+                sampleData match {
+                  case Some(_) =>
+                    readRetJson += "\"" + sample + "\":" +
+                      "{ \"filename\": " + write(fileMap(sample)) +
+                      ", \"tracks\": " + write(sampleData.get.records) +
+                      ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+                      ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+                      ", \"matePairs\": " + write(sampleData.get.matePairs) +
+                      ", \"freq\": " + write(freqData.get(sample)) + "},"
+                  case None =>
+                    readRetJson += "\"" + sample + "\":" +
+                      "{ \"filename\": " + write(fileMap(sample)) + "},"
+                }
+
               }
               readRetJson = readRetJson.dropRight(1)
               readRetJson = "{" + readRetJson + "}"

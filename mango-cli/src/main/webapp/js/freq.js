@@ -19,9 +19,9 @@ var bisectData = d3.bisector(function(d) {
 }).left;
 
 function renderJsonCoverage(data, i) {
-  // Removes at first to update frequency graph
-
+  data = typeof data != "undefined" ? data : [];
   maxFreq = d3.max(data, function(d) {return d.freq});
+  maxFreq = typeof maxFreq != "undefined" ? maxFreq : 0;
 
   // Create the scale for the x axis
   var xAxisScale = d3.scale.linear()
@@ -93,7 +93,7 @@ function renderJsonCoverage(data, i) {
     .attr("dy", "1em");
 
 
-  var removed = svgContainer[samples[i]].selectAll("rect").data(data).exit();
+  var removed = svgContainer[samples[i]].selectAll("g").data(data).exit();
   removed.remove();
 
     // render line
@@ -123,6 +123,10 @@ function renderJsonCoverage(data, i) {
     var i = bisectData(data, x0, 1);
     var opt1 = data[i - 1];
     var opt2 = data[i];
+
+    if (data.length == 0) {
+      return
+    }
 
     // Finds the position that is closest to the mouse cursor
     var d = (x0 - opt1.base) > (opt2.base - x0) ? opt2 : opt1;

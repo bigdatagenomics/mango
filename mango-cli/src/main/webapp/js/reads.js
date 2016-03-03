@@ -75,20 +75,17 @@ function renderReads(refName, start, end, quality) {
 function renderJsonReads(readsJsonLocation) {
 
   d3.json(readsJsonLocation,function(error, ret) {
-      for (var i = 0; i < samples.length; i++) {
-        if (!jQuery.isEmptyObject(ret)) {
-          // render reads for low or high resolution depending on base range
-          if (viewRegEnd - viewRegStart > 100) {
-            renderReadsByResolution(false, ret[rawSamples[i]], samples[i], i);
-          } else {
-            renderReadsByResolution(true,ret[rawSamples[i]], samples[i], i);
-          }
-        } else {
-          console.log("no reads to display");
-        }
-      }
-
+  for (var i = 0; i < samples.length; i++) {
+      var readsData = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
+     // render reads for low or high resolution depending on base range
+     if (viewRegEnd - viewRegStart > 100) {
+       renderReadsByResolution(false, readsData, samples[i], i);
+     } else {
+       renderReadsByResolution(true, readsData, samples[i], i);
+     }
+    }
   });
+
 }
 
 // Renders reads by resolution
@@ -117,10 +114,11 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
 
         var selector = "#" + sample;
         sampleData[i] = [];
-        sampleData[i].reads = data['tracks'];
-        sampleData[i].mismatches = data['mismatches'];
-        sampleData[i].indels = data['indels'];
-        sampleData[i].pairs = data['matePairs'];
+        sampleData[i].reads = typeof data['tracks'] != "undefined" ? data['tracks'] : [];
+        sampleData[i].mismatches = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
+        sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
+        sampleData[i].pairs = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
+        sampleData[i].filename = typeof data['filename'] != "undefined" ? data['filename'] : "";
 
         // Renders Reads Frequency
         renderJsonCoverage(data['freq'], i)
@@ -128,10 +126,11 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         // print file name
         // TODO: this should not be redrawn every page load
         $("#" + samples[i] + ">." + fileSelector + ">.fixed-title").remove();
-        var filename = data['filename'];
-        $("#" + samples[i] + ">." + fileSelector).append("<div class='fixed-title'>" + filename + "</div>");
+        $("#" + samples[i] + ">." + fileSelector).append("<div class='fixed-title'>" + sampleData[i].filename + "</div>");
 
         var numTracks = d3.max(sampleData[i].reads, function(d) {return d.track});
+        numTracks = typeof numTracks != "undefined" ? numTracks : [];
+
         readsHeight = (numTracks+1)*readTrackHeight;
 
         // Reset size of svg container
@@ -308,7 +307,9 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         var removedArrows = arrowHeads.exit();
         removedArrows.remove();
 
+        // TODO: why is this defined twice?
         numTracks = d3.max(sampleData[i].pairs, function(d) {return d.track});
+        numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
         // Add the lines connecting read pairs
         var mateLines = readsSvgContainer[samples[i]].selectAll(".readPairs").data(sampleData[i].pairs);
