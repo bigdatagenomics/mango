@@ -49,6 +49,10 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     this(sc, partitions, 1000)
   }
 
+  def getDictionary: SequenceDictionary = {
+    dict
+  }
+
   def setDictionary(filePath: String) {
     val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
     val isGenotype = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
