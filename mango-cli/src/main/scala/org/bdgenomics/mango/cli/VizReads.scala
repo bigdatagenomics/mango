@@ -147,6 +147,8 @@ object VizReads extends BDGCommandCompanion with Logging {
           log.warn("reference file type ", VizReads.referencePath, " not supported")
           None
         }
+      } case None => {
+        None
       }
       case None => None
     }
@@ -181,7 +183,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 1)
+  @Args4jOption(required = false, name = "-repartition", usage = "The number of partitions")
   var partitionCount: Int = 0
 
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
@@ -248,13 +250,20 @@ class VizServlet extends ScalatraServlet {
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
-                readRetJson += "\"" + sample + "\":" +
-                  "{ \"filename\": " + write(fileMap(sample)) +
-                  ", \"tracks\": " + write(sampleData.get.records) +
-                  ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
-                  ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
-                  ", \"matePairs\": " + write(sampleData.get.matePairs) +
-                  ", \"freq\": " + write(freqData.get(sample)) + "},"
+                sampleData match {
+                  case Some(_) =>
+                    readRetJson += "\"" + sample + "\":" +
+                      "{ \"filename\": " + write(fileMap(sample)) +
+                      ", \"tracks\": " + write(sampleData.get.records) +
+                      ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+                      ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+                      ", \"matePairs\": " + write(sampleData.get.matePairs) +
+                      ", \"freq\": " + write(freqData.get(sample)) + "},"
+                  case None =>
+                    readRetJson += "\"" + sample + "\":" +
+                      "{ \"filename\": " + write(fileMap(sample)) + "},"
+                }
+
               }
               readRetJson = readRetJson.dropRight(1)
               readRetJson = "{" + readRetJson + "}"
@@ -383,14 +392,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
-    val partitionCount = Option(args.partitionCount)
-    partitionCount match {
-      case Some(_) => {
-        VizReads.partitionCount = partitionCount.get
-      } case None => {
-        VizReads.partitionCount = 10
-      }
-    }
+
+    VizReads.partitionCount =
+      if (args.partitionCount <= 0)
+        VizReads.sc.defaultParallelism
+      else
+        args.partitionCount
+
     VizReads.readsData = LazyMaterialization(sc, VizReads.partitionCount)
     VizReads.variantData = LazyMaterialization(sc, VizReads.partitionCount)
 
@@ -432,13 +440,15 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     val variantsPath = Option(args.variantsPath)
     variantsPath match {
       case Some(_) => {
-        if (args.variantsPath.endsWith(".vcf") || args.variantsPath.endsWith(".adam")) {
+        if (args.variantsPath.endsWith(".vcf")) {
           VizReads.variantsPath = args.variantsPath
           // TODO: remove hardcode for callset1
           VizReads.variantData.loadSample("callset1", VizReads.variantsPath)
           VizReads.variantsExist = true
           VizReads.testRDD2 = VizReads.sc.loadParquetGenotypes(args.variantsPath)
           VizReads.testRDD2.cache()
+        } else if (args.variantsPath.endsWith(".adam")) {
+          VizReads.readsData.loadADAMSample(VizReads.variantsPath)
         } else {
           log.info("WARNING: Invalid input for variants file")
           println("WARNING: Invalid input for variants file")
