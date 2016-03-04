@@ -52,7 +52,6 @@ object VizTimers extends Metrics {
   val VarRequest = timer("GET variants")
   val VarFreqRequest = timer("Get variant frequency")
   val FeatRequest = timer("GET features")
-  val RefRequest = timer("GET reference")
   val AlignmentRequest = timer("GET alignment")
 
   //RDD operations
@@ -201,7 +200,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  var viewRegion = ReferenceRegion("chr", 1, 100)
+  var globalViewRegion = ReferenceRegion("chr", 1, 100) //Default view region
 
   get("/init") {
     write(VizReads.readsData.dict)
@@ -215,20 +214,10 @@ class VizServlet extends ScalatraServlet {
     VizReads.quit()
   }
 
-  get("/reads") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (VizReads.readsExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "samples" -> (VizReads.sampNames.mkString(","))))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
-    }
-  }
-
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length))
       contentType = "json"
       val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
       dictOpt match {
@@ -281,7 +270,7 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
-      Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
+      Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString),
         "samples" -> (VizReads.sampNames.mkString(",")),
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
@@ -293,16 +282,24 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     if (VizReads.variantsExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
+        Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/novariants.ssp")
     }
   }
 
+  get("/viewregion/:ref") {
+    contentType = "json"
+    globalViewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+      Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length))
+    write("Successfully saved view region with " + params.toString)
+  }
+
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
       contentType = "json"
-      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length))
       val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
       variantRDDOption match {
         case Some(_) => {
@@ -316,21 +313,11 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/variantfreq") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (VizReads.variantsExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/novariants.ssp")
-    }
-  }
-
   get("/variantfreq/:ref") {
     VizTimers.VarFreqRequest.time {
       contentType = "json"
-      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length))
       val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
       variantRDDOption match {
         case Some(_) => {
@@ -348,23 +335,23 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     if (VizReads.featuresExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString)))
+        Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
     } else {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofeatures.ssp")
     }
   }
 
   get("/features/:ref") {
-    viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+      Math.min(params("end").toLong, VizReads.readsData.dict(params("ref")).get.length))
     VizTimers.FeatRequest.time {
-      val region = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       val featureRDD: Option[RDD[Feature]] = {
         if (VizReads.featuresPath.endsWith(".adam")) {
-          val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
+          val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
           val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
           Option(VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj)))
         } else if (VizReads.featuresPath.endsWith(".bed")) {
-          Option(VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(region))
+          Option(VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion))
         } else {
           None
         }
@@ -380,10 +367,9 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/reference/:ref") {
-    VizTimers.RefRequest.time {
-      viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      write(VizReads.printReferenceJson(viewRegion))
-    }
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+      Math.min(params("end").toLong, VizReads.readsData.dict(params("ref")).get.length))
+    write(VizReads.printReferenceJson(viewRegion))
   }
 }
 
