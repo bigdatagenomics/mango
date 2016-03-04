@@ -44,9 +44,15 @@ import scala.reflect.{ classTag, ClassTag }
 class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long) extends Serializable with Logging {
 
   var dict: SequenceDictionary = null
+  var partitioner: Partitioner = null
 
   def this(sc: SparkContext, partitions: Int) = {
     this(sc, partitions, 1000)
+  }
+
+  // TODO: once tracking is pushed to front end, add sc.local partitioning
+  def setPartitioner: Unit = {
+    partitioner = GenomicRegionPartitioner(partitions, dict)
   }
 
   def getDictionary: SequenceDictionary = {
@@ -77,18 +83,26 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
   def loadSample(sampleId: String, filePath: String) {
     if (dict == null) {
       setDictionary(filePath)
+      setPartitioner
     }
     fileMap += ((sampleId, filePath))
   }
 
   def loadADAMSample(filePath: String): String = {
     val region = ReferenceRegion("new", 0, chunkSize - 1)
-    val items: (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
-    dict = items._2
-    val sample = items._3.recordGroups.head.sample
-    rememberValues(region, List(sample))
+    val (rdd, sd, rd): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
+    dict = sd
+    if (partitioner == null)
+      setPartitioner
+    val sample = rd.recordGroups.head.sample
     fileMap += ((sample, filePath))
-    intRDD = IntervalRDD(items._1.partitionBy(GenomicRegionPartitioner(partitions, dict)))
+
+    // add all contignames found in file to bookkeeping
+    val contigNames: Array[String] = rdd.map(r => (r._1.referenceName, 1)).reduceByKey(_ + _).map(_._1).collect
+    contigNames.foreach(n => rememberValues(ReferenceRegion(n, region.start, region.end), List(sample)))
+
+    intRDD = IntervalRDD(rdd.partitionBy(partitioner))
+    intRDD.persist()
     return sample
   }
 
@@ -189,7 +203,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
       throw UnsupportedFileException("File type not supported")
       data
     }
-    data.partitionBy(GenomicRegionPartitioner(partitions, dict))
+    data.partitionBy(partitioner)
   }
 
   def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, T]] = {
