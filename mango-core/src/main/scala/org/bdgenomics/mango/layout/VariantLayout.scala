@@ -60,10 +60,10 @@ object VariantFreqLayout extends Logging {
    * @return List of VariantFreqJsons
    */
   def apply(rdd: RDD[(ReferenceRegion, Genotype)]): List[VariantFreqJson] = {
-    val variantFreq = rdd.countByKey
+    val variantFreq = rdd.map(rec => ((rec._2.getVariant.getStart, rec._2.getVariant.getEnd), rec._2)).countByKey
     var freqJson = new ListBuffer[VariantFreqJson]
     for (rec <- variantFreq) {
-      freqJson += VariantFreqJson(rec._1.referenceName, rec._1.start, rec._1.end, rec._2)
+      freqJson += VariantFreqJson(rec._1._1, rec._1._2, rec._2)
     }
     freqJson.toList
   }
@@ -78,7 +78,7 @@ object VariantFreqLayout extends Logging {
 class VariantLayout(values: Iterator[(ReferenceRegion, Genotype)]) extends TrackedLayout[Genotype, GenericTrackBuffer[Genotype]] with Logging {
   val sequence = values.toList
   var trackBuilder = new ListBuffer[GenericTrackBuffer[Genotype]]()
-  val data = sequence.groupBy(_._2.sampleId)
+  val data = sequence.groupBy(_._2.getSampleId)
   addTracks
   trackBuilder = trackBuilder.filter(_.records.nonEmpty)
 
@@ -99,10 +99,10 @@ object VariantJson {
    * @return List of VariantJsons
    */
   def apply(recs: List[(ReferenceRegion, Genotype)], track: Int): List[VariantJson] = {
-    recs.map(rec => new VariantJson(rec._2.variant.contig.contigName, rec._2.alleles.map(_.toString).mkString(" / "), rec._2.variant.start, rec._2.variant.end, track))
+    recs.map(rec => new VariantJson(rec._2.getVariant.getContig.getContigName, rec._2.getAlleles.map(_.toString).mkString(" / "), rec._2.getVariant.getStart, rec._2.getVariant.getEnd, track))
   }
 }
 
 // tracked json objects for genotype visual data
 case class VariantJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
-case class VariantFreqJson(contigName: String, start: Long, end: Long, count: Long)
+case class VariantFreqJson(start: Long, end: Long, count: Long)

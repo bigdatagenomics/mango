@@ -31,7 +31,7 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.utils.cli._
-import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, VariantContext }
+import org.bdgenomics.adam.models.{ SequenceDictionary, ReferencePosition, ReferenceRegion, VariantContext }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
@@ -153,6 +153,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     }
   }
 
+  def formatDictionaryOpts(dict: SequenceDictionary): List[String] = {
+    dict.records.map(r => (r.name + ":0-" + r.length)).toList
+  }
+
   //Correctly shuts down the server
   def quit() {
     val thread = new Thread {
@@ -239,10 +243,12 @@ class VizServlet extends ScalatraServlet {
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
+                val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
                 sampleData match {
                   case Some(_) =>
                     readRetJson += "\"" + sample + "\":" +
                       "{ \"filename\": " + write(fileMap(sample)) +
+                      ", \"dictionary\": " + write(dictionary) +
                       ", \"tracks\": " + write(sampleData.get.records) +
                       ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
                       ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
