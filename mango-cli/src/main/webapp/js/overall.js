@@ -65,6 +65,7 @@ function render(refName, start, end, mapQuality) {
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
   $('#regInput').attr('placeholder', placeholder);
+  saveRegion(refName, start, end);
 
   // Reference
   renderReference(refName, start, end);
@@ -83,6 +84,11 @@ function render(refName, start, end, mapQuality) {
   if (readsExist) {
     renderReads(refName, start, end, mapQuality);
   }
+}
+
+function saveRegion(viewRefName, viewRegStart, viewRegEnd) {
+  var saveJsonLocation = "/viewregion/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  d3.json(saveJsonLocation, function(error, data) {});
 }
 
 function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
