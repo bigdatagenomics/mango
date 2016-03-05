@@ -171,9 +171,11 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
               .style("opacity", .9);
             readDiv[i].html(
               "Read Name: " + d.readName + "<br>" +
+              "Sequence:" + d.sequence + "<br>" +
               "Start: " + d.start + "<br>" +
               "End: " + d.end + "<br>" +
               "Cigar:" + d.cigar + "<br>" +
+              "Map Quality: " + d.mapq + "<br>" +
               "Track: " + d.track + "<br>" +
               "Reverse Strand: " + d.readNegativeStrand)
               .style("left", (d3.event.pageX) + "px")
@@ -396,6 +398,7 @@ function renderMismatches(mismatches, indels, sample) {
           "Read Start: " + d.start + "<br>" +
           "Length:" + (d.end - d.start) + "<br>" +
           "Sequence: " + d.sequence + "<br>" +
+          "Map Quality: " + d.mapq + "<br>" +
           "Track: " + d.track)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - yOffset) + "px");

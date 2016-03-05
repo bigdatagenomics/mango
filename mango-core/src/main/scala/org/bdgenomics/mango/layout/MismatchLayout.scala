@@ -43,64 +43,82 @@ object MismatchLayout extends Logging {
    * Finds and returns all indels and mismatches of a given alignment record from an overlapping reference string.
    * Must take into account overlapping regions that are not covered by both the reference and record sequence.
    *
-   * @param record: AlignmentRecord
-   * @param reference: reference string used to calculate mismatches
+   * @param rec: AlignmentRecord
+   * @param ref: reference string used to calculate mismatches
    * @param region: ReferenceRegion to be viewed
    * @return List of MisMatches
    */
-  def alignMismatchesToRead(rec: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatch] = {
-    var ref: String =
-      if (rec.readNegativeStrand) {
-        // get new reference sequence complementary to the given reference
-        complement(reference)
-      } else reference
+  def alignMismatchesToRead(rec: AlignmentRecord, ref: String, region: ReferenceRegion): List[MisMatch] = {
+
+    val regionSize = region.end - region.start
 
     var misMatches: ListBuffer[MisMatch] = new ListBuffer[MisMatch]()
-    val cigar = TextCigarCodec.decode(rec.cigar).getCigarElements()
-    var refIdx = rec.start + 1
-    var recIdx = rec.start
+
+    if (rec.getReadNegativeStrand == true) {
+      return misMatches.toList
+    }
+    
+    val cigar = TextCigarCodec.decode(rec.getCigar).getCigarElements()
+
+    var refIdx = 0L
+    var recIdx = 0L
+
+    // calculate start value
+    if (rec.getStart >= region.start) {
+      refIdx = rec.getStart + 1
+      recIdx = rec.getStart
+    } else {
+      refIdx = region.start + 1
+      recIdx = region.start
+    }
 
     cigar.foreach {
       e =>
         {
-          var misLen = e.getLength
-          var op: CigarOperator = e.getOperator
+          var misLen = 0
+          var op: CigarOperator = null
+          var refBase: Char = 'M'
+          var recBase: Char = 'M'
+          try {
+            misLen = e.getLength
+            op = e.getOperator
+            recBase = rec.getSequence.charAt(getPosition(recIdx, rec.getStart))
+            refBase = ref.charAt(getPosition(refIdx, region.start))
+          } catch {
+            case e: Exception => misMatches.toList
+          }
           if (op == CigarOperator.X || op == CigarOperator.M) {
             try {
               for (i <- 0 to misLen - 1) {
                 // if index position is not within region
                 if (refIdx <= region.end && refIdx >= region.start) {
-                  val recBase = rec.sequence.charAt(getPosition(recIdx, rec.start))
+                  val recBase = rec.getSequence.charAt(getPosition(recIdx, rec.getStart))
                   val refBase = ref.charAt(getPosition(refIdx, region.start))
                   if (refBase != recBase) {
                     val start = recIdx
-                    val end = start + 1
-                    misMatches += new MisMatch(op.toString, refIdx, start, end, recBase.toString, refBase.toString)
+                    misMatches += new MisMatch(op.toString, refIdx, start, start + 1, recBase.toString, refBase.toString)
                   }
                 }
                 recIdx += 1
                 refIdx += 1
               }
             } catch {
-              case iobe: StringIndexOutOfBoundsException => {
-                // log.warn("Record Sequence " + rec.sequence + " at index " + recIdx)
-                // log.warn(" Reference Sequence " + ref + " at index " + refIdx)
-                // log.warn("Cigar" + rec.cigar)
-              }
               case e: Exception => log.warn(e.toString)
             }
           } else if (op == CigarOperator.I) {
             val end = recIdx + misLen
-            val stringStart = (recIdx - rec.start).toInt
-            val indel = rec.sequence.substring(stringStart, stringStart + misLen)
+            val stringStart = (recIdx - rec.getStart).toInt
+            val indel = rec.getSequence.substring(stringStart, stringStart + misLen)
             misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
             recIdx += misLen
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
             val end = recIdx + misLen
-            val stringStart = getPosition(recIdx, rec.start)
-            val indel = rec.sequence.substring(stringStart, stringStart + misLen)
+            val stringStart = getPosition(recIdx, rec.getStart)
+            val indel = rec.getSequence.substring(stringStart, stringStart + misLen)
             misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
             refIdx += misLen
+          } else if (op == CigarOperator.S) {
+            recIdx += misLen
           }
 
         }
@@ -115,7 +133,7 @@ object MismatchLayout extends Logging {
    * @return Boolean whether record contains any indels
    */
   def containsIndels(rec: AlignmentRecord): Boolean = {
-    rec.cigar.contains("I") || rec.cigar.contains("D")
+    rec.getCigar.contains("I") || rec.getCigar.contains("D")
   }
 
   /**

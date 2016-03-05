@@ -42,8 +42,7 @@ import org.fusesource.scalate.TemplateEngine
 import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.ScalatraServlet
-import scala.reflect.ClassTag
-import scala.collection.mutable.ListBuffer
+import org.apache.spark.util.SizeEstimator
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -93,6 +92,31 @@ object VizReads extends BDGCommandCompanion with Logging {
   var server: org.eclipse.jetty.server.Server = null
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
+  }
+
+  /**
+   * Prints java heap map availability and usage
+   */
+  def printSysUsage() = {
+    val mb: Int = 1024 * 1024;
+    //Getting the runtime reference from system
+    var runtime: Runtime = Runtime.getRuntime();
+
+    println("##### Heap utilization statistics [MB] #####");
+
+    //Print used memory
+    println("Used Memory:"
+      + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+
+    //Print free memory
+    println("Free Memory:"
+      + runtime.freeMemory() / mb);
+
+    //Print total available memory
+    println("Total Memory:" + runtime.totalMemory() / mb);
+
+    //Print Maximum available memory
+    println("Max Memory:" + runtime.maxMemory() / mb);
   }
 
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {

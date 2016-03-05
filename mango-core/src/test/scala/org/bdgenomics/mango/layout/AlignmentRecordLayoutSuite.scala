@@ -43,6 +43,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setRecordGroupSample("Sample")
       .setStart(1)
       .setEnd(6)
+      .setMapq(50)
       .setReadName("read")
       .setSequence("AAAAT")
       .build
@@ -53,6 +54,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setStart(7)
       .setRecordGroupSample("Sample")
       .setEnd(11)
+      .setMapq(50)
       .setReadName("read")
       .setSequence("AAAAT")
       .build
@@ -74,6 +76,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setRecordGroupSample("Sample")
       .setStart(1)
       .setEnd(6)
+      .setMapq(50)
       .setReadName("read1")
       .setSequence("AAAAT")
       .build
@@ -84,6 +87,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setStart(30)
       .setRecordGroupSample("Sample")
       .setEnd(40)
+      .setMapq(50)
       .setReadName("read1")
       .setSequence("AAAAAAAAAA")
       .build
@@ -94,6 +98,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setRecordGroupSample("Sample")
       .setStart(9)
       .setEnd(14)
+      .setMapq(50)
       .setReadName("read2")
       .setSequence("AAAAT")
       .build
@@ -102,6 +107,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("10M")
       .setStart(18)
+      .setMapq(50)
       .setRecordGroupSample("Sample")
       .setEnd(28)
       .setReadName("read2")
@@ -126,6 +132,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(1)
+      .setMapq(50)
       .setEnd(6)
       .setReadName("read1")
       .setSequence("AAAAT")
@@ -135,6 +142,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("10M")
       .setStart(30)
+      .setMapq(50)
       .setRecordGroupSample("Sample")
       .setEnd(40)
       .setReadName("read1")
@@ -146,6 +154,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(9)
+      .setMapq(50)
       .setEnd(14)
       .setReadName("read2")
       .setSequence("AAAAT")
@@ -157,6 +166,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setStart(42)
       .setRecordGroupSample("Sample")
       .setEnd(48)
+      .setMapq(50)
       .setReadName("read2")
       .setSequence("AAAAAA")
       .build

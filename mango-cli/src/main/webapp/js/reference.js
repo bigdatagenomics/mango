@@ -177,8 +177,8 @@ function renderHighResRef(data, refContainer) {
   modify
       .attr("x", 0)
       .attr("dx", function(d, i) {
-             return i/(viewRegEnd-viewRegStart) * refWidth - 5;
-          })
+           return i/(viewRegEnd-viewRegStart) * refWidth - (refWidth/(viewRegEnd-viewRegStart))/2 ;
+      })
       .text( function (d) { return d.reference; })
       .attr("fill", function(d) {
         if (d.reference === "G") {
@@ -201,7 +201,7 @@ function renderHighResRef(data, refContainer) {
       .attr("y", 30)
       .attr("x", 0)
       .attr("dx", function(d, i) {
-             return i/(viewRegEnd-viewRegStart) * refWidth - 5;
+        return i/(viewRegEnd-viewRegStart) * refWidth - (refWidth/(viewRegEnd-viewRegStart))/2 ;
           })
       .text( function (d) { return d.reference; })
       .attr("font-family", "Sans-serif")
