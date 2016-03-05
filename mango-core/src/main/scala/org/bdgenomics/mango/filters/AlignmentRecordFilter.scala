@@ -26,7 +26,7 @@ object AlignmentRecordFilter {
   //Applies quality filter to (reference region, alignment records), returns the RDD
   def filterByRecordQuality(data: RDD[(ReferenceRegion, AlignmentRecord)], quality: String): RDD[(ReferenceRegion, AlignmentRecord)] = {
     val minimumQuality: Double = try { quality.toDouble } catch { case _ => 0 }
-    if (minimumQuality <= 0.0) return data
+    if (minimumQuality <= 0.0) return data.filter(r => r._2.getMapq() > 0)
     return data.filter(r => r._2.getMapq() >= minimumQuality)
   }
 

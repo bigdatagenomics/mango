@@ -91,7 +91,7 @@ class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRecord)]
   val sequence = values.toList
   var trackBuilder = new ListBuffer[ReadsTrackBuffer]()
 
-  val readPairs: Map[String, List[(ReferenceRegion, AlignmentRecord)]] = sequence.groupBy(_._2.readName)
+  val readPairs: Map[String, List[(ReferenceRegion, AlignmentRecord)]] = sequence.groupBy(_._2.getReadName)
   addTracks
   trackBuilder = trackBuilder.filter(_.records.nonEmpty)
 
@@ -125,7 +125,7 @@ class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRecord)]
  */
 object ReadJson {
   def apply(recs: List[(ReferenceRegion, AlignmentRecord)], track: Int): List[ReadJson] = {
-    recs.map(rec => new ReadJson(rec._2.readName, rec._2.start, rec._2.end, rec._2.readNegativeStrand, rec._2.sequence, rec._2.cigar, track))
+    recs.map(rec => new ReadJson(rec._2.getReadName, rec._2.getStart, rec._2.getEnd, rec._2.getReadNegativeStrand, rec._2.getSequence, rec._2.getCigar, rec._2.getMapq, track))
   }
 }
 
@@ -144,7 +144,7 @@ object MatePairJson {
 }
 
 // tracked json classes for alignmentrecord visual data
-case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, track: Long)
+case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, mapq: Int, track: Long)
 case class MatePairJson(val start: Long, val end: Long, track: Long)
 
 // complete json object of reads data containing matepairs and mismatches

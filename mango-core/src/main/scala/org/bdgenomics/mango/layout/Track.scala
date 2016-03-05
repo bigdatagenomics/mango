@@ -101,8 +101,6 @@ class ReadsTrack(recs: List[(ReferenceRegion, AlignmentRecord)], sampOpt: Option
   val matePairs: List[MatePair] = getMatePairs
   val misMatches: List[MisMatch] = getMisMatches
 
-  getMisMatches
-
   def getMatePairs(): List[MatePair] = {
     val pairs = records.groupBy(_._2.readName).filter(_._2.size == 2).map(_._2)
     val nonOverlap = pairs.filter(r => !(r(0)._1.overlaps(r(1)._1)))
