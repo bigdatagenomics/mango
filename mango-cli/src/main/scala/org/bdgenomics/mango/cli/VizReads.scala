@@ -228,7 +228,6 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  var globalViewRegion = ReferenceRegion("chr", 1, 100) //Default view region
 
   get("/init") {
     write(VizReads.readsData.dict)
@@ -298,6 +297,13 @@ class VizServlet extends ScalatraServlet {
 
   get("/overall") {
     contentType = "text/html"
+    if (!session.contains("ref")) {
+      session("ref") = "chr"
+      session("start") = "1"
+      session("end") = "100"
+    }
+    val globalViewRegion: ReferenceRegion =
+      ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString),
@@ -309,6 +315,13 @@ class VizServlet extends ScalatraServlet {
 
   get("/variants") {
     contentType = "text/html"
+    if (!session.contains("ref")) {
+      session("ref") = "chr"
+      session("start") = "1"
+      session("end") = "100"
+    }
+    val globalViewRegion: ReferenceRegion =
+      ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
     val templateEngine = new TemplateEngine
     if (VizReads.variantsExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
@@ -320,8 +333,9 @@ class VizServlet extends ScalatraServlet {
 
   get("/viewregion/:ref") {
     contentType = "json"
-    globalViewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-      Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length))
+    session("ref") = params("ref")
+    session("start") = params("start")
+    session("end") = Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length).toString
     write("Successfully saved view region with " + params.toString)
   }
 
@@ -363,6 +377,13 @@ class VizServlet extends ScalatraServlet {
   get("/features") {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
+    if (!session.contains("ref")) {
+      session("ref") = "chr"
+      session("start") = "1"
+      session("end") = "100"
+    }
+    val globalViewRegion: ReferenceRegion =
+      ReferenceRegion(session("ref").toString, session("start").toString.toInt, session("end").toString.toInt)
     if (VizReads.featuresExist) {
       templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
         Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
