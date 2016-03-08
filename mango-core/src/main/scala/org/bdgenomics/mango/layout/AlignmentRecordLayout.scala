@@ -45,7 +45,7 @@ object AlignmentRecordLayout extends Logging {
    */
   def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion, sampleIds: List[String]): Map[String, SampleTrack] = {
     val sampleTracks = new ListBuffer[(String, SampleTrack)]()
-    val highRes = region.end - region.start < 10000
+    val highRes = region.width < 10000
 
     val tracks: Map[String, Array[ReadsTrack]] = {
       if (highRes) {
