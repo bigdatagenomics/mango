@@ -57,7 +57,7 @@ object MismatchLayout extends Logging {
     if (rec.getReadNegativeStrand == true) {
       return misMatches.toList
     }
-    
+
     val cigar = TextCigarCodec.decode(rec.getCigar).getCigarElements()
 
     var refIdx = 0L
