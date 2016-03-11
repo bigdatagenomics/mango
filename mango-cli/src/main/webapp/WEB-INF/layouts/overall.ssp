@@ -14,11 +14,11 @@
     <script src="resources/js/jquery.min.js"></script>
     <script src="resources/js/jquery-ui.min.js"></script>
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
+    <script src="js/jquery.autocomplete.min.js"></script>
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type = "text/css" href = "stylesheets/main.css">
-
 </head>
 
 <!-- Fixed navbar -->
@@ -133,19 +133,25 @@
               class="btn btn-warning btn-xs"/>
         </li>
         <li>
-            <form name="regForm" method="GET" class="form-inline">
-                region:
-                <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
-                mapping quality:
-                <input type="text" name="quality" size="20" class="form-control" placeholder="0">
-                <input name="Submit button"
-                      type="button"
-                      value="Submit"
-                      onclick="checkForm(this.form)"
-                      class="btn btn-danger btn-xs"/>
-            </form>
+        <form id="regForm" name="regForm" method="GET" class="form-inline">
+        region:
+        <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
         </li>
-    </ul>
+        <li>
+          mapping quality:
+        </li>
+        <li>
+          <input type="range" name="quality" id="quality" min="0" max="100">
+        </li>
+        <li>
+          <input name="Submit button"
+                type="button"
+                value="Submit"
+                onclick="checkForm(this.form)"
+                class="btn btn-danger btn-xs"/>
+          </form>
+        </li>
+     </ul>
     <br>
 </div>
 
