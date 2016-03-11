@@ -142,7 +142,7 @@
           mapping quality:
         </li>
         <li>
-          <input type="range" name="quality" id="quality" min="0" max="10">
+          <input type="range" name="quality" id="quality" min="0" max="100">
         </li>
         <li>
           <input name="Submit button"
@@ -152,9 +152,7 @@
                 class="btn btn-danger btn-xs"/>
           </form>
         </li>
->>>>>>> 1fa9dbc... sucessfully merged the mapping quality textfield
-    </ul>
-
+     </ul>
     <br>
 </div>
 

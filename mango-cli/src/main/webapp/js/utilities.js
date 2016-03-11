@@ -137,7 +137,15 @@ function checkForm(form) {
   var newStart = Math.max(0, region[0]);
   var newEnd = Math.max(newStart, region[1]);
   var quality = form.elements["quality"].value;
-  render(refName, newStart, newEnd, quality);
+  // Check that the input syntax is correct 
+  if ( info===""|| refName==""|| isNaN(newStart) || isNaN(newEnd) || newStart===newEnd){
+    // alert('Invalid Input format. Missing Information.');
+    form[0].style.borderColor = "red";
+  }
+  else{
+    form[0].style.borderColor = "";
+    render(refName, newStart, newEnd, quality);  
+  }
 }
 
 function checkFormVariants(form) {

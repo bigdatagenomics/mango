@@ -119,7 +119,8 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
         sampleData[i].pairs = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
         sampleData[i].filename = typeof data['filename'] != "undefined" ? data['filename'] : "";
-
+        sampleData[i].dictionary = typeof data['dictionary'] != "undefined" ? data['dictionary'] : [];
+        // document.write(data['dictionary']);
         // Renders Reads Frequency
         renderJsonCoverage(data['freq'], i)
         
