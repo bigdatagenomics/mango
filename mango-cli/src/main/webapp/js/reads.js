@@ -124,6 +124,16 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         // Renders Reads Frequency
         renderJsonCoverage(data['freq'], i)
         
+        // Autocomplete function 
+        $('#autocomplete').autocomplete({
+          lookup: data['dictionary'],
+          onSelect: function (suggestion) {
+            var thehtml = '<strong>Name:</strong> '+suggestion.value;
+            $('#outputcontent').html(thehtml);
+          }
+        });
+
+
         // print file name
         // TODO: this should not be redrawn every page load
         $("#" + samples[i] + ">." + fileSelector + ">.fixed-title").remove();
