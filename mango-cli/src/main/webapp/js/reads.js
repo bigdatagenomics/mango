@@ -1,7 +1,5 @@
 //Configuration Variables
-var readsHeight = 0; //Default variable: this will change based on number of reads
-var fileSelector = "col-md-2";
-var readsSelector = "col-md-10";
+var readsHeight = 30; //Default variable: this will change based on number of reads
 var yOffset = 175;
 
 // Global Data
@@ -23,14 +21,15 @@ var refAxis = d3.svg.axis()
 var readsSvgContainer = {};
 
 for (var i = 0; i < samples.length; i++) {
-  $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"row samples resize-vertical\"></div>");
-  $("#"+samples[i]).append("<div class=\"" + fileSelector +" \"></div>");
-  $("#"+samples[i]).append("<div class=\"" + readsSelector + " graphArea\"></div>");
-  $("#"+samples[i] + ">.col-md-10").append("<div class=\"sampleCoverage\"></div>");
-  $("#"+samples[i] + ">.col-md-10").append("<div class=\"sampleReads\"></div>");
-  var width = $(".sampleReads").width();
+  $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"samples resize-vertical\"></div>");
+  $("#"+samples[i]).append("<div class=\"sampleLegend\"></div>");
+  $("#"+samples[i]).append("<div class=\"sampleCoverage\"></div>");
+  $("#"+samples[i]).append("<div class=\"mergedReads\"></div>");
+  $("#"+samples[i]).append("<div class=\"alignmentData\"></div>");
 
-  var selector = "#" + samples[i] + ">.col-md-10>.sampleReads";
+  var width = $(".mergedReads").width();
+
+  var selector = "#" + samples[i] + ">.mergedReads";
   readsSvgContainer[samples[i]] = d3.select(selector)
     .append("svg")
       .attr("height", (readsHeight))
@@ -57,31 +56,85 @@ for (var i = 0; i < samples.length; i++) {
 
 }
 
-// Functions
-function renderReads(refName, start, end, quality) {
-    quality = quality || 0
-    //Adding Reference rectangles
-    viewRegStart = start;
-    viewRegEnd = end;
-    viewRefName = refName;
+// print file name
+function renderSamplename(i) {
+    if ($("#" + samples[i] + ">.sampleLegend>.title").length < 1) {
+        var selector = "#" + samples[i] + ">.sampleLegend";
+        $(selector + ">.title").remove();
+        $(selector).append("<div class='col-md-9 title'>" + rawSamples[i] + "</div>");
+        $(selector).append("<div class='col-md-3'><input value='viewAlignments' name='viewAlignments'" +
+                                "type='checkbox'onClick='toggleAlignments(\"" + samples[i] + "\")' id='viewAlignments'>" +
+                                "<label for='viewAlignments'>Alignments</label></div>");
+        $( "#" + samples[i] + ">.alignmentData")[0].hidden = true; // TODO: change to jQuery
 
-    var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd + "&sample=" + sampleId
-        + "&quality=" + quality;
-    renderJsonReads(readsJsonLocation);
-
-
+    }
 }
 
-function renderJsonReads(readsJsonLocation) {
+function toggleAlignments(selector) {
+    var alignmentSelector =  $("#" + selector + ">.alignmentData");
+    if (alignmentSelector[0].hidden) {
+       alignmentSelector[0].hidden = false; // TODO: change to jQuery
+       renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, selector);
+    }
+    else {
+       alignmentSelector[0].hidden = true; // TODO: change to jQuery
+    }
+}
+
+function renderMergedReads(refName, start, end, quality) {
+    renderReads(refName, start, end, quality, true)
+}
+
+function renderAlignments(refName, start, end, quality, selector) {
+    renderReads(refName, start, end, quality, false, sampleMap[selector])
+}
+
+function renderReads(refName, start, end, quality, isCountData, samples) {
+    quality = quality || 0
+    var samples = typeof samples != "undefined" ? samples : sampleId;
+    var jsonPage = "reads"
+    if (isCountData)
+         jsonPage = "mergedReads";
+    else
+        jsonPage = "reads";
+    var readsJsonLocation = "/" + jsonPage + "/" + viewRefName + "?start=" + viewRegStart + "&end="
+        + viewRegEnd + "&sample=" + samples + "&quality=" + quality;
+
+    if (isCountData)
+        renderJsonMergedReads(readsJsonLocation);
+    else
+        renderJsonReads(readsJsonLocation, Array(samples));
+}
+
+function renderJsonMergedReads(readsJsonLocation) {
+
+  d3.json(readsJsonLocation,function(error, ret) {
+    for (var i = 0; i < samples.length; i++) {
+        var data = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
+        var selector = "#" + samples[i];
+        sampleData[i] = [];
+        sampleData[i].mismatches = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
+        sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
+
+        renderSamplename(i);
+        renderJsonCoverage(data['freq'], i);
+        renderMismatchCounts(sampleData[i].mismatches, samples[i]);
+        renderIndelCounts(sampleData[i].indels, samples[i]);
+    }
+  });
+}
+
+function renderJsonReads(readsJsonLocation, samples) {
 
   d3.json(readsJsonLocation,function(error, ret) {
   for (var i = 0; i < samples.length; i++) {
-      var readsData = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
+      var readsData = typeof ret[samples[i]] != "undefined" ? ret[samples[i]] : [];
+      console.log(readsData);
      // render reads for low or high resolution depending on base range
      if (viewRegEnd - viewRegStart > 100) {
-       renderReadsByResolution(false, readsData, samples[i], i);
+       renderReadsByResolution(false, readsData, samples[i]);
      } else {
-       renderReadsByResolution(true, readsData, samples[i], i);
+       renderReadsByResolution(true, readsData, samples[i]);
      }
     }
   });
@@ -89,13 +142,31 @@ function renderJsonReads(readsJsonLocation) {
 }
 
 // Renders reads by resolution
-function renderReadsByResolution(isHighRes, data, sample, i) {
+function renderReadsByResolution(isHighRes, data, rawSample) {
 
         var readTrackHeight = getTrackHeight();
         var readDiv = [];
+        var container = [];
+        var svgClass = "alignmentSvg";
+
+        var sample = filterName(rawSample);
+        var selector = "#" + sample + ">.alignmentData";
+
+        // check whether alignment container for this sample was already rendered
+        if ($(selector + ">." + svgClass).length == 0) {
+            container = d3.select(selector)
+                .append("svg")
+                .attr("class", svgClass)
+                .attr("height", (readsHeight))
+                .attr("width", width);
+        } else {
+            container = d3.select(selector).selectAll("svg");
+        }
+
+        var removed = container.selectAll("g").remove();
 
         // Making hover box
-        readDiv[i] = d3.select("#" + samples[i])
+        readDiv[i] = d3.select(selector)
           .append("div")
           .attr("class", "tooltip")
           .style("opacity", 0);
@@ -110,7 +181,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
            .scale(readsAxisScale);
 
         // Remove current axis to update it
-        readsSvgContainer[sample].select(".axis").remove();
+        container.select(".axis").remove();
 
         var selector = "#" + sample;
         sampleData[i] = [];
@@ -119,24 +190,21 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
         sampleData[i].pairs = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
         sampleData[i].filename = typeof data['filename'] != "undefined" ? data['filename'] : "";
+
         // Renders Reads Frequency
         renderJsonCoverage(data['freq'], i)
 
-        // print file name
-        // TODO: this should not be redrawn every page load
-        $("#" + samples[i] + ">." + fileSelector + ">.fixed-title").remove();
-        $("#" + samples[i] + ">." + fileSelector).append("<div class='fixed-title'>" + sampleData[i].filename + "</div>");
-
-        var numTracks = d3.max(sampleData[i].reads, function(d) {return d.track});
+        renderSamplename(i);
+        var numTracks = d3.max(data["tracks"], function(d) {return d.track});
         numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
         readsHeight = (numTracks+1)*readTrackHeight;
 
         // Reset size of svg container
-        readsSvgContainer[sample].attr("height", (readsHeight));
+        container.attr("height", (readsHeight));
 
         // Add the axis to the container
-        readsSvgContainer[sample].append("g")
+        container.append("g")
           .attr("class", "axis")
           .attr("transform", "translate(0, " + readsHeight + ")")
           .call(readsAxis);
@@ -145,7 +213,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         $(".verticalLine").attr("y2", readsHeight);
 
         //Add the rectangles
-        var rects = readsSvgContainer[sample].selectAll(".readrect").data(sampleData[i].reads);
+        var rects = container.selectAll(".readrect").data(data["tracks"]);
         var modify = rects.transition();
 
       modify
@@ -170,7 +238,6 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
               .style("opacity", .9);
             readDiv[i].html(
               "Read Name: " + d.readName + "<br>" +
-              "Sequence:" + d.sequence + "<br>" +
               "Start: " + d.start + "<br>" +
               "End: " + d.end + "<br>" +
               "Cigar:" + d.cigar + "<br>" +
@@ -194,11 +261,8 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
             .style("opacity", 0);
           });
 
-        var removed = rects.exit();
-        removed.remove();
-
         // white background for arrows
-        var arrowBkgds = readsSvgContainer[sample].selectAll(".bkgd").data(sampleData[i].reads);
+        var arrowBkgds = container.selectAll(".bkgd").data(data["tracks"]);
         var bkgdsModify = arrowBkgds.transition();
         bkgdsModify
         .attr('points', function(d) {
@@ -248,10 +312,7 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
                 }
               }).style("fill", "white");
 
-        var removedBkgds = arrowBkgds.exit();
-        removedBkgds.remove();
-
-        var arrowHeads = readsSvgContainer[sample].selectAll(".arrow").data(sampleData[i].reads);
+        var arrowHeads = container.selectAll(".arrow").data(data["tracks"]);
         var arrowModify = arrowHeads.transition();
         arrowModify
         .attr('points', function(d) {
@@ -304,16 +365,12 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
                   return "green";
                 }
             });
-
-        var removedArrows = arrowHeads.exit();
-        removedArrows.remove();
-
         // TODO: why is this defined twice?
-        numTracks = d3.max(sampleData[i].pairs, function(d) {return d.track});
+        numTracks = d3.max(data["matePairs"], function(d) {return d.track});
         numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
         // Add the lines connecting read pairs
-        var mateLines = readsSvgContainer[samples[i]].selectAll(".readPairs").data(sampleData[i].pairs);
+        var mateLines = container.selectAll(".readPairs").data(data["matePairs"]);
         modify = mateLines.transition();
         modify
           .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
@@ -332,18 +389,30 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
             .attr("strock-width", "1")
             .attr("stroke", "steelblue");
 
-      var removedGroupPairs = mateLines.exit();
-      removedGroupPairs.remove();
-
       if (indelCheck.checked) {
-        renderMismatches(sampleData[i].mismatches, sampleData[i].indels, samples[i]);
+        renderIndels(data["mismatches"], data["indels"], samples[i]);
       } else {
-        readsSvgContainer[sample].selectAll(".mismatch").remove()
+        container.selectAll(".mismatch").remove()
       }
 }
 
+function renderIndels(mismatches, indels, sample) {
+    renderIndels(mismatches, indels, sample, false)
+}
 
-function renderMismatches(mismatches, indels, sample) {
+function renderIndelCounts(indels, sample) {
+    renderIndels(null, indels, samples, true)
+}
+
+function renderMismatches(mismatches, sample) {
+    renderMismatches(mismatches, sample, false)
+}
+
+function renderMismatchCounts(mismatches, sample) {
+    renderMismatches(mismatches, samples, true)
+}
+
+function renderIndels(mismatches, indels, sample, isCountData) {
   var readTrackHeight = getTrackHeight();
   var selector = "#" + sample;
   var misMatchDiv = d3.select(selector)
@@ -351,27 +420,36 @@ function renderMismatches(mismatches, indels, sample) {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-  //Display M: This is where we compare mismatching pairs
-  if (mismatchCheck.checked) {
-    renderMCigar(mismatches, sample)
-  } else {
-    readsSvgContainer[sample].selectAll(".mrect").remove()
+  if (!isCountData) {
+    if (mismatchCheck.checked) {
+      renderMismatches(mismatches, sample)
+    } else {
+      readsSvgContainer[sample].selectAll(".mrect").remove()
+    }
   }
 
-  var misRects = readsSvgContainer[sample].selectAll(".mismatch").data(indels);
+  var misRects = readsSvgContainer[sample].selectAll(".indel").data(indels);
   var modMisRects = misRects.transition()
     .attr("x", (function(d) {
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-    .attr("y", (function(d) { return readsHeight - (readTrackHeight * (d.track+1)); }));
+    .attr("y", (function(d) {
+        if (isCountData) return 0
+        else
+            return readsHeight - (readTrackHeight * (d.track+1));
+    }));
 
   var newMisRects = misRects.enter();
   newMisRects
     .append("g")
     .append("rect")
-      .attr("class", "mismatch")
+      .attr("class", "indel")
       .attr("x", (function(d) {
         return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("y", (function(d) { return readsHeight - (readTrackHeight * (d.track+1)); }))
+      .attr("y", (function(d) {
+          if (isCountData) return readTrackHeight
+          else
+              return readsHeight - (readTrackHeight * (d.track+1));
+       }))
       .attr("width", (function(d) {
         if (d.op == "I" || d.op == "D" || d.op == "N") {
           return 5;
@@ -393,12 +471,8 @@ function renderMismatches(mismatches, indels, sample) {
           .style("opacity", .9);
         misMatchDiv.html(
           "Operation: " + d.op + "<br>" +
-          "Ref Start: " + d.refCurr + "<br>" +
-          "Read Start: " + d.start + "<br>" +
           "Length:" + (d.end - d.start) + "<br>" +
-          "Sequence: " + d.sequence + "<br>" +
-          "Map Quality: " + d.mapq + "<br>" +
-          "Track: " + d.track)
+          "Count: " + d.count )
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - yOffset) + "px");
       })
@@ -430,7 +504,7 @@ function renderMismatches(mismatches, indels, sample) {
 }
 
 //Render mismatching bases for cigar operator
-function renderMCigar(data, sample) {
+function renderMismatches(data, sample, isCountData) {
   // Making hover box
   var readTrackHeight = getTrackHeight();
   var selector = "#" + sample;
@@ -446,7 +520,11 @@ function renderMCigar(data, sample) {
   modifiedMRects
     .attr("x", (function(d) {
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-    .attr("y", function(d) { return d.refCurr})
+    .attr("y", (function(d) {
+        if (isCountData) return 0
+        else
+            return readsHeight - (readTrackHeight * (d.track+1));
+     }))
     .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)));
 
   var newMRects = mRects.enter();
@@ -456,7 +534,10 @@ function renderMCigar(data, sample) {
     .attr("class", "mrect")
     .attr("x", (function(d) {
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-    .attr("y", function(d) { return readsHeight - (readTrackHeight * (d.track+1));})
+    .attr("y", (function(d) {
+        if (isCountData) return 0
+        else
+            return readsHeight - (readTrackHeight * (d.track+1))}))
     .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
     .attr("height", (readTrackHeight-1))
     .attr("fill", function(d) {
@@ -477,21 +558,35 @@ function renderMCigar(data, sample) {
       misMatchDiv.transition()
         .duration(200)
         .style("opacity", .9);
-      misMatchDiv.html(
-        "Ref Base: " + d.refBase + "<br>" +
-        "Base: " + d.sequence)
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - yOffset) + "px");
+      if (isCountData) {
+          var counts = d.count
+          var aCount = typeof counts["A"] != "undefined" ? counts["A"] : 0;
+          var tCount = typeof counts["T"] != "undefined" ? counts["T"] : 0;
+          var cCount = typeof counts["C"] != "undefined" ? counts["C"] : 0;
+          var gCount = typeof counts["G"] != "undefined" ? counts["G"] : 0;
+          misMatchDiv.html(
+              "Ref Base: " + d.refBase + "<br>" +
+              "Base Counts:<br> " + "A: " + aCount + "<br>T: " + tCount + "<br>C: " + cCount + "<br>G: " + gCount)
+              .style("left", (d3.event.pageX) + "px")
+              .style("top", (d3.event.pageY - yOffset) + "px");
+      } else {
+        misMatchDiv.html(
+          "Ref Base: " + d.refBase + "<br>" +
+          "Base: " + d.sequence)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - yOffset) + "px");
+      }
     })
     .on("mouseover", function(d) {
-      misMatchDiv.transition()
-        .duration(200)
-        .style("opacity", .9);
-      misMatchDiv.html(
-        "Ref Base: " + d.refBase + "<br>" +
-        "Base: " + d.sequence)
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - yOffset) + "px");
+        misMatchDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+        var sequence = isCountData == true ? "" : "<br>Base: " + d.sequence;
+        misMatchDiv.html(
+            "Ref Base: " + d.refBase +
+            sequence)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - yOffset) + "px");
     })
     .on("mouseout", function(d) {
         misMatchDiv.transition()

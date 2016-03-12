@@ -5,7 +5,7 @@ var height = 100;
 
 var svgContainer = {};
 for (var i = 0; i < samples.length; i++) {
-  var selector = "#" + samples[i] + ">.col-md-10>.sampleCoverage";
+  var selector = "#" + samples[i] + ">.sampleCoverage";
   svgContainer[samples[i]] = d3.select(selector)
     .append("svg")
       .attr("class", "coverage-svg")

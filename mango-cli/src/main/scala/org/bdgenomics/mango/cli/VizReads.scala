@@ -43,6 +43,7 @@ import org.scalatra.ScalatraServlet
 object VizTimers extends Metrics {
   //HTTP requests
   val ReadsRequest = timer("GET reads")
+  val MergedReadsRequest = timer("GET merged reads")
   val FreqRequest = timer("GET frequency")
   val VarRequest = timer("GET variants")
   val VarFreqRequest = timer("Get variant frequency")
@@ -65,6 +66,7 @@ object VizTimers extends Metrics {
 
 object VizReads extends BDGCommandCompanion with Logging {
 
+  var readsRDD: RDD[(ReferenceRegion, AlignmentRecord)] = null
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
 
@@ -265,21 +267,72 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+
               val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
-              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
               val fileMap = VizReads.readsData.getFileMap()
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
-                val dictionary = VizReads.formatDictionaryOpts(VizReads.globalDict)
+                val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
+                sampleData match {
+                  case Some(_) =>
+                    readRetJson += "\"" + sample + "\":" +
+                      "{ \"dictionary\": " + write(dictionary) +
+                      ", \"tracks\": " + write(sampleData.get.records) +
+                      ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+                      ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+                      ", \"matePairs\": " + write(sampleData.get.matePairs) + "},"
+                  case None =>
+                    readRetJson += "\"" + sample + "\":" +
+                      "{ \"filename\": " + write(fileMap(sample)) + "},"
+                }
+
+              }
+              readRetJson = readRetJson.dropRight(1)
+              readRetJson = "{" + readRetJson + "}"
+              readRetJson
+            } case None => {
+              write("")
+            }
+          }
+        } case None => write("")
+      }
+    }
+  }
+
+  get("/mergedReads/:ref") {
+    VizTimers.AlignmentRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        Math.min(params("end").toLong, VizReads.readsData.dict(params("ref").toString).get.length))
+      contentType = "json"
+      val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
+      dictOpt match {
+        case Some(_) => {
+          val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
+          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val reference = VizReads.getReference(region)
+          val readQuality = params.getOrElse("quality", "0")
+
+          val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
+          dataOption match {
+            case Some(_) => {
+              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
+              val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+
+              val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, reference, region, sampleIds)
+              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
+              val fileMap = VizReads.readsData.getFileMap()
+              val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
+              var readRetJson: String = ""
+              for (sample <- sampleIds) {
+                val sampleData = alignmentData.get(sample)
                 sampleData match {
                   case Some(_) =>
                     readRetJson += "\"" + sample + "\":" +
                       "{ \"filename\": " + write(fileMap(sample)) +
-                      ", \"tracks\": " + write(sampleData.get.records) +
-                      ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
-                      ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
-                      ", \"matePairs\": " + write(sampleData.get.matePairs) +
+                      ", \"indels\": " + write(sampleData.get.filter(_.op != "M")) +
+                      ", \"mismatches\": " + write(sampleData.get.filter(_.op == "M")) +
                       ", \"freq\": " + write(freqData.get(sample)) + "},"
                   case None =>
                     readRetJson += "\"" + sample + "\":" +

@@ -40,6 +40,21 @@ object MismatchLayout extends Logging {
   }
 
   /**
+   * An implementation of AlignmentRecordLayout which takes in an Iterator of (ReferenceRegion, AlignmentRecord) tuples, the reference String
+   * over the region, and the region viewed.
+   *
+   * @param iter: Iterator of (ReferenceRegion, AlignmentRecord) tuples
+   * @param reference: reference string used to calculate mismatches
+   * @param region: ReferenceRegion to be viewed
+   * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
+   */
+  def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion): Iterator[(String, List[MisMatch])] = {
+    val alignments: List[AlignmentRecord] = iter.toList.map(_._2)
+    // get all mismatches for each read
+    alignments.map(r => (r.getRecordGroupSample, MismatchLayout(r, reference, region))).toIterator
+  }
+
+  /**
    * Finds and returns all indels and mismatches of a given alignment record from an overlapping reference string.
    * Must take into account overlapping regions that are not covered by both the reference and record sequence.
    *
@@ -133,7 +148,7 @@ object MismatchLayout extends Logging {
   /**
    * Determines weather a given AlignmentRecord contains indels using its cigar
    *
-   * @param record: AlignmentRecord
+   * @param rec: AlignmentRecord
    * @return Boolean whether record contains any indels
    */
   def containsIndels(rec: AlignmentRecord): Boolean = {
@@ -176,7 +191,7 @@ object MisMatchJson {
   /**
    * An implementation of MismatchJson which converts a single Mismatch into MisMatch Json
    *
-   * @param recs The single MisMatch to lay out in json
+   * @param rec The single MisMatch to lay out in json
    * @param track js track number
    * @return List of MisMatch Json objects
    */
@@ -185,8 +200,84 @@ object MisMatchJson {
   }
 }
 
+object PointMisMatch {
+
+  /**
+   * aggregated point mismatch at a specific location
+   *
+   * @param mismatches: List of mismatches to be grouped by start value
+   * @return List of aggregated mismatches and their corresponding counts
+   */
+  def apply(mismatches: List[MisMatch]): List[MutationCount] = {
+    val grouped = mismatches.groupBy(_.start)
+    grouped.mapValues(reducePoints(_)).values.toList
+  }
+
+  /**
+   * aggregated point mismatch at a specific location
+   *
+   * @param mismatches: List of mismatches to be grouped by start value
+   * @return aggregated mismatches and their corresponding counts
+   */
+  private def reducePoints(mismatches: List[MisMatch]): MutationCount = {
+
+    val refCurr = mismatches.head.refCurr
+    val refBase = mismatches.head.refBase // TODO: this will cause an issue if you have an indel and mismatch at the same location
+    val start = mismatches.head.start
+    val end = mismatches.head.end // TODO: this may vary
+
+    // count each occurrence of a mismatch
+    val ms: Map[String, Long] = mismatches.filter(_.op == "M").map(r => (r.sequence, 1L))
+      .groupBy(_._1)
+      .map { case (group: String, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
+
+    if (!ms.isEmpty) {
+      return MisMatchCount("M", refCurr, start, end, refBase, ms)
+    } else {
+      val iCount = mismatches.filter(_.op == "I").size
+      val dCount = mismatches.filter(_.op == "D").size
+      val nCount = mismatches.filter(_.op == "N").size
+
+      if (iCount > 0) {
+        IndelCount("I", refCurr, start, end, iCount)
+      } else if (dCount > 0) {
+        IndelCount("D", refCurr, start, end, dCount)
+      } else if (nCount > 0) {
+        IndelCount("N", refCurr, start, end, nCount)
+      } else {
+        null
+      }
+    }
+
+  }
+
+}
+
 // tracked MisMatch Json Object
 case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String, track: Long)
 
+/**
+ * aggregated point mismatch at a specific location
+ *
+ * @param refCurr: location of reference corresponding to mismatch
+ * @param refBase: base at reference corresponding to mismatch
+ * @param start: start of mismatch or indel
+ * @param end: end of mismatch or indel
+ * @param mismatches: Map of either [String, Long] for I,D or N or [String, (sequence, Long)] for M
+ */
+case class PointMisMatch(refCurr: Long, refBase: String, start: Long, end: Long, indels: Map[String, Long], mismatches: Map[String, Long])
+
 // untracked Mismatch Json Object
 case class MisMatch(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String)
+
+// counts is a map of sequence, count for mismatches
+case class MisMatchCount(op: String, refCurr: Long, start: Long, end: Long, refBase: String, count: Map[String, Long]) extends MutationCount
+case class IndelCount(op: String, refCurr: Long, start: Long, end: Long, count: Long) extends MutationCount
+
+trait MutationCount {
+  def op: String
+  def start: Long
+  def end: Long
+  def refCurr: Long
+  def count: Any
+}

@@ -1,7 +1,7 @@
 // Filters invalid characters from string to create javascript descriptor
 // Svg Containers for refArea (exists is all views)
 var refHeight = 38;
-var refWidth = $(".col-md-10.graphArea").width();
+var refWidth = $(".graphArea").width();
 
 var refContainer = d3.select("#refArea")
   .append("svg")

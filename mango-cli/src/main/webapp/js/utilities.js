@@ -2,12 +2,26 @@
 
 var barWidth = 21;
 
+function setGlobalReferenceRegion(refName, start, end) {
+    viewRefName = refName;
+    viewRegStart = start;
+    viewRegEnd = end;
+}
+
+function setGlobalMapQ(mapq) {
+    mapQuality = mapq;
+}
+
 function filterNames(arr) {
   var filteredArr = [];
   for (var i = 0; i < arr.length; i++) {
     filteredArr[i] = arr[i].replace("/","");
   }
   return filteredArr;
+}
+
+function filtername(name) {
+  filteredArr[i] = name.replace("/","");
 }
 
 Array.prototype.contains = function(v) {
@@ -44,10 +58,17 @@ function getTrackHeight() {
 function checkboxChange() {
   for (var i = 0; i < samples.length; i++) {
     if (indelCheck.checked) {
-      renderMismatches(sampleData[i].mismatches, sampleData[i].indels, samples[i]);
-    } else  {
-      readsSvgContainer[samples[i]].selectAll(".mismatch").remove();
+      $(".indel").show();
+    } else {
+      $(".indel").hide();
     }
+
+    if (mismatchCheck.checked) {
+      $(".mrect").show();
+    } else {
+      $(".mrect").hide();
+    }
+
     if (coverageCheck.checked) {
       $(".sampleCoverage").show();
     } else {
@@ -154,7 +175,9 @@ function checkFormVariants(form) {
   var region = info.split(":")[1].split("-");
   var newStart = Math.max(0, region[0]);
   var newEnd = Math.max(newStart, region[1]);
-  renderVariantFrequency(refName, newStart, newEnd);
+  setGlobalReferenceRegion(refName, newStart, newEnd);
+
+  renderVariantFrequency();
   renderVariants(refName, newStart, newEnd);
   renderReference(refName, newStart, newEnd);
 }

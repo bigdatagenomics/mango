@@ -1,5 +1,5 @@
 //Configuration Variables
-var width = $(".sampleReads").width();
+var width = $(".mergedReads").width();
 var base = 50;
 var trackHeight = 6;
 
@@ -77,9 +77,8 @@ render(viewRefName, viewRegStart, viewRegEnd);
 // Functions
 function render(refName, start, end, mapQuality) {
   //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
+  setGlobalReferenceRegion(refName, start, end);
+  setGlobalMapQ(mapQuality);
 
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
@@ -101,7 +100,7 @@ function render(refName, start, end, mapQuality) {
 
   // Reads and Coverage
   if (readsExist) {
-    renderReads(refName, start, end, mapQuality);
+    renderMergedReads(refName, start, end, mapQuality);
   }
 }
 

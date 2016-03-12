@@ -5,7 +5,7 @@ var varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegSta
 var refHeight = 38;
 var varHeight = 0; //Default variable: this will change based on number of tracks
 var freqHeight = 200;
-var width = $("#varArea").width() - barWidth;
+var width = $("#varArea").width();
 
 
 // Svg container for variant frequency
@@ -16,21 +16,11 @@ var svg = d3.select("#varFreqArea")
 
 // Functions
 function renderVariants(refName, start, end) {
-  //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
   varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   renderJsonVariants();
-
 }
 function renderVariantFrequency(refName, start, end) {
-  //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
-
   renderVariantFrequency();
 
 }

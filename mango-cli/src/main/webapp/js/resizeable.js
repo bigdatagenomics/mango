@@ -6,7 +6,6 @@ jQuery(function($) {
         .parent()
           .css({'display':'inline-block',
                 'overflow':'hidden',
-                'height': '100%',
                 'width': '100%'
 
               }).resizable({
@@ -16,7 +15,6 @@ jQuery(function($) {
               })
                   .find('.resize-vertical')
                     .css({overflow:'auto',
-                          width:'100%',
-                          height:'100%'});
+                          width:'100%'});
 
 });
