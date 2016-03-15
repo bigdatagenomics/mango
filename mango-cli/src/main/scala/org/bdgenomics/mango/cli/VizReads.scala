@@ -25,6 +25,7 @@ import org.apache.spark.{ Logging, SparkContext }
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
@@ -146,6 +147,7 @@ object VizReads extends BDGCommandCompanion with Logging {
       case Some(_) => {
         val end: Long = Math.min(region.end, seqRecord.get.length)
         if (VizReads.referencePath.endsWith(".adam")) {
+          refRDD.persist(StorageLevel.MEMORY_AND_DISK)
           Option(refRDD.adamGetReferenceString(region))
         } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta")) {
           val idx = new File(VizReads.referencePath + ".fai")
@@ -163,6 +165,7 @@ object VizReads extends BDGCommandCompanion with Logging {
               }
             }
           } else { //No fasta index provided
+            refRDD.persist(StorageLevel.MEMORY_AND_DISK)
             Option(refRDD.adamGetReferenceString(region))
           }
         } else {
