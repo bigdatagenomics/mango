@@ -59,39 +59,23 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     dict
   }
 
-  def setDictionary(filePath: String) {
-    val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
-    val isGenotype = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
-
-    if (isAlignmentRecord) {
-      dict = sc.adamDictionaryLoad[AlignmentRecord](filePath)
-    } else if (isGenotype) {
-      // TODO: this takes forever
-      // val projection = Projection(GenotypeField.variant)
-      // val projected: RDD[Genotype] = sc.loadParquet[Genotype](filePath, None, projection = Some(projection))
-      // val recs: RDD[SequenceRecord] = projected.map(rec => SequenceRecord(rec.getVariant.getContig.getContigName, (rec.getVariant.end - rec.getVariant.start)))
-      // dict = recs.aggregate(SequenceDictionary())(
-      //   (dict: SequenceDictionary, rec: SequenceRecord) => dict + rec,
-      //   (dict1: SequenceDictionary, dict2: SequenceDictionary) => dict1 ++ dict2)
-      dict = new SequenceDictionary(Vector(SequenceRecord("20", 25000000L),
-        SequenceRecord("chrM", 2000L),
-        SequenceRecord("chr3", 2000L)))
-    }
+  def setDictionary(seqDict: SequenceDictionary) {
+    dict = seqDict
   }
 
   // Stores location of sample at a given filepath
-  def loadSample(sampleId: String, filePath: String) {
+  def loadSample(sampleId: String, filePath: String, seqdict: SequenceDictionary) {
     if (dict == null) {
-      setDictionary(filePath)
+      setDictionary(seqdict)
       setPartitioner
     }
     fileMap += ((sampleId, filePath))
   }
 
-  def loadADAMSample(filePath: String): String = {
+  def loadADAMSample(filePath: String, seqDict: SequenceDictionary): String = {
     val region = ReferenceRegion("new", 0, chunkSize - 1)
+    setDictionary(seqDict)
     val (rdd, sd, rd): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
-    dict = sd
     if (partitioner == null)
       setPartitioner
     val sample = rd.recordGroups.head.sample

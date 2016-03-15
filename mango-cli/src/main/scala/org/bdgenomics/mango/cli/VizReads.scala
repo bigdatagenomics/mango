@@ -64,10 +64,6 @@ object VizTimers extends Metrics {
 
 object VizReads extends BDGCommandCompanion with Logging {
 
-  var readsRDD: RDD[(ReferenceRegion, AlignmentRecord)] = null
-  var testRDD: RDD[(String, AlignmentRecord)] = null
-  var testRDD2: RDD[Genotype] = null
-
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
 
@@ -82,6 +78,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var variantsExist: Boolean = false
   var featuresPath: String = ""
   var featuresExist: Boolean = false
+  var globalDict: SequenceDictionary = null
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
@@ -112,6 +109,15 @@ object VizReads extends BDGCommandCompanion with Logging {
 
     //Print Maximum available memory
     println("Max Memory:" + runtime.maxMemory() / mb)
+  }
+
+  def setSequenceDictionary(filePath: String) = {
+    if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
+      val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
+      globalDict = SequenceDictionary(fseq.getSequenceDictionary())
+    } else { //ADAM
+      globalDict = sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
+    }
   }
 
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
@@ -436,6 +442,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     if (args.referencePath.endsWith(".fa") || args.referencePath.endsWith(".fasta") || args.referencePath.endsWith(".adam")) {
       VizReads.referencePath = args.referencePath
+      VizReads.setSequenceDictionary(args.referencePath)
+      //TODO: working reference set
     } else {
       log.info("WARNING: Invalid reference file")
       println("WARNING: Invalid reference file")
@@ -454,9 +462,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             val rec: SAMRecord = samReader.iterator().next()
             val sample = rec.getReadGroup.getSample
             sampNamesBuffer += sample
-            VizReads.readsData.loadSample(sample, readsPath)
+            VizReads.readsData.loadSample(sample, readsPath, VizReads.globalDict)
           } else if (readsPath.endsWith(".adam")) {
-            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
+            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath, VizReads.globalDict)
           } else {
             log.info("WARNING: Invalid input for reads file")
             println("WARNING: Invalid input for reads file")
@@ -475,12 +483,10 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         if (args.variantsPath.endsWith(".vcf")) {
           VizReads.variantsPath = args.variantsPath
           // TODO: remove hardcode for callset1
-          VizReads.variantData.loadSample("callset1", VizReads.variantsPath)
+          VizReads.variantData.loadSample("callset1", VizReads.variantsPath, VizReads.globalDict)
           VizReads.variantsExist = true
-          VizReads.testRDD2 = VizReads.sc.loadParquetGenotypes(args.variantsPath)
-          VizReads.testRDD2.cache()
         } else if (args.variantsPath.endsWith(".adam")) {
-          VizReads.readsData.loadADAMSample(VizReads.variantsPath)
+          VizReads.readsData.loadADAMSample(VizReads.variantsPath, VizReads.globalDict)
         } else {
           log.info("WARNING: Invalid input for variants file")
           println("WARNING: Invalid input for variants file")

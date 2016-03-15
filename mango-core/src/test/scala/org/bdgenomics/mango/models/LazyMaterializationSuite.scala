@@ -58,7 +58,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     val sample = "sample1"
     var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
-    lazyMat.loadSample(sample, bamFile)
+    lazyMat.loadSample(sample, bamFile, sd)
 
     val region = new ReferenceRegion("chrM", 0L, 1000L)
 
@@ -74,8 +74,8 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
     val region = new ReferenceRegion("chrM", 0L, 100L)
-    lazyMat.loadSample(sample1, bamFile)
-    lazyMat.loadSample(sample2, bamFile)
+    lazyMat.loadSample(sample1, bamFile, sd)
+    lazyMat.loadSample(sample2, bamFile, sd)
     val results1 = lazyMat.get(region, sample1).get
     val lazySize1 = results1.count
 
@@ -89,7 +89,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
     val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
-    lazyMat.loadSample(sample1, bamFile)
+    lazyMat.loadSample(sample1, bamFile, sd)
     val results = lazyMat.get(bigRegion, sample1).get
     val lazySize = results.count
 
@@ -102,7 +102,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
     val bigRegion = new ReferenceRegion("M", 0L, 20000L)
-    lazyMat.loadSample(sample1, bamFile)
+    lazyMat.loadSample(sample1, bamFile, sd)
     val results = lazyMat.get(bigRegion, sample1)
 
     assert(results == None)
@@ -112,7 +112,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val region = new ReferenceRegion("chrM", 0L, 100L)
     val callset = "callset1"
     var lazyMat = LazyMaterialization[Genotype](sc, 10)
-    lazyMat.loadSample(callset, vcfFile)
+    lazyMat.loadSample(callset, vcfFile, sd)
 
     val results = lazyMat.get(region, callset).get
     assert(results.count == 3)
