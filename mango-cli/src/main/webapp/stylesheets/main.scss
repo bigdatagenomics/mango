@@ -67,6 +67,27 @@ input[type="text"] {
     margin-left:15px;
 }
 
+.main {
+  position: relative;
+  margin-right: 320px;
+  margin-left: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border-radius:5px;
+  padding: 20px;
+}
+.panel   { 
+  background: #ccc;
+  margin-right: 320px;
+  margin-left: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  padding: 20px;
+  width: 260px;
+  float:left; }
+
+
 #refArea {
     border-radius: 5px;
     border: 1.5px solid $refBorder;
