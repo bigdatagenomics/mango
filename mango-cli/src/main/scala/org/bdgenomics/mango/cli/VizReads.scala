@@ -79,6 +79,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var featuresPath: String = ""
   var featuresExist: Boolean = false
   var globalDict: SequenceDictionary = null
+  var refRDD: RDD[NucleotideContigFragment] = null
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
@@ -145,8 +146,7 @@ object VizReads extends BDGCommandCompanion with Logging {
       case Some(_) => {
         val end: Long = Math.min(region.end, seqRecord.get.length)
         if (VizReads.referencePath.endsWith(".adam")) {
-          val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
-          Option(referenceRDD.adamGetReferenceString(region))
+          Option(refRDD.adamGetReferenceString(region))
         } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta")) {
           val idx = new File(VizReads.referencePath + ".fai")
           if (idx.exists() && !idx.isDirectory) {
@@ -163,8 +163,7 @@ object VizReads extends BDGCommandCompanion with Logging {
               }
             }
           } else { //No fasta index provided
-            val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
-            Option(referenceRDD.adamGetReferenceString(region))
+            Option(refRDD.adamGetReferenceString(region))
           }
         } else {
           log.warn("reference file type ", VizReads.referencePath, " not supported")
@@ -442,6 +441,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     if (args.referencePath.endsWith(".fa") || args.referencePath.endsWith(".fasta") || args.referencePath.endsWith(".adam")) {
       VizReads.referencePath = args.referencePath
       VizReads.setSequenceDictionary(args.referencePath)
+      VizReads.refRDD = VizReads.sc.loadSequence(VizReads.referencePath)
+
       //TODO: working reference set
     } else {
       log.info("WARNING: Invalid reference file")
