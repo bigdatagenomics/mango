@@ -14,7 +14,8 @@
     <script src="resources/js/jquery.min.js"></script>
     <script src="resources/js/jquery-ui.min.js"></script>
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
-    <script src="js/jquery.autocomplete.min.js"></script>
+    <script src="resources/js/bigSlide.js"></script>
+    <script src="js/jquery.autocomplete.min.js"></script>    
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
@@ -22,153 +23,166 @@
 </head>
 
 <!-- Fixed navbar -->
-<nav class="navbar navbar-default">
-  <div class="container">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
+<div class="main push">
+  <nav class="navbar navbar-default">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
+      <div id="navbar" class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">File</a>
+            <ul class="dropdown-menu" id="menu1">
+              <li><label for="loadFile">Load File</label><input id="loadFile" type="file" style="position: fixed; top: -100em">
+              </li>
+              <li><label for="loadRef">Load Reference</label><input id="loadRef" type="file" style="position: fixed; top: -100em"></li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
+            <ul class="dropdown-menu" id="menu1">
+              <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck">
+              <li class="refDependancy"><label for="indelCheck">Indels</label></li>
+              <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck">
+              <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
+              <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
+              <li><label for="coverageCheck">Coverage</label></li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">Tracks</a>
+            <ul class="dropdown-menu" id="menu1" style="min-width:100px">
+              <li><label for="sortTracks">Sort Tracks</label></li>
+              <li><label for="filterTracks">Filter tracks</label></li>
+              <li><label for="groupTracks">Group tracks</label></li>
+            </ul>
+          </li>
+
+          <li class="active"><a href="overall">Overall</a></li>
+          <li><a href="variants">Variant Frequency</a></li>
+        </ul>
+      </div><!--/.nav-collapse -->
     </div>
-    <div id="navbar" class="navbar-collapse collapse">
-      <ul class="nav navbar-nav">
+  </nav>
+    <nav id="menu" class="panel" role="navigation">
+    <h2> Reference Panel </h2>
+  </nav>
 
-        <li class="dropdown">
-          <a href="#" data-toggle="dropdown" class="dropdown-toggle">File</a>
-          <ul class="dropdown-menu" id="menu1">
-            <li><label for="loadFile">Load File</label><input id="loadFile" type="file" style="position: fixed; top: -100em">
-            </li>
-            <li><label for="loadRef">Load Reference</label><input id="loadRef" type="file" style="position: fixed; top: -100em"></li>
-          </ul>
-        </li>
+  <script>
+      $(document).ready(function() {
+          $('.menu-link').bigSlide();
+      });
+  </script>
 
-        <li class="dropdown">
-          <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
-          <ul class="dropdown-menu" id="menu1">
-            <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck">
-            <li class="refDependancy"><label for="indelCheck">Indels</label></li>
-            <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck">
-            <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
-            <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
-            <li><label for="coverageCheck">Coverage</label></li>
-          </ul>
-        </li>
-
-        <li class="dropdown">
-          <a href="#" data-toggle="dropdown" class="dropdown-toggle">Tracks</a>
-          <ul class="dropdown-menu" id="menu1" style="min-width:100px">
-            <li><label for="sortTracks">Sort Tracks</label></li>
-            <li><label for="filterTracks">Filter tracks</label></li>
-            <li><label for="groupTracks">Group tracks</label></li>
-          </ul>
-        </li>
-
-        <li class="active"><a href="overall">Overall</a></li>
-        <li><a href="variants">Variant Frequency</a></li>
-      </ul>
-    </div><!--/.nav-collapse -->
-  </div>
-</nav>
-
-<div id = "navigation">
-    <ul>
-        <li>move:</li>
-        <li>
-            <input name="Move very far left button"
-              type="button"
-              value="<<<"
-              onclick="moveVeryFarLeft()"
-              class="btn btn-primary btn-xs"/>
-        </li>
-        <li>
-            <input name="Move far left button"
-              type="button"
-              value="<<"
-              onclick="moveFarLeft()"
-              class="btn btn-primary btn-xs"/>
-        </li>
-        <li>
-            <input name="Move left button"
-              type="button"
-              value="<"
-              onclick="moveLeft()"
-              class="btn btn-primary btn-xs"/>
-        </li>
-        <li>
-            <input name="Move right button"
-              type="button"
-              value=">"
-              onclick="moveRight()"
-              class="btn btn-info btn-xs"/>
-        </li>
-        <li>
-            <input name="Move far right button"
-              type="button"
-              value=">>"
-              onclick="moveFarRight()"
-              class="btn btn-info btn-xs"/>
-        </li>
-        <li>
-            <input name="Move very far right button"
-              type="button"
-              value=">>>"
-              onclick="moveVeryFarRight()"
-              class="btn btn-info btn-xs"/>
-        </li>
-        <li>zoom:</li>
-        <li>
-            <input name="Zoom in button"
-              type="button"
-              value="++"
-              onclick="zoomIn()"
-              class="btn btn-warning btn-xs"/>
-        </li>
-        <li>
-            <input name="Zoom out button"
-              type="button"
-              value="--"
-              onclick="zoomOut()"
-              class="btn btn-warning btn-xs"/>
-        </li>
-        <li>
-        <form id="regForm" name="regForm" method="GET" class="form-inline">
-        region:
-        <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
-        </li>
-        <li>
-          mapping quality:
-        </li>
-        <li>
-          <input type="range" name="quality" id="quality" min="0" max="100">
-        </li>
-        <li>
-          <input name="Submit button"
+  <div id = "navigation">
+      <ul>
+          <li>move:</li>
+          <li>
+              <input name="Move very far left button"
                 type="button"
-                value="Submit"
-                onclick="checkForm(this.form)"
-                class="btn btn-danger btn-xs"/>
-          </form>
-        </li>
-     </ul>
-    <br>
+                value="<<<"
+                onclick="moveVeryFarLeft()"
+                class="btn btn-primary btn-xs"/>
+          </li>
+          <li>
+              <input name="Move far left button"
+                type="button"
+                value="<<"
+                onclick="moveFarLeft()"
+                class="btn btn-primary btn-xs"/>
+          </li>
+          <li>
+              <input name="Move left button"
+                type="button"
+                value="<"
+                onclick="moveLeft()"
+                class="btn btn-primary btn-xs"/>
+          </li>
+          <li>
+              <input name="Move right button"
+                type="button"
+                value=">"
+                onclick="moveRight()"
+                class="btn btn-info btn-xs"/>
+          </li>
+          <li>
+              <input name="Move far right button"
+                type="button"
+                value=">>"
+                onclick="moveFarRight()"
+                class="btn btn-info btn-xs"/>
+          </li>
+          <li>
+              <input name="Move very far right button"
+                type="button"
+                value=">>>"
+                onclick="moveVeryFarRight()"
+                class="btn btn-info btn-xs"/>
+          </li>
+          <li>zoom:</li>
+          <li>
+              <input name="Zoom in button"
+                type="button"
+                value="++"
+                onclick="zoomIn()"
+                class="btn btn-warning btn-xs"/>
+          </li>
+          <li>
+              <input name="Zoom out button"
+                type="button"
+                value="--"
+                onclick="zoomOut()"
+                class="btn btn-warning btn-xs"/>
+          </li>
+          <li>
+          <form id="regForm" name="regForm" method="GET" class="form-inline">
+          region:
+          <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+          </li>
+          <li>
+            mapping quality:
+          </li>
+          <li>
+            <input type="range" name="quality" id="quality" min="0" max="100">
+          </li>
+          <li>
+            <input name="Submit button"
+                  type="button"
+                  value="Submit"
+                  onclick="checkForm(this.form)"
+                  class="btn btn-danger btn-xs"/>
+            </form>
+          </li>
+          <li><a href="#menu" class="menu-link">&#9776;</a></li>
+       </ul>
+      <br>
+  </div>
+  
+  <br>
+  <div class="row top">
+    <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
+  </div>
+  <div class="row top">
+    <div class="col-md-10 graphArea" id="featArea" style="float:right"></div>
+  </div>
+  <div class="row top">
+    <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
+  </div>
+  <div class="graphArea" id="readsArea">
+  </div>
+
+  <br>
 </div>
 
-<br>
-
-<div class="row top">
-  <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
-</div>
-<div class="row top">
-  <div class="col-md-10 graphArea" id="featArea" style="float:right"></div>
-</div>
-<div class="row top">
-  <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
-</div>
-
-<div class="graphArea" id="readsArea"></div>
-<br>
 
 <script src="js/utilities.js"></script>
 <script>
