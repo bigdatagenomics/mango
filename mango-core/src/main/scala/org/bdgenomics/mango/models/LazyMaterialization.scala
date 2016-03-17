@@ -86,7 +86,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     contigNames.foreach(n => rememberValues(ReferenceRegion(n, region.start, region.end), List(sample)))
 
     intRDD = IntervalRDD(rdd.partitionBy(partitioner))
-    intRDD.persist()
+    intRDD.persist(StorageLevel.MEMORY_AND_DISK)
     return sample
   }
 
@@ -242,8 +242,10 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
           val data = loadFromFile(reg, k)
           if (intRDD == null) {
             intRDD = IntervalRDD(data)
+            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
           } else {
             intRDD = intRDD.multiput(data)
+            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
           }
         })
         rememberValues(region, ks)
