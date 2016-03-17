@@ -15,7 +15,7 @@ mango uses [IntervalRDDs](https://github.com/akmorrow13/spark-intervalrdd) to pe
 ## Installation
 You will need to have [Maven](http://maven.apache.org/) installed in order to build mango.
 
-> **Note:** The default configuration is for Hadoop 2.2.0. If building against a different
+> **Note:** The default configuration is for Hadoop 2.6.0. If building against a different
 > version of Hadoop, please edit the build configuration in the `<properties>` section of
 > the `pom.xml` file.
 
