@@ -35,6 +35,7 @@ import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
+import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.ScalatraServlet
 
