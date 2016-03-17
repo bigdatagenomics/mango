@@ -17,32 +17,26 @@
  */
 package org.bdgenomics.mango.cli
 
-import com.github.erictu.intervaltree._
-import edu.berkeley.cs.amplab.spark.intervalrdd._
-import htsjdk.samtools.reference.{ FastaSequenceIndex, FastaSequenceFile, IndexedFastaSequenceFile, ReferenceSequence }
-import htsjdk.samtools.{ SAMRecord, SAMReadGroupRecord, SamReader, SamReaderFactory }
+import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile }
+import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import java.io.File
 import net.liftweb.json.Serialization.write
-import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.SparkContext._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.utils.cli._
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferencePosition, ReferenceRegion, VariantContext }
-import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
+import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.projections.{ Projection, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, NucleotideContigFragment }
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
-import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.ScalatraServlet
-import org.apache.spark.util.SizeEstimator
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -90,6 +84,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
+
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
@@ -98,25 +93,24 @@ object VizReads extends BDGCommandCompanion with Logging {
    * Prints java heap map availability and usage
    */
   def printSysUsage() = {
-    val mb: Int = 1024 * 1024;
+    val mb: Int = 1024 * 1024
     //Getting the runtime reference from system
-    var runtime: Runtime = Runtime.getRuntime();
+    val runtime: Runtime = Runtime.getRuntime
 
-    println("##### Heap utilization statistics [MB] #####");
+    println("##### Heap utilization statistics [MB] #####")
 
     //Print used memory
     println("Used Memory:"
-      + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+      + (runtime.totalMemory() - runtime.freeMemory()) / mb)
 
     //Print free memory
-    println("Free Memory:"
-      + runtime.freeMemory() / mb);
+    println("Free Memory:" + runtime.freeMemory() / mb)
 
     //Print total available memory
-    println("Total Memory:" + runtime.totalMemory() / mb);
+    println("Total Memory:" + runtime.totalMemory() / mb)
 
     //Print Maximum available memory
-    println("Max Memory:" + runtime.maxMemory() / mb);
+    println("Max Memory:" + runtime.maxMemory() / mb)
   }
 
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
@@ -127,7 +121,7 @@ object VizReads extends BDGCommandCompanion with Logging {
         var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
         var positionCount: Long = region.start
         for (base <- splitReference) {
-          tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+          tracks += new ReferenceJson(base.toUpperCase, positionCount)
           positionCount += 1
         }
         tracks.toList
@@ -144,12 +138,12 @@ object VizReads extends BDGCommandCompanion with Logging {
       case Some(_) => {
         val end: Long = Math.min(region.end, seqRecord.get.length)
         if (VizReads.referencePath.endsWith(".adam")) {
-          val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
+          val pred: FilterPredicate = (LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end)
           val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
           Option(referenceRDD.adamGetReferenceString(region))
         } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta")) {
           val idx = new File(VizReads.referencePath + ".fai")
-          if (idx.exists() && !idx.isDirectory()) {
+          if (idx.exists() && !idx.isDirectory) {
             VizReads.faWithIndex match {
               case Some(_) => {
                 val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
@@ -178,23 +172,23 @@ object VizReads extends BDGCommandCompanion with Logging {
   }
 
   def formatDictionaryOpts(dict: SequenceDictionary): List[String] = {
-    dict.records.map(r => (r.name + ":0-" + r.length)).toList
+    dict.records.map(r => r.name + ":0-" + r.length).toList
   }
 
   //Correctly shuts down the server
   def quit() {
     val thread = new Thread {
-      override def run {
+      override def run() {
         try {
           log.info("Shutting down the server")
           println("Shutting down the server")
-          server.stop();
+          server.stop()
           log.info("Server has stopped")
           println("Server has stopped")
         } catch {
           case e: Exception => {
-            log.info("Error when stopping Jetty server: " + e.getMessage(), e)
-            println("Error when stopping Jetty server: " + e.getMessage(), e)
+            log.info("Error when stopping Jetty server: " + e.getMessage, e)
+            println("Error when stopping Jetty server: " + e.getMessage, e)
           }
         }
       }
@@ -258,7 +252,7 @@ class VizServlet extends ScalatraServlet {
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
-              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
+              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
               val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
@@ -307,7 +301,7 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString),
-        "samples" -> (VizReads.sampNames.mkString(",")),
+        "samples" -> VizReads.sampNames.mkString(","),
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
         "featuresExist" -> VizReads.featuresExist))
@@ -347,7 +341,7 @@ class VizServlet extends ScalatraServlet {
       val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
       variantRDDOption match {
         case Some(_) => {
-          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
+          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD()
           write(VariantLayout(variantRDD))
         } case None => {
           write("")
@@ -365,7 +359,7 @@ class VizServlet extends ScalatraServlet {
       val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
       variantRDDOption match {
         case Some(_) => {
-          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
+          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD()
           write(VariantFreqLayout(variantRDD))
         } case None => {
           write("")
@@ -398,7 +392,7 @@ class VizServlet extends ScalatraServlet {
     VizTimers.FeatRequest.time {
       val featureRDD: Option[RDD[Feature]] = {
         if (VizReads.featuresPath.endsWith(".adam")) {
-          val pred: FilterPredicate = ((LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end))
+          val pred: FilterPredicate = (LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end)
           val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
           Option(VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj)))
         } else if (VizReads.featuresPath.endsWith(".bed")) {
@@ -457,7 +451,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             val srf: SamReaderFactory = SamReaderFactory.make()
             val samReader: SamReader = srf.open(new File(readsPath))
             val rec: SAMRecord = samReader.iterator().next()
-            val sample = rec.getReadGroup().getSample()
+            val sample = rec.getReadGroup.getSample
             sampNamesBuffer += sample
             VizReads.readsData.loadSample(sample, readsPath)
           } else if (readsPath.endsWith(".adam")) {
