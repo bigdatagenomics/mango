@@ -116,6 +116,9 @@ object VizReads extends BDGCommandCompanion with Logging {
   def setSequenceDictionary(filePath: String) = {
     if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
       val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
+      val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
+      val dictFile: File = new File(filePath.replace(extension, ".dict"))
+      require(dictFile.exists, "Generated sequence dictionary does not exist, use Picard to generate")
       globalDict = SequenceDictionary(fseq.getSequenceDictionary())
     } else { //ADAM
       globalDict = sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
