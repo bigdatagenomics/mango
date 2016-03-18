@@ -85,6 +85,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
+  var THRESHOLD: Int = 40,000
 
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
@@ -219,6 +220,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
+
+  @Args4jOption(required = false, name = "-read_threshold", usage = "The threshold to begin removing variant reads at. The default is 40,000.")
+  var threshold: Int = 40000
 }
 
 class VizServlet extends ScalatraServlet {
@@ -244,39 +248,55 @@ class VizServlet extends ScalatraServlet {
       val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
       dictOpt match {
         case Some(_) => {
+          val start: Long = params("start").toLong
           val end: Long = Math.min(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName).get.length)
-          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
+          val region = new ReferenceRegion(params("ref").toString, start, end)
           val sampleIds: List[String] = params("sample").split(",").toList
           val reference = VizReads.getReference(region)
           val readQuality = params.getOrElse("quality", "0")
-
+          val forcedView = params.getOrElse("forced", "0").toInt
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
+          var sampled = (end - start > VizReads.THRESHOLD && forcedView == 0)
           dataOption match {
             case Some(_) => {
-              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
-              val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
-              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
-              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
-              val fileMap = VizReads.readsData.getFileMap()
               var readRetJson: String = ""
-              for (sample <- sampleIds) {
-                val sampleData = alignmentData.get(sample)
-                val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
-                sampleData match {
-                  case Some(_) =>
-                    readRetJson += "\"" + sample + "\":" +
-                      "{ \"filename\": " + write(fileMap(sample)) +
-                      ", \"dictionary\": " + write(dictionary) +
-                      ", \"tracks\": " + write(sampleData.get.records) +
-                      ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
-                      ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
-                      ", \"matePairs\": " + write(sampleData.get.matePairs) +
-                      ", \"freq\": " + write(freqData.get(sample)) + "},"
-                  case None =>
-                    readRetJson += "\"" + sample + "\":" +
-                      "{ \"filename\": " + write(fileMap(sample)) + "},"
+              val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
+              var filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+              if (sampled) {
+                val ratio = VizReads.THRESHOLD / ((end - start))
+                filteredData = filteredData.sample(false, ratio)
+                sampled = true
+                val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds, 1 / ratio)
+                val fileMap = VizReads.readsData.getFileMap()
+                for (sample <- sampleIds) {
+                  val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
+                  readRetJson += "\"" + sample + "\":" +
+                    "{ \"filename\": " + write(fileMap(sample)) +
+                    ", \"dictionary\": " + write(dictionary) +
+                    ", \"freq\": " + write(freqData.get(sample)) + "},"
                 }
-
+              } else {
+                val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
+                val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
+                val fileMap = VizReads.readsData.getFileMap()
+                for (sample <- sampleIds) {
+                  val sampleData = alignmentData.get(sample)
+                  val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
+                  sampleData match {
+                    case Some(_) =>
+                      readRetJson += "\"" + sample + "\":" +
+                        "{ \"filename\": " + write(fileMap(sample)) +
+                        ", \"dictionary\": " + write(dictionary) +
+                        ", \"tracks\": " + write(sampleData.get.records) +
+                        ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
+                        ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
+                        ", \"matePairs\": " + write(sampleData.get.matePairs) +
+                        ", \"freq\": " + write(freqData.get(sample)) + "},"
+                    case None =>
+                      readRetJson += "\"" + sample + "\":" +
+                        "{ \"filename\": " + write(fileMap(sample)) + "},"
+                  }
+                }
               }
               readRetJson = readRetJson.dropRight(1)
               readRetJson = "{" + readRetJson + "}"
@@ -479,6 +499,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           VizReads.variantsExist = true
           VizReads.testRDD2 = VizReads.sc.loadParquetGenotypes(args.variantsPath)
           VizReads.testRDD2.cache()
+          VizReads.THRESHOLD = args.threshold
         } else if (args.variantsPath.endsWith(".adam")) {
           VizReads.readsData.loadADAMSample(VizReads.variantsPath)
         } else {
