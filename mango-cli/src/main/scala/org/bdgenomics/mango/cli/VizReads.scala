@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.cli
 
-import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile }
+import htsjdk.samtools.reference.{ FastaSequenceFile, FastaSequenceIndex, IndexedFastaSequenceFile }
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import java.io.File
 import net.liftweb.json.Serialization.write
@@ -448,8 +448,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       VizReads.referencePath = args.referencePath
       VizReads.setSequenceDictionary(args.referencePath)
       VizReads.refRDD = VizReads.sc.loadSequence(VizReads.referencePath)
-
-      //TODO: working reference set
     } else {
       log.info("WARNING: Invalid reference file")
       println("WARNING: Invalid reference file")

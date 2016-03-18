@@ -48,7 +48,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
   }
 
   val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000L),
-    SequenceRecord("chrM", 2000L),
+    SequenceRecord("chrM", 20000L),
     SequenceRecord("chr3", 2000L)))
 
   val bamFile = "./src/test/resources/mouse_chrM.bam"

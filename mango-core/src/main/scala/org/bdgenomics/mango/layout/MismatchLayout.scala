@@ -106,11 +106,15 @@ object MismatchLayout extends Logging {
               case e: Exception => log.warn(e.toString)
             }
           } else if (op == CigarOperator.I) {
-            val end = recIdx + misLen
-            val stringStart = (recIdx - rec.getStart).toInt
-            val indel = rec.getSequence.substring(stringStart, stringStart + misLen)
-            misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
-            recIdx += misLen
+            try {
+              val end = recIdx + misLen
+              val stringStart = (recIdx - rec.getStart).toInt
+              val indel = rec.getSequence.substring(stringStart, stringStart + misLen)
+              misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
+              recIdx += misLen
+            } catch {
+              case e: Exception => log.warn(e.toString)
+            }
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
             val end = recIdx + misLen
             val stringStart = getPosition(recIdx, rec.getStart)
