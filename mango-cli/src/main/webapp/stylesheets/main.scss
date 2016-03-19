@@ -2,6 +2,11 @@
 @import 'partials/menu';
 @import 'partials/sampleLegend';
 
+.mergedReads {
+    border-bottom: 1px solid $covBorder;
+    margin-bottom: 5px;
+}
+
 body {
     font-family: 'Open Sans', sans-serif;
     font-weight:300;
@@ -54,9 +59,14 @@ div.tooltip {
     position: absolute;
     text-align: center;
     padding: 2px;
-    background: lightsteelblue;
+    background: $med-grey;
     border: 0px;
     pointer-events: none;
+    color: white;
+
+    p {
+        margin: 0px;
+    }
 }
 
 input[type="text"] {
@@ -126,10 +136,6 @@ input[type="text"] {
     .col-md-10 {
       overflow-x: hidden;
     }
-}
-
-.row.top {
-  margin-right: 15px;
 }
 
 .sampleCoverage {

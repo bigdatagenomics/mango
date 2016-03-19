@@ -48,20 +48,21 @@ class MismatchLayoutSuite extends ADAMFunSuite {
   val bamFile = "./src/test/resources/mouse_chrM.bam"
   val referencePath = "./src/test/resources/mouse_chrM.fasta"
 
-  test("find 1 mismatch in read") {
+  test("find 1 mismatch in read when read and reference are aligned") {
     val read = AlignmentRecord.newBuilder
       .setCigar("5M")
-      .setStart(1)
-      .setEnd(5)
+      .setStart(3)
+      .setEnd(7)
       .setSequence("AAAAT")
       .build
 
-    val reference = "NAAAAA"
-    val region = new ReferenceRegion("chr", 1, 6)
+    val reference = "NAAAAG"
+    val region = new ReferenceRegion("chr", 3, 7)
 
     val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
     assert(results.size == 1)
     assert(results.head.op == "M")
+    assert(results.head.refCurr == 7)
     assert(results.head.sequence == "T")
   }
 
@@ -69,7 +70,7 @@ class MismatchLayoutSuite extends ADAMFunSuite {
     val read = AlignmentRecord.newBuilder
       .setCigar("3M1I2M")
       .setStart(1)
-      .setEnd(6)
+      .setEnd(7)
       .setSequence("TAGGAT")
       .build
 
@@ -80,55 +81,106 @@ class MismatchLayoutSuite extends ADAMFunSuite {
     assert(results.size == 1)
     assert(results.head.op == "I")
     assert(results.head.sequence == "G")
+    assert(results.head.refCurr == 4)
   }
 
   test("find 1 deletion in read") {
     val read = AlignmentRecord.newBuilder
       .setCigar("4M1D1M")
-      .setStart(1)
-      .setEnd(6)
+      .setStart(3)
+      .setEnd(8)
       .setSequence("TAGGT")
       .build
 
     val reference = "NTAGGAT"
-    val region = new ReferenceRegion("chr", 1, 7)
+    val region = new ReferenceRegion("chr", 3, 8)
 
     val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
-
     assert(results.size == 1)
     assert(results.head.op == "D")
+    assert(results.head.refBase == "A")
+    assert(results.head.refCurr == 7)
   }
 
   test("find 1 mismatch and 1 insertion in read") {
     val read = AlignmentRecord.newBuilder
       .setCigar("6M1I")
-      .setStart(1)
-      .setEnd(7)
+      .setStart(11)
+      .setEnd(17)
       .setSequence("AAGGATT")
       .build
 
     val reference = "NTAGGAT"
-    val region = new ReferenceRegion("chr", 1, 7)
+    val region = new ReferenceRegion("chr", 11, 17)
 
     val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
     assert(results.size == 2)
+
+    assert(results.head.op == "M")
+    assert(results.head.refBase == "T")
+    assert(results.head.sequence == "A")
+    assert(results.head.refCurr == 11)
+
+    assert(results.last.op == "I")
+    assert(results.last.refCurr == 17)
+    assert(results.last.sequence == "T")
   }
 
-  test("find insertion in read overlapping at end of reference") {
+  test("find 1 insertion and 1 deletion") {
     val read = AlignmentRecord.newBuilder
-      .setCigar("7M")
-      .setStart(1)
+      .setCigar("1M2I1M1D1M")
+      .setStart(3)
       .setEnd(7)
-      .setSequence("AAGGATT")
+      .setSequence("ATTAG")
       .build
 
-    val reference = "GGCTTA"
-    val region = new ReferenceRegion("chr", 4, 8)
+    val reference = "NAATA"
+    val region = new ReferenceRegion("chr", 3, 7)
 
     val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
-    assert(results.size == 1)
-    assert(results.head.op == "M")
-    assert(results.head.sequence == "A")
+    assert(results.size == 3)
+    assert(results.head.op == "I")
+    assert(results.head.sequence == "TT")
+    assert(results.head.refCurr == 4)
+
+    assert(results(1).op == "D")
+    assert(results(1).refBase == "T")
+    assert(results(1).refCurr == 5)
+
+    assert(results(2).op == "M")
+    assert(results(2).refBase == "A")
+    assert(results(2).sequence == "G")
+    assert(results(2).refCurr == 6)
+
+  }
+
+  test("find 1 insertion and 1 deletion with large reference") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("1M1I1M1D1M")
+      .setStart(3)
+      .setEnd(7)
+      .setSequence("ATAG")
+      .build
+
+    val reference = "NGGAATAGGGGGGGGGGGGG"
+    val region = new ReferenceRegion("chr", 1, 20)
+
+    val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
+
+    assert(results.size == 3)
+    assert(results.head.op == "I")
+    assert(results.head.sequence == "T")
+    assert(results.head.refCurr == 4)
+
+    assert(results(1).op == "D")
+    assert(results(1).refBase == "T")
+    assert(results(1).refCurr == 5)
+
+    assert(results(2).op == "M")
+    assert(results(2).refBase == "A")
+    assert(results(2).sequence == "G")
+    assert(results(2).refCurr == 6)
+
   }
 
 }

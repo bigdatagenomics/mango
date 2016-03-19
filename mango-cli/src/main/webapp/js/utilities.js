@@ -8,6 +8,31 @@ function setGlobalReferenceRegion(refName, start, end) {
     viewRegEnd = end;
 }
 
+function isValidHttpResponse(data) {
+  if (data == undefined || jQuery.isEmptyObject(data) || data.length == 0) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+// colors for base pairs [A, T, G, C]
+var aColor = '#5050FF'; //AZURE
+var cColor = '#E00000'; //CRIMSON
+var tColor = '#E6E600'; //TWEETY BIRD
+var gColor = '#00C000'; //GREEN
+var nColor = '#D3D3D3'; // GREY
+
+//var color = d3.scale.ordinal()
+//    .range([aColor, cColor, tColor, gColor]);
+//color.domain(["A", "T", "C", "G"]);
+var baseColors = {
+  'A': aColor,
+  'C': cColor,
+  'T': tColor,
+  'G': gColor
+}
+
 function setGlobalMapQ(mapq) {
     mapQuality = mapq;
 }
@@ -20,8 +45,8 @@ function filterNames(arr) {
   return filteredArr;
 }
 
-function filtername(name) {
-  filteredArr[i] = name.replace("/","");
+function filterName(name) {
+  return name.replace("/","");
 }
 
 Array.prototype.contains = function(v) {
@@ -56,24 +81,23 @@ function getTrackHeight() {
 }
 
 function checkboxChange() {
-  for (var i = 0; i < samples.length; i++) {
-    if (indelCheck.checked) {
-      $(".indel").show();
-    } else {
-      $(".indel").hide();
-    }
+  if (indelCheck.checked) {
+    $(".indel").show();
 
-    if (mismatchCheck.checked) {
-      $(".mrect").show();
-    } else {
-      $(".mrect").hide();
-    }
+  } else {
+    $(".indel").hide();
+  }
 
-    if (coverageCheck.checked) {
-      $(".sampleCoverage").show();
-    } else {
-      $(".sampleCoverage").hide();
-    }
+  if (mismatchCheck.checked) {
+    $(".mrect").show();
+  } else {
+    $(".mrect").hide();
+  }
+
+  if (coverageCheck.checked) {
+    $(".sampleCoverage").show();
+  } else {
+    $(".sampleCoverage").hide();
   }
 }
 
@@ -150,34 +174,3 @@ $("#loadRef:file").change(function(){
   var filename = $("#loadRef:file").val();
 });
 
-// Redirect based on form input
-function checkForm(form) {
-  var info = form.info.value;
-  var refName = info.split(":")[0];
-  var region = info.split(":")[1].split("-");
-  var newStart = Math.max(0, region[0]);
-  var newEnd = Math.max(newStart, region[1]);
-  var quality = form.elements["quality"].value;
-  // Check that the input syntax is correct 
-  if ( info===""|| refName==""|| isNaN(newStart) || isNaN(newEnd) || newStart===newEnd){
-    // alert('Invalid Input format. Missing Information.');
-    form[0].style.borderColor = "red";
-  }
-  else{
-    form[0].style.borderColor = "";
-    render(refName, newStart, newEnd, quality);  
-  }
-}
-
-function checkFormVariants(form) {
-  var info = form.info.value;
-  var refName = info.split(":")[0];
-  var region = info.split(":")[1].split("-");
-  var newStart = Math.max(0, region[0]);
-  var newEnd = Math.max(newStart, region[1]);
-  setGlobalReferenceRegion(refName, newStart, newEnd);
-
-  renderVariantFrequency();
-  renderVariants(refName, newStart, newEnd);
-  renderReference(refName, newStart, newEnd);
-}

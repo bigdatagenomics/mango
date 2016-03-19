@@ -100,11 +100,11 @@
       <li>
           <form name="regForm" method="GET" class="form-inline">
               region:
-              <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+              <input id="regInput" type="text" name="info" size="20" class="variant-search form-control" placeholder="sample:refName:start-end">
               <input name="Submit button"
                     type="button"
                     value="Submit"
-                    onclick="checkFormVariants(this.form)"
+                    onclick="checkVariantForm(this.form)"
                     class="btn btn-danger btn-xs"/>
           </form>
       </li>
@@ -139,6 +139,7 @@
 </script>
 <script src="js/utilities.js"></script>
 <script src="js/variants.js"></script>
+<script src="js/formSubmit.js"></script>
 <script src="js/reference.js"></script>
 <script>
   renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);

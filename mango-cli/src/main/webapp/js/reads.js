@@ -1,24 +1,25 @@
 //Configuration Variables
-var readsHeight = 30; //Default variable: this will change based on number of reads
-var yOffset = 175;
+var readsHeight = 100;
+var padding = 3;
+var readTrackHeight = getTrackHeight();
+var mismatchHeight = readsHeight - readTrackHeight
 
-// Global Data
+var yOffset = 200;
+// svg class for alignment data
+var alignmentSvgClass = "alignmentSvg";
+// stores sample mismatch and indel data
+var readCountSvgContainer = {};
+// stores sample alignment data. Contains MODIFIED samples as keys
+var readAlignmentSvgContainer = {};
+// Contains 1 to 1 mapping of MODIFIED sample names to RAW sample names
 var sampleData = [];
-// Svg Containers, and vertical guidance lines and animations set here for all divs
+
+function getAlignmentSelector(sample) {
+    return selector = "#" + sample + ">.alignmentData";
+}
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
-
-// Create the scale for the axis
-var refAxisScale = d3.scale.linear()
-    .domain([viewRegStart, viewRegEnd])
-    .range([0, width]);
-
-// Create the axis
-var refAxis = d3.svg.axis()
-   .scale(refAxisScale);
-
-var readsSvgContainer = {};
 
 for (var i = 0; i < samples.length; i++) {
   $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"samples resize-vertical\"></div>");
@@ -30,12 +31,12 @@ for (var i = 0; i < samples.length; i++) {
   var width = $(".mergedReads").width();
 
   var selector = "#" + samples[i] + ">.mergedReads";
-  readsSvgContainer[samples[i]] = d3.select(selector)
+  readCountSvgContainer[samples[i]] = d3.select(selector)
     .append("svg")
       .attr("height", (readsHeight))
       .attr("width", width);
 
-  var readsVertLine = readsSvgContainer[samples[i]].append('line')
+  var readsVertLine = readCountSvgContainer[samples[i]].append('line')
     .attr({
       'x1': 50,
       'y1': 0,
@@ -45,7 +46,7 @@ for (var i = 0; i < samples.length; i++) {
     .attr("stroke", "#002900")
     .attr("class", "verticalLine");
 
-  readsSvgContainer[samples[i]].on('mousemove', function () {
+  readCountSvgContainer[samples[i]].on('mousemove', function () {
     var xPosition = d3.mouse(this)[0];
     d3.selectAll(".verticalLine")
       .attr({
@@ -65,28 +66,49 @@ function renderSamplename(i) {
         $(selector).append("<div class='col-md-3'><input value='viewAlignments' name='viewAlignments'" +
                                 "type='checkbox'onClick='toggleAlignments(\"" + samples[i] + "\")' id='viewAlignments'>" +
                                 "<label for='viewAlignments'>Alignments</label></div>");
-        $( "#" + samples[i] + ">.alignmentData")[0].hidden = true; // TODO: change to jQuery
+        var alignmentSelector = $( "#" + samples[i] + ">.alignmentData");
+        $(alignmentSelector).hide();
+
 
     }
 }
 
-function toggleAlignments(selector) {
-    var alignmentSelector =  $("#" + selector + ">.alignmentData");
-    if (alignmentSelector[0].hidden) {
-       alignmentSelector[0].hidden = false; // TODO: change to jQuery
-       renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, selector);
+function toggleAlignments(sample) {
+    var alignmentSelector =  $("#" + sample + ">.alignmentData");
+    if (!alignmentSelector.is(':visible')) {
+       renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, sample);
     }
-    else {
-       alignmentSelector[0].hidden = true; // TODO: change to jQuery
-    }
+   $(alignmentSelector).slideToggle( "slow" );
 }
 
 function renderMergedReads(refName, start, end, quality) {
     renderReads(refName, start, end, quality, true)
 }
 
-function renderAlignments(refName, start, end, quality, selector) {
-    renderReads(refName, start, end, quality, false, sampleMap[selector])
+function renderAlignments(refName, start, end, quality, sample) {
+
+    var isData = sample in readAlignmentSvgContainer;
+    if (isData) {
+        var region = readAlignmentSvgContainer[sample];
+        if (region.refName != refName || region.start !=start || region.end != end) {
+            renderReads(refName, start, end, quality, false, sampleMap[sample]);
+
+            readAlignmentSvgContainer[sample] = {
+                                                    refName: refName,
+                                                    start: start,
+                                                    end: end
+                                                };
+        }
+
+    } else {
+        renderReads(refName, start, end, quality, false, sampleMap[sample]);
+
+        readAlignmentSvgContainer[sample] = {
+                                                refName: refName,
+                                                start: start,
+                                                end: end
+                                            };
+    }
 }
 
 function renderReads(refName, start, end, quality, isCountData, samples) {
@@ -100,15 +122,24 @@ function renderReads(refName, start, end, quality, isCountData, samples) {
     var readsJsonLocation = "/" + jsonPage + "/" + viewRefName + "?start=" + viewRegStart + "&end="
         + viewRegEnd + "&sample=" + samples + "&quality=" + quality;
 
-    if (isCountData)
+    if (isCountData) {
         renderJsonMergedReads(readsJsonLocation);
-    else
+        var keys = Object.keys(readAlignmentSvgContainer)
+        keys.forEach(function(sample) {
+            renderAlignments(refName, start, end, quality, sample);
+        });
+    } else
         renderJsonReads(readsJsonLocation, Array(samples));
 }
 
 function renderJsonMergedReads(readsJsonLocation) {
 
   d3.json(readsJsonLocation,function(error, ret) {
+    if(error) console.log(error);
+    if (!isValidHttpResponse(ret)) {
+      return;
+    }
+
     for (var i = 0; i < samples.length; i++) {
         var data = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
         var selector = "#" + samples[i];
@@ -127,9 +158,12 @@ function renderJsonMergedReads(readsJsonLocation) {
 function renderJsonReads(readsJsonLocation, samples) {
 
   d3.json(readsJsonLocation,function(error, ret) {
+  if (error) return error;
+  if (!isValidHttpResponse(ret)) {
+    return;
+  }
   for (var i = 0; i < samples.length; i++) {
       var readsData = typeof ret[samples[i]] != "undefined" ? ret[samples[i]] : [];
-      console.log(readsData);
      // render reads for low or high resolution depending on base range
      if (viewRegEnd - viewRegStart > 100) {
        renderReadsByResolution(false, readsData, samples[i]);
@@ -143,20 +177,17 @@ function renderJsonReads(readsJsonLocation, samples) {
 
 // Renders reads by resolution
 function renderReadsByResolution(isHighRes, data, rawSample) {
-
-        var readTrackHeight = getTrackHeight();
         var readDiv = [];
         var container = [];
-        var svgClass = "alignmentSvg";
 
         var sample = filterName(rawSample);
-        var selector = "#" + sample + ">.alignmentData";
+        var selector = getAlignmentSelector(sample)
 
         // check whether alignment container for this sample was already rendered
-        if ($(selector + ">." + svgClass).length == 0) {
+        if ($(selector + ">." + alignmentSvgClass).length == 0) {
             container = d3.select(selector)
                 .append("svg")
-                .attr("class", svgClass)
+                .attr("class", alignmentSvgClass)
                 .attr("height", (readsHeight))
                 .attr("width", width);
         } else {
@@ -171,28 +202,12 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
           .attr("class", "tooltip")
           .style("opacity", 0);
 
-        // Create the scale for the axis
-        var readsAxisScale = d3.scale.linear()
-            .domain([viewRegStart, viewRegEnd])
-            .range([0, width]);
-
-        // Create the axis
-        var readsAxis = d3.svg.axis()
-           .scale(readsAxisScale);
-
-        // Remove current axis to update it
-        container.select(".axis").remove();
-
         var selector = "#" + sample;
-        sampleData[i] = [];
-        sampleData[i].reads = typeof data['tracks'] != "undefined" ? data['tracks'] : [];
-        sampleData[i].mismatches = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
-        sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
-        sampleData[i].pairs = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
-        sampleData[i].filename = typeof data['filename'] != "undefined" ? data['filename'] : "";
-
-        // Renders Reads Frequency
-        renderJsonCoverage(data['freq'], i)
+        data['tracks'] = typeof data['tracks'] != "undefined" ? data['tracks'] : [];
+        data['mismatches'] = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
+        data['indels'] = typeof data['indels'] != "undefined" ? data['indels'] : [];
+        data['matePairs'] = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
+        data['dictionary'] = typeof data['dictionary'] != "undefined" ? data['dictionary'] : [];
 
         renderSamplename(i);
         var numTracks = d3.max(data["tracks"], function(d) {return d.track});
@@ -202,12 +217,6 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
 
         // Reset size of svg container
         container.attr("height", (readsHeight));
-
-        // Add the axis to the container
-        container.append("g")
-          .attr("class", "axis")
-          .attr("transform", "translate(0, " + readsHeight + ")")
-          .call(readsAxis);
 
         // Update height of vertical guide line
         $(".verticalLine").attr("y2", readsHeight);
@@ -227,7 +236,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         .append("g")
         .append("rect")
         .attr("class", "readrect")
-        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+            .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
         .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", (readTrackHeight-1))
@@ -251,7 +260,14 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
             readDiv[i].transition()
               .duration(200)
               .style("opacity", .9);
-            readDiv[i].html(d.readName)
+            readDiv[i].html("Read Name: " + d.readName + "<br>" +
+                                          d.sequence +
+                                          "Start: " + d.start + "<br>" +
+                                          "End: " + d.end + "<br>" +
+                                          "Cigar:" + d.cigar + "<br>" +
+                                          "Map Quality: " + d.mapq + "<br>" +
+                                          "Track: " + d.track + "<br>" +
+                                          "Reverse Strand: " + d.readNegativeStrand)
               .style("left", (d3.event.pageX) + "px")
               .style("top", (d3.event.pageY - yOffset) + "px");
           })
@@ -270,7 +286,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
           var height = readTrackHeight - 2;
           var yCoord = readsHeight - readTrackHeight * (d.track + 1);
           if (d.readNegativeStrand === true) { // to the right
-            var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
+            var rectWidth = Math.max(1,(d.end - d.start)*(width/(viewRegEnd-viewRegStart)));
             var xCoord = rectStart + rectWidth + 1;
             return ((xCoord - height) + ' ' + yCoord + ","
                 + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
@@ -389,54 +405,73 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
             .attr("strock-width", "1")
             .attr("stroke", "steelblue");
 
-      if (indelCheck.checked) {
-        renderIndels(data["mismatches"], data["indels"], samples[i]);
-      } else {
-        container.selectAll(".mismatch").remove()
-      }
+        renderAlignmentIndels(data["indels"], sample);
+        renderAlignmentMismatches(data["mismatches"], sample);
+
+        // check if mismatches and indels are currently displayed, and show/hide accordingly
+        checkboxChange();
+
+        var readsVertLine = container.append('line')
+            .attr({
+              'x1': 50,
+              'y1': 0,
+              'x2': 50,
+              'y2': readsHeight
+            })
+            .attr("stroke", "#002900")
+            .attr("class", "verticalLine");
+
+        container.on('mousemove', function () {
+            var xPosition = d3.mouse(this)[0];
+            d3.selectAll(".verticalLine")
+              .attr({
+                "x1" : xPosition,
+                "x2" : xPosition
+              })
+          });
 }
 
-function renderIndels(mismatches, indels, sample) {
-    renderIndels(mismatches, indels, sample, false)
+function renderAlignmentIndels(indels, sample) {
+    renderIndels(indels, sample, false);
 }
 
 function renderIndelCounts(indels, sample) {
-    renderIndels(null, indels, samples, true)
+    renderIndels(indels, sample, true);
 }
 
-function renderMismatches(mismatches, sample) {
-    renderMismatches(mismatches, sample, false)
-}
-
-function renderMismatchCounts(mismatches, sample) {
-    renderMismatches(mismatches, samples, true)
-}
-
-function renderIndels(mismatches, indels, sample, isCountData) {
-  var readTrackHeight = getTrackHeight();
+function renderIndels(indels, sample, isCountData) {
   var selector = "#" + sample;
   var misMatchDiv = d3.select(selector)
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-  if (!isCountData) {
-    if (mismatchCheck.checked) {
-      renderMismatches(mismatches, sample)
-    } else {
-      readsSvgContainer[sample].selectAll(".mrect").remove()
-    }
-  }
+  var misRects;
 
-  var misRects = readsSvgContainer[sample].selectAll(".indel").data(indels);
+  if (isCountData)
+    misRects = readCountSvgContainer[sample].selectAll(".indel").data(indels);
+  else
+    misRects = d3.select(getAlignmentSelector(sample) + ">." + alignmentSvgClass).selectAll(".indel").data(indels);
+
   var modMisRects = misRects.transition()
     .attr("x", (function(d) {
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
     .attr("y", (function(d) {
-        if (isCountData) return 0
+        if (isCountData) return mismatchHeight;
         else
             return readsHeight - (readTrackHeight * (d.track+1));
-    }));
+    }))
+    .attr("width", (function(d) {
+        return Math.max(1,(d.length)*(width/(viewRegEnd-viewRegStart))); }))
+    .attr("fill", function(d) {
+       if (d.op == "I") {
+         return "pink";
+       } else if (d.op == "D") {
+         return "black";
+       } else if (d.op == "N") {
+         return "gray";
+       }
+     });
 
   var newMisRects = misRects.enter();
   newMisRects
@@ -446,15 +481,12 @@ function renderIndels(mismatches, indels, sample, isCountData) {
       .attr("x", (function(d) {
         return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
       .attr("y", (function(d) {
-          if (isCountData) return readTrackHeight
+          if (isCountData) return mismatchHeight;
           else
               return readsHeight - (readTrackHeight * (d.track+1));
        }))
       .attr("width", (function(d) {
-        if (d.op == "I" || d.op == "D" || d.op == "N") {
-          return 5;
-        }
-        return Math.max(1,(d.end - d.start)*(width/(viewRegEnd-viewRegStart))); }))
+        return Math.max(1,(d.length)*(width/(viewRegEnd-viewRegStart))); }))
       .attr("height", (readTrackHeight-1))
       .attr("fill", function(d) {
         if (d.op == "I") {
@@ -471,7 +503,7 @@ function renderIndels(mismatches, indels, sample, isCountData) {
           .style("opacity", .9);
         misMatchDiv.html(
           "Operation: " + d.op + "<br>" +
-          "Length:" + (d.end - d.start) + "<br>" +
+          "Length:" + (d.length) + "<br>" +
           "Count: " + d.count )
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - yOffset) + "px");
@@ -500,13 +532,11 @@ function renderIndels(mismatches, indels, sample, isCountData) {
 
   var removedMisRects = misRects.exit();
   removedMisRects.remove();
-
 }
 
 //Render mismatching bases for cigar operator
-function renderMismatches(data, sample, isCountData) {
+function renderMismatchCounts(data, sample) {
   // Making hover box
-  var readTrackHeight = getTrackHeight();
   var selector = "#" + sample;
   var misMatchDiv = d3.select(selector)
     .append("div")
@@ -514,77 +544,81 @@ function renderMismatches(data, sample, isCountData) {
     .style("opacity", 0);
 
 
-  //Displays rects from the data we just calculated
-  var mRects = readsSvgContainer[sample].selectAll(".mrect").data(data);
-  var modifiedMRects = mRects.transition()
-  modifiedMRects
-    .attr("x", (function(d) {
-      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-    .attr("y", (function(d) {
-        if (isCountData) return 0
-        else
-            return readsHeight - (readTrackHeight * (d.track+1));
-     }))
-    .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)));
+    data.forEach(function(d) {
+        d["A"] = typeof d.count["A"] != "undefined" ? d.count["A"] : 0;
+        d["T"] = typeof d.count["T"] != "undefined" ? d.count["T"] : 0;
+        d["C"] = typeof d.count["C"] != "undefined" ? d.count["C"] : 0;
+        d["G"] = typeof d.count["G"] != "undefined" ? d.count["G"] : 0;
+    });
 
-  var newMRects = mRects.enter();
-  newMRects
-    .append("g")
-    .append("rect")
-    .attr("class", "mrect")
-    .attr("x", (function(d) {
-      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-    .attr("y", (function(d) {
-        if (isCountData) return 0
-        else
-            return readsHeight - (readTrackHeight * (d.track+1))}))
+    data.forEach(function(d) {
+        var y0 = 0;
+        d.totals = [];
+        for (var base in baseColors) {
+           if (baseColors.hasOwnProperty(base)) {
+            d.totals.push({base: base, y0: y0, y1: y0 += +d[base], refCurr: d["refCurr"]});
+           }
+        }
+        d.sum = d.totals[d.totals.length - 1].y1;
+    });
+    var y = d3.scale.linear()
+        .rangeRound([mismatchHeight - padding, 0]);
+     y.domain([0, d3.max(data, function(d) { return d.sum; })]);
+
+  //Displays rects from the data we just calculated
+    var mRects = readCountSvgContainer[sample].selectAll("g").data(data);
+    var coloredRects = mRects.selectAll(".mrect").data(function(d) {return d.totals});
+
+
+  // modified rectangles on update
+  var modifiedMRects = mRects.transition();
+  var modifiedColoredRects = coloredRects.transition();
+
+  modifiedMRects
+    .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; });
+
+  modifiedColoredRects
+    .attr("y", (function(d) { return y(d.y1); }))
     .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
-    .attr("height", (readTrackHeight-1))
-    .attr("fill", function(d) {
-      currBase = d.sequence;
-      if (currBase === "G") {
-        return '#00C000'; //GREEN
-      } else if (currBase === "C") {
-        return '#E00000'; //CRIMSON
-      } else if (currBase === "A") {
-        return '#5050FF'; //AZURE
-      } else if (currBase === "T") {
-        return '#E6E600'; //TWEETY BIRD
-      } else if (currBase === "N") {
-        return 'black'; //WHITE
-      }
-    })
+    .attr("height", function(d) { return y(d.y0) - y(d.y1); })
+    .attr("fill", function(d) {return baseColors[d.base]; });
+
+  // new rectangles on initial page render
+  var newMRects = mRects
+        .enter().append("g")
+        .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; });
+
+  newMRects.selectAll("rect")
+    .append("rect")
+        .data(function(d) { return d.totals; })
+        .enter().append("rect")
+        .attr("class", "mrect")
+        .attr("y", (function(d) { return y(d.y1); }))
+        .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
+        .attr("height", function(d) { return y(d.y0) - y(d.y1); })
+        .attr("fill", function(d) {return baseColors[d.base]; });
+
+    newMRects
     .on("click", function(d) {
       misMatchDiv.transition()
         .duration(200)
         .style("opacity", .9);
-      if (isCountData) {
-          var counts = d.count
-          var aCount = typeof counts["A"] != "undefined" ? counts["A"] : 0;
-          var tCount = typeof counts["T"] != "undefined" ? counts["T"] : 0;
-          var cCount = typeof counts["C"] != "undefined" ? counts["C"] : 0;
-          var gCount = typeof counts["G"] != "undefined" ? counts["G"] : 0;
-          misMatchDiv.html(
-              "Ref Base: " + d.refBase + "<br>" +
-              "Base Counts:<br> " + "A: " + aCount + "<br>T: " + tCount + "<br>C: " + cCount + "<br>G: " + gCount)
-              .style("left", (d3.event.pageX) + "px")
-              .style("top", (d3.event.pageY - yOffset) + "px");
-      } else {
-        misMatchDiv.html(
-          "Ref Base: " + d.refBase + "<br>" +
-          "Base: " + d.sequence)
+      misMatchDiv.html(
+          "Ref Base: " + d.refBase + "<br>"
+          + "Base Counts:" +
+            "<p style='color:" + baseColors["A"] + "'>A: " + d["A"] + "</p>" +
+            "<p style='color:" + baseColors["T"] + "'>T: " + d["T"] + "</p>" +
+            "<p style='color:" + baseColors["C"] + "'>C: " + d["C"] + "</p>" +
+            "<p style='color:" + baseColors["G"] + "'>G: " + d["G"] + "</p>")
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - yOffset) + "px");
-      }
     })
     .on("mouseover", function(d) {
         misMatchDiv.transition()
             .duration(200)
             .style("opacity", .9);
-        var sequence = isCountData == true ? "" : "<br>Base: " + d.sequence;
         misMatchDiv.html(
-            "Ref Base: " + d.refBase +
-            sequence)
+            "Ref Base: " + d.refBase)
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - yOffset) + "px");
     })
@@ -592,7 +626,79 @@ function renderMismatches(data, sample, isCountData) {
         misMatchDiv.transition()
         .duration(500)
         .style("opacity", 0);
-      });
+     });
+
     var removedMRects = mRects.exit();
     removedMRects.remove()
+}
+
+//Render mismatching bases for cigar operator
+function renderAlignmentMismatches(data, sample) {
+  // Making hover box
+  var selector = "#" + sample;
+  var misMatchDiv = d3.select(selector)
+    .append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+  //Displays rects from the data we just calculated
+  var mRects = d3.select(getAlignmentSelector(sample) + ">." + alignmentSvgClass).selectAll(".mrect").data(data);
+
+  // modified rectangles on update
+  var modifiedMRects = mRects.transition();
+  modifiedMRects
+    .attr("x", (function(d) {
+      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+    .attr("y", function(d) { return d.refCurr})
+    .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)));
+
+  var newMRects = mRects.enter();
+  newMRects
+    .append("g")
+        .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; })
+        .append("rect")
+        .attr("class", "mrect")
+        .attr("y", (function(d) {
+            return readsHeight - (readTrackHeight * (d.track+1));
+        })).attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
+        .attr("height", function(d) {
+            return (readTrackHeight-1);
+        }).attr("fill", function(d) {
+              currBase = d.sequence;
+              if (currBase === "N") {
+                return nColor;
+              } else {
+                return baseColors[currBase];
+              }
+        })
+        .on("click", function(d) {
+          misMatchDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          misMatchDiv.html(
+            "Ref Base: " + d.refBase + "<br>" +
+            "Base: " + d.sequence)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - yOffset) + "px");
+        })
+        .on("mouseover", function(d) {
+            console.log(d);
+          misMatchDiv.transition()
+            .duration(200)
+            .style("opacity", .9);
+          misMatchDiv.html(
+            "Ref Base: " + d.refBase + "<br>" +
+            "Base: " + d.sequence)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - yOffset) + "px");
+        })
+        .on("mouseout", function(d) {
+            misMatchDiv.transition()
+            .duration(500)
+            .style("opacity", 0);
+          });
+
+    var removedMRects = mRects.exit();
+    removedMRects.remove()
+
 }

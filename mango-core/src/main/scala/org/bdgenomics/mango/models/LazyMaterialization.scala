@@ -52,10 +52,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
 
   // TODO: once tracking is pushed to front end, add sc.local partitioning
   def setPartitioner: Unit = {
-    if (sc.isLocal)
-      partitioner = new HashPartitioner(partitions)
-    else
-      partitioner = GenomicRegionPartitioner(partitions, dict)
+    partitioner = GenomicRegionPartitioner(partitions, dict)
   }
 
   def getDictionary: SequenceDictionary = {

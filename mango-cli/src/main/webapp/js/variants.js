@@ -40,7 +40,7 @@ var varVertLine = varSvgContainer.append('line')
   .attr("class", "verticalLine");
 
 varSvgContainer.on('mousemove', function () {
-    var xPosition = d3.mouse(this)[0];
+    var xPosition = d3.event.pageX;
     d3.selectAll(".verticalLine")
       .attr({
         "x1" : xPosition,
@@ -58,10 +58,10 @@ var varDiv = d3.select("#varArea")
 function renderJsonVariants() {
 
   d3.json(varJsonLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
+    if (error) throw error;
+    if (!isValidHttpResponse(data)) {
       return;
     }
-    if (error) throw error;
 
     //dynamically setting height of svg containers
     var numTracks = d3.max(data, function(d) {return d.track});
@@ -104,16 +104,16 @@ function renderJsonVariants() {
           varDiv.html(
             "Contig: " + d.contigName + "<br>" +
             "Alleles: " + d.alleles)
-            .style("left", d3.mouse(this)[0] + "px")
-            .style("top", "-4px");
+            .style("left", d3.event.pageX + 10 + "px")
+            .style("top", d3.event.pageY - 100 +  "px");
         })
         .on("mouseover", function(d) {
           varDiv.transition()
             .duration(200)
             .style("opacity", .9);
           varDiv.html(d.alleles)
-            .style("left", d3.mouse(this)[0] +  "px")
-            .style("top", "-4px");
+            .style("left", d3.event.pageX + 10 +  "px")
+            .style("top", d3.event.pageY - 100 +  "px");
         })
         .on("mouseout", function(d) {
           varDiv.transition()
@@ -144,7 +144,7 @@ function renderVariantFrequency() {
       .attr("class", "verticalLine");
 
     varDiv.on('mousemove', function () {
-        var xPosition = d3.mouse(this)[0];
+        var xPosition = d3.event.pageX;
         d3.selectAll(".verticalLine")
           .attr({
             "x1" : xPosition,
@@ -174,10 +174,11 @@ function renderVariantFrequency() {
     .ticks(10, "%");
 
   d3.json(varFreqJsonLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
+    if (error) throw error;
+    if (!isValidHttpResponse(data)) {
       return;
     }
-    if (error) throw error;
+
     x.domain([viewRegStart, viewRegEnd]);
     y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
@@ -217,7 +218,7 @@ function renderVariantFrequency() {
           .duration(200)
           .style("opacity", .9);
         varDiv.html("Samples with variant: " + d.count)
-          .style("left", (d3.event.pageX - 220) + "px")
+          .style("left", (d3.event.pageX - 120) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       })
       .on("mouseout", function(d) {

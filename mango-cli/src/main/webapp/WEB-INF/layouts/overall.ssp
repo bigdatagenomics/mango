@@ -15,7 +15,7 @@
     <script src="resources/js/jquery-ui.min.js"></script>
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
     <script src="resources/js/bigSlide.js"></script>
-    <script src="js/jquery.autocomplete.min.js"></script>    
+    <script src="resources/js/jquery.autocomplete.min.js"></script>
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
@@ -46,17 +46,17 @@
             </ul>
           </li>
 
-        <li class="dropdown">
-          <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
-          <ul class="dropdown-menu" id="menu1">
-            <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
-            <li class="refDependancy"><label for="indelCheck">Indels</label></li>
-            <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
-            <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
-            <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
-            <li><label for="coverageCheck">Coverage</label></li>
-          </ul>
-        </li>
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
+            <ul class="dropdown-menu" id="menu1">
+              <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
+              <li class="refDependancy"><label for="indelCheck">Indels</label></li>
+              <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
+              <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
+              <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
+              <li><label for="coverageCheck">Coverage</label></li>
+            </ul>
+          </li>
 
           <li class="dropdown">
             <a href="#" data-toggle="dropdown" class="dropdown-toggle">Tracks</a>
@@ -140,7 +140,7 @@
           <li>
           <form id="regForm" name="regForm" method="GET" class="form-inline">
           region:
-          <input id="autocomplete" type="text" name="info" size="20" class="chr-search form-control" placeholder="sample:refName:start-end">
+          <input id="autocomplete" type="text" name="info" size="20" class="alignment-search form-control" placeholder="sample:refName:start-end">
           </li>
           <li>
             mapping quality:
@@ -161,20 +161,13 @@
       <br>
   </div>
 
-<<<<<<< HEAD
 <div class="row">
     <div>
-        <div class="row top">
-          <div class="graphArea" id="refArea"></div>
-        </div>
-        <div class="row top">
-          <div class="graphArea" id="featArea"></div>
-        </div>
-        <div class="row top">
-          <div class="graphArea" id="varArea"></div>
-        </div>
-        <div class="row top">
-            <div class="graphArea" id="readsArea"></div>
+        <div class="col-md-12">
+              <div class="graphArea" id="refArea"></div>
+              <div class="graphArea" id="featArea"></div>
+              <div class="graphArea" id="varArea"></div>
+              <div class="graphArea" id="readsArea"></div>
         </div>
     </div>
 </div>
@@ -184,6 +177,8 @@
 
 
 <script src="js/utilities.js"></script>
+<script src="js/formSubmit.js"></script>
+
 <script>
   $(document).ready(function() {
       $('.menu-link').bigSlide();
