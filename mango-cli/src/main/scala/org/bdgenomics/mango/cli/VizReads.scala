@@ -85,7 +85,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
-  var THRESHOLD: Int = 40,000
+  var THRESHOLD: Int = 40000
 
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
@@ -256,17 +256,14 @@ class VizServlet extends ScalatraServlet {
           val readQuality = params.getOrElse("quality", "0")
           val forcedView = params.getOrElse("forced", "0").toInt
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
-          var sampled = (end - start > VizReads.THRESHOLD && forcedView == 0)
+          val sampled = end - start > VizReads.THRESHOLD && forcedView == 0
           dataOption match {
             case Some(_) => {
               var readRetJson: String = ""
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
-              var filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+              val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
               if (sampled) {
-                val ratio = VizReads.THRESHOLD / ((end - start))
-                filteredData = filteredData.sample(false, ratio)
-                sampled = true
-                val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds, 1 / ratio)
+                val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
                 val fileMap = VizReads.readsData.getFileMap()
                 for (sample <- sampleIds) {
                   val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
