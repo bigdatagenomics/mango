@@ -48,7 +48,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
   }
 
   val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000L),
-    SequenceRecord("chrM", 2000L),
+    SequenceRecord("chrM", 20000L),
     SequenceRecord("chr3", 2000L)))
 
   val bamFile = "./src/test/resources/mouse_chrM.bam"
@@ -57,7 +57,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
   sparkTest("assert the data pulled from a file is the same") {
 
     val sample = "sample1"
-    var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
+    var lazyMat = LazyMaterialization[AlignmentRecord](sc, sd, 10)
     lazyMat.loadSample(sample, bamFile)
 
     val region = new ReferenceRegion("chrM", 0L, 1000L)
@@ -72,7 +72,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val sample1 = "person1"
     val sample2 = "person2"
 
-    var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
+    var lazyMat = LazyMaterialization[AlignmentRecord](sc, sd, 10)
     val region = new ReferenceRegion("chrM", 0L, 100L)
     lazyMat.loadSample(sample1, bamFile)
     lazyMat.loadSample(sample2, bamFile)
@@ -87,7 +87,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
   sparkTest("Fetch region out of bounds") {
     val sample1 = "person1"
 
-    var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
+    var lazyMat = LazyMaterialization[AlignmentRecord](sc, sd, 10)
     val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
     lazyMat.loadSample(sample1, bamFile)
     val results = lazyMat.get(bigRegion, sample1).get
@@ -100,7 +100,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
   sparkTest("Fetch region whose name is not yet loaded") {
     val sample1 = "person1"
 
-    var lazyMat = LazyMaterialization[AlignmentRecord](sc, 10)
+    var lazyMat = LazyMaterialization[AlignmentRecord](sc, sd, 10)
     val bigRegion = new ReferenceRegion("M", 0L, 20000L)
     lazyMat.loadSample(sample1, bamFile)
     val results = lazyMat.get(bigRegion, sample1)
@@ -111,7 +111,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
   sparkTest("Get data for variants") {
     val region = new ReferenceRegion("chrM", 0L, 100L)
     val callset = "callset1"
-    var lazyMat = LazyMaterialization[Genotype](sc, 10)
+    var lazyMat = LazyMaterialization[Genotype](sc, sd, 10)
     lazyMat.loadSample(callset, vcfFile)
 
     val results = lazyMat.get(region, callset).get

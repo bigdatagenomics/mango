@@ -119,20 +119,8 @@ function renderReadsByResolution(isHighRes, data, sample, i) {
         sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
         sampleData[i].pairs = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
         sampleData[i].filename = typeof data['filename'] != "undefined" ? data['filename'] : "";
-        sampleData[i].dictionary = typeof data['dictionary'] != "undefined" ? data['dictionary'] : [];
-        // document.write(data['dictionary']);
         // Renders Reads Frequency
         renderJsonCoverage(data['freq'], i)
-        
-        // Autocomplete function 
-        $('#autocomplete').autocomplete({
-          lookup: data['dictionary'],
-          onSelect: function (suggestion) {
-            var thehtml = '<strong>Name:</strong> '+suggestion.value;
-            $('#outputcontent').html(thehtml);
-          }
-        });
-
 
         // print file name
         // TODO: this should not be redrawn every page load

@@ -2,7 +2,7 @@
 *.log
 .DS_Store
 *.DS_Store
-
+.idea
 # sbt specific
 .cache/
 .history/
