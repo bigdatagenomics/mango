@@ -441,9 +441,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       else
         args.partitionCount
 
-    VizReads.readsData = LazyMaterialization(sc, VizReads.partitionCount)
-    VizReads.variantData = LazyMaterialization(sc, VizReads.partitionCount)
-
     if (args.referencePath.endsWith(".fa") || args.referencePath.endsWith(".fasta") || args.referencePath.endsWith(".adam")) {
       VizReads.referencePath = args.referencePath
       VizReads.setSequenceDictionary(args.referencePath)
@@ -453,6 +450,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       println("WARNING: Invalid reference file")
     }
 
+    VizReads.readsData = LazyMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
     val readsPaths = Option(args.readsPaths)
     readsPaths match {
       case Some(_) => {
@@ -466,9 +464,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             val rec: SAMRecord = samReader.iterator().next()
             val sample = rec.getReadGroup.getSample
             sampNamesBuffer += sample
-            VizReads.readsData.loadSample(sample, readsPath, VizReads.globalDict)
+            VizReads.readsData.loadSample(sample, readsPath)
           } else if (readsPath.endsWith(".adam")) {
-            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath, VizReads.globalDict)
+            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
           } else {
             log.info("WARNING: Invalid input for reads file")
             println("WARNING: Invalid input for reads file")
@@ -481,16 +479,17 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       }
     }
 
+    VizReads.variantData = LazyMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
     val variantsPath = Option(args.variantsPath)
     variantsPath match {
       case Some(_) => {
         if (args.variantsPath.endsWith(".vcf")) {
           VizReads.variantsPath = args.variantsPath
           // TODO: remove hardcode for callset1
-          VizReads.variantData.loadSample("callset1", VizReads.variantsPath, VizReads.globalDict)
+          VizReads.variantData.loadSample("callset1", VizReads.variantsPath)
           VizReads.variantsExist = true
         } else if (args.variantsPath.endsWith(".adam")) {
-          VizReads.readsData.loadADAMSample(VizReads.variantsPath, VizReads.globalDict)
+          VizReads.readsData.loadADAMSample(VizReads.variantsPath)
         } else {
           log.info("WARNING: Invalid input for variants file")
           println("WARNING: Invalid input for variants file")

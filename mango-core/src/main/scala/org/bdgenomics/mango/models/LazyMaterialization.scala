@@ -41,13 +41,14 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, Genotyp
 import scala.collection.mutable.ListBuffer
 import scala.reflect.{ classTag, ClassTag }
 
-class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long) extends Serializable with Logging {
+class LazyMaterialization[T: ClassTag](sc: SparkContext, seqDict: SequenceDictionary, partitions: Int, chunkSize: Long) extends Serializable with Logging {
 
-  var dict: SequenceDictionary = null
+  var dict: SequenceDictionary = seqDict
   var partitioner: Partitioner = null
+  setPartitioner
 
-  def this(sc: SparkContext, partitions: Int) = {
-    this(sc, partitions, 1000)
+  def this(sc: SparkContext, seqDict: SequenceDictionary, partitions: Int) = {
+    this(sc, seqDict, partitions, 1000)
   }
 
   // TODO: once tracking is pushed to front end, add sc.local partitioning
@@ -59,25 +60,14 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     dict
   }
 
-  def setDictionary(seqDict: SequenceDictionary) {
-    dict = seqDict
-  }
-
   // Stores location of sample at a given filepath
-  def loadSample(sampleId: String, filePath: String, seqdict: SequenceDictionary) {
-    if (dict == null) {
-      setDictionary(seqdict)
-      setPartitioner
-    }
+  def loadSample(sampleId: String, filePath: String) {
     fileMap += ((sampleId, filePath))
   }
 
-  def loadADAMSample(filePath: String, seqDict: SequenceDictionary): String = {
+  def loadADAMSample(filePath: String): String = {
     val region = ReferenceRegion("new", 0, chunkSize - 1)
-    setDictionary(seqDict)
-    val (rdd, sd, rd): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadadam(region, filePath)
-    if (partitioner == null)
-      setPartitioner
+    val (rdd, sd, rd): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadAdam(region, filePath)
     val sample = rd.recordGroups.head.sample
     fileMap += ((sample, filePath))
 
@@ -112,7 +102,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     }
   }
 
-  def loadadam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = {
+  def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = {
     val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
     val isVariant = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
     val isFeature = classOf[Feature].isAssignableFrom(classTag[T].runtimeClass)
@@ -133,10 +123,6 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
       val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
       val d = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
       (d, null, null)
-    } else if (isNucleotideFrag) {
-      // val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-      // sc.loadParquetFragments(fp, predicate = Some(pred)).map(r => (ReferenceRegion(r).get, r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-      (null, null, null) // TODO
     } else {
       log.warn("Generic type not supported")
       (null, null, null)
@@ -150,11 +136,6 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
     } else {
       sc.loadIndexedBam(fp, region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     }
-  }
-
-  private def loadReference(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
-    // TODO
-    null
   }
 
   def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, T)] = {
@@ -174,15 +155,13 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, partitions: Int, chunkS
       null
     }
     if (fp.endsWith(".adam")) {
-      data = loadadam(region, fp)._1
+      data = loadAdam(region, fp)._1
     } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
       data = loadFromBam(region, fp)
     } else if (fp.endsWith(".vcf")) {
       data = sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     } else if (fp.endsWith(".bed")) {
       data = sc.loadFeatures(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-    } else if (fp.endsWith(".fa") || fp.endsWith(".fasta")) {
-      data = loadReference(region, fp)
     } else {
       throw UnsupportedFileException("File type not supported")
       data
@@ -309,12 +288,12 @@ case class UnsupportedFileException(message: String) extends Exception(message)
 
 object LazyMaterialization {
 
-  def apply[T: ClassTag](sc: SparkContext, partitions: Int): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, partitions)
+  def apply[T: ClassTag](sc: SparkContext, seqDict: SequenceDictionary, partitions: Int): LazyMaterialization[T] = {
+    new LazyMaterialization[T](sc, seqDict, partitions)
   }
 
-  def apply[T: ClassTag](sc: SparkContext, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, partitions, chunkSize)
+  def apply[T: ClassTag](sc: SparkContext, seqDict: SequenceDictionary, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
+    new LazyMaterialization[T](sc, seqDict, partitions, chunkSize)
   }
 
   /**
