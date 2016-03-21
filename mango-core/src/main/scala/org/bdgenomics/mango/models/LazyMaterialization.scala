@@ -41,14 +41,13 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, Genotyp
 import scala.collection.mutable.ListBuffer
 import scala.reflect.{ classTag, ClassTag }
 
-class LazyMaterialization[T: ClassTag](sc: SparkContext, seqDict: SequenceDictionary, partitions: Int, chunkSize: Long) extends Serializable with Logging {
+class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long) extends Serializable with Logging {
 
-  var dict: SequenceDictionary = seqDict
   var partitioner: Partitioner = null
   setPartitioner
 
-  def this(sc: SparkContext, seqDict: SequenceDictionary, partitions: Int) = {
-    this(sc, seqDict, partitions, 1000)
+  def this(sc: SparkContext, dict: SequenceDictionary, partitions: Int) = {
+    this(sc, dict, partitions, 1000)
   }
 
   // TODO: once tracking is pushed to front end, add sc.local partitioning
@@ -288,12 +287,12 @@ case class UnsupportedFileException(message: String) extends Exception(message)
 
 object LazyMaterialization {
 
-  def apply[T: ClassTag](sc: SparkContext, seqDict: SequenceDictionary, partitions: Int): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, seqDict, partitions)
+  def apply[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int): LazyMaterialization[T] = {
+    new LazyMaterialization[T](sc, dict, partitions)
   }
 
-  def apply[T: ClassTag](sc: SparkContext, seqDict: SequenceDictionary, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, seqDict, partitions, chunkSize)
+  def apply[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
+    new LazyMaterialization[T](sc, dict, partitions, chunkSize)
   }
 
   /**

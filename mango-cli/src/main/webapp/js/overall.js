@@ -12,6 +12,7 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 // Global Data
 var refSequence;
 var sampleData;
+var seqDict;
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
@@ -52,8 +53,26 @@ if (featuresExist === true) {
 
 }
 
+//setting seqDict
+d3.json("/init", function(error, data) {
+  seqDict = data
+  // Autocomplete function 
+  $('#autocomplete').autocomplete({
+    lookup: seqDict,
+    onSelect: function (suggestion) {
+      var thehtml = '<strong>Name:</strong> '+suggestion.value;
+      $('#outputcontent').html(thehtml);
+    }
+  });
+})
+
+
+
 //All rendering of data, and everything setting new region parameters, is done here
 render(viewRefName, viewRegStart, viewRegEnd);
+
+
+
 
 // Functions
 function render(refName, start, end, mapQuality) {
