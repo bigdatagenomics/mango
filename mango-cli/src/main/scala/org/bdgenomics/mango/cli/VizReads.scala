@@ -51,7 +51,6 @@ object VizTimers extends Metrics {
   val AlignmentRequest = timer("GET alignment")
 
   //RDD operations
-  val ReadsRDDTimer = timer("RDD Reads operations")
   val FreqRDDTimer = timer("RDD Freq operations")
   val VarRDDTimer = timer("RDD Var operations")
   val FeatRDDTimer = timer("RDD Feat operations")
@@ -66,7 +65,6 @@ object VizTimers extends Metrics {
 
 object VizReads extends BDGCommandCompanion with Logging {
 
-  var readsRDD: RDD[(ReferenceRegion, AlignmentRecord)] = null
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
 
@@ -144,6 +142,22 @@ object VizReads extends BDGCommandCompanion with Logging {
       }
     }
 
+  }
+
+  /* returns the region and reference string that incorporates all alignmentrecords in rdd */
+  def getReference(rdd: RDD[(ReferenceRegion, AlignmentRecord)]): (ReferenceRegion, Option[String]) = {
+    val minStart: Long = rdd.min()(new Ordering[Tuple2[ReferenceRegion, AlignmentRecord]]() {
+      override def compare(x: (ReferenceRegion, AlignmentRecord), y: (ReferenceRegion, AlignmentRecord)): Int =
+        Ordering[Long].compare(x._2.getStart, y._2.getStart)
+    })._2.getStart
+
+    val maxEndElement = rdd.max()(new Ordering[Tuple2[ReferenceRegion, AlignmentRecord]]() {
+      override def compare(x: (ReferenceRegion, AlignmentRecord), y: (ReferenceRegion, AlignmentRecord)): Int =
+        Ordering[Long].compare(x._2.getEnd, y._2.getEnd)
+    })
+    val region = ReferenceRegion(maxEndElement._1.referenceName, minStart, maxEndElement._2.getEnd)
+    val reference = getReference(region)
+    (region, reference)
   }
 
   def getReference(region: ReferenceRegion): Option[String] = {
@@ -267,7 +281,6 @@ class VizServlet extends ScalatraServlet {
           val end: Long = VizReads.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
-          val reference = VizReads.getReference(region)
           val readQuality = params.getOrElse("quality", "0")
 
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
@@ -275,33 +288,18 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+              val (region, reference) = VizReads.getReference(filteredData)
 
-              // TODO: replace with new reference implementations
-              val minStart: Long = filteredData.min()(new Ordering[Tuple2[ReferenceRegion, AlignmentRecord]]() {
-                override def compare(x: (ReferenceRegion, AlignmentRecord), y: (ReferenceRegion, AlignmentRecord)): Int =
-                  Ordering[Long].compare(x._2.getStart, y._2.getStart)
-              })._2.getStart
-
-              val maxEnd: Long = filteredData.max()(new Ordering[Tuple2[ReferenceRegion, AlignmentRecord]]() {
-                override def compare(x: (ReferenceRegion, AlignmentRecord), y: (ReferenceRegion, AlignmentRecord)): Int =
-                  Ordering[Long].compare(x._2.getEnd, y._2.getEnd)
-              })._2.getEnd
-
-              val newRegion = ReferenceRegion(params("ref"), minStart, maxEnd)
-              val mismatchReference = VizReads.getReference(newRegion)
-
-              // TODO: these 2 new variables may cause downstream issues
-              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, mismatchReference, newRegion, sampleIds)
+              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
               val fileMap = VizReads.readsData.getFileMap()
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
-                val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
+                val dictionary = VizReads.formatDictionaryOpts(VizReads.globalDict)
                 sampleData match {
                   case Some(_) =>
                     readRetJson += "\"" + sample + "\":" +
-                      "{ \"dictionary\": " + write(dictionary) +
-                      ", \"tracks\": " + write(sampleData.get.records) +
+                      "{ \"tracks\": " + write(sampleData.get.records) +
                       ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
                       ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
                       ", \"matePairs\": " + write(sampleData.get.matePairs) + "},"
@@ -326,15 +324,14 @@ class VizServlet extends ScalatraServlet {
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizReads.getEnd(params("end").toLong, VizReads.readsData.dict(params("ref").toString)))
+        VizReads.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
       contentType = "json"
-      val dictOpt = VizReads.readsData.dict(viewRegion.referenceName)
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       dictOpt match {
         case Some(_) => {
-          val end: Long = VizReads.getEnd(viewRegion.end, VizReads.readsData.dict(viewRegion.referenceName))
+          val end: Long = VizReads.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
-          val reference = VizReads.getReference(region)
           val readQuality = params.getOrElse("quality", "0")
 
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
@@ -342,25 +339,11 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
+              val (region, reference) = VizReads.getReference(filteredData)
 
-              // TODO: replace with new reference implementations
-              val minStart: Long = filteredData.min()(new Ordering[Tuple2[ReferenceRegion, AlignmentRecord]]() {
-                override def compare(x: (ReferenceRegion, AlignmentRecord), y: (ReferenceRegion, AlignmentRecord)): Int =
-                  Ordering[Long].compare(x._2.getStart, y._2.getStart)
-              })._2.getStart
-
-              val maxEnd: Long = filteredData.max()(new Ordering[Tuple2[ReferenceRegion, AlignmentRecord]]() {
-                override def compare(x: (ReferenceRegion, AlignmentRecord), y: (ReferenceRegion, AlignmentRecord)): Int =
-                  Ordering[Long].compare(x._2.getEnd, y._2.getEnd)
-              })._2.getEnd
-
-              val newRegion = ReferenceRegion(params("ref"), minStart, maxEnd)
-              val mismatchReference = VizReads.getReference(newRegion)
-
-              val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, mismatchReference, newRegion, sampleIds)
+              val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, reference, region, sampleIds)
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
               val fileMap = VizReads.readsData.getFileMap()
-              val dictionary = VizReads.formatDictionaryOpts(VizReads.readsData.getDictionary)
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)

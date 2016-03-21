@@ -15,8 +15,6 @@ src_managed/
 project/boot/
 project/plugins/project/
 parquettest.sh
-out.txt
-stylesheets/main.css
 *.css.map
 # Scala-IDE specific
 .scala_dependencies

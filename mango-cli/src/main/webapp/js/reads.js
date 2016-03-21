@@ -261,7 +261,6 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
               .duration(200)
               .style("opacity", .9);
             readDiv[i].html("Read Name: " + d.readName + "<br>" +
-                                          d.sequence +
                                           "Start: " + d.start + "<br>" +
                                           "End: " + d.end + "<br>" +
                                           "Cigar:" + d.cigar + "<br>" +
