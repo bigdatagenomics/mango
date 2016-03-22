@@ -4,7 +4,7 @@
 <%@ val variantsExist: Boolean %>
 <%@ val featuresExist: Boolean %>
 
-<html>
+<html xmlns="http://www.w3.org/1999/html">
 <head lang="en">
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -15,7 +15,7 @@
     <script src="resources/js/jquery-ui.min.js"></script>
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
     <script src="resources/js/bigSlide.js"></script>
-    <script src="js/jquery.autocomplete.min.js"></script>    
+    <script src="resources/js/jquery.autocomplete.min.js"></script>
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
@@ -49,9 +49,9 @@
           <li class="dropdown">
             <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
             <ul class="dropdown-menu" id="menu1">
-              <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck">
+              <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
               <li class="refDependancy"><label for="indelCheck">Indels</label></li>
-              <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck">
+              <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
               <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
               <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
               <li><label for="coverageCheck">Coverage</label></li>
@@ -76,12 +76,6 @@
     <nav id="menu" class="panel" role="navigation">
     <h2> Reference Panel </h2>
   </nav>
-
-  <script>
-      $(document).ready(function() {
-          $('.menu-link').bigSlide();
-      });
-  </script>
 
   <div id = "navigation">
       <ul>
@@ -146,7 +140,7 @@
           <li>
           <form id="regForm" name="regForm" method="GET" class="form-inline">
           region:
-          <input id="autocomplete" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
+          <input id="autocomplete" type="text" name="info" size="20" class="alignment-search form-control" placeholder="sample:refName:start-end">
           </li>
           <li>
             mapping quality:
@@ -166,29 +160,34 @@
        </ul>
       <br>
   </div>
-  
-  <br>
-  <div class="row top">
-    <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
-  </div>
-  <div class="row top">
-    <div class="col-md-10 graphArea" id="featArea" style="float:right"></div>
-  </div>
-  <div class="row top">
-    <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
-  </div>
-  <div class="graphArea" id="readsArea">
-  </div>
 
-  <br>
+<div class="row">
+    <div>
+        <div class="col-md-12">
+              <div class="graphArea" id="refArea"></div>
+              <div class="graphArea" id="featArea"></div>
+              <div class="graphArea" id="varArea"></div>
+              <div class="graphArea" id="readsArea"></div>
+        </div>
+    </div>
+</div>
+
+
 </div>
 
 
 <script src="js/utilities.js"></script>
+<script src="js/formSubmit.js"></script>
+
 <script>
+  $(document).ready(function() {
+      $('.menu-link').bigSlide();
+  });
+
   <!-- Define Global Variables -->
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
+  var mapQuality = 100;
   var viewRegEnd = parseInt(${viewRegion._3}, 10);
   var readsExist = ${readsExist};
   var variantsExist = ${variantsExist};
@@ -196,8 +195,15 @@
   var refSequence = null;
 
   var sampleId = "${samples}";
-  var rawSamples = sampleId.split(",").unique(); // distinct
+  var rawSamples = sampleId.split(",").unique();
   var samples = filterNames(rawSamples);
+
+  // object used to track sample names and their corresponding html identifiers
+  var sampleMap = {};
+  for (var i = 0; i < rawSamples.length; i++){
+    sampleMap[filterName(rawSamples[i])] = rawSamples[i];
+  }
+
   var width = window.innerWidth - 18;
 </script>
 <script src="js/reads.js"></script>

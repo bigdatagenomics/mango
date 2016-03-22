@@ -1,5 +1,5 @@
 //Configuration Variables
-var width = $(".sampleReads").width();
+var width = $(".mergedReads").width();
 var base = 50;
 var trackHeight = 6;
 
@@ -12,7 +12,6 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 // Global Data
 var refSequence;
 var sampleData;
-var seqDict;
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
@@ -54,16 +53,9 @@ if (featuresExist === true) {
 }
 
 //setting seqDict
-d3.json("/init", function(error, data) {
-  seqDict = data
-  // Autocomplete function 
-  $('#autocomplete').autocomplete({
-    lookup: seqDict,
-    onSelect: function (suggestion) {
-      var thehtml = '<strong>Name:</strong> '+suggestion.value;
-      $('#outputcontent').html(thehtml);
-    }
-  });
+d3.json("/init", function(error, seqDict) {
+  // Autocomplete function
+  autoComplete(seqDict);
 })
 
 
@@ -77,9 +69,8 @@ render(viewRefName, viewRegStart, viewRegEnd);
 // Functions
 function render(refName, start, end, mapQuality) {
   //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
+  setGlobalReferenceRegion(refName, start, end);
+  setGlobalMapQ(mapQuality);
 
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
@@ -101,7 +92,7 @@ function render(refName, start, end, mapQuality) {
 
   // Reads and Coverage
   if (readsExist) {
-    renderReads(refName, start, end, mapQuality);
+    renderMergedReads(refName, start, end, mapQuality);
   }
 }
 
@@ -121,9 +112,10 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
     .style("opacity", 0);
 
   d3.json(featureJsonLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
-      return;
-    }
+  if (error) return error;
+  if (!isValidHttpResponse(data)) {
+    return;
+  }
     var rects = featureSvgContainer.selectAll("rect").data(data);
     var modify = rects.transition();
     modify

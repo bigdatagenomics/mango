@@ -1,5 +1,11 @@
 @import 'modules/colors';
 @import 'partials/menu';
+@import 'partials/sampleLegend';
+
+.mergedReads {
+    border-bottom: 1px solid $covBorder;
+    margin-bottom: 5px;
+}
 
 body {
     font-family: 'Open Sans', sans-serif;
@@ -53,9 +59,14 @@ div.tooltip {
     position: absolute;
     text-align: center;
     padding: 2px;
-    background: lightsteelblue;
+    background: $med-grey;
     border: 0px;
     pointer-events: none;
+    color: white;
+
+    p {
+        margin: 0px;
+    }
 }
 
 input[type="text"] {
@@ -67,6 +78,7 @@ input[type="text"] {
     margin-left:15px;
 }
 
+/*
 .main {
   position: relative;
   margin-right: 320px;
@@ -75,7 +87,7 @@ input[type="text"] {
   margin-bottom: 10px;
   border-radius:5px;
   padding: 20px;
-}
+}*/
 .panel   { 
   background: #ccc;
   margin-right: 320px;
@@ -126,10 +138,6 @@ input[type="text"] {
     }
 }
 
-.row.top {
-  margin-right: 15px;
-}
-
 .sampleCoverage {
   border-bottom: 1px solid $covBorder;
   margin-bottom: 5px;
@@ -141,12 +149,6 @@ input[type="text"] {
   font-size: 0.1px;
   z-index: 99999;
   display: block;
-}
-
-.fixed-title {
-  position: relative;
-  font-size: 12px;
-  top: 30px;
 }
 
 .ui-resizable {
@@ -183,8 +185,6 @@ input[type="text"] {
   cursor: default;
   color: grey;
 }
-
-
 
 #searchfield { display: block; width: 100%; text-align: center; margin-bottom: 35px; }
 

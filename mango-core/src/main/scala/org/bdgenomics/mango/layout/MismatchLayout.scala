@@ -40,6 +40,21 @@ object MismatchLayout extends Logging {
   }
 
   /**
+   * An implementation of AlignmentRecordLayout which takes in an Iterator of (ReferenceRegion, AlignmentRecord) tuples, the reference String
+   * over the region, and the region viewed.
+   *
+   * @param iter: Iterator of (ReferenceRegion, AlignmentRecord) tuples
+   * @param reference: reference string used to calculate mismatches
+   * @param region: ReferenceRegion to be viewed
+   * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
+   */
+  def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion): Iterator[(String, List[MisMatch])] = {
+    val alignments: List[AlignmentRecord] = iter.toList.map(_._2)
+    // get all mismatches for each read
+    alignments.map(r => (r.getRecordGroupSample, MismatchLayout(r, reference, region))).toIterator
+  }
+
+  /**
    * Finds and returns all indels and mismatches of a given alignment record from an overlapping reference string.
    * Must take into account overlapping regions that are not covered by both the reference and record sequence.
    *
@@ -53,6 +68,7 @@ object MismatchLayout extends Logging {
     val regionSize = region.end - region.start
 
     var misMatches: ListBuffer[MisMatch] = new ListBuffer[MisMatch]()
+    val refLength = ref.length - 1
 
     if (rec.getReadNegativeStrand == true) {
       return misMatches.toList
@@ -60,21 +76,17 @@ object MismatchLayout extends Logging {
 
     val cigar = TextCigarCodec.decode(rec.getCigar).getCigarElements()
 
-    var refIdx = 0L
-    var recIdx = 0L
+    // string position
+    var refIdx: Int = (rec.getStart - region.start).toInt
+    var recIdx: Int = 0
 
-    // calculate start value
-    if (rec.getStart >= region.start) {
-      refIdx = rec.getStart + 1
-      recIdx = rec.getStart
-    } else {
-      refIdx = region.start + 1
-      recIdx = region.start
-    }
+    // actual position relative to reference region
+    var refPos: Long = rec.getStart
 
     cigar.foreach {
       e =>
         {
+          // required for reads that extend reference
           var misLen = 0
           var op: CigarOperator = null
           var refBase: Char = 'M'
@@ -82,45 +94,50 @@ object MismatchLayout extends Logging {
           try {
             misLen = e.getLength
             op = e.getOperator
-            recBase = rec.getSequence.charAt(getPosition(recIdx, rec.getStart))
-            refBase = ref.charAt(getPosition(refIdx, region.start))
+            recBase = rec.getSequence.charAt(recIdx)
+            refBase = ref.charAt(refIdx)
           } catch {
             case e: Exception => misMatches.toList
           }
           if (op == CigarOperator.X || op == CigarOperator.M) {
             try {
               for (i <- 0 to misLen - 1) {
-                // if index position is not within region
-                if (refIdx <= region.end && refIdx >= region.start) {
-                  val recBase = rec.getSequence.charAt(getPosition(recIdx, rec.getStart))
-                  val refBase = ref.charAt(getPosition(refIdx, region.start))
-                  if (refBase != recBase) {
-                    val start = recIdx
-                    misMatches += new MisMatch(op.toString, refIdx, start, start + 1, recBase.toString, refBase.toString)
-                  }
+                // required for reads that extend reference
+                if (refIdx > refLength)
+                  return misMatches.toList
+
+                val recBase = rec.getSequence.charAt(recIdx)
+
+                val refBase = ref.charAt(refIdx)
+                if (refBase != recBase) {
+                  misMatches += new MisMatch(op.toString, refPos, 1, recBase.toString, refBase.toString)
                 }
                 recIdx += 1
                 refIdx += 1
+                refPos += 1
               }
             } catch {
-              case e: Exception => log.warn(e.toString)
+              case e: Exception => {
+                log.warn(e.toString)
+              }
             }
           } else if (op == CigarOperator.I) {
             try {
-              val end = recIdx + misLen
-              val stringStart = (recIdx - rec.getStart).toInt
-              val indel = rec.getSequence.substring(stringStart, stringStart + misLen)
-              misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
+              val indel = rec.getSequence.substring(recIdx, recIdx + misLen)
+              misMatches += new MisMatch(op.toString, refPos, misLen, indel, "")
               recIdx += misLen
             } catch {
-              case e: Exception => log.warn(e.toString)
+              case e: Exception => {
+                log.warn(e.toString)
+              }
             }
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
-            val end = recIdx + misLen
-            val stringStart = getPosition(recIdx, rec.getStart)
-            val indel = rec.getSequence.substring(stringStart, stringStart + misLen)
-            misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
+            val start = Math.min(refIdx, refLength)
+            val end = Math.min(refIdx + misLen, refLength)
+            val indel = ref.substring(start, end)
+            misMatches += new MisMatch(op.toString, refPos, misLen, "", indel)
             refIdx += misLen
+            refPos += misLen
           } else if (op == CigarOperator.S) {
             recIdx += misLen
           }
@@ -133,7 +150,7 @@ object MismatchLayout extends Logging {
   /**
    * Determines weather a given AlignmentRecord contains indels using its cigar
    *
-   * @param record: AlignmentRecord
+   * @param rec: AlignmentRecord
    * @return Boolean whether record contains any indels
    */
   def containsIndels(rec: AlignmentRecord): Boolean = {
@@ -157,7 +174,7 @@ object MismatchLayout extends Logging {
     }
   }
 
-  private def getPosition(idx: Long, start: Long): Int = (idx - start).toInt
+  //  private def getPosition(idx: Long, start: Long): Int = (idx - start).toInt
 }
 
 object MisMatchJson {
@@ -176,17 +193,101 @@ object MisMatchJson {
   /**
    * An implementation of MismatchJson which converts a single Mismatch into MisMatch Json
    *
-   * @param recs The single MisMatch to lay out in json
+   * @param rec The single MisMatch to lay out in json
    * @param track js track number
    * @return List of MisMatch Json objects
    */
   def apply(rec: MisMatch, track: Int): MisMatchJson = {
-    new MisMatchJson(rec.op, rec.refCurr, rec.start, rec.end, rec.sequence, rec.refBase, track)
+    new MisMatchJson(rec.op, rec.refCurr, rec.length, rec.sequence, rec.refBase, track)
+  }
+}
+
+object PointMisMatch {
+
+  /**
+   * aggregated point mismatch at a specific location
+   *
+   * @param mismatches: List of mismatches to be grouped by start value
+   * @return List of aggregated mismatches and their corresponding counts
+   */
+  def apply(mismatches: List[MisMatch]): List[MutationCount] = {
+    val grouped = mismatches.groupBy(_.refCurr)
+    val g = grouped.map(_._2).flatMap(reducePoints(_)).toList
+    return g
+  }
+
+  /**
+   * aggregated point mismatch at a specific location
+   *
+   * @param mismatches: List of mismatches to be grouped by start value
+   * @return aggregated mismatches and their corresponding counts
+   */
+  private def reducePoints(mismatches: List[MisMatch]): List[MutationCount] = {
+
+    var mutationCounts: ListBuffer[MutationCount] = new ListBuffer[MutationCount]
+    // process mismatches
+    val ms = mismatches.filter(_.op == "M")
+    val indels = mismatches.filter(_.op != "M")
+
+    if (ms.nonEmpty) {
+      val length = ms.head.length
+      val refCurr = ms.head.refCurr
+      val refBase = ms.head.refBase // TODO: this will cause an issue if you have an indel and mismatch at the same location
+
+      // count each occurrence of a mismatch
+      val mappedMs: Map[String, Long] = ms.map(r => (r.sequence, 1L))
+        .groupBy(_._1)
+        .map { case (group: String, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
+
+      if (!mappedMs.isEmpty) {
+        mutationCounts += MisMatchCount("M", refCurr, length, refBase, mappedMs)
+      }
+    }
+
+    // process indels
+    if (indels.nonEmpty) {
+      val length = indels.head.length
+      val refCurr = indels.head.refCurr
+
+      val iCount = indels.filter(_.op == "I").size
+      val dCount = indels.filter(_.op == "D").size
+      val nCount = indels.filter(_.op == "N").size
+
+      if (iCount > 0) {
+        mutationCounts += IndelCount("I", refCurr, length, iCount)
+      } else if (dCount > 0) {
+        mutationCounts += IndelCount("D", refCurr, length, dCount)
+      } else if (nCount > 0) {
+        mutationCounts += IndelCount("N", refCurr, length, nCount)
+      }
+    }
+    mutationCounts.toList
   }
 }
 
 // tracked MisMatch Json Object
-case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String, track: Long)
+case class MisMatchJson(op: String, refCurr: Long, length: Long, sequence: String, refBase: String, track: Long)
+
+/**
+ * aggregated point mismatch at a specific location
+ *
+ * @param refCurr: location of reference corresponding to mismatch
+ * @param refBase: base at reference corresponding to mismatch
+ * @param length: length of mismatch or indel
+ * @param mismatches: Map of either [String, Long] for I,D or N or [String, (sequence, Long)] for M
+ */
+case class PointMisMatch(refCurr: Long, refBase: String, length: Long, indels: Map[String, Long], mismatches: Map[String, Long])
 
 // untracked Mismatch Json Object
-case class MisMatch(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String)
+case class MisMatch(op: String, refCurr: Long, length: Long, sequence: String, refBase: String)
+
+// counts is a map of sequence, count for mismatches
+case class MisMatchCount(op: String, refCurr: Long, length: Long, refBase: String, count: Map[String, Long]) extends MutationCount
+case class IndelCount(op: String, refCurr: Long, length: Long, count: Long) extends MutationCount
+
+trait MutationCount {
+  def op: String
+  def length: Long
+  def refCurr: Long
+  def count: Any
+}

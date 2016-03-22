@@ -45,15 +45,9 @@ object AlignmentRecordLayout extends Logging {
    */
   def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion, sampleIds: List[String]): Map[String, SampleTrack] = {
     val sampleTracks = new ListBuffer[(String, SampleTrack)]()
-    val highRes = region.width < 10000
 
-    val tracks: Map[String, Array[ReadsTrack]] = {
-      if (highRes) {
-        rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).collect.groupBy(_.sample)
-      } else {
-        rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).filter(!_.misMatches.isEmpty).collect.groupBy(_.sample)
-      }
-    }
+    val tracks: Map[String, Array[ReadsTrack]] =
+      rdd.mapPartitions(AlignmentRecordLayout(_, reference, region)).filter(!_.misMatches.isEmpty).collect.groupBy(_.sample)
 
     tracks.foreach {
       case (sample, track) => {
@@ -80,6 +74,39 @@ object AlignmentRecordLayout extends Logging {
   def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: Option[String], region: ReferenceRegion): Iterator[ReadsTrack] = {
     new AlignmentRecordLayout(iter).collect(reference, region)
   }
+}
+
+object MergedAlignmentRecordLayout extends Logging {
+
+  /**
+   * An implementation of AlignmentRecordLayout which takes in an RDD of (ReferenceRegion, AlignmentRecord) tuples, the reference String
+   * over the region, the region viewed and samples viewed.
+   *
+   * @param rdd: RDD of (ReferenceRegion, AlignmentRecord) tuples
+   * @param referenceOpt: reference string used to calculate mismatches
+   * @param region: ReferenceRegion to be viewed
+   * @param sampleIds: List of sample identifiers to be rendered
+   * @return List of Read Tracks containing json for reads, mismatches and mate pairs
+   */
+  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], referenceOpt: Option[String], region: ReferenceRegion, sampleIds: List[String]): Map[String, List[MutationCount]] = {
+
+    // check for reference
+    val reference = referenceOpt match {
+      case Some(_) => referenceOpt.get
+      case None => {
+        log.error("Reference not provided")
+        return Map.empty
+      }
+    }
+
+    // collect and reduce mismatches for each sample
+    val mismatches: RDD[(String, List[MisMatch])] = rdd.mapPartitions(MismatchLayout(_, reference, region))
+      .reduceByKey(_ ++ _) // list of [sample, mismatches]
+
+    // reduce point mismatches by start and end value
+    mismatches.map(r => (r._1, PointMisMatch(r._2))).collect.toMap
+  }
+
 }
 
 /**
@@ -117,13 +144,22 @@ class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRecord)]
 }
 
 /**
- * An implementation of ReadJson which converts AlignmentRecord data to ReadJson
+ * An extension of TrackedLayout for AlignmentRecord data
  *
- * @param recs The list of (Reference, AlignmentRecord) tuples to lay out in json
- * @param track js track number
- * @return List of Read Json objects
+ * @param values The set of (Reference, AlignmentRecord) tuples to lay out in tracks
  */
+class MergedAlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRecord)]) extends Logging {
+
+}
+
 object ReadJson {
+  /**
+   * An implementation of ReadJson which converts AlignmentRecord data to ReadJson
+   *
+   * @param recs The list of (Reference, AlignmentRecord) tuples to lay out in json
+   * @param track js track number
+   * @return List of Read Json objects
+   */
   def apply(recs: List[(ReferenceRegion, AlignmentRecord)], track: Int): List[ReadJson] = {
     recs.map(rec => new ReadJson(rec._2.getReadName, rec._2.getStart, rec._2.getEnd, rec._2.getReadNegativeStrand, rec._2.getSequence, rec._2.getCigar, rec._2.getMapq, track))
   }
