@@ -68,6 +68,7 @@ object MismatchLayout extends Logging {
     val regionSize = region.end - region.start
 
     var misMatches: ListBuffer[MisMatch] = new ListBuffer[MisMatch]()
+    val refLength = ref.length - 1
 
     if (rec.getReadNegativeStrand == true) {
       return misMatches.toList
@@ -85,6 +86,9 @@ object MismatchLayout extends Logging {
     cigar.foreach {
       e =>
         {
+          // required for reads that extend reference
+          if (refIdx > refLength)
+            return misMatches.toList
           var misLen = 0
           var op: CigarOperator = null
           var refBase: Char = 'M'
@@ -100,6 +104,10 @@ object MismatchLayout extends Logging {
           if (op == CigarOperator.X || op == CigarOperator.M) {
             try {
               for (i <- 0 to misLen - 1) {
+                // required for reads that extend reference
+                if (refIdx >= refLength)
+                  return misMatches.toList
+
                 val recBase = rec.getSequence.charAt(recIdx)
 
                 val refBase = ref.charAt(refIdx)
@@ -128,7 +136,9 @@ object MismatchLayout extends Logging {
               }
             }
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
-            val indel = ref.substring(refIdx, refIdx + misLen)
+            val start = Math.min(refIdx, refLength)
+            val end = Math.min(refIdx + misLen, refLength)
+            val indel = ref.substring(start, end)
             misMatches += new MisMatch(op.toString, refPos, misLen, "", indel)
             refIdx += misLen
             refPos += misLen

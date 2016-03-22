@@ -183,4 +183,17 @@ class MismatchLayoutSuite extends ADAMFunSuite {
 
   }
 
+  test("reads that extend reference") {
+    val read = AlignmentRecord.newBuilder
+      .setCigar("6M")
+      .setStart(1)
+      .setEnd(6)
+      .setSequence("AAAAAA")
+      .build
+
+    val reference = "NAAAAA"
+    val region = new ReferenceRegion("chr", 1, 6)
+    val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
+    assert(results.size == 0)
+  }
 }
