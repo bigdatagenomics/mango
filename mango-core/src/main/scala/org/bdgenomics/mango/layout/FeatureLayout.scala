@@ -95,7 +95,7 @@ object FeatureJson {
    * @return List of Feature Json Objects
    */
   def apply(recs: List[(ReferenceRegion, Feature)], track: Int): List[FeatureJson] = {
-    recs.map(rec => new FeatureJson(rec._2.featureId, rec._2.featureType, rec._2.start, rec._2.end, track))
+    recs.map(rec => new FeatureJson(rec._2.getFeatureId, rec._2.getFeatureType, rec._2.getStart, rec._2.getEnd, track))
   }
 }
 

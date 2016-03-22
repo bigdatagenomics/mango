@@ -207,7 +207,6 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         data['mismatches'] = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
         data['indels'] = typeof data['indels'] != "undefined" ? data['indels'] : [];
         data['matePairs'] = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
-        data['dictionary'] = typeof data['dictionary'] != "undefined" ? data['dictionary'] : [];
 
         renderSamplename(i);
         var numTracks = d3.max(data["tracks"], function(d) {return d.track});

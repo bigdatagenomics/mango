@@ -12,7 +12,6 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 // Global Data
 var refSequence;
 var sampleData;
-var seqDict;
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
@@ -54,16 +53,9 @@ if (featuresExist === true) {
 }
 
 //setting seqDict
-d3.json("/init", function(error, data) {
-  seqDict = data
-  // Autocomplete function 
-  $('#autocomplete').autocomplete({
-    lookup: seqDict,
-    onSelect: function (suggestion) {
-      var thehtml = '<strong>Name:</strong> '+suggestion.value;
-      $('#outputcontent').html(thehtml);
-    }
-  });
+d3.json("/init", function(error, seqDict) {
+  // Autocomplete function
+  autoComplete(seqDict);
 })
 
 

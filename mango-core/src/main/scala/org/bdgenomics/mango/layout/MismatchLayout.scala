@@ -77,7 +77,7 @@ object MismatchLayout extends Logging {
     val cigar = TextCigarCodec.decode(rec.getCigar).getCigarElements()
 
     // string position
-    var refIdx: Int = (rec.getStart - region.start).toInt + 1
+    var refIdx: Int = (rec.getStart - region.start).toInt
     var recIdx: Int = 0
 
     // actual position relative to reference region
@@ -87,8 +87,6 @@ object MismatchLayout extends Logging {
       e =>
         {
           // required for reads that extend reference
-          if (refIdx > refLength)
-            return misMatches.toList
           var misLen = 0
           var op: CigarOperator = null
           var refBase: Char = 'M'
@@ -105,14 +103,14 @@ object MismatchLayout extends Logging {
             try {
               for (i <- 0 to misLen - 1) {
                 // required for reads that extend reference
-                if (refIdx >= refLength)
+                if (refIdx > refLength)
                   return misMatches.toList
 
                 val recBase = rec.getSequence.charAt(recIdx)
 
                 val refBase = ref.charAt(refIdx)
                 if (refBase != recBase) {
-                  misMatches += new MisMatch(op.toString, refPos, misLen, recBase.toString, refBase.toString)
+                  misMatches += new MisMatch(op.toString, refPos, 1, recBase.toString, refBase.toString)
                 }
                 recIdx += 1
                 refIdx += 1
@@ -121,7 +119,6 @@ object MismatchLayout extends Logging {
             } catch {
               case e: Exception => {
                 log.warn(e.toString)
-                println(ref, rec, region)
               }
             }
           } else if (op == CigarOperator.I) {
@@ -132,7 +129,6 @@ object MismatchLayout extends Logging {
             } catch {
               case e: Exception => {
                 log.warn(e.toString)
-                println(ref, rec, region)
               }
             }
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
