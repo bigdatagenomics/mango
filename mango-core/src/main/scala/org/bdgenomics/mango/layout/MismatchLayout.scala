@@ -46,7 +46,7 @@ object MismatchLayout extends Logging {
    * @param iter: Iterator of (ReferenceRegion, AlignmentRecord) tuples
    * @param reference: reference string used to calculate mismatches
    * @param region: ReferenceRegion to be viewed
-   * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
+   * @return Iterator of (sample, list of mismatch) pairs)
    */
   def apply(iter: Iterator[(ReferenceRegion, AlignmentRecord)], reference: String, region: ReferenceRegion): Iterator[(String, List[MisMatch])] = {
     val alignments: List[AlignmentRecord] = iter.toList.map(_._2)
@@ -210,8 +210,8 @@ object PointMisMatch {
    * @param mismatches: List of mismatches to be grouped by start value
    * @return List of aggregated mismatches and their corresponding counts
    */
-  def apply(mismatches: List[MisMatch]): List[MutationCount] = {
-    val grouped = mismatches.groupBy(_.refCurr)
+  def apply(mismatches: List[MisMatch], binSize: Int): List[MutationCount] = {
+    val grouped = mismatches.map(m => new MisMatch(m.op, (m.refCurr - (m.refCurr % binSize)), binSize, m.sequence, m.refBase)).groupBy(_.refCurr)
     val g = grouped.map(_._2).flatMap(reducePoints(_)).toList
     return g
   }
@@ -232,7 +232,7 @@ object PointMisMatch {
     if (ms.nonEmpty) {
       val length = ms.head.length
       val refCurr = ms.head.refCurr
-      val refBase = ms.head.refBase // TODO: this will cause an issue if you have an indel and mismatch at the same location
+      val refBase = ms.head.refBase
 
       // count each occurrence of a mismatch
       val mappedMs: Map[String, Long] = ms.map(r => (r.sequence, 1L))
@@ -249,17 +249,11 @@ object PointMisMatch {
       val length = indels.head.length
       val refCurr = indels.head.refCurr
 
-      val iCount = indels.filter(_.op == "I").size
-      val dCount = indels.filter(_.op == "D").size
-      val nCount = indels.filter(_.op == "N").size
+      val insertions: Map[String, Long] = indels.filter(_.op == "I").groupBy(_.sequence).mapValues(v => v.length)
+      val deletions: Map[String, Long] = indels.filter(_.op == "D").groupBy(_.length.toString).mapValues(v => v.length)
 
-      if (iCount > 0) {
-        mutationCounts += IndelCount("I", refCurr, length, iCount)
-      } else if (dCount > 0) {
-        mutationCounts += IndelCount("D", refCurr, length, dCount)
-      } else if (nCount > 0) {
-        mutationCounts += IndelCount("N", refCurr, length, nCount)
-      }
+      mutationCounts += IndelCount("indel", refCurr, Map("I" -> insertions, "D" -> deletions))
+
     }
     mutationCounts.toList
   }
@@ -281,13 +275,13 @@ case class PointMisMatch(refCurr: Long, refBase: String, length: Long, indels: M
 // untracked Mismatch Json Object
 case class MisMatch(op: String, refCurr: Long, length: Long, sequence: String, refBase: String)
 
-// counts is a map of sequence, count for mismatches
+//  count = Map[Base, Count]
 case class MisMatchCount(op: String, refCurr: Long, length: Long, refBase: String, count: Map[String, Long]) extends MutationCount
-case class IndelCount(op: String, refCurr: Long, length: Long, count: Long) extends MutationCount
+// count = Map[indel (I or D), (Sequence, Count)
+case class IndelCount(op: String, refCurr: Long, count: Map[String, Any]) extends MutationCount
 
 trait MutationCount {
   def op: String
-  def length: Long
   def refCurr: Long
-  def count: Any
+  def count: Map[String, Any]
 }

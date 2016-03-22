@@ -29,24 +29,6 @@ var varSvgContainer = d3.select("#varArea")
     .attr("width", width)
     .attr("height", varHeight);
 
-var varVertLine = varSvgContainer.append('line')
-  .attr({
-    'x1': 0,
-    'y1': 0,
-    'x2': 0,
-    'y2': varHeight
-  })
-  .attr("stroke", "#002900")
-  .attr("class", "verticalLine");
-
-varSvgContainer.on('mousemove', function () {
-    var xPosition = d3.event.pageX;
-    d3.selectAll(".verticalLine")
-      .attr({
-        "x1" : xPosition,
-        "x2" : xPosition
-      })
-});
 
 // Making hover box
 var varDiv = d3.select("#varArea")
@@ -68,7 +50,7 @@ function renderJsonVariants() {
     var varTrackHeight = getTrackHeight()
     varHeight = (numTracks+1)*varTrackHeight;
     varSvgContainer.attr("height", varHeight);
-    $(".verticalLine").attr("y2", varHeight);
+    renderd3Line(varSvgContainer, varHeight);
 
     // Add the rectangles
     var variants = varSvgContainer.selectAll(".variant").data(data);
@@ -133,24 +115,7 @@ function renderVariantFrequency() {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-    var varVertLine = varDiv.append('line')
-      .attr({
-        'x1': 0,
-        'y1': 0,
-        'x2': 0,
-        'y2': varHeight
-      })
-      .attr("stroke", "#002900")
-      .attr("class", "verticalLine");
-
-    varDiv.on('mousemove', function () {
-        var xPosition = d3.event.pageX;
-        d3.selectAll(".verticalLine")
-          .attr({
-            "x1" : xPosition,
-            "x2" : xPosition
-          })
-    });
+  renderd3Line(varDiv, varHeight);
 
   var margin = {top: 20, right: 0, bottom: 30, left: 0},
       height = 200 - margin.top - margin.bottom;

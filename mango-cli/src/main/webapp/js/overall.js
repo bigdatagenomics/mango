@@ -31,40 +31,17 @@ if (featuresExist === true) {
       .attr("height", featHeight)
       .attr("width", width);
 
-  var featVertLine = featureSvgContainer.append('line')
-    .attr({
-      'x1': 0,
-      'y1': 0,
-      'x2': 0,
-      'y2': featHeight
-    })
-    .attr("stroke", "#002900")
-    .attr("class", "verticalLine");
-
-  featureSvgContainer.on('mousemove', function () {
-    var xPosition = d3.mouse(this)[0];
-    d3.selectAll(".verticalLine")
-      .attr({
-        "x1" : xPosition,
-        "x2" : xPosition
-      })
-  });
-
+  renderd3Line(featureSvgContainer, featHeight);
 }
 
-//setting seqDict
-d3.json("/init", function(error, seqDict) {
-  // Autocomplete function
+// send pixel size for bining and initialize autocomplete
+var initJson =  "/init/" + $(".samples").width();
+d3.json(initJson, function(error, seqDict) {
   autoComplete(seqDict);
-})
-
-
+});
 
 //All rendering of data, and everything setting new region parameters, is done here
 render(viewRefName, viewRegStart, viewRegEnd);
-
-
-
 
 // Functions
 function render(refName, start, end, mapQuality) {

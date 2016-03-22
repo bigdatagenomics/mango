@@ -26,7 +26,7 @@ import org.bdgenomics.mango.layout._
 import scala.collection.mutable.ListBuffer
 
 class FrequencyLayoutSuite extends FunSuite {
-
+  val binSize = 1
   test("get frequency from reads of a 10 base pair long region") {
 
     val region = new ReferenceRegion("chr1", 0, 10)
@@ -41,7 +41,7 @@ class FrequencyLayoutSuite extends FunSuite {
         .build
     }
 
-    val freq = FrequencyLayout(records.toIterator, region).toList
+    val freq = FrequencyLayout(records.toIterator, region, binSize).toList
     assert(freq.contains(("sample1", 5, 5)))
     assert(freq.contains(("sample1", 9, 7)))
 
@@ -68,7 +68,7 @@ class FrequencyLayoutSuite extends FunSuite {
         .build
     }
 
-    val freq = FrequencyLayout(records.toIterator, region).toList
+    val freq = FrequencyLayout(records.toIterator, region, binSize).toList
     assert(freq.contains(("sample2", 5, 5)))
     assert(freq.contains(("sample1", 9, 7)))
 

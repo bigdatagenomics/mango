@@ -84,6 +84,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
+  var screenSize: Int = 0
 
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
@@ -144,7 +145,24 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   }
 
-  /* returns the region and reference string that incorporates all alignmentrecords in rdd */
+  /**
+   * Returns the bin size for calculation based on the client's screen
+   * size
+   * @param region Region to bin over
+   * @return Bin size to calculate over
+   */
+  def getBinSize(region: ReferenceRegion): Int = {
+    val binSize = ((region.end - region.start) / VizReads.screenSize).toInt
+    return Math.max(1, binSize)
+  }
+
+  /**
+   * Returns reference region string that is padded to encompass all reads for
+   * mismatch calculation
+   *
+   * @param region: ReferenceRegion to be viewed
+   * @return Option of Padded Reference
+   */
   def getPaddedReference(region: ReferenceRegion): (ReferenceRegion, Option[String]) = {
     val padding = 200
     val start = Math.max(0, region.start - padding)
@@ -154,6 +172,12 @@ object VizReads extends BDGCommandCompanion with Logging {
     (paddedRegion, reference)
   }
 
+  /**
+   * Returns reference from reference RDD working set
+   *
+   * @param region: ReferenceRegion to be viewed
+   * @return Option of Padded Reference
+   */
   def getReference(region: ReferenceRegion): Option[String] = {
     val seqRecord = VizReads.globalDict(region.referenceName)
     seqRecord match {
@@ -167,11 +191,24 @@ object VizReads extends BDGCommandCompanion with Logging {
     }
   }
 
+  /**
+   * Returns stringified version of sequence dictionary
+   *
+   * @param dict: dictionary to format to a string
+   * @return List of sequence dictionary strings of form referenceName:0-referenceName.length
+   */
   def formatDictionaryOpts(dict: SequenceDictionary): List[String] = {
     dict.records.map(r => r.name + ":0-" + r.length).toList
   }
 
-  // returns the minimum base pair of a chromosome queried
+  /**
+   * Returns the very last base in a given chromosome that
+   * can be viewed relative to the reference
+   *
+   * @param end: end of referenceregion that has been queried
+   * @param rec: Option of sequence record that is being viewed
+   * @return Last valid base in region being viewed
+   */
   def getEnd(end: Long, rec: Option[SequenceRecord]): Long = {
     rec match {
       case Some(_) => Math.min(end, rec.get.length)
@@ -235,7 +272,8 @@ class VizServlet extends ScalatraServlet {
     VizReads.quit()
   }
 
-  get("/init") {
+  get("/init/:pixels") {
+    VizReads.screenSize = params("pixels").toInt
     write(VizReads.formatDictionaryOpts(VizReads.globalDict))
   }
 
@@ -309,9 +347,9 @@ class VizServlet extends ScalatraServlet {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
               val (paddedRegion, reference) = VizReads.getPaddedReference(region)
-
-              val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, reference, paddedRegion, sampleIds)
-              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
+              val binSize = VizReads.getBinSize(region)
+              val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, reference, paddedRegion, sampleIds, VizReads.getBinSize(region))
+              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, binSize, sampleIds)
               val fileMap = VizReads.readsData.getFileMap()
               var readRetJson: String = ""
               for (sample <- sampleIds) {
@@ -322,6 +360,7 @@ class VizServlet extends ScalatraServlet {
                       "{ \"filename\": " + write(fileMap(sample)) +
                       ", \"indels\": " + write(sampleData.get.filter(_.op != "M")) +
                       ", \"mismatches\": " + write(sampleData.get.filter(_.op == "M")) +
+                      ", \"binSize\": " + binSize +
                       ", \"freq\": " + write(freqData.get(sample)) + "},"
                   case None =>
                     readRetJson += "\"" + sample + "\":" +

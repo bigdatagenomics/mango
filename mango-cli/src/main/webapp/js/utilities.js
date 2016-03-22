@@ -33,6 +33,36 @@ var baseColors = {
   'G': gColor
 }
 
+// render line for navigation
+function renderd3Line(container, height) {
+
+  if (!container.contains('line')) {
+   container.append('line')
+     .attr({
+       'x1': 50,
+       'y1': 0,
+       'x2': 50,
+       'y2': height
+     })
+     .attr("stroke", "#002900")
+     .attr("class", "verticalLine");
+
+   container.on('mousemove', function () {
+     var xPosition = d3.mouse(this)[0];
+     d3.selectAll(".verticalLine")
+       .attr({
+         "x1" : xPosition,
+         "x2" : xPosition
+       })
+   });
+  } else {
+  // reset height
+  container.find('line').attr({
+                               'y2': height
+                             })
+  }
+}
+
 function setGlobalMapQ(mapq) {
     mapQuality = mapq;
 }
