@@ -94,26 +94,7 @@ function renderJsonCoverage(data, i) {
     .attr("dx", 8)
     .attr("dy", "1em");
 
-    // render line
-    // TODO: this should be moved as a function in utilities.js
-    var readsVertLine = svgContainer[samples[i]].append('line')
-      .attr({
-        'x1': 50,
-        'y1': 0,
-        'x2': 50,
-        'y2': height
-      })
-      .attr("stroke", "#002900")
-      .attr("class", "verticalLine");
-
-    svgContainer[samples[i]].on('mousemove', function () {
-      var xPosition = d3.mouse(this)[0];
-      d3.selectAll(".verticalLine")
-        .attr({
-          "x1" : xPosition,
-          "x2" : xPosition
-        })
-    });
+renderd3Line(svgContainer[samples[i]], height);
 
   function mousemove() {
     // Initial calibrates initial mouse offset due to y axis position

@@ -88,7 +88,7 @@ object MergedAlignmentRecordLayout extends Logging {
    * @param sampleIds: List of sample identifiers to be rendered
    * @return List of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], referenceOpt: Option[String], region: ReferenceRegion, sampleIds: List[String]): Map[String, List[MutationCount]] = {
+  def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], referenceOpt: Option[String], region: ReferenceRegion, sampleIds: List[String], binSize: Int): Map[String, List[MutationCount]] = {
 
     // check for reference
     val reference = referenceOpt match {
@@ -104,7 +104,7 @@ object MergedAlignmentRecordLayout extends Logging {
       .reduceByKey(_ ++ _) // list of [sample, mismatches]
 
     // reduce point mismatches by start and end value
-    mismatches.map(r => (r._1, PointMisMatch(r._2))).collect.toMap
+    mismatches.map(r => (r._1, PointMisMatch(r._2, binSize))).collect.toMap
   }
 
 }

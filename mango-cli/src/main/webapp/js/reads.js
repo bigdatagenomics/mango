@@ -13,6 +13,8 @@ var readCountSvgContainer = {};
 var readAlignmentSvgContainer = {};
 // Contains 1 to 1 mapping of MODIFIED sample names to RAW sample names
 var sampleData = [];
+// bin size
+var binSize = 1;
 
 function getAlignmentSelector(sample) {
     return selector = "#" + sample + ">.alignmentData";
@@ -36,24 +38,7 @@ for (var i = 0; i < samples.length; i++) {
       .attr("height", (readsHeight))
       .attr("width", width);
 
-  var readsVertLine = readCountSvgContainer[samples[i]].append('line')
-    .attr({
-      'x1': 50,
-      'y1': 0,
-      'x2': 50,
-      'y2': readsHeight
-    })
-    .attr("stroke", "#002900")
-    .attr("class", "verticalLine");
-
-  readCountSvgContainer[samples[i]].on('mousemove', function () {
-    var xPosition = d3.mouse(this)[0];
-    d3.selectAll(".verticalLine")
-      .attr({
-        "x1" : xPosition,
-        "x2" : xPosition
-      })
-  });
+  renderd3Line(readCountSvgContainer[samples[i]], readsHeight);
 
 }
 
@@ -146,6 +131,7 @@ function renderJsonMergedReads(readsJsonLocation) {
         sampleData[i] = [];
         sampleData[i].mismatches = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
         sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
+        binSize = typeof data['binSize'] != "undefined" ? data['binSize'] : 1;
 
         renderSamplename(i);
         renderJsonCoverage(data['freq'], i);
@@ -216,9 +202,6 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
 
         // Reset size of svg container
         container.attr("height", (readsHeight));
-
-        // Update height of vertical guide line
-        $(".verticalLine").attr("y2", readsHeight);
 
         //Add the rectangles
         var rects = container.selectAll(".readrect").data(data["tracks"]);
@@ -409,55 +392,152 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         // check if mismatches and indels are currently displayed, and show/hide accordingly
         checkboxChange();
 
-        var readsVertLine = container.append('line')
-            .attr({
-              'x1': 50,
-              'y1': 0,
-              'x2': 50,
-              'y2': readsHeight
-            })
-            .attr("stroke", "#002900")
-            .attr("class", "verticalLine");
-
-        container.on('mousemove', function () {
-            var xPosition = d3.mouse(this)[0];
-            d3.selectAll(".verticalLine")
-              .attr({
-                "x1" : xPosition,
-                "x2" : xPosition
-              })
-          });
+        renderd3Line(container, readsHeight);
 }
 
-function renderAlignmentIndels(indels, sample) {
-    renderIndels(indels, sample, false);
+function formatIndelText(op, object) {
+    var text = "";
+    if (op == "I" && getIndelCounts("I", object) > 0) {
+    text += "<p style='color:pink'>Insertions: </br>"
+    for (var sequence in object) {
+        if (object.hasOwnProperty(sequence)) {
+            text = text + (sequence + ": " + object[sequence]) + "</br>"
+        }
+    }
+    text = text + "</p>"
+    } else if (op == "D" && getIndelCounts("D", object) > 0) {
+        text += "<p style='color:black'>Deletions: </br>"
+        for (var length in object) {
+            if (object.hasOwnProperty(length)) {
+                text = text + (Array(parseInt(length)+1).join("N") + ": " + object[length]) + "</br>"
+            }
+        }
+        text = text + "</p>"
+    }
+    return text;
+}
+
+function getIndelCounts(op, object) {
+    count = 0;
+    if (op == "I") {
+    for (var sequence in object) {
+        if (object.hasOwnProperty(sequence)) {
+            count += object[sequence];
+        }
+    }
+    } else if (op == "D") {
+        for (var length in object) {
+            if (object.hasOwnProperty(length)) {
+                count += object[length];
+            }
+        }
+    }
+    return count;
 }
 
 function renderIndelCounts(indels, sample) {
-    renderIndels(indels, sample, true);
-}
-
-function renderIndels(indels, sample, isCountData) {
   var selector = "#" + sample;
   var misMatchDiv = d3.select(selector)
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-  var misRects;
+  var range = viewRegEnd-viewRegStart;
 
-  if (isCountData)
-    misRects = readCountSvgContainer[sample].selectAll(".indel").data(indels);
-  else
-    misRects = d3.select(getAlignmentSelector(sample) + ">." + alignmentSvgClass).selectAll(".indel").data(indels);
+  var misRects = readCountSvgContainer[sample].selectAll(".indel").data(indels);
+
+  var modMisRects = misRects.transition();
+
+    modMisRects
+      .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; });
+
+    modMisRects
+    .attr("y", (function(d) {
+        return mismatchHeight;
+    }))
+    .attr("width", (function(d) {
+        return Math.max(1,(binSize * width/(viewRegEnd-viewRegStart))); }))
+    .attr("fill", function(d) {
+        var is = getIndelCounts("I", d.count.I)
+        var ds = getIndelCounts("D", d.count.D)
+        if (is > 0 && ds == 0) {
+            return "pink"
+        } else if (ds > 0 && is == 0) {
+            return "black";
+        } else { // both indels and deletions
+            return "#7D585F"; // mix of black and pink
+        }
+    });
+
+  // new rectangles on initial page render
+  var newMisRects = misRects
+    .enter().append("rect")
+    .attr("class", "indel")
+    .attr("y", (function(d) {
+        return mismatchHeight;
+     }))
+    .attr("width", (function(d) {
+      return Math.max(1,(binSize * width/(viewRegEnd-viewRegStart))); }))
+    .attr("height", (readTrackHeight-1))
+    .attr("fill", function(d) {
+        var is = getIndelCounts("I", d.count.I)
+        var ds = getIndelCounts("D", d.count.D)
+        if (is > 0 && ds == 0) {
+            return "pink"
+        } else if (ds > 0 && is == 0) {
+            return "black";
+        } else { // both indels and deletions
+            return "#7D585F";
+        }
+    })
+        .attr("transform", function(d) {
+        return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; })
+      .on("click", function(d) {
+        misMatchDiv.transition()
+          .duration(200)
+          .style("opacity", .9);
+        misMatchDiv.html(
+          formatIndelText("I", d.count.I) + + d.refCurr +
+          formatIndelText("D", d.count.D))
+          .style("text-align", "left")
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - yOffset) + "px");
+      })
+      .on("mouseover", function(d) {
+        misMatchDiv.transition()
+          .duration(200)
+          .style("opacity", .9);
+        var text = "<p style='color:pink'>Insertions: " + getIndelCounts("I", d.count.I) +
+        "</p><p style='color:black'>Deletions: "+ getIndelCounts("D", d.count.D) + "</p>" + d.refCurr ;
+        misMatchDiv.html(text)
+          .style("text-align", "left")
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - yOffset) + "px");
+      })
+      .on("mouseout", function(d) {
+        misMatchDiv.transition()
+        .duration(500)
+        .style("opacity", 0);
+      });
+
+  var removedMisRects = misRects.exit();
+  removedMisRects.remove();
+}
+
+function renderAlignmentIndels(indels, sample) {
+  var selector = "#" + sample;
+  var misMatchDiv = d3.select(selector)
+    .append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+  var misRects = d3.select(getAlignmentSelector(sample) + ">." + alignmentSvgClass).selectAll(".indel").data(indels);
 
   var modMisRects = misRects.transition()
     .attr("x", (function(d) {
       return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
     .attr("y", (function(d) {
-        if (isCountData) return mismatchHeight;
-        else
-            return readsHeight - (readTrackHeight * (d.track+1));
+        return readsHeight - (readTrackHeight * (d.track+1));
     }))
     .attr("width", (function(d) {
         return Math.max(1,(d.length)*(width/(viewRegEnd-viewRegStart))); }))
@@ -479,9 +559,7 @@ function renderIndels(indels, sample, isCountData) {
       .attr("x", (function(d) {
         return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
       .attr("y", (function(d) {
-          if (isCountData) return mismatchHeight;
-          else
-              return readsHeight - (readTrackHeight * (d.track+1));
+          return readsHeight - (readTrackHeight * (d.track+1));
        }))
       .attr("width", (function(d) {
         return Math.max(1,(d.length)*(width/(viewRegEnd-viewRegStart))); }))
@@ -577,7 +655,7 @@ function renderMismatchCounts(data, sample) {
 
   modifiedColoredRects
     .attr("y", (function(d) { return y(d.y1); }))
-    .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
+    .attr("width", Math.max(1, binSize * width/(viewRegEnd-viewRegStart)))
     .attr("height", function(d) { return y(d.y0) - y(d.y1); })
     .attr("fill", function(d) {return baseColors[d.base]; });
 
@@ -592,7 +670,7 @@ function renderMismatchCounts(data, sample) {
         .enter().append("rect")
         .attr("class", "mrect")
         .attr("y", (function(d) { return y(d.y1); }))
-        .attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
+        .attr("width", Math.max(1, binSize * width/(viewRegEnd-viewRegStart)))
         .attr("height", function(d) { return y(d.y0) - y(d.y1); })
         .attr("fill", function(d) {return baseColors[d.base]; });
 
