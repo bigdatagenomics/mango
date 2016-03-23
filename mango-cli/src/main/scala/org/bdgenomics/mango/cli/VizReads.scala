@@ -17,26 +17,26 @@
  */
 package org.bdgenomics.mango.cli
 
-import htsjdk.samtools.reference.{ FastaSequenceFile, FastaSequenceIndex, IndexedFastaSequenceFile }
-import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import java.io.File
+
+import htsjdk.samtools.reference.{ FastaSequenceFile, IndexedFastaSequenceFile }
+import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
+import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.mango.filters.AlignmentRecordFilter
-import org.bdgenomics.utils.cli._
-import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, ReferenceRegion }
-import org.bdgenomics.adam.projections.{ Projection, FeatureField }
+import org.apache.spark.{ Logging, SparkContext }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
+import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, NucleotideContigFragment }
+import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
+import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
-import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.ScalatraServlet
 
@@ -115,13 +115,17 @@ object VizReads extends BDGCommandCompanion with Logging {
   }
 
   def setSequenceDictionary(filePath: String) = {
-    if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
-      val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
-      val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
-      val dictFile: File = new File(filePath.replace(extension, ".dict"))
-      require(dictFile.exists, "Generated sequence dictionary does not exist, use Picard to generate")
-      globalDict = SequenceDictionary(fseq.getSequenceDictionary())
-    } else { //ADAM
+    if (LazyMaterialization.isLocal(filePath, sc)) {
+      if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
+        val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
+        val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
+        val dictFile: File = new File(filePath.replace(extension, ".dict"))
+        require(dictFile.exists, "Generated sequence dictionary does not exist, use Picard to generate")
+        globalDict = SequenceDictionary(fseq.getSequenceDictionary())
+      } else { //ADAM LOCAL
+        globalDict = sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
+      }
+    } else { //REMOTE
       globalDict = sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
     }
   }
@@ -153,7 +157,7 @@ object VizReads extends BDGCommandCompanion with Logging {
    */
   def getBinSize(region: ReferenceRegion): Int = {
     val binSize = ((region.end - region.start) / VizReads.screenSize).toInt
-    return Math.max(1, binSize)
+    Math.max(1, binSize)
   }
 
   /**
@@ -298,7 +302,7 @@ class VizServlet extends ScalatraServlet {
               val (paddedRegion, reference) = VizReads.getPaddedReference(region)
 
               val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, paddedRegion, sampleIds)
-              val fileMap = VizReads.readsData.getFileMap()
+              val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
@@ -350,7 +354,7 @@ class VizServlet extends ScalatraServlet {
               val binSize = VizReads.getBinSize(region)
               val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, reference, paddedRegion, sampleIds, VizReads.getBinSize(region))
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, binSize, sampleIds)
-              val fileMap = VizReads.readsData.getFileMap()
+              val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
@@ -538,18 +542,27 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         VizReads.readsExist = true
         var sampNamesBuffer = new scala.collection.mutable.ListBuffer[String]
         for (readsPath <- VizReads.readsPaths) {
-          if (readsPath.endsWith(".bam") || readsPath.endsWith(".sam")) {
-            val srf: SamReaderFactory = SamReaderFactory.make()
-            val samReader: SamReader = srf.open(new File(readsPath))
-            val rec: SAMRecord = samReader.iterator().next()
-            val sample = rec.getReadGroup.getSample
-            sampNamesBuffer += sample
-            VizReads.readsData.loadSample(sample, readsPath)
-          } else if (readsPath.endsWith(".adam")) {
-            sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
+          if (LazyMaterialization.isLocal(readsPath, sc)) {
+            if (readsPath.endsWith(".bam") || readsPath.endsWith(".sam")) {
+              val srf: SamReaderFactory = SamReaderFactory.make()
+              val samReader: SamReader = srf.open(new File(readsPath))
+              val rec: SAMRecord = samReader.iterator().next()
+              val sample = rec.getReadGroup.getSample
+              sampNamesBuffer += sample
+              VizReads.readsData.loadSample(sample, readsPath)
+            } else if (readsPath.endsWith(".adam")) {
+              sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
+            } else {
+              log.info("WARNING: Invalid input for reads file on local fs")
+              println("WARNING: Invalid input for reads file on local fs")
+            }
           } else {
-            log.info("WARNING: Invalid input for reads file")
-            println("WARNING: Invalid input for reads file")
+            if (readsPath.endsWith(".adam")) {
+              sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
+            } else {
+              log.info("WARNING: Invalid input for reads file on remote fs")
+              println("WARNING: Invalid input for reads file on remote fs")
+            }
           }
         }
         VizReads.sampNames = sampNamesBuffer.toList

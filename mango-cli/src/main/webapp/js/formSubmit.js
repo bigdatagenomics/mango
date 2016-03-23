@@ -17,7 +17,7 @@ function autoComplete(dictionary) {
 // on enter submits search form for chromosomal position
 $('.alignment-search').keypress(function (e) {
   if (e.which == 13) {
-    checkForm(this.form)
+    checkForm(this.form);
     return false;
   }
 });
@@ -25,7 +25,7 @@ $('.alignment-search').keypress(function (e) {
 // on enter submits search form for chromosomal position
 $('.variant-search').keypress(function (e) {
   if (e.which == 13) {
-    checkVariantForm(this.form)
+    checkVariantForm(this.form);
     return false;
   }
 });

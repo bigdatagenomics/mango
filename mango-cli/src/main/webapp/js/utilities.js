@@ -31,7 +31,7 @@ var baseColors = {
   'C': cColor,
   'T': tColor,
   'G': gColor
-}
+};
 
 // render line for navigation
 function renderd3Line(container, height) {

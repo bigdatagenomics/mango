@@ -17,41 +17,38 @@
  */
 package org.bdgenomics.mango.models
 
-import collection.mutable.HashMap
+import java.io.{ File, FileNotFoundException }
+
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import java.io.File
-import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.spark.Dependency
-import org.apache.spark.Partition
-import org.apache.spark._
-import org.apache.spark.SparkContext._
-import org.apache.spark.TaskContext
+import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.spark.{ Logging, _ }
 import org.apache.spark.rdd.RDD
-import org.apache.spark.Logging
 import org.apache.spark.storage.StorageLevel
-import org.apache.avro.specific.SpecificRecord
-import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
-import org.bdgenomics.adam.rdd.read.{ AlignedReadRDD, AlignmentRecordRDD, AlignmentRecordRDDFunctions }
-import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition, RecordGroupDictionary, SequenceDictionary, SequenceRecord }
-import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.projections.{ AlignmentRecordField, FeatureField, GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment, Contig }
-import scala.collection.mutable.ListBuffer
-import scala.reflect.{ classTag, ClassTag }
+import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
+import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, NucleotideContigFragment }
+
+import scala.collection.mutable
+import scala.collection.mutable.{ HashMap, ListBuffer }
+import scala.reflect.{ ClassTag, classTag }
 
 class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long) extends Serializable with Logging {
 
   var partitioner: Partitioner = null
-  setPartitioner
+  setPartitioner()
 
   def this(sc: SparkContext, dict: SequenceDictionary, partitions: Int) = {
     this(sc, dict, partitions, 1000)
   }
 
   // TODO: once tracking is pushed to front end, add sc.local partitioning
-  def setPartitioner: Unit = {
+  def setPartitioner(): Unit = {
     partitioner = GenomicRegionPartitioner(partitions, dict)
   }
 
@@ -69,15 +66,15 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
     val rd: RecordGroupDictionary = loadAdam(region, filePath)._3
     val sample = rd.recordGroups.head.sample
     fileMap += ((sample, filePath))
-    return sample
+    sample
   }
 
   // Keeps track of sample ids and corresponding files
-  private var fileMap: HashMap[String, String] = new HashMap()
+  private var fileMap: mutable.HashMap[String, String] = new mutable.HashMap()
 
-  def getFileMap(): HashMap[String, String] = fileMap
+  def getFileMap: mutable.HashMap[String, String] = fileMap
 
-  private var bookkeep: HashMap[String, IntervalTree[ReferenceRegion, String]] = new HashMap()
+  private var bookkeep: mutable.HashMap[String, IntervalTree[ReferenceRegion, String]] = new mutable.HashMap()
 
   var intRDD: IntervalRDD[ReferenceRegion, T] = null
 
@@ -129,11 +126,10 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
   }
 
   def loadFromBam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
-    val idxFile: File = new File(fp + ".bai")
-    if (!idxFile.exists()) {
-      sc.loadBam(fp).rdd.filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-    } else {
+    if (LazyMaterialization.isLocal(fp + ".bai", sc)) {
       sc.loadIndexedBam(fp, region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
+    } else {
+      sc.loadBam(fp).rdd.filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     }
   }
 
@@ -141,18 +137,8 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
     var data: RDD[(ReferenceRegion, T)] = null
     if (!fileMap.containsKey(k)) {
       log.error("Key not in FileMap")
-      null
     }
     val fp = fileMap(k)
-    val file: File = new File(fp)
-    if (!file.exists()) {
-      log.error("File does not exist")
-      return sc.emptyRDD[(ReferenceRegion, T)]
-    }
-    if (!(new File(fp)).exists()) {
-      log.warn("File path for sample " + k + " not loaded")
-      null
-    }
     if (fp.endsWith(".adam")) {
       data = loadAdam(region, fp)._1
     } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
@@ -163,7 +149,6 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
       data = sc.loadFeatures(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
     } else {
       throw UnsupportedFileException("File type not supported")
-      data
     }
     data.partitionBy(partitioner)
   }
@@ -182,21 +167,19 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
     val seqRecord = dict(region.referenceName)
     val regionsOpt = getMaterializedRegions(region, ks)
     seqRecord match {
-      case Some(_) => {
+      case Some(_) =>
         regionsOpt match {
-          case Some(_) => {
+          case Some(_) =>
             for (r <- regionsOpt.get) {
               put(r, ks)
             }
-          } case None => {
-            // DO NOTHING
-          }
+          case None =>
+          // DO NOTHING
         }
         // TODO: return data to multiget instead of making subsequent call to RDD
         Option(intRDD.filterByInterval(region))
-      } case None => {
+      case None =>
         None
-      }
     }
   }
 
@@ -211,7 +194,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
   private def put(region: ReferenceRegion, ks: List[String]) = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
-      case Some(_) => {
+      case Some(_) =>
         val end =
           Math.min(region.end, seqRecord.get.length)
         val start = Math.min(region.start, end)
@@ -227,9 +210,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
           }
         })
         rememberValues(region, ks)
-      }
-      case None => {
-      }
+      case None =>
     }
   }
 
@@ -300,15 +281,13 @@ object LazyMaterialization {
    *
    * @note For example, given a list of regions with ranges (0, 999), (1000, 1999) and (3000, 3999)
    * This function will consolidate adjacent regions and output (0, 1999), (3000, 3999)
-   *
    * @note Requires that list region is ordered
-   *
    * @param Option of list of regions to merge
    * @return Option of list of merged adjacent regions
    */
   def mergeRegions(regionsOpt: Option[List[ReferenceRegion]]): Option[List[ReferenceRegion]] = {
     regionsOpt match {
-      case Some(_) => {
+      case Some(_) =>
         val regions = regionsOpt.get
         var rmerged: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
         rmerged += regions.head
@@ -324,8 +303,24 @@ object LazyMaterialization {
           }
         }
         Option(rmerged.toList)
-      }
       case None => None
     }
   }
+
+  /**
+   * Returns whether a file is local or remote, and throws an exception if it can't find the file
+   */
+  def isLocal(filePath: String, sc: SparkContext): Boolean = {
+    val localFile: File = new File(filePath)
+    val path: Path = new Path(filePath)
+    val fs: FileSystem = path.getFileSystem(sc.hadoopConfiguration)
+    if (localFile.exists) {
+      true
+    } else if (fs.exists(path)) {
+      false
+    } else {
+      throw new FileNotFoundException("Couldn't find the file ${path.toUri}")
+    }
+  }
+
 }

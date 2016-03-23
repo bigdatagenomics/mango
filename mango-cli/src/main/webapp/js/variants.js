@@ -47,7 +47,7 @@ function renderJsonVariants() {
 
     //dynamically setting height of svg containers
     var numTracks = d3.max(data, function(d) {return d.track});
-    var varTrackHeight = getTrackHeight()
+    var varTrackHeight = getTrackHeight();
     varHeight = (numTracks+1)*varTrackHeight;
     varSvgContainer.attr("height", varHeight);
     renderd3Line(varSvgContainer, varHeight);
@@ -163,12 +163,12 @@ function renderVariantFrequency() {
         .style("text-anchor", "end")
         .text("Frequency");
 
-    var freqBars = svg.selectAll(".bar").data(data)
+    var freqBars = svg.selectAll(".bar").data(data);
 
     var modifyBars = freqBars.transition();
     modifyBars
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
+      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
 
     var newBars = freqBars.enter();
     newBars.append("rect")

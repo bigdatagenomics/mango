@@ -206,7 +206,7 @@
         settings.afterClose();
       }
 
-    }
+    };
 
     controller.init();
 

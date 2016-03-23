@@ -2,7 +2,7 @@
 var readsHeight = 100;
 var padding = 3;
 var readTrackHeight = getTrackHeight();
-var mismatchHeight = readsHeight - readTrackHeight
+var mismatchHeight = readsHeight - readTrackHeight;
 
 var yOffset = 200;
 // svg class for alignment data
@@ -97,9 +97,9 @@ function renderAlignments(refName, start, end, quality, sample) {
 }
 
 function renderReads(refName, start, end, quality, isCountData, samples) {
-    quality = quality || 0
+    quality = quality || 0;
     var samples = typeof samples != "undefined" ? samples : sampleId;
-    var jsonPage = "reads"
+    var jsonPage = "reads";
     if (isCountData)
          jsonPage = "mergedReads";
     else
@@ -109,7 +109,7 @@ function renderReads(refName, start, end, quality, isCountData, samples) {
 
     if (isCountData) {
         renderJsonMergedReads(readsJsonLocation);
-        var keys = Object.keys(readAlignmentSvgContainer)
+        var keys = Object.keys(readAlignmentSvgContainer);
         keys.forEach(function(sample) {
             renderAlignments(refName, start, end, quality, sample);
         });
@@ -167,7 +167,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         var container = [];
 
         var sample = filterName(rawSample);
-        var selector = getAlignmentSelector(sample)
+        var selector = getAlignmentSelector(sample);
 
         // check whether alignment container for this sample was already rendered
         if ($(selector + ">." + alignmentSvgClass).length == 0) {
@@ -398,7 +398,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
 function formatIndelText(op, object) {
     var text = "";
     if (op == "I" && getIndelCounts("I", object) > 0) {
-    text += "<p style='color:pink'>Insertions: </br>"
+    text += "<p style='color:pink'>Insertions: </br>";
     for (var sequence in object) {
         if (object.hasOwnProperty(sequence)) {
             text = text + (sequence + ": " + object[sequence]) + "</br>"
@@ -406,7 +406,7 @@ function formatIndelText(op, object) {
     }
     text = text + "</p>"
     } else if (op == "D" && getIndelCounts("D", object) > 0) {
-        text += "<p style='color:black'>Deletions: </br>"
+        text += "<p style='color:black'>Deletions: </br>";
         for (var length in object) {
             if (object.hasOwnProperty(length)) {
                 text = text + (Array(parseInt(length)+1).join("N") + ": " + object[length]) + "</br>"
@@ -458,8 +458,8 @@ function renderIndelCounts(indels, sample) {
     .attr("width", (function(d) {
         return Math.max(1,(binSize * width/(viewRegEnd-viewRegStart))); }))
     .attr("fill", function(d) {
-        var is = getIndelCounts("I", d.count.I)
-        var ds = getIndelCounts("D", d.count.D)
+        var is = getIndelCounts("I", d.count.I);
+        var ds = getIndelCounts("D", d.count.D);
         if (is > 0 && ds == 0) {
             return "pink"
         } else if (ds > 0 && is == 0) {
@@ -480,8 +480,8 @@ function renderIndelCounts(indels, sample) {
       return Math.max(1,(binSize * width/(viewRegEnd-viewRegStart))); }))
     .attr("height", (readTrackHeight-1))
     .attr("fill", function(d) {
-        var is = getIndelCounts("I", d.count.I)
-        var ds = getIndelCounts("D", d.count.D)
+        var is = getIndelCounts("I", d.count.I);
+        var ds = getIndelCounts("D", d.count.D);
         if (is > 0 && ds == 0) {
             return "pink"
         } else if (ds > 0 && is == 0) {
