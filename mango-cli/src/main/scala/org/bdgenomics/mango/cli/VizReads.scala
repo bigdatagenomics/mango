@@ -84,7 +84,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: LazyMaterialization[AlignmentRecord] = null
   var variantData: LazyMaterialization[Genotype] = null
   var server: org.eclipse.jetty.server.Server = null
-  var screenSize: Int = 0
+  var screenSize: Int = 1
 
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))

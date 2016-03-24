@@ -66,16 +66,9 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
 
   def loadADAMSample(filePath: String): String = {
     val region = ReferenceRegion("new", 0, chunkSize - 1)
-    val (rdd, sd, rd): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = loadAdam(region, filePath)
+    val rd: RecordGroupDictionary = loadAdam(region, filePath)._3
     val sample = rd.recordGroups.head.sample
     fileMap += ((sample, filePath))
-
-    // add all contignames found in file to bookkeeping
-    val contigNames: Array[String] = rdd.map(r => (r._1.referenceName, 1)).reduceByKey(_ + _).map(_._1).collect
-    contigNames.foreach(n => rememberValues(ReferenceRegion(n, region.start, region.end), List(sample)))
-
-    intRDD = IntervalRDD(rdd.partitionBy(partitioner))
-    intRDD.persist(StorageLevel.MEMORY_AND_DISK)
     return sample
   }
 
