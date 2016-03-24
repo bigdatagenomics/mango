@@ -211,6 +211,5 @@
 <script src="js/variants.js"></script>
 <script src="js/reference.js"></script>
 <script src="js/overall.js"></script>
-<script src="js/resizeable.js"></script>
 
 </html>

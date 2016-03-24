@@ -24,7 +24,7 @@ function getAlignmentSelector(sample) {
 d3.selectAll("input").on("change", checkboxChange);
 
 for (var i = 0; i < samples.length; i++) {
-  $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"samples resize-vertical\"></div>");
+  $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"samples\"></div>");
   $("#"+samples[i]).append("<div class=\"sampleLegend\"></div>");
   $("#"+samples[i]).append("<div class=\"sampleCoverage\"></div>");
   $("#"+samples[i]).append("<div class=\"mergedReads\"></div>");
