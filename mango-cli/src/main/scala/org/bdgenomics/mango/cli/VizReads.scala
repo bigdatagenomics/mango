@@ -281,6 +281,37 @@ class VizServlet extends ScalatraServlet {
     write(VizReads.formatDictionaryOpts(VizReads.globalDict))
   }
 
+  get("/plainReads/:ref") {
+    VizTimers.AlignmentRequest.time {
+      val end = VizReads.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString))
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, end)
+      contentType = "json"
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      dictOpt match {
+        case Some(_) => {
+          val end: Long = VizReads.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val readQuality = params.getOrElse("quality", "0")
+          var readRetJson = ""
+          val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
+          dataOption match {
+            case Some(_) => {
+              val data: Array[AlignmentRecord] = dataOption.get.toRDD.map(_._2).collect()
+              readRetJson = "{" + write(data) + "},"
+            } case None =>
+              readRetJson =
+                "{" + write("no data") + "},"
+          }
+          readRetJson = readRetJson.dropRight(1)
+          readRetJson = "{" + readRetJson + "}"
+          readRetJson
+        } case None => {
+          write("")
+        }
+      }
+    }
+  }
+
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
       val end = VizReads.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString))
