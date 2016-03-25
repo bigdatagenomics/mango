@@ -71,6 +71,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var sc: SparkContext = null
   var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var referencePath: String = ""
+  var chromosomes: List[String] = null
   var partitionCount: Int = 0
   var readsPaths: List[String] = null
   var sampNames: List[String] = null
@@ -167,13 +168,19 @@ object VizReads extends BDGCommandCompanion with Logging {
    * @param region: ReferenceRegion to be viewed
    * @return Option of Padded Reference
    */
-  def getPaddedReference(region: ReferenceRegion): (ReferenceRegion, Option[String]) = {
+  def getPaddedReference(region: ReferenceRegion, isPlaceholder: Boolean = false): (ReferenceRegion, Option[String]) = {
     val padding = 200
     val start = Math.max(0, region.start - padding)
     val end = VizReads.getEnd(region.end, VizReads.globalDict(region.referenceName))
     val paddedRegion = ReferenceRegion(region.referenceName, start, end)
-    val reference = getReference(paddedRegion)
-    (paddedRegion, reference)
+    if (isPlaceholder) {
+      val n = (end - start).toInt
+      (paddedRegion, Option(List.fill(n)("N").mkString))
+    } else {
+      val reference = getReference(paddedRegion)
+      (paddedRegion, reference)
+
+    }
   }
 
   /**
@@ -248,6 +255,9 @@ case class ReferenceJson(reference: String, position: Long)
 class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
+
+  @Args4jOption(required = false, name = "-chromosomes", usage = "Chromosomes to be preprocessed for viewing")
+  var chromosomes: String = null
 
   @Args4jOption(required = false, name = "-repartition", usage = "The number of partitions")
   var partitionCount: Int = 0
@@ -330,7 +340,7 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
-              val (paddedRegion, reference) = VizReads.getPaddedReference(region)
+              val (paddedRegion, reference) = VizReads.getPaddedReference(region, true)
 
               val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, paddedRegion, sampleIds)
               val fileMap = VizReads.readsData.getFileMap
@@ -381,7 +391,7 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD()
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
-              val (paddedRegion, reference) = VizReads.getPaddedReference(region)
+              val (paddedRegion, reference) = VizReads.getPaddedReference(region, true)
               val binSize = VizReads.getBinSize(region)
               val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, reference, paddedRegion, sampleIds, VizReads.getBinSize(region))
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, binSize, sampleIds)
@@ -601,6 +611,19 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         log.info("WARNING: No reads file provided")
         println("WARNING: No reads file provided")
       }
+    }
+
+    // preprocessing data
+    val chrs = Option(args.chromosomes)
+    chrs match {
+      case Some(_) =>
+        VizReads.chromosomes = args.chromosomes.split(",").toList
+        VizReads.chromosomes.map(c => {
+          // TODO: check if chr exists
+          println(c)
+          val region: ReferenceRegion = ReferenceRegion(c, 0, VizReads.globalDict(c).get.length)
+          VizReads.readsData.multiget(region, VizReads.sampNames).get.count
+        })
     }
 
     VizReads.variantData = LazyMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
