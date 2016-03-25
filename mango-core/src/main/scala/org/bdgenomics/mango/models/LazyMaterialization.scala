@@ -99,26 +99,33 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
     val isVariant = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
     val isFeature = classOf[Feature].isAssignableFrom(classTag[T].runtimeClass)
     val isNucleotideFrag = classOf[NucleotideContigFragment].isAssignableFrom(classTag[T].runtimeClass)
-
-    if (isAlignmentRecord) {
-      val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
-      val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-      val alignedReadRDD: AlignmentRecordRDD = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
-      (alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]], alignedReadRDD.sequences, alignedReadRDD.recordGroups)
-    } else if (isVariant) {
-      val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end))
-      val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
-      val d = sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-      (d, null, null)
-    } else if (isFeature) {
-      val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
-      val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-      val d = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-      (d, null, null)
-    } else {
-      log.warn("Generic type not supported")
-      (null, null, null)
-    }
+    val (rdd, sd, rg) =
+      if (isAlignmentRecord) {
+        val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
+        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+        val alignedReadRDD: AlignmentRecordRDD = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
+        (alignedReadRDD.rdd.filter(_.getContig.getContigName == region.referenceName)
+          .map(r => (ReferenceRegion(r), r)),
+          alignedReadRDD.sequences, alignedReadRDD.recordGroups)
+      } else if (isVariant) {
+        val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end))
+        val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
+        val d = sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
+          .filter(_.getVariant.getContig.getContigName == region.referenceName)
+          .map(r => (ReferenceRegion(ReferencePosition(r)), r))
+        (d, null, null)
+      } else if (isFeature) {
+        val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end))
+        val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
+        val d = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
+          .filter(_.getContig.getContigName == region.referenceName)
+          .map(r => (ReferenceRegion(r), r))
+        (d, null, null)
+      } else {
+        log.warn("Generic type not supported")
+        (null, null, null)
+      }
+    (rdd.asInstanceOf[RDD[(ReferenceRegion, T)]], sd, rg)
   }
 
   def loadFromBam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
