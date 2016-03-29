@@ -44,7 +44,7 @@ function renderJsonCoverage(data, i) {
     .y0(height)
     .y1(function(d){return dataScale(maxFreq-d.freq);});
 
-  var removed = svgContainer[samples[i]].selectAll("g").remove()
+  var removed = svgContainer[samples[i]].selectAll("g").remove();
 
   // Add the data area shape to the graph
   svgContainer[samples[i]].append("g")
