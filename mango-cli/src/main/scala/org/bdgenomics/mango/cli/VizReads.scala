@@ -75,7 +75,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsPaths: List[String] = null
   var sampNames: List[String] = null
   var readsExist: Boolean = false
-  var variantsPath: String = ""
+  var variantsPaths: List[String] = null
   var variantsExist: Boolean = false
   var featuresPath: String = ""
   var featuresExist: Boolean = false
@@ -251,8 +251,8 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
 
-  @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
-  var variantsPath: String = null
+  @Args4jOption(required = false, name = "-var_files", usage ="A list of variants files to view, separated by commas (,)")
+  var variantsPaths: String = null
 
   @Args4jOption(required = false, name = "-feat_file", usage = "The feature file to view")
   var featuresPath: String = null
@@ -560,19 +560,21 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     }
 
     VizReads.variantData = LazyMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
-    val variantsPath = Option(args.variantsPath)
+    val variantsPath = Option(args.variantsPaths)
     variantsPath match {
       case Some(_) => {
-        if (args.variantsPath.endsWith(".vcf")) {
-          VizReads.variantsPath = args.variantsPath
-          // TODO: remove hardcode for callset1
-          VizReads.variantData.loadSample("callset1", VizReads.variantsPath)
-          VizReads.variantsExist = true
-        } else if (args.variantsPath.endsWith(".adam")) {
-          VizReads.readsData.loadADAMSample(VizReads.variantsPath)
-        } else {
-          log.info("WARNING: Invalid input for variants file")
-          println("WARNING: Invalid input for variants file")
+        VizReads.variantsPaths = args.readsPaths.split(",").toList
+        VizReads.variantsExist = true
+        for (varPath <- VizReads.variantsPaths) {
+          if (varPath.endsWith(".vcf")) {
+            // TODO: remove hardcode for callset1
+            VizReads.variantData.loadSample("callset1", varPath)
+          } else if (varPath.endsWith(".adam")) {
+            VizReads.readsData.loadADAMSample(varPath)
+          } else {
+            log.info("WARNING: Invalid input for variants file")
+            println("WARNING: Invalid input for variants file")
+          }
         }
       }
       case None => {
@@ -584,7 +586,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     val featuresPath = Option(args.featuresPath)
     featuresPath match {
       case Some(_) => {
-        if (args.featuresPath.endsWith(".bed") || args.variantsPath.endsWith(".adam")) {
+        if (args.featuresPath.endsWith(".bed") || args.featuresPath.endsWith(".adam")) {
           VizReads.featuresPath = args.featuresPath
           VizReads.featuresExist = true
         } else {
