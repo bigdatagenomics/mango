@@ -1,0 +1,9 @@
+<nav id="menu" class="panel" role="navigation">
+    <% render("../templates/refVis.ssp")%>
+</nav>
+
+<script >
+$(document).ready(function() {
+      $('.menu-link').bigSlide();
+  });
+</script>
