@@ -78,6 +78,28 @@ input[type="text"] {
     margin-left:15px;
 }
 
+#refVis {
+  height: 180px;
+  position: relative;
+  width: 180px;
+}
+
+.refVistooltip { 
+  background: #eee;
+  box-shadow: 0 0 5px #999999;
+  color: #333;
+  display: none;
+  font-size: 12px;
+  left: 50px;
+  padding: 10px;
+  position: absolute;
+  text-align: center;
+  top: 170px;
+  width: 80px;
+  z-index: 999999; 
+}
+
+
 /*
 .main {
   position: relative;
@@ -88,6 +110,17 @@ input[type="text"] {
   border-radius:5px;
   padding: 20px;
 }*/
+
+h2.panel {
+  text-align: center;
+  color: #180E3A;
+  font-weight: 500; 
+  width: 0;
+  margin-left: -10px;
+  margin-right: 0px;
+  margin-top: 0px;
+  border-radius: 0px;
+  float: center; }
 .panel   { 
   background: #ccc;
   margin-right: 320px;
@@ -97,7 +130,8 @@ input[type="text"] {
   border-radius: 5px;
   padding: 20px;
   width: 260px;
-  float:left; }
+  float:left; 
+  z-index: 99999;}
 
 
 #refArea {
