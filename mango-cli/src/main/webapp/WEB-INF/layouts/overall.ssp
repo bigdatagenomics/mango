@@ -17,7 +17,7 @@
           <div class="graphArea" id="varArea"></div>
           <div class="graphArea" id="readsArea"></div>
     </div>    
-
+    
   <nav id="menu" class="panel" role="navigation">
     <h2 class="panel"> Reference Panel </h2>
     <div id="refVis"></div>

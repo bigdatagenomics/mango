@@ -88,6 +88,27 @@ input[type="text"] {
 .checkbox-inline {
   margin-left: 15px; }
 
+#refVis {
+  height: 180px;
+  position: relative;
+  width: 180px;
+}
+
+.tooltip { 
+  background: #eee;
+  box-shadow: 0 0 5px #999999;
+  color: #333;
+  display: none;
+  font-size: 12px;
+  left: 130px;
+  padding: 10px;
+  position: absolute;
+  text-align: center;
+  top: 95px;
+  width: 80px;
+  z-index: 10;
+}
+
 /*
 .main {
   position: relative;
@@ -98,6 +119,17 @@ input[type="text"] {
   border-radius:5px;
   padding: 20px;
 }*/
+h2.panel{
+  text-align: center;
+  color: #180E3A;
+  font-weight: 500; 
+  width: 0;
+  margin-left: -10px;
+  margin-right: 0px;
+  margin-top: 0px;
+  border-radius: 0px;
+  float: center; 
+}
 .panel {
   background: #ccc;
   margin-right: 320px;
@@ -107,7 +139,9 @@ input[type="text"] {
   border-radius: 5px;
   padding: 20px;
   width: 260px;
-  float: left; }
+  float: left; 
+  z-index: 99999;
+}
 
 #refArea {
   border-radius: 5px;
