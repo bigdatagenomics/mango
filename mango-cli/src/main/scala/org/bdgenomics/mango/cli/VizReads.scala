@@ -17,11 +17,6 @@
  */
 package org.bdgenomics.mango.cli
 
-<<<<<<< 799776961895743e2873bfab96ecd2e0d3c07f0d
-=======
-import htsjdk.samtools.reference.IndexedFastaSequenceFile
-import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
->>>>>>> fixed freqency computation and completed materialization of mismatches on load
 import java.io.File
 
 import htsjdk.samtools.reference.{ FastaSequenceFile, IndexedFastaSequenceFile }
@@ -29,17 +24,18 @@ import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.spark.{ Logging, SparkContext }
 import org.apache.spark.rdd.RDD
 
-import org.bdgenomics.mango.core.util.VizUtils
+import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, ReferenceRegion }
 import org.bdgenomics.adam.projections.{ Projection, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
+import org.bdgenomics.formats.avro.{ NucleotideContigFragment, AlignmentRecord, Feature, Genotype }
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.{ ReferenceRDD, GenotypeMaterialization, AlignmentRecordMaterialization }
+import org.bdgenomics.mango.models.{ ReferenceRDD, GenotypeMaterialization, AlignmentRecordMaterialization, LazyMaterialization }
 
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
@@ -121,7 +117,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   }
 
   def setSequenceDictionary(filePath: String) = {
-    if (LazyMaterialization.isLocal(filePath, sc)) {
+    if (ResourceUtils.isLocal(filePath, sc)) {
       if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
         val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
         val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
@@ -153,58 +149,6 @@ object VizReads extends BDGCommandCompanion with Logging {
       }
     }
 
-  }
-
-  /**
-   * Returns the bin size for calculation based on the client's screen
-   * size
-   * @param region Region to bin over
-   * @return Bin size to calculate over
-   */
-  def getBinSize(region: ReferenceRegion): Int = {
-    val binSize = ((region.end - region.start) / VizReads.screenSize).toInt
-    Math.max(1, binSize)
-  }
-
-  /**
-   * Returns reference region string that is padded to encompass all reads for
-   * mismatch calculation
-   *
-   * @param region: ReferenceRegion to be viewed
-   * @return Option of Padded Reference
-   */
-  def getPaddedReference(region: ReferenceRegion, isPlaceholder: Boolean = false): (ReferenceRegion, Option[String]) = {
-    val padding = 200
-    val start = Math.max(0, region.start - padding)
-    val end = VizReads.getEnd(region.end, VizReads.globalDict(region.referenceName))
-    val paddedRegion = ReferenceRegion(region.referenceName, start, end)
-    if (isPlaceholder) {
-      val n = (end - start).toInt
-      (paddedRegion, Option(List.fill(n)("N").mkString))
-    } else {
-      val reference = getReference(paddedRegion)
-      (paddedRegion, reference)
-
-    }
-  }
-
-  /**
-   * Returns reference from reference RDD working set
-   *
-   * @param region: ReferenceRegion to be viewed
-   * @return Option of Padded Reference
-   */
-  def getReference(region: ReferenceRegion): Option[String] = {
-    val seqRecord = VizReads.globalDict(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val end: Long = VizReads.getEnd(region.end, seqRecord)
-        val newRegion = ReferenceRegion(region.referenceName, region.start, end)
-        Option(refRDD.adamGetReferenceString(region).toUpperCase)
-      } case None => {
-        None
-      }
-    }
   }
 
   /**
@@ -255,7 +199,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
 
-  @Args4jOption(required = false, name = "-var_files", usage ="A list of variants files to view, separated by commas (,)")
+  @Args4jOption(required = false, name = "-var_files", usage = "A list of variants files to view, separated by commas (,)")
   var variantsPaths: String = null
 
   @Args4jOption(required = false, name = "-feat_file", usage = "The feature file to view")
@@ -348,7 +292,7 @@ class VizServlet extends ScalatraServlet {
               val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
 
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2.record), region, binSize, sampleIds)
-              val fileMap = VizReads.readsData.getFileMap()
+              val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
@@ -534,7 +478,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         VizReads.readsExist = true
         var sampNamesBuffer = new scala.collection.mutable.ListBuffer[String]
         for (readsPath <- VizReads.readsPaths) {
-          if (LazyMaterialization.isLocal(readsPath, sc)) {
+          if (ResourceUtils.isLocal(readsPath, sc)) {
             if (readsPath.endsWith(".bam") || readsPath.endsWith(".sam")) {
               val srf: SamReaderFactory = SamReaderFactory.make()
               val samReader: SamReader = srf.open(new File(readsPath))
@@ -591,7 +535,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         }
     }
     VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
-    val variantsPath = Option(args.variantsPath)
+    val variantsPath = Option(args.variantsPaths)
     variantsPath match {
       case Some(_) => {
         VizReads.variantsPaths = args.readsPaths.split(",").toList

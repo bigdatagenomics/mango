@@ -237,22 +237,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
     }
   }
 
-  /**
-   * Returns whether a file is local or remote, and throws an exception if it can't find the file
-   */
-  def isLocal(filePath: String, sc: SparkContext): Boolean = {
-    val localFile: File = new File(filePath)
-    val path: Path = new Path(filePath)
-    val fs: FileSystem = path.getFileSystem(sc.hadoopConfiguration)
-    if (localFile.exists) {
-      true
-    } else if (fs.exists(path)) {
-      false
-    } else {
-      throw new FileNotFoundException("Couldn't find the file ${path.toUri}")
-    }
-  }
-
 }
 
 case class UnsupportedFileException(message: String) extends Exception(message)
