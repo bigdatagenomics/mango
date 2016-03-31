@@ -30,8 +30,13 @@ object FrequencyLayout extends Logging {
 
     val freqData: List[(String, Long, Long)] = rdd.mapPartitions(FrequencyLayout(_, region, binSize)).collect.toList
     for (sample <- sampleIds) {
-      val sampleData: List[FreqJson] = freqData.filter(_._1 == sample).map(r => FreqJson(r._2, r._3))
-      jsonList += Tuple2(sample, sampleData)
+      val sampleData: Map[Long, Long] = freqData.filter(_._1 == sample) // get frequency for this sample
+        .map(r => (r._2, r._3))
+        .groupBy(_._1) // group by base
+        .map(r => (r._1, r._2.map(_._2).reduce(_ + _))) // add up total frequency at all spots
+
+      val jsonData = sampleData.map { case (k, v) => FreqJson(k, v) }.toList.sortBy(_.base)
+      jsonList += Tuple2(sample, jsonData)
     }
     jsonList.toMap
   }

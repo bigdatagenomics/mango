@@ -110,7 +110,6 @@ function renderLowResRef(data, refContainer, refDiv) {
 
     var newData = rects.enter();
     newData
-    .append("g")
     .append("rect")
       .attr("class", "refrect")
       .attr("x", function(d, i) {
