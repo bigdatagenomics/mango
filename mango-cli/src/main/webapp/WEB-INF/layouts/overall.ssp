@@ -9,10 +9,6 @@
 
     <% render("../templates/head.ssp")%>
     <% render("../navigation/navigation.ssp") %>
-
-    <nav id="menu" class="panel" role="navigation">
-        <h2> Reference Panel </h2>
-    </nav>
     <% render("../navigation/panAndZoom.ssp", Map("page" -> "reads")) %>
 
     <div class="main">
@@ -20,7 +16,13 @@
           <div class="graphArea" id="featArea"></div>
           <div class="graphArea" id="varArea"></div>
           <div class="graphArea" id="readsArea"></div>
-    </div>
+    </div>    
+
+  <nav id="menu" class="panel" role="navigation">
+    <h2 class="panel"> Reference Panel </h2>
+    <div id="refVis"></div>
+  </nav>
+
 
     <script src="js/utilities.js"></script>
     <script src="js/formSubmit.js"></script>

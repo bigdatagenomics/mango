@@ -12,7 +12,7 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 // Global Data
 var refSequence;
 var sampleData;
-
+var sDict;
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
 
@@ -37,11 +37,14 @@ if (featuresExist === true) {
 // send pixel size for bining and initialize autocomplete
 var initJson =  "/init/" + Math.round($(".samples").width());
 d3.json(initJson, function(error, seqDict) {
+  sDict =seqDict;
   autoComplete(seqDict);
+  refVis(sDict);
 });
 
 //All rendering of data, and everything setting new region parameters, is done here
 render(viewRefName, viewRegStart, viewRegEnd);
+
 
 // Functions
 function render(refName, start, end, mapQuality) {
@@ -73,6 +76,69 @@ function render(refName, start, end, mapQuality) {
   }
 }
 
+function refVis(dictionary){
+ // Creating reference visualization from sequence dictionary
+ var dict = [];
+ // var namelist=[];
+ // var lengthlist=[];
+ var totalLength=0;
+ for (i = 0; i < dictionary.length; i++) { 
+   var range = dictionary[i].split(":")[1].split("-");
+   var length = parseInt(range[1]-range[0]);
+   var name = dictionary[i].split(":")[0];
+   dict.push({name: name, length: length });
+   totalLength+=length;
+   // namelist.append(name);
+   // lengthlist.append(length);
+ }
+
+ // Create visualization
+  var dataset = [
+    { name: 'chrM', length: 10 }, 
+    { name: 'chrM_a', length: 20 }, 
+    { name: 'chrM_b', length: 30 }, 
+    { name: 'chrM_c', length: 40 }
+  ];
+  var innerWidth = 45;
+  var width = 180;
+  var height = 180;
+  var radius = Math.min(width, height) / 2;
+  var color = d3.scale.category20b();
+  var svg = d3.select('#refVis')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .append('g')
+    .attr('transform', 'translate(' + (width / 2) + 
+      ',' + (height / 2) + ')');
+  var arc = d3.svg.arc()
+    .innerRadius(radius-innerWidth)
+    .outerRadius(radius);
+  var pie = d3.layout.pie()
+    .value(function(d) { return d.length/totalLength*100; }) //Express as percentage
+    .sort(null);
+  var path = svg.selectAll('path')
+    .data(pie(dataset))
+    .enter()
+    .append('path')
+    .attr('d', arc)
+    .attr('fill', function(d, i) { 
+      return color(d.data.name);
+    });
+  refVisTooltip();
+}
+
+function refVisTooltip() {//Tooltip
+  var tooltip = d3.select('#refVis')       
+  .append('div')                          
+  .attr('class', 'tooltip');              
+
+  tooltip.append('div')                   
+    .attr('class', 'name');              
+
+  tooltip.append('div')                     
+    .attr('class', 'length');                
+}
 function saveRegion(viewRefName, viewRegStart, viewRegEnd) {
   var saveJsonLocation = "/viewregion/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   d3.json(saveJsonLocation, function(error, data) {});
