@@ -35,7 +35,7 @@ if (featuresExist === true) {
 }
 
 // send pixel size for bining and initialize autocomplete
-var initJson =  "/init/" + $(".samples").width();
+var initJson =  "/init/" + Math.round($(".samples").width());
 d3.json(initJson, function(error, seqDict) {
   autoComplete(seqDict);
 });
