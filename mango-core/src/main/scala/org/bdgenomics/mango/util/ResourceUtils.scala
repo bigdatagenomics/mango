@@ -17,6 +17,11 @@
  */
 package org.bdgenomics.mango.core.util
 
+import java.io.{ FileNotFoundException, File }
+
+import org.apache.hadoop.fs.{ FileSystem, Path }
+import org.apache.spark.SparkContext
+
 object ResourceUtils {
 
   /**
@@ -42,5 +47,21 @@ object ResourceUtils {
 
     //Print Maximum available memory
     println("Max Memory:" + runtime.maxMemory() / mb);
+  }
+
+  /**
+   * Returns whether a file is local or remote, and throws an exception if it can't find the file
+   */
+  def isLocal(filePath: String, sc: SparkContext): Boolean = {
+    val localFile: File = new File(filePath)
+    val path: Path = new Path(filePath)
+    val fs: FileSystem = path.getFileSystem(sc.hadoopConfiguration)
+    if (localFile.exists) {
+      true
+    } else if (fs.exists(path)) {
+      false
+    } else {
+      throw new FileNotFoundException("Couldn't find the file ${path.toUri}")
+    }
   }
 }
