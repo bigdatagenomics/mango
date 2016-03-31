@@ -15,19 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bdgenomics.mango.filters
+package org.bdgenomics.mango.core.util
 
-import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord }
-import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, MisMatch }
+object ResourceUtils {
 
-object AlignmentRecordFilter {
+  /**
+   * Prints java heap map availability and usage
+   */
+  def printSysUsage() = {
+    val mb: Int = 1024 * 1024;
+    //Getting the runtime reference from system
+    var runtime: Runtime = Runtime.getRuntime();
 
-  //Applies quality filter to (reference region, alignment records), returns the RDD
-  def filterByRecordQuality(data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], quality: String): RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = {
-    val minimumQuality: Double = try { quality.toDouble } catch { case _ => 0 }
-    data.filter(r => r._2.record.getMapq() >= minimumQuality && r._2.record.getMapq() > 0)
+    println("##### Heap utilization statistics [MB] #####");
+
+    //Print used memory
+    println("Used Memory:"
+      + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+
+    //Print free memory
+    println("Free Memory:"
+      + runtime.freeMemory() / mb);
+
+    //Print total available memory
+    println("Total Memory:" + runtime.totalMemory() / mb);
+
+    //Print Maximum available memory
+    println("Max Memory:" + runtime.maxMemory() / mb);
   }
-
 }

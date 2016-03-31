@@ -32,7 +32,7 @@ class FrequencyLayoutSuite extends FunSuite {
     val region = new ReferenceRegion("chr1", 0, 10)
     val records = new ListBuffer[AlignmentRecord]
     val sequence = "GATAAA"
-    for (i <- 1 to 10) {
+    for (i <- 1L to 10L) {
       records += AlignmentRecord.newBuilder()
         .setStart(i)
         .setEnd(i + sequence.length)
@@ -52,7 +52,7 @@ class FrequencyLayoutSuite extends FunSuite {
     val region = new ReferenceRegion("chr1", 1, 10)
     val records = new ListBuffer[AlignmentRecord]
     val sequence = "GATAAA"
-    for (i <- 1 to 10) {
+    for (i <- 1L to 10L) {
       records += AlignmentRecord.newBuilder()
         .setStart(i)
         .setEnd(i + sequence.length)

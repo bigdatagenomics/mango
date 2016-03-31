@@ -27,7 +27,7 @@ import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.{ Logging, _ }
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferenceRegion, RecordGroupDictionary, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, FeatureField, GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
@@ -37,19 +37,20 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, Nucleot
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap, ListBuffer }
 import scala.reflect.{ ClassTag, classTag }
+import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
 
-class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long) extends Serializable with Logging {
+abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializable with Logging {
 
-  var partitioner: Partitioner = null
-  setPartitioner()
-
-  def this(sc: SparkContext, dict: SequenceDictionary, partitions: Int) = {
-    this(sc, dict, partitions, 1000)
-  }
+  def sc: SparkContext
+  def dict: SequenceDictionary
+  def partitions: Int
+  def chunkSize: Long
+  def partitioner: Partitioner
 
   // TODO: once tracking is pushed to front end, add sc.local partitioning
-  def setPartitioner(): Unit = {
-    partitioner = GenomicRegionPartitioner(partitions, dict)
+  def setPartitioner: Partitioner = {
+    GenomicRegionPartitioner(partitions, dict)
   }
 
   def getDictionary: SequenceDictionary = {
@@ -70,18 +71,18 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
   }
 
   // Keeps track of sample ids and corresponding files
-  private var fileMap: mutable.HashMap[String, String] = new mutable.HashMap()
+  var fileMap: HashMap[String, String] = new HashMap()
 
   def getFileMap: mutable.HashMap[String, String] = fileMap
 
-  private var bookkeep: mutable.HashMap[String, IntervalTree[ReferenceRegion, String]] = new mutable.HashMap()
+  var bookkeep: HashMap[String, IntervalTree[ReferenceRegion, String]] = new HashMap()
 
-  var intRDD: IntervalRDD[ReferenceRegion, T] = null
+  var intRDD: IntervalRDD[ReferenceRegion, S] = null
 
   /*
   * Logs key and region values in a bookkeeping structure per chromosome
   */
-  private def rememberValues(region: ReferenceRegion, ks: List[String]) = {
+  protected def rememberValues(region: ReferenceRegion, ks: List[String]) = {
     if (bookkeep.contains(region.referenceName)) {
       bookkeep(region.referenceName).insert(region, ks.toIterator)
     } else {
@@ -91,66 +92,11 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
     }
   }
 
-  def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary) = {
-    val isAlignmentRecord = classOf[AlignmentRecord].isAssignableFrom(classTag[T].runtimeClass)
-    val isVariant = classOf[Genotype].isAssignableFrom(classTag[T].runtimeClass)
-    val isFeature = classOf[Feature].isAssignableFrom(classTag[T].runtimeClass)
-    val isNucleotideFrag = classOf[NucleotideContigFragment].isAssignableFrom(classTag[T].runtimeClass)
-    val (rdd, sd, rg) =
-      if (isAlignmentRecord) {
-        val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contig.contigName") === (region.referenceName)))
-        val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-        val alignedReadRDD: AlignmentRecordRDD = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
-        (alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r)),
-          alignedReadRDD.sequences, alignedReadRDD.recordGroups)
-      } else if (isVariant) {
-        val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end) && (BinaryColumn("variant.contig.contigName") === (region.referenceName)))
-        val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
-        val d = sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
-          .map(r => (ReferenceRegion(ReferencePosition(r)), r))
-        (d, null, null)
-      } else if (isFeature) {
-        val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contig.contigName") === (region.referenceName)))
-        val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-        val d = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
-          .map(r => (ReferenceRegion(r), r))
-        (d, null, null)
-      } else {
-        log.warn("Generic type not supported")
-        (null, null, null)
-      }
-    (rdd.asInstanceOf[RDD[(ReferenceRegion, T)]], sd, rg)
-  }
+  def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary)
 
-  def loadFromBam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)] = {
-    if (LazyMaterialization.isLocal(fp + ".bai", sc)) {
-      sc.loadIndexedBam(fp, region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-    } else {
-      sc.loadBam(fp).rdd.filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-    }
-  }
+  def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, T)]
 
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, T)] = {
-    var data: RDD[(ReferenceRegion, T)] = null
-    if (!fileMap.containsKey(k)) {
-      log.error("Key not in FileMap")
-    }
-    val fp = fileMap(k)
-    if (fp.endsWith(".adam")) {
-      data = loadAdam(region, fp)._1
-    } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
-      data = loadFromBam(region, fp)
-    } else if (fp.endsWith(".vcf")) {
-      data = sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-    } else if (fp.endsWith(".bed")) {
-      data = sc.loadFeatures(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(r), r)).asInstanceOf[RDD[(ReferenceRegion, T)]]
-    } else {
-      throw UnsupportedFileException("File type not supported")
-    }
-    data.partitionBy(partitioner)
-  }
-
-  def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, T]] = {
+  def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, S]] = {
     multiget(region, List(k))
   }
 
@@ -160,7 +106,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
 	* Otherwise call put on the sections of data that don't exist
 	* Here, ks, is an option of list of personids (String)
 	*/
-  def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, T]] = {
+  def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
     val seqRecord = dict(region.referenceName)
     val regionsOpt = getMaterializedRegions(region, ks)
     seqRecord match {
@@ -186,9 +132,9 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
    * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
    *
    * @param region ReferenceRegion in which data is retreived
-   * @param keys to be retreived
+   * @param ks to be retreived
    */
-  private def put(region: ReferenceRegion, ks: List[String]) = {
+  protected def put(region: ReferenceRegion, ks: List[String]) = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) =>
@@ -197,7 +143,7 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
         val start = Math.min(region.start, end)
         val reg = new ReferenceRegion(region.referenceName, start, end)
         ks.map(k => {
-          val data = loadFromFile(reg, k)
+          val data = loadFromFile(reg, k).asInstanceOf[RDD[(ReferenceRegion, S)]]
           if (intRDD == null) {
             intRDD = IntervalRDD(data)
             intRDD.persist(StorageLevel.MEMORY_AND_DISK)
@@ -215,10 +161,10 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
    * gets materialized regions that are not yet loaded into the bookkeeping structure
    *
    * @param region that to be searched over
-   * @param keys in which region is searched over. these are sample IDs
+   * @param ks in which region is searched over. these are sample IDs
    * @return List of materialied and merged reference regions not found in bookkeeping structure
    */
-  def getMaterializedRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
+  protected def getMaterializedRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
     val start = region.start / chunkSize * chunkSize
     val end = region.end / chunkSize * chunkSize + (chunkSize - 1)
     getMissingRegions(new ReferenceRegion(region.referenceName, start, end), ks)
@@ -228,10 +174,10 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
    * generates a list of reference regions that were not found in bookkeeping structure
    *
    * @param region that is divided into chunks and searched for in bookkeeping structure
-   * @param keys in which region is searched over. these are sample IDs
+   * @param ks in which region is searched over. these are sample IDs
    * @return List of reference regions not found in bookkeeping structure
    */
-  def getMissingRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
+  protected def getMissingRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
     var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
     var start = region.start / chunkSize * chunkSize
     var end = start + (chunkSize - 1)
@@ -255,22 +201,9 @@ class LazyMaterialization[T: ClassTag](sc: SparkContext, dict: SequenceDictionar
     if (regions.size < 1) {
       None
     } else {
-      LazyMaterialization.mergeRegions(Option(regions.toList))
+      mergeRegions(Option(regions.toList))
     }
 
-  }
-}
-
-case class UnsupportedFileException(message: String) extends Exception(message)
-
-object LazyMaterialization {
-
-  def apply[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, dict, partitions)
-  }
-
-  def apply[T: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long): LazyMaterialization[T] = {
-    new LazyMaterialization[T](sc, dict, partitions, chunkSize)
   }
 
   /**
@@ -279,7 +212,7 @@ object LazyMaterialization {
    * @note For example, given a list of regions with ranges (0, 999), (1000, 1999) and (3000, 3999)
    * This function will consolidate adjacent regions and output (0, 1999), (3000, 3999)
    * @note Requires that list region is ordered
-   * @param Option of list of regions to merge
+   * @param regionsOpt Option of list of regions to merge
    * @return Option of list of merged adjacent regions
    */
   def mergeRegions(regionsOpt: Option[List[ReferenceRegion]]): Option[List[ReferenceRegion]] = {
@@ -321,3 +254,5 @@ object LazyMaterialization {
   }
 
 }
+
+case class UnsupportedFileException(message: String) extends Exception(message)

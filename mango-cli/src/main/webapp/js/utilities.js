@@ -1,6 +1,8 @@
 // Filters invalid characters from string to create javascript descriptor
 
+// width of scrollbar when page content length exceeds display height
 var barWidth = 21;
+var width = $("body").width() - barWidth;
 
 function setGlobalReferenceRegion(refName, start, end) {
     viewRefName = refName;
