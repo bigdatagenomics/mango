@@ -30,8 +30,6 @@ for (var i = 0; i < samples.length; i++) {
   $("#"+samples[i]).append("<div class=\"mergedReads\"></div>");
   $("#"+samples[i]).append("<div class=\"alignmentData\"></div>");
 
-  var width = $(".mergedReads").width();
-
   var selector = "#" + samples[i] + ">.mergedReads";
   readCountSvgContainer[samples[i]] = d3.select(selector)
     .append("svg")
@@ -49,7 +47,7 @@ function renderSamplename(i) {
         $(selector + ">.title").remove();
         $(selector).append("<div class='col-md-9 title'>" + rawSamples[i] + "</div>");
         $(selector).append("<div class='col-md-3'><input value='viewAlignments' name='viewAlignments'" +
-                                "type='checkbox'onClick='toggleAlignments(\"" + samples[i] + "\")' id='viewAlignments'>" +
+                                "type='checkbox'onClick='toggleAlignments(\"" + samples[i] + "\")' id='viewAlignments" + samples[i] + "' class='viewAlignments'>" +
                                 "<label for='viewAlignments'>Alignments</label></div>");
         var alignmentSelector = $( "#" + samples[i] + ">.alignmentData");
         $(alignmentSelector).hide();
@@ -111,7 +109,12 @@ function renderReads(refName, start, end, quality, isCountData, samples) {
         renderJsonMergedReads(readsJsonLocation);
         var keys = Object.keys(readAlignmentSvgContainer);
         keys.forEach(function(sample) {
-            renderAlignments(refName, start, end, quality, sample);
+            // if is checked
+            var checkSelector = "#viewAlignments" + sample;
+            if ($(checkSelector).attr('checked')) {
+                console.log("cadsf");
+                renderAlignments(refName, start, end, quality, sample);
+            }
         });
     } else
         renderJsonReads(readsJsonLocation, Array(samples));
@@ -362,9 +365,6 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
                   return "green";
                 }
             });
-        // TODO: why is this defined twice?
-        numTracks = d3.max(data["matePairs"], function(d) {return d.track});
-        numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
         // Add the lines connecting read pairs
         var mateLines = container.selectAll(".readPairs").data(data["matePairs"]);
@@ -372,7 +372,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         modify
           .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
           .attr("y1", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
-          .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+          .attr("x2", (function(d) { return ((d.end)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
           .attr("y2", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }));
         newData = mateLines.enter();
         newData
@@ -381,7 +381,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
             .attr("class", "readPairs")
             .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
             .attr("y1", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
-            .attr("x2", (function(d) { return ((d.end + 1)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+            .attr("x2", (function(d) { return ((d.end)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
             .attr("y2", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
             .attr("strock-width", "1")
             .attr("stroke", "steelblue");
@@ -497,7 +497,7 @@ function renderIndelCounts(indels, sample) {
           .duration(200)
           .style("opacity", .9);
         misMatchDiv.html(
-          formatIndelText("I", d.count.I) + + d.refCurr +
+          formatIndelText("I", d.count.I) +
           formatIndelText("D", d.count.D))
           .style("text-align", "left")
           .style("left", (d3.event.pageX) + "px")
@@ -508,7 +508,7 @@ function renderIndelCounts(indels, sample) {
           .duration(200)
           .style("opacity", .9);
         var text = "<p style='color:pink'>Insertions: " + getIndelCounts("I", d.count.I) +
-        "</p><p style='color:black'>Deletions: "+ getIndelCounts("D", d.count.D) + "</p>" + d.refCurr ;
+        "</p><p style='color:black'>Deletions: "+ getIndelCounts("D", d.count.D) + "</p>";
         misMatchDiv.html(text)
           .style("text-align", "left")
           .style("left", (d3.event.pageX) + "px")

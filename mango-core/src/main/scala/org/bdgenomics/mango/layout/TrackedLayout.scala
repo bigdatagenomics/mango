@@ -48,7 +48,6 @@ object TrackTimers extends Metrics {
  *
  * This is the kind of data structure which is required for non-overlapping genome visualization.
  *
- * @tparam T the type of value which is to be tracked.
  */
 object TrackedLayout {
 

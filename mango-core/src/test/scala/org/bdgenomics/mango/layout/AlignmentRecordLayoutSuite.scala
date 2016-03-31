@@ -41,8 +41,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
-      .setStart(1)
-      .setEnd(6)
+      .setStart(1L)
+      .setEnd(6L)
       .setMapq(50)
       .setReadName("read")
       .setSequence("AAAAT")
@@ -51,20 +51,24 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read2 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
-      .setStart(7)
+      .setStart(7L)
       .setRecordGroupSample("Sample")
-      .setEnd(11)
+      .setEnd(11L)
       .setMapq(50)
       .setReadName("read")
       .setSequence("AAAAT")
       .build
 
+    val mismatch1 = List(MisMatch("M", 1, 1, "A", "T"))
+    val mismatch2 = List(MisMatch("M", 7, 1, "A", "T"))
+
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
-    val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read2), 1).keyBy(ReferenceRegion(_))
-    val reference = "NAAAAA"
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(
+      List(CalculatedAlignmentRecord(read1, mismatch1),
+        CalculatedAlignmentRecord(read2, mismatch2)), 1).keyBy(r => ReferenceRegion(r.record))
 
-    val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
     assert(alignmentData.head._2.matePairs.length == 1)
   }
 
@@ -74,8 +78,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
-      .setStart(1)
-      .setEnd(6)
+      .setStart(1L)
+      .setEnd(6L)
       .setMapq(50)
       .setReadName("read1")
       .setSequence("AAAAT")
@@ -84,9 +88,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read2 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("10M")
-      .setStart(30)
+      .setStart(30L)
       .setRecordGroupSample("Sample")
-      .setEnd(40)
+      .setEnd(40L)
       .setMapq(50)
       .setReadName("read1")
       .setSequence("AAAAAAAAAA")
@@ -96,8 +100,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
-      .setStart(9)
-      .setEnd(14)
+      .setStart(9L)
+      .setEnd(14L)
       .setMapq(50)
       .setReadName("read2")
       .setSequence("AAAAT")
@@ -106,20 +110,24 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read4 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("10M")
-      .setStart(18)
+      .setStart(18L)
       .setMapq(50)
       .setRecordGroupSample("Sample")
-      .setEnd(28)
+      .setEnd(28L)
       .setReadName("read2")
       .setSequence("AAAAAAAAAA")
       .build
 
     val region = new ReferenceRegion("chrM", 1, 40)
     val sampleIds: List[String] = List("Sample")
-    val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read3, read2, read4), 1).keyBy(ReferenceRegion(_))
-    val reference = "NAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    val d: List[CalculatedAlignmentRecord] = List(
+      CalculatedAlignmentRecord(read1, List()),
+      CalculatedAlignmentRecord(read2, List()),
+      CalculatedAlignmentRecord(read3, List()),
+      CalculatedAlignmentRecord(read4, List()))
 
-    val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
     val result = alignmentData.head
     assert(result._2.matePairs.length == 2)
     assert(result._2.matePairs.filter(_.track == 0).length == 1)
@@ -131,9 +139,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
-      .setStart(1)
+      .setStart(1L)
       .setMapq(50)
-      .setEnd(6)
+      .setEnd(6L)
       .setReadName("read1")
       .setSequence("AAAAT")
       .build
@@ -141,10 +149,10 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read2 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("10M")
-      .setStart(30)
+      .setStart(30L)
       .setMapq(50)
       .setRecordGroupSample("Sample")
-      .setEnd(40)
+      .setEnd(40L)
       .setReadName("read1")
       .setSequence("AAAAAAAAAA")
       .build
@@ -153,9 +161,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
-      .setStart(9)
+      .setStart(9L)
       .setMapq(50)
-      .setEnd(14)
+      .setEnd(14L)
       .setReadName("read2")
       .setSequence("AAAAT")
       .build
@@ -163,9 +171,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read4 = AlignmentRecord.newBuilder
       .setContig(Contig.newBuilder.setContigName("chrM").build)
       .setCigar("6M")
-      .setStart(42)
+      .setStart(42L)
       .setRecordGroupSample("Sample")
-      .setEnd(48)
+      .setEnd(48L)
       .setMapq(50)
       .setReadName("read2")
       .setSequence("AAAAAA")
@@ -173,10 +181,16 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 48)
     val sampleIds: List[String] = List("Sample")
-    val data: RDD[(ReferenceRegion, AlignmentRecord)] = sc.parallelize(List(read1, read3, read2, read4), 1).keyBy(ReferenceRegion(_))
-    val reference = "NAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
-    val alignmentData = AlignmentRecordLayout(data, Option(reference), region, sampleIds)
+    val d: List[CalculatedAlignmentRecord] = List(
+      CalculatedAlignmentRecord(read1, List()),
+      CalculatedAlignmentRecord(read2, List()),
+      CalculatedAlignmentRecord(read3, List()),
+      CalculatedAlignmentRecord(read4, List()))
+
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
     val result = alignmentData.head
     assert(result._2.matePairs.length == 2)
     assert(result._2.matePairs.filter(_.track == 0).length == 1)

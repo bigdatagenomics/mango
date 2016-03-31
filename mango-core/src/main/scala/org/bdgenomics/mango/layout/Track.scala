@@ -73,15 +73,14 @@ object Track {
    * @param trackBuffer: Mutable listbuffer of ReadsTrackBuffer
    * @return List of ReadsTracks
    */
-  def apply(trackBuffer: ReadsTrackBuffer, reference: Option[String], region: ReferenceRegion): ReadsTrack = {
-    new ReadsTrack(trackBuffer.records.toList, trackBuffer.sample, reference, region)
+  def apply(trackBuffer: ReadsTrackBuffer): ReadsTrack = {
+    new ReadsTrack(trackBuffer.records.toList, trackBuffer.sample)
   }
 }
 
 /**
  * Extension of Track to support all but AlignmentRecord Data
  *
- * @param recs: List of (ReferenceRegion, T) tuples in a ReadsTrack
  * @tparam T: Genomic type
  */
 case class GenericTrack[T: ClassTag](records: List[(ReferenceRegion, T)]) extends Track[T]
@@ -91,32 +90,19 @@ case class GenericTrack[T: ClassTag](records: List[(ReferenceRegion, T)]) extend
  *
  * @param recs: List of (ReferenceRegion, AlignmentRecord) tuples in a ReadsTrack
  * @param sampOpt: Option of sample id
- * @param reference: String of referenceregion to compare records to
- * @param region: ReferenceRegion tracks are viewed over
  */
-class ReadsTrack(recs: List[(ReferenceRegion, AlignmentRecord)], sampOpt: Option[String], reference: Option[String], region: ReferenceRegion) extends Track[AlignmentRecord] {
+class ReadsTrack(recs: List[(ReferenceRegion, CalculatedAlignmentRecord)], sampOpt: Option[String]) extends Track[AlignmentRecord] {
 
   val sample = sampOpt.get
-  val records = recs
+  val records = recs.map(r => (r._1, r._2.record))
   val matePairs: List[MatePair] = getMatePairs
-  val misMatches: List[MisMatch] = getMisMatches
+  val misMatches: List[MisMatch] = recs.flatMap(_._2.mismatches)
 
   def getMatePairs(): List[MatePair] = {
     val pairs = records.groupBy(_._2.getReadName).filter(_._2.size == 2).map(_._2)
     val nonOverlap = pairs.filter(r => !(r(0)._1.overlaps(r(1)._1)))
     nonOverlap.map(p => MatePair(p.map(_._1.end).min, p.map(_._1.start).max)).toList
   }
-
-  def getMisMatches: List[MisMatch] = {
-    reference match {
-      case Some(_) => {
-        records.flatMap(r => MismatchLayout(r._2, reference.get, region))
-      } case None => {
-        List[MisMatch]()
-      }
-    }
-  }
-
 }
 
 /**
@@ -141,18 +127,18 @@ case class GenericTrackBuffer[T: ClassTag](recs: List[(ReferenceRegion, T)]) ext
  *
  * @param recs: List of (ReferenceRegion, AlignmentRecord) tuples in a ReadsTrackBuffer
  */
-case class ReadsTrackBuffer(recs: List[(ReferenceRegion, AlignmentRecord)]) extends TrackBuffer[AlignmentRecord] {
+case class ReadsTrackBuffer(recs: List[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackBuffer[CalculatedAlignmentRecord] {
   records ++= recs
-  val sample: Option[String] = Option(records.head._2.getRecordGroupSample)
+  val sample: Option[String] = Option(records.head._2.record.getRecordGroupSample)
 
-  def conflicts(recs: Seq[(ReferenceRegion, AlignmentRecord)]): Boolean = {
+  def conflicts(recs: Seq[(ReferenceRegion, CalculatedAlignmentRecord)]): Boolean = {
     assert(sample != None)
     val start = recs.map(rec => rec._1.start).min
     val end = recs.map(rec => rec._1.end).max
-    val groupedSample = recs.head._2.getRecordGroupSample
+    val groupedSample = recs.head._2.record.getRecordGroupSample
     val tempRegion = new ReferenceRegion(recs.head._1.referenceName, start, end)
 
-    val pairs = records.toList.groupBy(_._2.getReadName).map(_._2)
+    val pairs = records.toList.groupBy(_._2.record.getReadName).map(_._2)
     val aggregatedPairs = pairs.map(p => ReferenceRegion(p.head._1.referenceName, p.map(rec => rec._1.start).min, p.map(rec => rec._1.end).max))
     sample.get != groupedSample || aggregatedPairs.exists(r => r.overlaps(tempRegion))
   }
