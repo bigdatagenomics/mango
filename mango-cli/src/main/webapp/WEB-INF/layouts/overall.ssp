@@ -74,7 +74,8 @@
     </div>
   </nav>
     <nav id="menu" class="panel" role="navigation">
-    <h2> Reference Panel </h2>
+    <h2 class="panel"> Reference Panel </h2>
+    <div id="refVis"></div>
   </nav>
 
   <div id = "navigation">
