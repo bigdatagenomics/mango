@@ -533,19 +533,21 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         } else {
           log.warn("invalid prepocessing file path")
         }
+      case None => log.info("No preprocessing file provided")
     }
     VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
     val variantsPath = Option(args.variantsPaths)
     variantsPath match {
       case Some(_) => {
-        VizReads.variantsPaths = args.readsPaths.split(",").toList
+        VizReads.variantsPaths = args.variantsPaths.split(",").toList
         VizReads.variantsExist = true
         for (varPath <- VizReads.variantsPaths) {
           if (varPath.endsWith(".vcf")) {
-            // TODO: remove hardcode for callset1
+            //TODO: remove hardcode, fetch callset from vcf file
             VizReads.variantData.loadSample("callset1", varPath)
           } else if (varPath.endsWith(".adam")) {
-            VizReads.readsData.loadADAMSample(varPath)
+            //TODO: remove hardcode, fetch callset from adam file
+            VizReads.variantData.loadSample("callset1", varPath)
           } else {
             log.info("WARNING: Invalid input for variants file")
             println("WARNING: Invalid input for variants file")
