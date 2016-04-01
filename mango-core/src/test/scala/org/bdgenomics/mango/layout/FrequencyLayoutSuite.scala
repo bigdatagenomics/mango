@@ -18,10 +18,8 @@
 package org.bdgenomics.mango.layout
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.bdgenomics.formats.avro.AlignmentRecord
 import org.scalatest.FunSuite
-import org.bdgenomics.mango.layout._
 
 import scala.collection.mutable.ListBuffer
 

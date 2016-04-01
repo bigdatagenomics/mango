@@ -17,12 +17,8 @@
  */
 package org.bdgenomics.mango.serialization
 
-import com.esotericsoftware.kryo.{ Kryo, Serializer }
-import com.esotericsoftware.kryo.io.{ Input, Output }
+import com.esotericsoftware.kryo.Kryo
 import org.apache.spark.serializer.KryoRegistrator
-import org.bdgenomics.mango.models._
-import org.bdgenomics.mango.layout._
-import scala.reflect.ClassTag
 
 class MangoKryoRegistrator extends KryoRegistrator {
   override def registerClasses(kryo: Kryo) {

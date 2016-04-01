@@ -19,8 +19,7 @@ package org.bdgenomics.mango.filters
 
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord }
-import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, MisMatch }
+import org.bdgenomics.mango.layout.CalculatedAlignmentRecord
 
 object AlignmentRecordFilter {
 

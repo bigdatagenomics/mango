@@ -17,15 +17,15 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.File
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
+import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition, RecordGroupDictionary, SequenceDictionary, SequenceRecord }
-import org.bdgenomics.adam.projections.{ Projection, VariantField, GenotypeField }
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
+
 import scala.reflect.ClassTag
 
 class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Long) extends LazyMaterialization[Genotype, Genotype] {

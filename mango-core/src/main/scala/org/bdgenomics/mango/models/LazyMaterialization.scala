@@ -17,27 +17,16 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ File, FileNotFoundException }
-
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import org.apache.hadoop.fs.{ FileSystem, Path }
-import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.parquet.filter2.predicate.FilterPredicate
-import org.apache.spark.{ Logging, _ }
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.{ ReferenceRegion, RecordGroupDictionary, SequenceDictionary }
-import org.bdgenomics.adam.projections.{ AlignmentRecordField, FeatureField, GenotypeField, Projection }
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.apache.spark.{ Logging, _ }
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
-import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, NucleotideContigFragment }
 
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap, ListBuffer }
-import scala.reflect.{ ClassTag, classTag }
-import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializable with Logging {

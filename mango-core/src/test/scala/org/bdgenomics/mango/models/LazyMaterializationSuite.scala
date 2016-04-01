@@ -18,7 +18,7 @@
 
 package org.bdgenomics.mango.models
 
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceRecord, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 

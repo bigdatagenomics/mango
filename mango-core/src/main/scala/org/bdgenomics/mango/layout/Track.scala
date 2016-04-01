@@ -18,15 +18,10 @@
 
 package org.bdgenomics.mango.layout
 import org.bdgenomics.adam.models.ReferenceRegion
-import edu.berkeley.cs.amplab.spark.intervalrdd._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
+import org.bdgenomics.formats.avro.AlignmentRecord
+
 import scala.collection.mutable
-import scala.util.control.Breaks._
-import org.apache.spark.rdd.RDD
-import org.apache.spark.rdd.MetricsContext._
-import org.bdgenomics.utils.instrumentation.Metrics
-import org.apache.spark.Logging
-import scala.reflect.{ ClassTag, classTag }
+import scala.reflect.ClassTag
 
 /**
  * An abstract Track class to support Tracks for different Genomic Types

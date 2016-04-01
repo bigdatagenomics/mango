@@ -352,7 +352,7 @@
       <dependency>
         <groupId>com.github.broadinstitute</groupId>
         <artifactId>picard</artifactId>
-        <version>2.1.1</version>
+        <version>1.141</version>
       </dependency>
       <dependency>
         <groupId>com.github.samtools</groupId>
