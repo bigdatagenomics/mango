@@ -33,9 +33,9 @@ object MismatchLayout extends Logging {
    * @param record: AlignmentRecord
    * @param reference: reference string used to calculate mismatches
    * @param region: ReferenceRegion to be viewed
-   * @return List of MisMatches
+   * @return List of MisMatchJsones
    */
-  def apply(record: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatch] = {
+  def apply(record: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatchJson] = {
     alignMismatchesToRead(record, reference, region)
   }
 
@@ -46,16 +46,16 @@ object MismatchLayout extends Logging {
    * @param record: AlignmentRecord
    * @param reference: reference string used to calculate mismatches
    * @param region: ReferenceRegion to be viewed
-   * @return List of MisMatches
+   * @return List of MisMatchJsones
    */
-  def alignMismatchesToRead(rec: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatch] = {
+  def alignMismatchesToRead(rec: AlignmentRecord, reference: String, region: ReferenceRegion): List[MisMatchJson] = {
     var ref: String =
       if (rec.readNegativeStrand) {
         // get new reference sequence complementary to the given reference
         complement(reference)
       } else reference
 
-    var misMatches: ListBuffer[MisMatch] = new ListBuffer[MisMatch]()
+    var misMatches: ListBuffer[MisMatchJson] = new ListBuffer[MisMatchJson]()
     val cigar = TextCigarCodec.decode(rec.cigar).getCigarElements()
     var refIdx = rec.start + 1
     var recIdx = rec.start
@@ -75,7 +75,7 @@ object MismatchLayout extends Logging {
                   if (refBase != recBase) {
                     val start = recIdx
                     val end = start + 1
-                    misMatches += new MisMatch(op.toString, refIdx, start, end, recBase.toString, refBase.toString)
+                    misMatches += new MisMatchJson(op.toString, refIdx, start, end, recBase.toString, refBase.toString)
                   }
                 }
                 recIdx += 1
@@ -93,13 +93,13 @@ object MismatchLayout extends Logging {
             val end = recIdx + misLen
             val stringStart = (recIdx - rec.start).toInt
             val indel = rec.sequence.substring(stringStart, stringStart + misLen)
-            misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
+            misMatches += new MisMatchJson(op.toString, refIdx, recIdx, end, indel, null)
             recIdx += misLen
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
             val end = recIdx + misLen
             val stringStart = getPosition(recIdx, rec.start)
             val indel = rec.sequence.substring(stringStart, stringStart + misLen)
-            misMatches += new MisMatch(op.toString, refIdx, recIdx, end, indel, null)
+            misMatches += new MisMatchJson(op.toString, refIdx, recIdx, end, indel, null)
             refIdx += misLen
           }
 
@@ -141,30 +141,27 @@ object MismatchLayout extends Logging {
 object MisMatchJson {
 
   /**
-   * An implementation of MismatchJson which converts a list of Mismatches into MisMatch Json
+   * An implementation of MismatchJson which converts a list of Mismatches into MisMatchJson Json
    *
-   * @param recs The list of MisMatches to lay out in json
-   * @param track js track number
+   * @param recs The list of MisMatchJsones to lay out in json
    * @return List of MisMatch Json objects
    */
-  def apply(recs: List[MisMatch], track: Int): List[MisMatchJson] = {
-    recs.map(rec => MisMatchJson(rec, track))
+  def apply(recs: List[MisMatchJson]): List[MisMatchJson] = {
+    //removed track
+    recs.map(rec => MisMatchJson(rec))
   }
 
   /**
-   * An implementation of MismatchJson which converts a single Mismatch into MisMatch Json
+   * An implementation of MismatchJson which converts a single Mismatch into MisMatchJson Json
    *
-   * @param recs The single MisMatch to lay out in json
-   * @param track js track number
-   * @return List of MisMatch Json objects
+   * @param recs The single MisMatchJson to lay out in json
+   * @return List of MisMatchJson objects
    */
-  def apply(rec: MisMatch, track: Int): MisMatchJson = {
-    new MisMatchJson(rec.op, rec.refCurr, rec.start, rec.end, rec.sequence, rec.refBase, track)
+  def apply(rec: MisMatchJson): MisMatchJson = {
+    //removed track
+    new MisMatchJson(rec.op, rec.refCurr, rec.start, rec.end, rec.sequence, rec.refBase)
   }
 }
 
-// tracked MisMatch Json Object
-case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String, track: Long)
-
-// untracked Mismatch Json Object
-case class MisMatch(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String)
+// MisMatch Json Object
+case class MisMatchJson(op: String, refCurr: Long, start: Long, end: Long, sequence: String, refBase: String)

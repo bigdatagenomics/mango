@@ -17,19 +17,19 @@
  */
 package org.bdgenomics.mango.cli
 
-import com.github.erictu.intervaltree._
-import edu.berkeley.cs.amplab.spark.intervalrdd._
+import java.io.File
+
 import htsjdk.samtools.reference.{ FastaSequenceIndex, FastaSequenceFile, IndexedFastaSequenceFile, ReferenceSequence }
 import htsjdk.samtools.{ SAMRecord, SAMReadGroupRecord, SamReader, SamReaderFactory }
-import java.io.File
 import net.liftweb.json.Serialization.write
-import org.apache.hadoop.mapreduce.Job
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.SparkContext._
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
+import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.spark.{ Logging, SparkContext }
 import org.apache.spark.rdd.RDD
+
+import org.bdgenomics.mango.core.util. { ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
+import org.bdgenomics.mango.filters.VariantRecordFilter
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, VariantContext }
 import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
@@ -242,7 +242,7 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val data: RDD[(ReferenceRegion, AlignmentRecord)] = dataOption.get.toRDD
               val filteredData = AlignmentRecordFilter.filterByRecordQuality(data, readQuality)
-              val alignmentData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, reference, region, sampleIds)
+              val alignmentData: List[ReadJson] = AlignmentRecordLayout(filteredData, reference, region)
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2), region, sampleIds)
               val fileMap = VizReads.readsData.getFileMap()
               var readRetJson: String = ""
@@ -294,16 +294,17 @@ class VizServlet extends ScalatraServlet {
     VizTimers.VarRequest.time {
       contentType = "json"
       viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      val genotypeQuality = params("quality").toInt
       val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
       variantRDDOption match {
         case Some(_) => {
           val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
-          write(VariantLayout(variantRDD))
+          val filteredRDD = VariantRecordFilter.filterByGenotypeQuality(variantRDD, genotypeQuality)
+          write(VariantLayout(filteredRDD))
         } case None => {
           write("")
         }
       }
-
     }
   }
 
