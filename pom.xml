@@ -219,6 +219,10 @@
 
   <repositories>
     <repository>
+      <id>central</id>
+      <url>http://repo1.maven.org/maven2/</url>
+    </repository>
+    <repository>
       <id>Sonatype</id>
       <url>http://oss.sonatype.org/content/repositories/snapshots/</url>
     </repository>
@@ -344,6 +348,11 @@
             <artifactId>htsjdk</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.github.broadinstitute</groupId>
+        <artifactId>picard</artifactId>
+        <version>2.1.1</version>
       </dependency>
       <dependency>
         <groupId>com.github.samtools</groupId>
