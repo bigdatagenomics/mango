@@ -181,6 +181,10 @@
       <artifactId>hadoop-bam</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.github.broadinstitute</groupId>
+      <artifactId>picard</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.github.samtools</groupId>
       <artifactId>htsjdk</artifactId>
     </dependency>

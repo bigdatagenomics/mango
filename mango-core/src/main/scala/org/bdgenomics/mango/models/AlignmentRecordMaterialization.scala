@@ -17,21 +17,21 @@
  */
 package org.bdgenomics.mango.models
 
-import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, MismatchLayout, MisMatch }
+import java.io.File
 
 import edu.berkeley.cs.amplab.spark.intervalrdd._
-import java.io.File
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.spark._
+import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.rdd.RDD
-import org.apache.spark.Logging
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
-import org.bdgenomics.adam.models.{ ReferenceRegion, RecordGroupDictionary, SequenceDictionary }
-import org.bdgenomics.adam.projections.{ Projection, AlignmentRecordField }
+import org.apache.spark.{ Logging, _ }
+import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, MismatchLayout }
+
 import scala.reflect.ClassTag
 
 class AlignmentRecordMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Long, refRDD: ReferenceRDD) extends LazyMaterialization[AlignmentRecord, CalculatedAlignmentRecord] with Serializable with Logging {

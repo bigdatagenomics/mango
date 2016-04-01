@@ -21,6 +21,7 @@ import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
+
 import scala.collection.mutable.ListBuffer
 
 object FrequencyLayout extends Logging {

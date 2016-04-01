@@ -17,12 +17,12 @@
  */
 package org.bdgenomics.mango.layout
 
-import htsjdk.samtools.{ Cigar, CigarOperator, CigarElement, TextCigarCodec }
+import htsjdk.samtools.{ CigarOperator, TextCigarCodec }
 import org.apache.spark.Logging
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.bdgenomics.formats.avro.AlignmentRecord
+
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object MismatchLayout extends Logging {

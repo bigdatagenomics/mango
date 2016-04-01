@@ -17,32 +17,17 @@
  */
 package org.bdgenomics.mango.models
 
-import htsjdk.samtools.reference.FastaSequenceFile
-import org.bdgenomics.mango.core.util.VizUtils
-
-import collection.mutable.HashMap
-import com.github.erictu.intervaltree._
-import edu.berkeley.cs.amplab.spark.intervalrdd._
 import java.io.File
-import org.apache.parquet.filter2.predicate.FilterPredicate
-import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.spark.Dependency
-import org.apache.spark.Partition
-import org.apache.spark._
-import org.apache.spark.SparkContext._
-import org.apache.spark.TaskContext
+
+import htsjdk.samtools.SAMSequenceDictionary
 import org.apache.spark.rdd.RDD
-import org.apache.spark.Logging
 import org.apache.spark.storage.StorageLevel
-import org.apache.avro.specific.SpecificRecord
-import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
-import org.bdgenomics.adam.rdd.read.{ AlignedReadRDD, AlignmentRecordRDD, AlignmentRecordRDDFunctions }
+import org.apache.spark.{ Logging, _ }
 import org.bdgenomics.adam.models._
-import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment, Contig }
-import scala.collection.mutable.ListBuffer
-import scala.reflect.{ classTag, ClassTag }
+import org.bdgenomics.formats.avro.NucleotideContigFragment
+import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import picard.sam.CreateSequenceDictionary
 
 class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable with Logging {
 
@@ -64,13 +49,18 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
   def getSequenceDictionary: SequenceDictionary = dict
 
   def setSequenceDictionary(filePath: String): SequenceDictionary = {
-    if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
-      val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
-      val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
-      val dictFile: File = new File(filePath.replace(extension, ".dict"))
-      require(dictFile.exists, "Generated sequence dictionary does not exist, use Picard to generate")
-      SequenceDictionary(fseq.getSequenceDictionary())
-    } else { //ADAM
+    if (ResourceUtils.isLocal(filePath, sc)) {
+      if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
+        val createObj = new CreateSequenceDictionary
+        val dict: SAMSequenceDictionary = createObj.makeSequenceDictionary(new File(filePath))
+        SequenceDictionary(dict)
+      } else if (filePath.endsWith(".adam")) {
+        sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
+      } else {
+        throw UnsupportedFileException("File type not supported")
+      }
+    } else {
+      require(filePath.endsWith(".adam"), "To generate SequenceDictionary on remote cluster, must use adam files")
       sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
     }
   }

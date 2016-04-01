@@ -17,21 +17,10 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.bdgenomics.adam.models.{ ReferenceRegion, ReferencePosition }
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig, Feature, Genotype, Variant }
-import org.scalatest.FunSuite
-import org.bdgenomics.mango.layout._
-import org.apache.spark.TaskContext
-import org.bdgenomics.adam.util.ADAMFunSuite
-import org.scalatest._
-import org.apache.spark.{ SparkConf, Logging, SparkContext }
-import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
-import org.scalatest.FunSuite
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion }
 import org.bdgenomics.adam.util.ADAMFunSuite
-import org.bdgenomics.adam.rdd.ADAMContext._
-import scala.collection.mutable.ListBuffer
+import org.bdgenomics.formats.avro.{ Contig, Genotype, Variant }
 
 class VariantLayoutSuite extends ADAMFunSuite {
 

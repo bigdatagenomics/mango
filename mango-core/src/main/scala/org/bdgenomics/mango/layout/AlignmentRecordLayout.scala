@@ -17,16 +17,13 @@
  */
 package org.bdgenomics.mango.layout
 
+import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.SparkContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.utils.instrumentation.Metrics
-import scala.collection.JavaConversions._
-import scala.collection.mutable
+
 import scala.collection.mutable.ListBuffer
-import scala.reflect.ClassTag
 
 object AlignmentLayoutTimers extends Metrics {
   val AlignmentLayout = timer("collect and filter alignment records")
