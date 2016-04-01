@@ -77,28 +77,19 @@ function render(refName, start, end, mapQuality) {
 }
 
 function refVis(dictionary){
- // Creating reference visualization from sequence dictionary
- var dict = [];
- // var namelist=[];
- // var lengthlist=[];
- var totalLength=0;
- for (i = 0; i < dictionary.length; i++) { 
+  // Creating reference visualization from sequence dictionary
+  var dataset = [];
+  // var namelist=[];
+  // var lengthlist=[];
+  var totalLength=0;
+  for (i = 0; i < dictionary.length; i++) { 
    var range = dictionary[i].split(":")[1].split("-");
    var length = parseInt(range[1]-range[0]);
    var name = dictionary[i].split(":")[0];
-   dict.push({name: name, length: length });
+   dataset.push({name: name, length: length });
    totalLength+=length;
-   // namelist.append(name);
-   // lengthlist.append(length);
- }
+  }
 
- // Create visualization
-  var dataset = [
-    { name: 'chrM', length: 10 }, 
-    { name: 'chrM_a', length: 20 }, 
-    { name: 'chrM_b', length: 30 }, 
-    { name: 'chrM_c', length: 40 }
-  ];
   var innerWidth = 45;
   var width = 180;
   var height = 180;
