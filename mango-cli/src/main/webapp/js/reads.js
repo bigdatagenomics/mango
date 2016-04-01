@@ -111,8 +111,7 @@ function renderReads(refName, start, end, quality, isCountData, samples) {
         keys.forEach(function(sample) {
             // if is checked
             var checkSelector = "#viewAlignments" + sample;
-            if ($(checkSelector).attr('checked')) {
-                console.log("cadsf");
+            if ($(checkSelector).is(':checked')) {
                 renderAlignments(refName, start, end, quality, sample);
             }
         });
