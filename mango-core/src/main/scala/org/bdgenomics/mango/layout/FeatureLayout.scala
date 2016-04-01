@@ -20,9 +20,9 @@ package org.bdgenomics.mango.layout
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature }
+import org.bdgenomics.formats.avro.Feature
+
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 object FeatureLayout extends Logging {
 

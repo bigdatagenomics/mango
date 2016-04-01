@@ -17,20 +17,14 @@
  */
 package org.bdgenomics.mango.layout
 
-import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile, ReferenceSequence }
 import java.io.File
+
+import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile }
 import org.apache.spark.rdd.RDD
-import org.apache.spark._
-import org.apache.spark.SparkContext
-import org.apache.spark.TaskContext
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
-import org.bdgenomics.mango.layout._
-import org.scalatest.FunSuite
-
-import scala.collection.mutable.ListBuffer
+import org.bdgenomics.formats.avro.AlignmentRecord
 
 class MismatchLayoutSuite extends ADAMFunSuite {
 

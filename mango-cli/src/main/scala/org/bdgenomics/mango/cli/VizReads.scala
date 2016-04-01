@@ -19,24 +19,22 @@ package org.bdgenomics.mango.cli
 
 import java.io.File
 
-import htsjdk.samtools.reference.{ FastaSequenceFile, IndexedFastaSequenceFile }
-import htsjdk.samtools.{ SAMRecord, SamReader, SAMSequenceDictionary, SamReaderFactory }
+import htsjdk.samtools.reference.IndexedFastaSequenceFile
+import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
-import org.apache.spark.{ Logging, SparkContext }
 import org.apache.spark.rdd.RDD
-
+import org.apache.spark.{ Logging, SparkContext }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.projections.{ FeatureField, Projection }
+import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
-import org.bdgenomics.utils.cli._
-import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, ReferenceRegion }
-import org.bdgenomics.adam.projections.{ Projection, FeatureField }
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ NucleotideContigFragment, AlignmentRecord, Feature, Genotype }
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.{ ReferenceRDD, GenotypeMaterialization, AlignmentRecordMaterialization, LazyMaterialization }
-
+import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, GenotypeMaterialization, ReferenceRDD }
+import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }

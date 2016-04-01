@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.core.util
 
-import java.io.{ FileNotFoundException, File }
+import java.io.{ File, FileNotFoundException }
 
 import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.spark.SparkContext
