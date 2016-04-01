@@ -17,8 +17,9 @@
  */
 package org.bdgenomics.mango.models
 
+import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.samtools.reference.FastaSequenceFile
-import org.bdgenomics.mango.core.util.VizUtils
+import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 
 import collection.mutable.HashMap
 import com.github.erictu.intervaltree._
@@ -44,6 +45,8 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, Genotyp
 import scala.collection.mutable.ListBuffer
 import scala.reflect.{ classTag, ClassTag }
 
+import picard.sam.CreateSequenceDictionary
+
 class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable with Logging {
 
   var refRDD: RDD[NucleotideContigFragment] = null
@@ -64,13 +67,17 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
   def getSequenceDictionary: SequenceDictionary = dict
 
   def setSequenceDictionary(filePath: String): SequenceDictionary = {
-    if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
-      val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
-      val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
-      val dictFile: File = new File(filePath.replace(extension, ".dict"))
-      require(dictFile.exists, "Generated sequence dictionary does not exist, use Picard to generate")
-      SequenceDictionary(fseq.getSequenceDictionary())
-    } else { //ADAM
+    if (ResourceUtils.isLocal(filePath, sc)) {
+      if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
+        val createObj = new CreateSequenceDictionary
+        val dict: SAMSequenceDictionary = createObj.makeSequenceDictionary(new File(filePath))
+        SequenceDictionary(dict)
+      } else {
+        //ADAM
+        sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
+      }
+    } else {
+      require(filePath.endsWith(".adam"), "To generate SequenceDictionary on remote cluster, must use adam files")
       sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
     }
   }

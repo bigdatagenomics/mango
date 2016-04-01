@@ -20,7 +20,7 @@ package org.bdgenomics.mango.cli
 import java.io.File
 
 import htsjdk.samtools.reference.{ FastaSequenceFile, IndexedFastaSequenceFile }
-import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
+import htsjdk.samtools.{ SAMRecord, SamReader, SAMSequenceDictionary, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -114,22 +114,6 @@ object VizReads extends BDGCommandCompanion with Logging {
 
     //Print Maximum available memory
     println("Max Memory:" + runtime.maxMemory() / mb)
-  }
-
-  def setSequenceDictionary(filePath: String) = {
-    if (ResourceUtils.isLocal(filePath, sc)) {
-      if (filePath.endsWith(".fa") || filePath.endsWith(".fasta")) {
-        val fseq: FastaSequenceFile = new FastaSequenceFile(new File(filePath), true) //truncateNamesAtWhitespace
-        val extension: String = if (filePath.endsWith(".fa")) ".fa" else ".fasta"
-        val dictFile: File = new File(filePath.replace(extension, ".dict"))
-        require(dictFile.exists, "Generated sequence dictionary does not exist, use Picard to generate")
-        globalDict = SequenceDictionary(fseq.getSequenceDictionary())
-      } else { //ADAM LOCAL
-        globalDict = sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
-      }
-    } else { //REMOTE
-      globalDict = sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
-    }
   }
 
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
