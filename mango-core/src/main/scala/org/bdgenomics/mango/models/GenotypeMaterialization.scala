@@ -38,7 +38,7 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
 
   override def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, Genotype)], SequenceDictionary, RecordGroupDictionary) = {
     val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end) && (BinaryColumn("variant.contig.contigName") === (region.referenceName)))
-    val proj = Projection(GenotypeField.variant, GenotypeField.alleles)
+    val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
     val d = sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
       .map(r => (ReferenceRegion(ReferencePosition(r)), r))
     (d, null, null)
@@ -50,16 +50,6 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
       null
     }
     val fp = fileMap(k)
-
-    val file: File = new File(fp)
-    //    if (!file.exists()) {
-    //      log.error("File does not exist")
-    //      return sc.emptyRDD[(ReferenceRegion, T)]
-    //    }
-    //    if (!(new File(fp)).exists()) {
-    //      log.warn("File path for sample " + k + " not loaded")
-    //      null
-    //    }
     val data: RDD[(ReferenceRegion, Genotype)] =
       if (fp.endsWith(".adam")) {
         loadAdam(region, fp)._1
