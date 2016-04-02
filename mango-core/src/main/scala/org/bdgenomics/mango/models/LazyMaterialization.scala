@@ -53,8 +53,8 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def loadADAMSample(filePath: String): String = {
     val region = ReferenceRegion("new", 0, chunkSize - 1)
-    val rd: RecordGroupDictionary = loadAdam(region, filePath)._3
-    val sample = rd.recordGroups.head.sample
+    val sample = getRecordGroupDictionary(filePath)
+      .recordGroups.head.sample
     fileMap += ((sample, filePath))
     sample
   }
@@ -81,7 +81,9 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
     }
   }
 
-  def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, T)], SequenceDictionary, RecordGroupDictionary)
+  def getRecordGroupDictionary(fp: String): RecordGroupDictionary
+
+  def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)]
 
   def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, T)]
 

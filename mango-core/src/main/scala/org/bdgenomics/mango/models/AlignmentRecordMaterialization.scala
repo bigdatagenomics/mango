@@ -42,14 +42,18 @@ class AlignmentRecordMaterialization(s: SparkContext, d: SequenceDictionary, par
   val chunkSize = chunkS
   val partitioner = setPartitioner
 
-  override def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, AlignmentRecord)], SequenceDictionary, RecordGroupDictionary) = {
+  override def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, AlignmentRecord)] = {
     val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contig.contigName") === (region.referenceName)))
     val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-
     val alignedReadRDD: AlignmentRecordRDD = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
-    (alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r)),
-      alignedReadRDD.sequences, alignedReadRDD.recordGroups)
+    alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r))
+  }
+
+  override def getRecordGroupDictionary(fp: String): RecordGroupDictionary = {
+    // TODO: most efficient predicate
+    val pred: FilterPredicate = ((LongColumn("end") === 0L) && (LongColumn("start") === 0L))
+    sc.loadParquetAlignments(fp, predicate = Some(pred)).recordGroups
   }
 
   def loadFromBam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, AlignmentRecord)] = {
@@ -68,17 +72,9 @@ class AlignmentRecordMaterialization(s: SparkContext, d: SequenceDictionary, par
     }
     val fp = fileMap(k)
     val file: File = new File(fp)
-    //    if (!file.exists()) {
-    //      log.error("File does not exist")
-    //      return sc.emptyRDD[(ReferenceRegion, T)]
-    //    }
-    //    if (!(new File(fp)).exists()) {
-    //      log.warn("File path for sample " + k + " not loaded")
-    //      null
-    //    }
     val data: RDD[(ReferenceRegion, AlignmentRecord)] =
       if (fp.endsWith(".adam")) {
-        loadAdam(region, fp)._1
+        loadAdam(region, fp)
       } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
         loadFromBam(region, fp)
       } else {

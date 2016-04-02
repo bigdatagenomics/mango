@@ -98,10 +98,12 @@ object VariantJson {
    * @return List of VariantJsons
    */
   def apply(recs: List[(ReferenceRegion, Genotype)], track: Int): List[VariantJson] = {
-    recs.map(rec => new VariantJson(rec._2.getVariant.getContig.getContigName, rec._2.getAlleles.map(_.toString).mkString(" / "), rec._2.getVariant.getStart, rec._2.getVariant.getEnd, track))
+    recs.map(rec => new VariantJson(rec._2.getVariant.getContig.getContigName, rec._2.getSampleId,
+      rec._2.getAlleles.map(_.toString).mkString(" / "), rec._2.getVariant.getStart,
+      rec._2.getVariant.getEnd, track))
   }
 }
 
 // tracked json objects for genotype visual data
-case class VariantJson(contigName: String, alleles: String, start: Long, end: Long, track: Long)
+case class VariantJson(contigName: String, sampleId: String, alleles: String, start: Long, end: Long, track: Long)
 case class VariantFreqJson(start: Long, end: Long, count: Long)

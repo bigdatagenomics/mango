@@ -36,12 +36,16 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
   val chunkSize = chunkS
   val partitioner = setPartitioner
 
-  override def loadAdam(region: ReferenceRegion, fp: String): (RDD[(ReferenceRegion, Genotype)], SequenceDictionary, RecordGroupDictionary) = {
+  override def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, Genotype)] = {
     val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end) && (BinaryColumn("variant.contig.contigName") === (region.referenceName)))
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
-    val d = sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
+    sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
       .map(r => (ReferenceRegion(ReferencePosition(r)), r))
-    (d, null, null)
+  }
+
+  override def getRecordGroupDictionary(fp: String): RecordGroupDictionary = {
+    // TODO: should return name of callset
+    null
   }
 
   override def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, Genotype)] = {
@@ -52,7 +56,7 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     val fp = fileMap(k)
     val data: RDD[(ReferenceRegion, Genotype)] =
       if (fp.endsWith(".adam")) {
-        loadAdam(region, fp)._1
+        loadAdam(region, fp)
       } else if (fp.endsWith(".vcf")) {
         sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r))
       } else {
