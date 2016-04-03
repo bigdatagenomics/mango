@@ -50,10 +50,10 @@ class AlignmentRecordMaterialization(s: SparkContext, d: SequenceDictionary, par
     alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r))
   }
 
-  override def getRecordGroupDictionary(fp: String): RecordGroupDictionary = {
+  override def getFileReference(fp: String): String = {
     // TODO: most efficient predicate
     val pred: FilterPredicate = ((LongColumn("end") === 0L) && (LongColumn("start") === 0L))
-    sc.loadParquetAlignments(fp, predicate = Some(pred)).recordGroups
+    sc.loadParquetAlignments(fp, predicate = Some(pred)).recordGroups.recordGroups.head.sample
   }
 
   def loadFromBam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, AlignmentRecord)] = {

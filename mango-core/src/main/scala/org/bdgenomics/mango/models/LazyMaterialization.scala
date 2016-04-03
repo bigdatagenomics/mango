@@ -47,14 +47,17 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   }
 
   // Stores location of sample at a given filepath
-  def loadSample(sampleId: String, filePath: String) {
-    fileMap += ((sampleId, filePath))
+  def loadSample(filePath: String, sampleId: Option[String] = None) {
+    sampleId match {
+      case Some(_) => fileMap += ((sampleId.get, filePath))
+      case None    => fileMap += ((filePath, filePath))
+
+    }
   }
 
   def loadADAMSample(filePath: String): String = {
     val region = ReferenceRegion("new", 0, chunkSize - 1)
-    val sample = getRecordGroupDictionary(filePath)
-      .recordGroups.head.sample
+    val sample = getFileReference(filePath)
     fileMap += ((sample, filePath))
     sample
   }
@@ -81,7 +84,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
     }
   }
 
-  def getRecordGroupDictionary(fp: String): RecordGroupDictionary
+  def getFileReference(fp: String): String
 
   def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)]
 
@@ -110,7 +113,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
           case None =>
           // DO NOTHING
         }
-        // TODO: return data to multiget instead of making subsequent call to RDD
         Option(intRDD.filterByInterval(region))
       case None =>
         None
