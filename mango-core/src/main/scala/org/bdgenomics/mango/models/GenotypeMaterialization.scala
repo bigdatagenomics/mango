@@ -43,9 +43,8 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
       .map(r => (ReferenceRegion(ReferencePosition(r)), r))
   }
 
-  override def getRecordGroupDictionary(fp: String): RecordGroupDictionary = {
-    // TODO: should return name of callset
-    null
+  override def getFileReference(fp: String): String = {
+    fp
   }
 
   override def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, Genotype)] = {
