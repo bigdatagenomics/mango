@@ -1,0 +1,49 @@
+<!-- Top navigation bar -->
+<%@ val page: String %>
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+
+                #if (page == "reads")
+                    <li class="active">
+                #else
+                    <li>
+                #end
+                    <a href="overall">Overall</a>
+                </li>
+
+                #if (page == "variants")
+                    <li class="active">
+                #else
+                    <li>
+                #end
+                    <a href="variants">Variant Frequency</a>
+                </li>
+
+                #if (page == "reads")
+                    <li style="border-left:1px solid #333" class="dropdown">
+                        <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
+                        <ul class="dropdown-menu" id="menu1">
+                            <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
+                                <li class="refDependancy"><label for="indelCheck">Indels</label></li>
+                            <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
+                                <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
+                            <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
+                                <li><label for="coverageCheck">Coverage</label></li>
+                        </ul>
+                    </li>
+                #end
+
+            </ul>
+        </div>
+    </div>
+</nav>

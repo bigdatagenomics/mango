@@ -39,7 +39,10 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   // TODO: once tracking is pushed to front end, add sc.local partitioning
   def setPartitioner: Partitioner = {
-    GenomicRegionPartitioner(partitions, dict)
+    if (sc.isLocal)
+      new HashPartitioner(partitions)
+    else
+      GenomicRegionPartitioner(partitions, dict)
   }
 
   def getDictionary: SequenceDictionary = {

@@ -3,6 +3,7 @@
 // width of scrollbar when page content length exceeds display height
 var barWidth = 21;
 var width = $("body").width() - barWidth;
+$(".main").width(width);
 
 function setGlobalReferenceRegion(refName, start, end) {
     viewRefName = refName;
