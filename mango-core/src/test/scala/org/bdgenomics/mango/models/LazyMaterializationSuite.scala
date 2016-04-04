@@ -34,6 +34,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
   val bamFile = "./src/test/resources/mouse_chrM.bam"
   val vcfFile = "./src/test/resources/truetest.vcf"
+  val vcfFile2 = "./src/test/resources/truetest2.vcf"
   val referencePath = "./src/test/resources/mm10_chrM.fa"
 
   sparkTest("assert the data pulled from a file is the same") {
@@ -41,7 +42,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     val sample = "sample1"
     val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
-    lazyMat.loadSample(sample, bamFile)
+    lazyMat.loadSample(bamFile, Option(sample))
 
     val region = new ReferenceRegion("chrM", 0L, 1000L)
 
@@ -59,8 +60,8 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
     val region = new ReferenceRegion("chrM", 0L, 100L)
-    lazyMat.loadSample(sample1, bamFile)
-    lazyMat.loadSample(sample2, bamFile)
+    lazyMat.loadSample(bamFile, Option(sample1))
+    lazyMat.loadSample(bamFile, Option(sample2))
     val results1 = lazyMat.get(region, sample1).get
     val lazySize1 = results1.count
 
@@ -74,7 +75,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
     val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
-    lazyMat.loadSample(sample1, bamFile)
+    lazyMat.loadSample(bamFile, Option(sample1))
     val results = lazyMat.get(bigRegion, sample1).get
     val lazySize = results.count
 
@@ -88,7 +89,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
     val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
     val bigRegion = new ReferenceRegion("M", 0L, 20000L)
-    lazyMat.loadSample(sample1, bamFile)
+    lazyMat.loadSample(bamFile, Option(sample1))
     val results = lazyMat.get(bigRegion, sample1)
 
     assert(results == None)
@@ -96,12 +97,26 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
   sparkTest("Get data for variants") {
     val region = new ReferenceRegion("chrM", 0L, 100L)
-    val callset = "callset1"
     val lazyMat = GenotypeMaterialization(sc, sd, 10)
-    lazyMat.loadSample(callset, vcfFile)
+    lazyMat.loadSample(vcfFile)
 
-    val results = lazyMat.get(region, callset).get
+    val results = lazyMat.get(region, vcfFile).get
     assert(results.count == 3)
+
+  }
+
+  sparkTest("Get data for 2 variant files") {
+    val region = new ReferenceRegion("chrM", 0L, 100L)
+    val lazyMat = GenotypeMaterialization(sc, sd, 10)
+    lazyMat.loadSample(vcfFile)
+    lazyMat.loadSample(vcfFile2)
+    val vcfFiles = List(vcfFile, vcfFile2)
+    val results1 = lazyMat.get(region, vcfFile).get
+    val results2 = lazyMat.get(region, vcfFile2).get
+    val recordCount = results1.count + results2.count
+
+    val results = lazyMat.multiget(region, vcfFiles).get
+    assert(results.count == recordCount)
 
   }
 

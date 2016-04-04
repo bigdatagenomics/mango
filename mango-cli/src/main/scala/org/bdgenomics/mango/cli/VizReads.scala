@@ -352,7 +352,7 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
         VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-      val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
+      val variantRDDOption = VizReads.variantData.multiget(viewRegion, VizReads.variantsPaths)
       variantRDDOption match {
         case Some(_) => {
           val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD()
@@ -370,7 +370,7 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
         VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-      val variantRDDOption = VizReads.variantData.get(viewRegion, "callset1")
+      val variantRDDOption = VizReads.variantData.multiget(viewRegion, VizReads.variantsPaths)
       variantRDDOption match {
         case Some(_) => {
           val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD()
@@ -467,7 +467,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
               val rec: SAMRecord = samReader.iterator().next()
               val sample = rec.getReadGroup.getSample
               sampNamesBuffer += sample
-              VizReads.readsData.loadSample(sample, readsPath)
+              VizReads.readsData.loadSample(readsPath, Option(sample))
             } else if (readsPath.endsWith(".adam")) {
               sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
             } else {
@@ -525,11 +525,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         VizReads.variantsExist = true
         for (varPath <- VizReads.variantsPaths) {
           if (varPath.endsWith(".vcf")) {
-            //TODO: remove hardcode, fetch callset from vcf file
-            VizReads.variantData.loadSample("callset1", varPath)
+            VizReads.variantData.loadSample(varPath)
           } else if (varPath.endsWith(".adam")) {
-            //TODO: remove hardcode, fetch callset from adam file
-            VizReads.variantData.loadSample("callset1", varPath)
+            VizReads.variantData.loadSample(varPath)
           } else {
             log.info("WARNING: Invalid input for variants file")
             println("WARNING: Invalid input for variants file")
