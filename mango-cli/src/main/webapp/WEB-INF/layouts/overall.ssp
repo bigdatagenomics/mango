@@ -20,9 +20,40 @@
     
   <nav id="menu" class="panel" role="navigation">
     <h2 class="panel"> Reference Panel </h2>
-    <div id="refVis"></div>
+    <!-- <div id="refVis"></div> -->
   </nav>
 
+</div>
+
+
+<script src="js/utilities.js"></script>
+<script src="js/formSubmit.js"></script>
+
+<script>
+  $(document).ready(function() {
+      $('.menu-link').bigSlide();
+  });
+
+  <!-- Define Global Variables -->
+  var viewRefName = "${viewRegion._1}";
+  var viewRegStart = parseInt(${viewRegion._2}, 10);
+  var mapQuality = 100;
+  var viewRegEnd = parseInt(${viewRegion._3}, 10);
+  var readsExist = ${readsExist};
+  var variantsExist = ${variantsExist};
+  var featuresExist = ${featuresExist};
+  var refSequence = null;
+
+  var sampleId = "${samples}";
+  var rawSamples = sampleId.split(",").unique();
+  var samples = filterNames(rawSamples);
+
+  // object used to track sample names and their corresponding html identifiers
+  var sampleMap = {};
+  for (var i = 0; i < rawSamples.length; i++){
+    sampleMap[filterName(rawSamples[i])] = rawSamples[i];
+  }
+>>>>>>> tooltip animation working now
 
     <script src="js/utilities.js"></script>
     <script src="js/formSubmit.js"></script>
