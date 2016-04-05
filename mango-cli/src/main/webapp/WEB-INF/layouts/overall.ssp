@@ -20,11 +20,8 @@
     
   <nav id="menu" class="panel" role="navigation">
     <h2 class="panel"> Reference Panel </h2>
-    <!-- <div id="refVis"></div> -->
+    <div id="refVis"></div>
   </nav>
-
-</div>
-
 
 <script src="js/utilities.js"></script>
 <script src="js/formSubmit.js"></script>
