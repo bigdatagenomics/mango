@@ -84,7 +84,7 @@ input[type="text"] {
   width: 180px;
 }
 
-.tooltip { 
+.refVistooltip { 
   background: #eee;
   box-shadow: 0 0 5px #999999;
   color: #333;
@@ -96,7 +96,7 @@ input[type="text"] {
   text-align: center;
   top: 95px;
   width: 80px;
-  z-index: 10; }
+  z-index: 100000000000; }
 
 
 /*

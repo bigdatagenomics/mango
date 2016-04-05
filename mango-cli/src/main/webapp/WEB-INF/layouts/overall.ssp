@@ -75,7 +75,7 @@
   </nav>
     <nav id="menu" class="panel" role="navigation">
     <h2 class="panel"> Reference Panel </h2>
-    <div id="refVis"></div>
+    <!-- <div id="refVis"></div> -->
   </nav>
 
   <div id = "navigation">
@@ -158,6 +158,7 @@
             </form>
           </li>
           <li><a href="#menu" class="menu-link">&#9776;</a></li>
+          <li><div id="refVis"></div></li>
        </ul>
       <br>
   </div>

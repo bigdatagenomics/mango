@@ -116,19 +116,38 @@ function refVis(dictionary){
     .attr('fill', function(d, i) { 
       return color(d.data.name);
     });
-  refVisTooltip();
-}
+//   refVisTooltip(path);
+// }
 
-function refVisTooltip() {//Tooltip
+// function refVisTooltip(path) {//Tooltip
   var tooltip = d3.select('#refVis')       
   .append('div')                          
-  .attr('class', 'tooltip');              
+  .attr('class', 'refVistooltip');              
 
   tooltip.append('div')                   
     .attr('class', 'name');              
 
   tooltip.append('div')                     
-    .attr('class', 'length');                
+    .attr('class', 'length');   
+
+   tooltip.append('div')                                         
+    .attr('class', 'percent');                             
+
+  path.on('mouseover', function(d) {                            
+    var total = d3.sum(dataset.map(function(d) {                
+      return d.length;                                           
+    }));                                                        
+    var percent = Math.round(1000 * d.data.length / total) / 10; //force 1 s.f.
+    tooltip.select('.name').html(d.data.name);                
+    tooltip.select('.length').html(d.data.length);                
+    tooltip.select('.percent').html(percent + '%');             
+    tooltip.style('display', 'block');                          
+  });                                                           
+  
+  path.on('mouseout', function() {                              
+    tooltip.style('display', 'none');                           
+  });                                                           
+             
 }
 function saveRegion(viewRefName, viewRegStart, viewRegEnd) {
   var saveJsonLocation = "/viewregion/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
