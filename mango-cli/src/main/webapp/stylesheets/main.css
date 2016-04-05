@@ -99,13 +99,13 @@ input[type="text"] {
   color: #333;
   display: none;
   font-size: 12px;
-  left: 130px;
+  left: 50px;
   padding: 10px;
   position: absolute;
   text-align: center;
-  top: 95px;
+  top: 170px;
   width: 80px;
-  z-index: 100000000000; }
+  z-index: 999999; }
 
 /*
 .main {
