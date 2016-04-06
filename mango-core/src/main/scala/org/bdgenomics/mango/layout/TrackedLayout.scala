@@ -18,17 +18,10 @@
  */
 package org.bdgenomics.mango.layout
 
-import edu.berkeley.cs.amplab.spark.intervalrdd._
-import org.apache.spark.Logging
-import org.apache.spark.rdd.RDD
-import org.apache.spark.rdd.MetricsContext._
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
 import org.bdgenomics.utils.instrumentation.Metrics
-import scala.collection.mutable
+
 import scala.collection.mutable.ListBuffer
-import scala.reflect.{ ClassTag, classTag }
-import scala.util.control.Breaks._
 
 object TrackTimers extends Metrics {
   val FindAddTimer = timer("Find and Add to Track")
@@ -49,7 +42,6 @@ object TrackTimers extends Metrics {
  *
  * This is the kind of data structure which is required for non-overlapping genome visualization.
  *
- * @tparam T the type of value which is to be tracked.
  */
 object TrackedLayout {
 

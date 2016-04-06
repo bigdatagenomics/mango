@@ -17,14 +17,12 @@
  */
 package org.bdgenomics.mango.layout
 
+import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.SparkContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.utils.instrumentation.Metrics
-import scala.collection.JavaConversions._
-import scala.collection.mutable
+
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
@@ -42,7 +40,7 @@ object AlignmentRecordLayout extends Logging {
    * @param sampleIds: List of sample identifiers to be rendered
    * @return List of ReadJsons, which takes (AlignmentRecord, List[MisMatchJson]) tuples and picks the required information and mismatches
    */
-  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[AlignmentRecord, List[MisMatchJson]] = {
+  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): ReadJson = {
     val mappingTuples: List[(AlignmentRecord, List[MisMatchJson])] = {
         rdd.mapPartitions(AlignmentRecordLayout(_)).collect
     }
@@ -54,8 +52,6 @@ object AlignmentRecordLayout extends Logging {
    * over the region, and the region viewed.
    *
    * @param iter: Iterator of (ReferenceRegion, AlignmentRecord) tuples
-   * @param reference: reference string used to calculate mismatches
-   * @param region: ReferenceRegion to be viewed
    * @return Iterator of tuples of alignment records to list of mismatches 
    */
   def apply(iter: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]): Iterator[CalculatedAlignmentRecord] = {
@@ -73,7 +69,7 @@ object MergedAlignmentRecordLayout extends Logging {
    * @param referenceOpt: reference string used to calculate mismatches
    * @param region: ReferenceRegion to be viewed
    * @param sampleIds: List of sample identifiers to be rendered
-   * @return List of Read Tracks containing json for reads, mismatches and mate pairs
+   * @return List of ReadJsons containing json for reads and corresponding mismatches
    */
   def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], referenceOpt: Option[String], region: ReferenceRegion, sampleIds: List[String], binSize: Int): Map[String, List[MutationCount]] = {
 
@@ -118,6 +114,7 @@ object MergedAlignmentRecordLayout extends Logging {
  *
  * @param values The set of (Reference, AlignmentRecord) tuples
  */
+
 class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]) with Logging {
   val sequence = values.toList
 
@@ -142,16 +139,15 @@ class MergedAlignmentRecordLayout(values: Iterator[(ReferenceRegion, AlignmentRe
 
 }
 
-/**
- * An implementation of ReadJson which converts AlignmentRecord data to ReadJson
- *
- * @param recs The list of (Reference, AlignmentRecord) tuples to lay out in json
- * @return List of Read Json objects
- */
 object ReadJson {
-  //track has been removed
+  /**
+   * An implementation of ReadJson which converts AlignmentRecord data to ReadJson
+   *
+   * @param recs The list of (AlignmentRecord, List[MisMatchJson]) tuples to lay out in json
+   * @return List of Read Json objects
+   */
   def apply(recs: List[(AlignmentRecord, List[MisMatchJson])]): List[ReadJson] = {
-    recs.map(rec => new ReadJson(rec._1.readName, rec._1.start, rec._1.end, rec._1.readNegativeStrand, rec._1.sequence, rec._1.cigar, rec._2)) //removed track
+    recs.map(rec => new ReadJson(rec._1.getReadName, rec._1.getStart, rec._1.getEnd, rec._1.getReadNegativeStrand, rec._1.getSequence, rec._1.getCigar, rec._1.getMapq, rec._2)) //removed track
   }
 }
 

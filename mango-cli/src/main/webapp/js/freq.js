@@ -5,7 +5,7 @@ var height = 100;
 
 var svgContainer = {};
 for (var i = 0; i < samples.length; i++) {
-  var selector = "#" + samples[i] + ">.col-md-10>.sampleCoverage";
+  var selector = "#" + samples[i] + ">.sampleCoverage";
   svgContainer[samples[i]] = d3.select(selector)
     .append("svg")
       .attr("class", "coverage-svg")
@@ -19,9 +19,9 @@ var bisectData = d3.bisector(function(d) {
 }).left;
 
 function renderJsonCoverage(data, i) {
-  // Removes at first to update frequency graph
-
+  data = typeof data != "undefined" ? data : [];
   maxFreq = d3.max(data, function(d) {return d.freq});
+  maxFreq = typeof maxFreq != "undefined" ? maxFreq : 0;
 
   // Create the scale for the x axis
   var xAxisScale = d3.scale.linear()
@@ -44,8 +44,10 @@ function renderJsonCoverage(data, i) {
     .y0(height)
     .y1(function(d){return dataScale(maxFreq-d.freq);});
 
+  var removed = svgContainer[samples[i]].selectAll("path").remove()
+
   // Add the data area shape to the graph
-  svgContainer[samples[i]].append("g")
+  svgContainer[samples[i]]
     .append("path")
     .attr("d", freqArea(data))
     .style("fill", "#B8B8B8");
@@ -92,30 +94,7 @@ function renderJsonCoverage(data, i) {
     .attr("dx", 8)
     .attr("dy", "1em");
 
-
-  var removed = svgContainer[samples[i]].selectAll("rect").data(data).exit();
-  removed.remove();
-
-    // render line
-    // TODO: this should be moved as a function in utilities.js
-    var readsVertLine = svgContainer[samples[i]].append('line')
-      .attr({
-        'x1': 50,
-        'y1': 0,
-        'x2': 50,
-        'y2': height
-      })
-      .attr("stroke", "#002900")
-      .attr("class", "verticalLine");
-
-    svgContainer[samples[i]].on('mousemove', function () {
-      var xPosition = d3.mouse(this)[0];
-      d3.selectAll(".verticalLine")
-        .attr({
-          "x1" : xPosition,
-          "x2" : xPosition
-        })
-    });
+renderd3Line(svgContainer[samples[i]], height);
 
   function mousemove() {
     // Initial calibrates initial mouse offset due to y axis position
@@ -123,6 +102,10 @@ function renderJsonCoverage(data, i) {
     var i = bisectData(data, x0, 1);
     var opt1 = data[i - 1];
     var opt2 = data[i];
+
+    if (data.length == 0) {
+      return
+    }
 
     // Finds the position that is closest to the mouse cursor
     var d = (x0 - opt1.base) > (opt2.base - x0) ? opt2 : opt1;

@@ -1,130 +1,34 @@
 <%@ val viewRegion: (String, String, String) %>
+<% attributes("page") = "variants" %>
+
 
 <html>
-<head lang="en">
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Variants Visualization for Mango">
-    <meta name="author" content="Eric Tu">
-    <script src="resources/js/jquery.min.js"></script>
-    <script src="resources/js/jquery-ui.min.js"></script>
-    <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
-    <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
-    <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
-    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type = "text/css" href = "stylesheets/main.css">
-</head>
 
-<!-- Fixed navbar -->
-<nav class="navbar navbar-default">
-  <div class="container">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
+    <% render("../templates/head.ssp")%>
+    <% render("../navigation/navigation.ssp") %>
+
+
+    <% render("../navigation/panAndZoom.ssp") %>
+
+    <br>
+    <div class="row">
+      <div class = "col-md-2 sidebar"></div>
+
+      <div class="col-md-10">
+          <div class="row top">
+              <div class="graphArea" id="refArea"></div>
+          </div>
+          <div class="row top">
+              <div class="graphArea" id="varFreqArea"></div>
+          </div>
+          <div class="row top">
+              <div class="graphArea" id="varArea"></div>
+          </div>
+      </div>
+
     </div>
-    <div id="navbar" class="navbar-collapse collapse">
-      <ul class="nav navbar-nav">
-        <li><a href="overall">Overall</a></li>
-        <li class="active"><a href="variants">Variant Frequency</a></li>
-      </ul>
-    </div><!--/.nav-collapse -->
-  </div>
-</nav>
-
-<div id = "navigation">
-  <br>
-  <ul>
-      <li>move:</li>
-      <li>
-          <input name="Move very far left button"
-            type="button"
-            value="<<<"
-            onclick="moveVeryFarLeft()"
-            class="btn btn-primary btn-xs"/>
-      </li>
-      <li>
-          <input name="Move far left button"
-            type="button"
-            value="<<"
-            onclick="moveFarLeft()"
-            class="btn btn-primary btn-xs"/>
-      </li>
-      <li>
-          <input name="Move left button"
-            type="button"
-            value="<"
-            onclick="moveLeft()"
-            class="btn btn-primary btn-xs"/>
-      </li>
-      <li>
-          <input name="Move right button"
-            type="button"
-            value=">"
-            onclick="moveRight()"
-            class="btn btn-info btn-xs"/>
-      </li>
-      <li>
-          <input name="Move far right button"
-            type="button"
-            value=">>"
-            onclick="moveFarRight()"
-            class="btn btn-info btn-xs"/>
-      </li>
-      <li>
-          <input name="Move very far right button"
-            type="button"
-            value=">>>"
-            onclick="moveVeryFarRight()"
-            class="btn btn-info btn-xs"/>
-      </li>
-      <li>zoom:</li>
-      <li>
-          <input name="Zoom in button"
-            type="button"
-            value="++"
-            onclick="zoomIn()"
-            class="btn btn-warning btn-xs"/>
-      </li>
-      <li>
-          <input name="Zoom out button"
-            type="button"
-            value="--"
-            onclick="zoomOut()"
-            class="btn btn-warning btn-xs"/>
-      </li>
-      <li>
-          <form name="regForm" method="GET" class="form-inline">
-              region:
-              <input id="regInput" type="text" name="info" size="20" class="form-control" placeholder="sample:refName:start-end">
-              <input name="Submit button"
-                    type="button"
-                    value="Submit"
-                    onclick="checkFormVariants(this.form)"
-                    class="btn btn-danger btn-xs"/>
-          </form>
-      </li>
-  </ul>
-  <br>
-</div>
-<br>
-
-<div class="row top">
-  <div class="col-md-10 graphArea" id="refArea" style="float:right"></div>
-</div>
-<div class="row top">
-  <div class="col-md-10 graphArea" id="varFreqArea" style="float:right"></div>
-</div>
-<div class="row top">
-  <div class="col-md-10 graphArea" id="varArea" style="float:right"></div>
-</div>
 
 </div>
-<br>
 
 <script>
   var viewRefName = "${viewRegion._1}";
@@ -134,6 +38,7 @@
 </script>
 <script src="js/utilities.js"></script>
 <script src="js/variants.js"></script>
+<script src="js/formSubmit.js"></script>
 <script src="js/reference.js"></script>
 <script>
   renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);

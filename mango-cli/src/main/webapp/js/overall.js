@@ -1,5 +1,5 @@
 //Configuration Variables
-var width = $(".sampleReads").width();
+var width = $(".mergedReads").width();
 var base = 50;
 var trackHeight = 6;
 
@@ -31,26 +31,14 @@ if (featuresExist === true) {
       .attr("height", featHeight)
       .attr("width", width);
 
-  var featVertLine = featureSvgContainer.append('line')
-    .attr({
-      'x1': 0,
-      'y1': 0,
-      'x2': 0,
-      'y2': featHeight
-    })
-    .attr("stroke", "#002900")
-    .attr("class", "verticalLine");
-
-  featureSvgContainer.on('mousemove', function () {
-    var xPosition = d3.mouse(this)[0];
-    d3.selectAll(".verticalLine")
-      .attr({
-        "x1" : xPosition,
-        "x2" : xPosition
-      })
-  });
-
+  renderd3Line(featureSvgContainer, featHeight);
 }
+
+// send pixel size for bining and initialize autocomplete
+var initJson =  "/init/" + Math.round($(".samples").width());
+d3.json(initJson, function(error, seqDict) {
+  autoComplete(seqDict);
+});
 
 //All rendering of data, and everything setting new region parameters, is done here
 render(viewRefName, viewRegStart, viewRegEnd);
@@ -58,13 +46,13 @@ render(viewRefName, viewRegStart, viewRegEnd);
 // Functions
 function render(refName, start, end, mapQuality) {
   //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
+  setGlobalReferenceRegion(refName, start, end);
+  setGlobalMapQ(mapQuality);
 
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
   $('#regInput').attr('placeholder', placeholder);
+  saveRegion(refName, start, end);
 
   // Reference
   renderReference(refName, start, end);
@@ -81,8 +69,13 @@ function render(refName, start, end, mapQuality) {
 
   // Reads and Coverage
   if (readsExist) {
-    renderReads(refName, start, end, mapQuality);
+    renderMergedReads(refName, start, end, mapQuality);
   }
+}
+
+function saveRegion(viewRefName, viewRegStart, viewRegEnd) {
+  var saveJsonLocation = "/viewregion/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+  d3.json(saveJsonLocation, function(error, data) {});
 }
 
 function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
@@ -96,9 +89,10 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
     .style("opacity", 0);
 
   d3.json(featureJsonLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
-      return;
-    }
+  if (error) return error;
+  if (!isValidHttpResponse(data)) {
+    return;
+  }
     var rects = featureSvgContainer.selectAll("rect").data(data);
     var modify = rects.transition();
     modify
@@ -131,8 +125,8 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
           .duration(200)
           .style("opacity", .9);
           featDiv.html(d.featureId)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
+          .style("left", (d3.event.pageX - 200) + "px")
+          .style("top", (d3.event.pageY - 200) + "px");
         })
         .on("mouseout", function(d) {
           featDiv.transition()

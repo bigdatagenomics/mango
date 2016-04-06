@@ -1,0 +1,83 @@
+<div id = "navigation">
+    <ul>
+        <li>move:</li>
+        <li>
+            <input name="Move very far left button"
+            type="button"
+            value="<<<"
+            onclick="moveVeryFarLeft()"
+            class="btn btn-primary btn-xs"/>
+        </li>
+        <li>
+            <input name="Move far left button"
+            type="button"
+            value="<<"
+            onclick="moveFarLeft()"
+            class="btn btn-primary btn-xs"/>
+        </li>
+        <li>
+            <input name="Move left button"
+            type="button"
+            value="<"
+            onclick="moveLeft()"
+            class="btn btn-primary btn-xs"/>
+        </li>
+        <li>
+            <input name="Move right button"
+            type="button"
+            value=">"
+            onclick="moveRight()"
+            class="btn btn-info btn-xs"/>
+        </li>
+        <li>
+            <input name="Move far right button"
+            type="button"
+            value=">>"
+            onclick="moveFarRight()"
+            class="btn btn-info btn-xs"/>
+        </li>
+        <li>
+            <input name="Move very far right button"
+            type="button"
+            value=">>>"
+            onclick="moveVeryFarRight()"
+            class="btn btn-info btn-xs"/>
+        </li>
+        <li>zoom:</li>
+        <li>
+            <input name="Zoom in button"
+            type="button"
+            value="++"
+            onclick="zoomIn()"
+            class="btn btn-warning btn-xs"/>
+        </li>
+        <li>
+            <input name="Zoom out button"
+            type="button"
+            value="--"
+            onclick="zoomOut()"
+            class="btn btn-warning btn-xs"/>
+        </li>
+        <li>
+            <form id="regForm" name="regForm" method="GET" class="form-inline">
+            region:
+            <input id="autocomplete" type="text" name="info" size="20" class="alignment-search form-control" placeholder="sample:refName:start-end">
+        </li>
+        <li>
+            mapping quality:
+        </li>
+        <li>
+        <input type="range" name="quality" id="quality" min="0" max="100">
+        </li>
+        <li>
+            <input name="Submit button"
+            type="button"
+            value="Submit"
+            onclick="checkForm(this.form)"
+            class="btn btn-danger btn-xs"/>
+            </form>
+        </li>
+        <li><a href="#menu" class="menu-link">&#9776;</a></li>
+    </ul>
+<br>
+</div>

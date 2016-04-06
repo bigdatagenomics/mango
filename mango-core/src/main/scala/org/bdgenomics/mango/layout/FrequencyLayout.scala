@@ -21,28 +21,34 @@ import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
+
 import scala.collection.mutable.ListBuffer
 
 object FrequencyLayout extends Logging {
 
-  def apply(rdd: RDD[AlignmentRecord], region: ReferenceRegion, sampleIds: List[String]): Map[String, List[FreqJson]] = {
+  def apply(rdd: RDD[AlignmentRecord], region: ReferenceRegion, binSize: Int, sampleIds: List[String]): Map[String, List[FreqJson]] = {
     val jsonList = new ListBuffer[(String, List[FreqJson])]()
 
-    val freqData: List[(String, Long, Long)] = rdd.mapPartitions(FrequencyLayout(_, region)).collect.toList
+    val freqData: List[(String, Long, Long)] = rdd.mapPartitions(FrequencyLayout(_, region, binSize)).collect.toList
     for (sample <- sampleIds) {
-      val sampleData: List[FreqJson] = freqData.filter(_._1 == sample).map(r => FreqJson(r._2, r._3))
-      jsonList += Tuple2(sample, sampleData)
+      val sampleData: Map[Long, Long] = freqData.filter(_._1 == sample) // get frequency for this sample
+        .map(r => (r._2, r._3))
+        .groupBy(_._1) // group by base
+        .map(r => (r._1, r._2.map(_._2).reduce(_ + _))) // add up total frequency at all spots
+
+      val jsonData = sampleData.map { case (k, v) => FreqJson(k, v) }.toList.sortBy(_.base)
+      jsonList += Tuple2(sample, jsonData)
     }
     jsonList.toMap
   }
 
-  def apply(iter: Iterator[AlignmentRecord], region: ReferenceRegion): Iterator[(String, Long, Long)] = {
-    new FrequencyLayout(iter, region).collect
+  def apply(iter: Iterator[AlignmentRecord], region: ReferenceRegion, binSize: Int): Iterator[(String, Long, Long)] = {
+    new FrequencyLayout(iter, region, binSize).collect
   }
 
 }
 
-class FrequencyLayout(array: Iterator[AlignmentRecord], region: ReferenceRegion) extends Logging {
+class FrequencyLayout(array: Iterator[AlignmentRecord], region: ReferenceRegion, binSize: Int) extends Logging {
   // Prepares frequency information in Json format
   // TODO: this algorithm can better perform using interval partitions
   val freqBuffer = new ListBuffer[(String, Long, Long)]
@@ -50,9 +56,9 @@ class FrequencyLayout(array: Iterator[AlignmentRecord], region: ReferenceRegion)
   var i = region.start
 
   while (i <= region.end) {
-    val currSubset = records.filter(value => ((value.getStart <= i) && (value.getEnd >= i))).groupBy(_.recordGroupSample)
+    val currSubset = records.filter(value => ((value.getStart <= i) && (value.getEnd >= i))).groupBy(_.getRecordGroupSample)
     currSubset.foreach(p => freqBuffer += ((p._1, i, p._2.length)))
-    i = i + 1
+    i = i + binSize
   }
 
   def collect(): Iterator[(String, Long, Long)] = freqBuffer.toIterator

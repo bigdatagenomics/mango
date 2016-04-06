@@ -2,21 +2,23 @@
 *.log
 .DS_Store
 *.DS_Store
-
+.idea
 # sbt specific
 .cache/
 .history/
 .lib/
 dist/*
 target/
+*.sh
 lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
 parquettest.sh
-out.txt
-stylesheets/main.css
-stylesheets/main.css.map
+*.css.map
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
+*.iml
+.idea/
+workfiles/

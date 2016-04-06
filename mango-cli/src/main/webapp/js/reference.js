@@ -1,7 +1,7 @@
 // Filters invalid characters from string to create javascript descriptor
 // Svg Containers for refArea (exists is all views)
 var refHeight = 38;
-var refWidth = $(".col-md-10.graphArea").width();
+var refWidth = $(".graphArea").width();
 
 var refContainer = d3.select("#refArea")
   .append("svg")
@@ -56,6 +56,10 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
       .call(refAxis);
 
   d3.json(jsonLocation, function(error, data) {
+    if (error) return error;
+    if (!isValidHttpResponse(data)) {
+      return;
+    }
 
     toggleReferenceDependencies(data);
 
@@ -98,70 +102,51 @@ function renderLowResRef(data, refContainer, refDiv) {
     })
     .attr("width", function(d) {
       return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
-    })
-    .attr("fill", function(d) {
-      if (d.reference === "G") {
-        return '#00C000'; //GREEN
-      } else if (d.reference === "C") {
-        return '#E00000'; //CRIMSON
-      } else if (d.reference === "A") {
-        return '#5050FF'; //AZURE
-      } else if (d.reference === "T") {
-        return '#E6E600'; //TWEETY BIRD
-      } else if (d.reference === "N") {
-        return '#000000'; //BLACK
-      }
-    });
+  })
+  .attr("fill", function(d) {
+    if (d.reference === "N") return nColor;
+    else return baseColors[d.reference];
+  });
 
     var newData = rects.enter();
     newData
-    .append("g")
     .append("rect")
       .attr("class", "refrect")
       .attr("x", function(d, i) {
         return i/(viewRegEnd-viewRegStart) * refWidth;
       })
       .attr("y", 30)
-      .attr("fill", function(d) {
-        if (d.reference === "G") {
-          return '#00C000'; //GREEN
-        } else if (d.reference === "C") {
-          return '#E00000'; //CRIMSON
-        } else if (d.reference === "A") {
-          return '#5050FF'; //AZURE
-        } else if (d.reference === "T") {
-          return '#FFCC00'; //TWEETY BIRD
-        } else if (d.reference === "N") {
-          return '#000000'; //BLACK
-        }
-      })
-      .attr("width", function(d) {
-        return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
-      })
-      .attr("height", refHeight)
-      .on("click", function(d) {
+    .attr("fill", function(d) {
+      if (d.reference === "N") return nColor;
+      else return baseColors[d.reference];
+    })
+    .attr("width", function(d) {
+      return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
+    })
+    .attr("height", refHeight)
+    .on("click", function(d) {
+      refDiv.transition()
+        .duration(200)
+        .style("opacity", .9);
+      refDiv.html(
+        "Base: " + d.reference + "<br>" +
+        "Position: " + d.position)
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 100) + "px");
+    })
+    .on("mouseover", function(d) {
+      refDiv.transition()
+        .duration(200)
+        .style("opacity", .9);
+      refDiv.html(d.reference)
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 100) + "px");
+    })
+    .on("mouseout", function(d) {
         refDiv.transition()
-          .duration(200)
-          .style("opacity", .9);
-        refDiv.html(
-          "Base: " + d.reference + "<br>" +
-          "Position: " + d.position)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
-      })
-      .on("mouseover", function(d) {
-        refDiv.transition()
-          .duration(200)
-          .style("opacity", .9);
-        refDiv.html(d.reference)
-          .style("left", (d3.event.pageX - 10) + "px")
-          .style("top", (d3.event.pageY - 30) + "px");
-      })
-      .on("mouseout", function(d) {
-          refDiv.transition()
-          .duration(500)
-          .style("opacity", 0);
-        });
+        .duration(500)
+        .style("opacity", 0);
+      });
 
     var removed = rects.exit();
     removed.remove();
@@ -177,21 +162,12 @@ function renderHighResRef(data, refContainer) {
   modify
       .attr("x", 0)
       .attr("dx", function(d, i) {
-             return i/(viewRegEnd-viewRegStart) * refWidth - 5;
-          })
+           return i/(viewRegEnd-viewRegStart) * refWidth - (refWidth/(viewRegEnd-viewRegStart))/2 ;
+      })
       .text( function (d) { return d.reference; })
       .attr("fill", function(d) {
-        if (d.reference === "G") {
-          return '#00C000'; //GREEN
-        } else if (d.reference === "C") {
-          return '#E00000'; //CRIMSON
-        } else if (d.reference === "A") {
-          return '#5050FF'; //AZURE
-        } else if (d.reference === "T") {
-          return '#FFCC00'; //TWEETY BIRD
-        } else if (d.reference === "N") {
-          return '#000000'; //BLACK
-        }
+        if (d.reference === "N") return nColor;
+        else return baseColors[d.reference];
       });
 
   var newData = refString.enter();
@@ -201,24 +177,15 @@ function renderHighResRef(data, refContainer) {
       .attr("y", 30)
       .attr("x", 0)
       .attr("dx", function(d, i) {
-             return i/(viewRegEnd-viewRegStart) * refWidth - 5;
+        return i/(viewRegEnd-viewRegStart) * refWidth - (refWidth/(viewRegEnd-viewRegStart))/2 ;
           })
       .text( function (d) { return d.reference; })
       .attr("font-family", "Sans-serif")
       .attr("font-weight", "bold")
       .attr("font-size", "12px")
       .attr("fill", function(d) {
-        if (d.reference === "G") {
-          return '#00C000'; //GREEN
-        } else if (d.reference === "C") {
-          return '#E00000'; //CRIMSON
-        } else if (d.reference === "A") {
-          return '#5050FF'; //AZURE
-        } else if (d.reference === "T") {
-          return '#FFCC00'; //TWEETY BIRD
-        } else if (d.reference === "N") {
-          return '#000000'; //BLACK
-        }
+        if (d.reference === "N") return nColor;
+        else return baseColors[d.reference];
       });
 
     var removed = refString.exit();

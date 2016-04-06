@@ -1,35 +1,37 @@
-.nav-tabs .dropdown-menu, .nav-pills .dropdown-menu, .navbar .dropdown-menu {
-    margin-top: 0;
-}
+#navbar {
+  .nav-tabs .dropdown-menu, .nav-pills .dropdown-menu, .navbar .dropdown-menu {
+      margin-top: 0;
+  }
 
-.dropdown-menu {
+  .dropdown-menu {
+    li {
+      width: 100%;
+    }
+
+    li:hover {
+      color: white;
+      background-color: $liHover !important;
+    }
+  }
+
+  .dropdown {
+    &:hover .dropdown-menu {
+      display: block;
+    }
+  }
+
   li {
-    width: 100%;
+    label {
+      width: 100%;
+      font-weight: 300;
+    }
   }
 
-  li:hover {
-    color: white;
-    background-color: $liHover !important;
+  input[type=checkbox] {
+    display: none;
   }
-}
 
-.dropdown {
-  &:hover .dropdown-menu {
-    display: block;
+  input[type=checkbox]:checked + li {
+     background: $viewSelected;
   }
-}
-
-li {
-  label {
-    width: 100%;
-    font-weight: 300;
-  }
-}
-
-input[type=checkbox] {
-  display: none;
-}
-
-input[type=checkbox]:checked + li {
-   background: $viewSelected;
 }

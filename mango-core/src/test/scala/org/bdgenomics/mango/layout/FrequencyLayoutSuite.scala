@@ -18,21 +18,19 @@
 package org.bdgenomics.mango.layout
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.bdgenomics.formats.avro.AlignmentRecord
 import org.scalatest.FunSuite
-import org.bdgenomics.mango.layout._
 
 import scala.collection.mutable.ListBuffer
 
 class FrequencyLayoutSuite extends FunSuite {
-
+  val binSize = 1
   test("get frequency from reads of a 10 base pair long region") {
 
     val region = new ReferenceRegion("chr1", 0, 10)
     val records = new ListBuffer[AlignmentRecord]
     val sequence = "GATAAA"
-    for (i <- 1 to 10) {
+    for (i <- 1L to 10L) {
       records += AlignmentRecord.newBuilder()
         .setStart(i)
         .setEnd(i + sequence.length)
@@ -41,7 +39,7 @@ class FrequencyLayoutSuite extends FunSuite {
         .build
     }
 
-    val freq = FrequencyLayout(records.toIterator, region).toList
+    val freq = FrequencyLayout(records.toIterator, region, binSize).toList
     assert(freq.contains(("sample1", 5, 5)))
     assert(freq.contains(("sample1", 9, 7)))
 
@@ -52,7 +50,7 @@ class FrequencyLayoutSuite extends FunSuite {
     val region = new ReferenceRegion("chr1", 1, 10)
     val records = new ListBuffer[AlignmentRecord]
     val sequence = "GATAAA"
-    for (i <- 1 to 10) {
+    for (i <- 1L to 10L) {
       records += AlignmentRecord.newBuilder()
         .setStart(i)
         .setEnd(i + sequence.length)
@@ -68,7 +66,7 @@ class FrequencyLayoutSuite extends FunSuite {
         .build
     }
 
-    val freq = FrequencyLayout(records.toIterator, region).toList
+    val freq = FrequencyLayout(records.toIterator, region, binSize).toList
     assert(freq.contains(("sample2", 5, 5)))
     assert(freq.contains(("sample1", 9, 7)))
 

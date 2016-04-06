@@ -5,7 +5,7 @@ var varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegSta
 var refHeight = 38;
 var varHeight = 0; //Default variable: this will change based on number of tracks
 var freqHeight = 200;
-var width = $("#varArea").width() - barWidth;
+var width = $("#varArea").width();
 
 
 // Svg container for variant frequency
@@ -16,21 +16,11 @@ var svg = d3.select("#varFreqArea")
 
 // Functions
 function renderVariants(refName, start, end) {
-  //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
   varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
   renderJsonVariants();
-
 }
 function renderVariantFrequency(refName, start, end) {
-  //Adding Reference rectangles
-  viewRegStart = start;
-  viewRegEnd = end;
-  viewRefName = refName;
-
   renderVariantFrequency();
 
 }
@@ -39,24 +29,6 @@ var varSvgContainer = d3.select("#varArea")
     .attr("width", width)
     .attr("height", varHeight);
 
-var varVertLine = varSvgContainer.append('line')
-  .attr({
-    'x1': 0,
-    'y1': 0,
-    'x2': 0,
-    'y2': varHeight
-  })
-  .attr("stroke", "#002900")
-  .attr("class", "verticalLine");
-
-varSvgContainer.on('mousemove', function () {
-    var xPosition = d3.mouse(this)[0];
-    d3.selectAll(".verticalLine")
-      .attr({
-        "x1" : xPosition,
-        "x2" : xPosition
-      })
-});
 
 // Making hover box
 var varDiv = d3.select("#varArea")
@@ -68,17 +40,17 @@ var varDiv = d3.select("#varArea")
 function renderJsonVariants() {
 
   d3.json(varJsonLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
+    if (error) throw error;
+    if (!isValidHttpResponse(data)) {
       return;
     }
-    if (error) throw error;
 
     //dynamically setting height of svg containers
     var numTracks = d3.max(data, function(d) {return d.track});
-    var varTrackHeight = getTrackHeight()
+    var varTrackHeight = getTrackHeight();
     varHeight = (numTracks+1)*varTrackHeight;
     varSvgContainer.attr("height", varHeight);
-    $(".verticalLine").attr("y2", varHeight);
+    renderd3Line(varSvgContainer, varHeight);
 
     // Add the rectangles
     var variants = varSvgContainer.selectAll(".variant").data(data);
@@ -114,16 +86,16 @@ function renderJsonVariants() {
           varDiv.html(
             "Contig: " + d.contigName + "<br>" +
             "Alleles: " + d.alleles)
-            .style("left", d3.mouse(this)[0] + "px")
-            .style("top", "-4px");
+            .style("left", d3.event.pageX + 10 + "px")
+            .style("top", d3.event.pageY - 100 +  "px");
         })
         .on("mouseover", function(d) {
           varDiv.transition()
             .duration(200)
             .style("opacity", .9);
           varDiv.html(d.alleles)
-            .style("left", d3.mouse(this)[0] +  "px")
-            .style("top", "-4px");
+            .style("left", d3.event.pageX + 10 +  "px")
+            .style("top", d3.event.pageY - 100 +  "px");
         })
         .on("mouseout", function(d) {
           varDiv.transition()
@@ -143,24 +115,7 @@ function renderVariantFrequency() {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-    var varVertLine = varDiv.append('line')
-      .attr({
-        'x1': 0,
-        'y1': 0,
-        'x2': 0,
-        'y2': varHeight
-      })
-      .attr("stroke", "#002900")
-      .attr("class", "verticalLine");
-
-    varDiv.on('mousemove', function () {
-        var xPosition = d3.mouse(this)[0];
-        d3.selectAll(".verticalLine")
-          .attr({
-            "x1" : xPosition,
-            "x2" : xPosition
-          })
-    });
+  renderd3Line(varDiv, varHeight);
 
   var margin = {top: 20, right: 0, bottom: 30, left: 0},
       height = 200 - margin.top - margin.bottom;
@@ -184,10 +139,11 @@ function renderVariantFrequency() {
     .ticks(10, "%");
 
   d3.json(varFreqJsonLocation, function(error, data) {
-    if (jQuery.isEmptyObject(data)) {
+    if (error) throw error;
+    if (!isValidHttpResponse(data)) {
       return;
     }
-    if (error) throw error;
+
     x.domain([viewRegStart, viewRegEnd]);
     y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
@@ -207,12 +163,12 @@ function renderVariantFrequency() {
         .style("text-anchor", "end")
         .text("Frequency");
 
-    var freqBars = svg.selectAll(".bar").data(data)
+    var freqBars = svg.selectAll(".bar").data(data);
 
     var modifyBars = freqBars.transition();
     modifyBars
       .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
-      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
+      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
 
     var newBars = freqBars.enter();
     newBars.append("rect")
@@ -227,7 +183,7 @@ function renderVariantFrequency() {
           .duration(200)
           .style("opacity", .9);
         varDiv.html("Samples with variant: " + d.count)
-          .style("left", (d3.event.pageX - 220) + "px")
+          .style("left", (d3.event.pageX - 120) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       })
       .on("mouseout", function(d) {
