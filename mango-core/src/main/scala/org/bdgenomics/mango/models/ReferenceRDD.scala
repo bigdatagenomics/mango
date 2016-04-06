@@ -36,9 +36,10 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
   if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || referencePath.endsWith(".adam")) {
     setSequenceDictionary(referencePath)
     refRDD = sc.loadSequence(referencePath)
-    refRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    log.info("Loaded reference file, size: ", refRDD.count)
-    refRDD.persist(StorageLevel.MEMORY_AND_DISK)
+    if (!ResourceUtils.isLocal(referencePath, sc)) {
+      refRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      log.info("Loaded reference file, size: ", refRDD.count)
+    }
   } else {
     log.info("WARNING: Invalid reference file")
     println("WARNING: Invalid reference file")
