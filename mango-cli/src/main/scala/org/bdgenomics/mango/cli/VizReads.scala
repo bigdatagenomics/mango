@@ -19,44 +19,41 @@ package org.bdgenomics.mango.cli
 
 import java.io.File
 
-import htsjdk.samtools.reference.{ FastaSequenceIndex, FastaSequenceFile, IndexedFastaSequenceFile, ReferenceSequence }
-import htsjdk.samtools.{ SAMRecord, SAMReadGroupRecord, SamReader, SamReaderFactory }
+import htsjdk.samtools.reference.{ FastaSequenceFile, IndexedFastaSequenceFile }
+import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.{ Logging, SparkContext }
 import org.apache.spark.rdd.RDD
 
-import org.bdgenomics.mango.core.util. { ResourceUtils, VizUtils }
+import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.mango.filters.VariantRecordFilter
 import org.bdgenomics.utils.cli._
-import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, VariantContext }
-import org.bdgenomics.adam.projections.{ Projection, VariantField, AlignmentRecordField, GenotypeField, NucleotideContigFragmentField, FeatureField }
+import org.bdgenomics.adam.models.{ SequenceDictionary, SequenceRecord, ReferenceRegion }
+import org.bdgenomics.adam.projections.{ Projection, FeatureField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype, GenotypeAllele, NucleotideContigFragment }
+import org.bdgenomics.formats.avro.{ NucleotideContigFragment, AlignmentRecord, Feature, Genotype }
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.LazyMaterialization
+import org.bdgenomics.mango.models.{ ReferenceRDD, GenotypeMaterialization, AlignmentRecordMaterialization, LazyMaterialization }
+
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
-import org.json4s._
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra.ScalatraServlet
-import scala.reflect.ClassTag
-import scala.collection.mutable.ListBuffer
 
 object VizTimers extends Metrics {
   //HTTP requests
   val ReadsRequest = timer("GET reads")
+  val MergedReadsRequest = timer("GET merged reads")
   val FreqRequest = timer("GET frequency")
   val VarRequest = timer("GET variants")
   val VarFreqRequest = timer("Get variant frequency")
   val FeatRequest = timer("GET features")
-  val RefRequest = timer("GET reference")
   val AlignmentRequest = timer("GET alignment")
 
   //RDD operations
-  val ReadsRDDTimer = timer("RDD Reads operations")
   val FreqRDDTimer = timer("RDD Freq operations")
   val VarRDDTimer = timer("RDD Var operations")
   val FeatRDDTimer = timer("RDD Feat operations")
@@ -71,40 +68,41 @@ object VizTimers extends Metrics {
 
 object VizReads extends BDGCommandCompanion with Logging {
 
-  var readsRDD: RDD[(ReferenceRegion, AlignmentRecord)] = null
-  var testRDD: RDD[(String, AlignmentRecord)] = null
-  var testRDD2: RDD[Genotype] = null
 
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
 
   var sc: SparkContext = null
   var faWithIndex: Option[IndexedFastaSequenceFile] = None
-  var referencePath: String = ""
   var partitionCount: Int = 0
+  var referencePath: String = ""
   var readsPaths: List[String] = null
   var sampNames: List[String] = null
   var readsExist: Boolean = false
-  var variantsPath: String = ""
+  var variantsPath: List[String] = null
   var variantsExist: Boolean = false
   var featuresPath: String = ""
   var featuresExist: Boolean = false
-  var readsData: LazyMaterialization[AlignmentRecord] = null
-  var variantData: LazyMaterialization[Genotype] = null
+  var globalDict: SequenceDictionary = null
+  var refRDD: ReferenceRDD = null
+  var readsData: AlignmentRecordMaterialization = null
+  var variantData: GenotypeMaterialization = null
   var server: org.eclipse.jetty.server.Server = null
+  var screenSize: Int = 1
+
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
 
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
-    val splitReferenceOpt: Option[String] = getReference(region)
+    val splitReferenceOpt: Option[String] = refRDD.getReference(region)
     splitReferenceOpt match {
       case Some(_) => {
         val splitReference = splitReferenceOpt.get.split("")
         var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
         var positionCount: Long = region.start
         for (base <- splitReference) {
-          tracks += new ReferenceJson(base.toUpperCase(), positionCount)
+          tracks += new ReferenceJson(base.toUpperCase, positionCount)
           positionCount += 1
         }
         tracks.toList
@@ -115,57 +113,30 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   }
 
-  def getReference(region: ReferenceRegion): Option[String] = {
-    val seqRecord = VizReads.readsData.dict(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val end: Long = Math.min(region.end, seqRecord.get.length)
-        if (VizReads.referencePath.endsWith(".adam")) {
-          val pred: FilterPredicate = ((LongColumn("fragmentStartPosition") >= region.start) && (LongColumn("fragmentStartPosition") <= region.end))
-          val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadParquetContigFragments(VizReads.referencePath, predicate = Some(pred))
-          Option(referenceRDD.adamGetReferenceString(region))
-        } else if (VizReads.referencePath.endsWith(".fa") || VizReads.referencePath.endsWith(".fasta")) {
-          val idx = new File(VizReads.referencePath + ".fai")
-          if (idx.exists() && !idx.isDirectory()) {
-            VizReads.faWithIndex match {
-              case Some(_) => {
-                val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
-                Option(new String(bases))
-              }
-              case None => {
-                val faidx: FastaSequenceIndex = new FastaSequenceIndex(new File(VizReads.referencePath + ".fai"))
-                VizReads.faWithIndex = Some(new IndexedFastaSequenceFile(new File(VizReads.referencePath), faidx))
-                val bases = VizReads.faWithIndex.get.getSubsequenceAt(region.referenceName, region.start, end).getBases
-                Option(new String(bases))
-              }
-            }
-          } else { //No fasta index provided
-            val referenceRDD: RDD[NucleotideContigFragment] = VizReads.sc.loadSequence(VizReads.referencePath)
-            Option(referenceRDD.adamGetReferenceString(region))
-          }
-        } else {
-          log.warn("reference file type ", VizReads.referencePath, " not supported")
-          None
-        }
-      }
-      case None => None
-    }
+  /**
+   * Returns stringified version of sequence dictionary
+   *
+   * @param dict: dictionary to format to a string
+   * @return List of sequence dictionary strings of form referenceName:0-referenceName.length
+   */
+  def formatDictionaryOpts(dict: SequenceDictionary): List[String] = {
+    dict.records.map(r => r.name + ":0-" + r.length).toList
   }
 
   //Correctly shuts down the server
   def quit() {
     val thread = new Thread {
-      override def run {
+      override def run() {
         try {
           log.info("Shutting down the server")
           println("Shutting down the server")
-          server.stop();
+          server.stop()
           log.info("Server has stopped")
           println("Server has stopped")
         } catch {
           case e: Exception => {
-            log.info("Error when stopping Jetty server: " + e.getMessage(), e)
-            println("Error when stopping Jetty server: " + e.getMessage(), e)
+            log.info("Error when stopping Jetty server: " + e.getMessage, e)
+            println("Error when stopping Jetty server: " + e.getMessage, e)
           }
         }
       }
@@ -181,14 +152,17 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = false, metaVar = "part_count", usage = "The number of partitions", index = 1)
+  @Args4jOption(required = false, name = "-preprocess_path", usage = "Path to file containing reference regions to be preprocessed")
+  var preprocessPath: String = null
+
+  @Args4jOption(required = false, name = "-repartition", usage = "The number of partitions")
   var partitionCount: Int = 0
 
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
 
-  @Args4jOption(required = false, name = "-var_file", usage = "The variants file to view")
-  var variantsPath: String = null
+  @Args4jOption(required = false, name = "-var_files", usage = "A list of variants files to view, separated by commas (,)")
+  var variantsPaths: String = null
 
   @Args4jOption(required = false, name = "-feat_file", usage = "The feature file to view")
   var featuresPath: String = null
@@ -199,11 +173,6 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
-  var viewRegion = ReferenceRegion("chr", 1, 100)
-
-  get("/init") {
-    write(VizReads.readsData.dict)
-  }
 
   get("/?") {
     redirect("/overall")
@@ -213,17 +182,10 @@ class VizServlet extends ScalatraServlet {
     VizReads.quit()
   }
 
-  get("/reads") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (VizReads.readsExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/reads.ssp",
-        Map("viewRegion" -> (viewRegion.referenceName, viewRegion.start.toString, viewRegion.end.toString),
-          "samples" -> (VizReads.sampNames.mkString(","))))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/noreads.ssp")
-    }
-  }
+  get("/init/:pixels") {
+    VizReads.screenSize = params("pixels").toInt
+    write(VizReads.formatDictionaryOpts(VizReads.globalDict))
+   }
 
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
