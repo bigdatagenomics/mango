@@ -27,7 +27,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
   sparkTest("test correct matePairs") {
 
     val read1 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(1L)
@@ -38,7 +38,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read2 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setStart(7L)
       .setRecordGroupSample("Sample")
@@ -64,7 +64,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
   sparkTest("test mate pairs do not overlap for multiple pairs") {
 
     val read1 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(1L)
@@ -75,7 +75,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read2 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("10M")
       .setStart(30L)
       .setRecordGroupSample("Sample")
@@ -86,7 +86,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read3 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(9L)
@@ -97,7 +97,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read4 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("10M")
       .setStart(18L)
       .setMapq(50)
@@ -125,7 +125,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
   sparkTest("test mate pairs do not overlap in interspersed pattern") {
 
     val read1 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(1L)
@@ -136,7 +136,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read2 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("10M")
       .setStart(30L)
       .setMapq(50)
@@ -147,7 +147,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read3 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(9L)
@@ -158,7 +158,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .build
 
     val read4 = AlignmentRecord.newBuilder
-      .setContig(Contig.newBuilder.setContigName("chrM").build)
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("6M")
       .setStart(42L)
       .setRecordGroupSample("Sample")

@@ -58,7 +58,7 @@ object ResourceUtils {
     val homedir = fs.getHomeDirectory.toString
     if (homedir.startsWith("file:") && fs.exists(path)) {
       true
-    } else if (homedir.startsWith("hdfs:/") && fs.exists(path)) {
+    } else if ((homedir.startsWith("hdfs:") || homedir.startsWith("s3:")) && fs.exists(path)) {
       false
     } else {
       throw new FileNotFoundException("Couldn't find the file ${path.toUri}")
