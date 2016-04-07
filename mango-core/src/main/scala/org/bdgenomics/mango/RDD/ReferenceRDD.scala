@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bdgenomics.mango.models
+package org.bdgenomics.mango.RDD
 
 import java.io.File
 
@@ -27,6 +27,7 @@ import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.NucleotideContigFragment
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import org.bdgenomics.mango.models.UnsupportedFileException
 import picard.sam.CreateSequenceDictionary
 
 class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable with Logging {

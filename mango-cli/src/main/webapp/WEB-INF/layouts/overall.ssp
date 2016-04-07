@@ -7,7 +7,7 @@
 
 <html xmlns="http://www.w3.org/1999/html">
 
-    <% render("../templates/head.ssp")%>
+    <% render("../templates/head.ssp") %>
     <% render("../navigation/navigation.ssp") %>
 
     <nav id="menu" class="panel" role="navigation">

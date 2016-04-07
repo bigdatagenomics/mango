@@ -3,6 +3,7 @@ var readsHeight = 100;
 var padding = 3;
 var readTrackHeight = getTrackHeight();
 var mismatchHeight = readsHeight - readTrackHeight;
+var width = $(".graphArea").width();
 
 var yOffset = 200;
 // svg class for alignment data

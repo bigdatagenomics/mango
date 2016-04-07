@@ -2,8 +2,9 @@
 
 // width of scrollbar when page content length exceeds display height
 var barWidth = 21;
-var width = $("body").width() - barWidth;
-$(".main").width(width);
+$(".main").width($("body").width() - barWidth);
+var width = $(".graphArea").width();
+
 
 function setGlobalReferenceRegion(refName, start, end) {
     viewRefName = refName;
@@ -25,10 +26,8 @@ var cColor = '#E00000'; //CRIMSON
 var tColor = '#E6E600'; //TWEETY BIRD
 var gColor = '#00C000'; //GREEN
 var nColor = '#D3D3D3'; // GREY
+var brown = "#47244C";  // BROWN
 
-//var color = d3.scale.ordinal()
-//    .range([aColor, cColor, tColor, gColor]);
-//color.domain(["A", "T", "C", "G"]);
 var baseColors = {
   'A': aColor,
   'C': cColor,

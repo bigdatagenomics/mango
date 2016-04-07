@@ -15,60 +15,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bdgenomics.mango.layout
+package org.bdgenomics.mango.RDD
 
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.scalatest.FunSuite
 
 import scala.collection.mutable.ListBuffer
 
-class FrequencyLayoutSuite extends FunSuite {
-  val binSize = 1
-  test("get frequency from reads of a 10 base pair long region") {
+class FrequencyRDDSuite extends ADAMFunSuite {
+  val binSize = 2
+
+  val chrM = resourcePath("mouse_chrM.bam")
+
+  sparkTest("get frequency from reads of a 10 base pair long region") {
+    val samples = List("sample1")
 
     val region = new ReferenceRegion("chr1", 0, 10)
     val records = new ListBuffer[AlignmentRecord]
     val sequence = "GATAAA"
-    for (i <- 1L to 10L) {
+    for (i <- 0L to 10L) {
       records += AlignmentRecord.newBuilder()
         .setStart(i)
         .setEnd(i + sequence.length)
+        .setContigName("chr1")
         .setSequence(sequence)
-        .setRecordGroupSample("sample1")
+        .setRecordGroupSample(samples(0))
         .build
     }
 
-    val freq = FrequencyLayout(records.toIterator, region, binSize).toList
-    assert(freq.contains(("sample1", 5, 5)))
-    assert(freq.contains(("sample1", 9, 7)))
+    val freq = new FrequencyRDD
+    val rdd = sc.parallelize(records.toList, 1)
+
+    freq.put(rdd, region, stride = 1)
+    val results = freq.get(region, samples)
+    assert(results(samples(0)).size == 10)
 
   }
 
-  test("get frequency from reads of a 10 base pair long region for 2 samples") {
+  sparkTest("get frequency from medium amount of reads") {
 
-    val region = new ReferenceRegion("chr1", 1, 10)
-    val records = new ListBuffer[AlignmentRecord]
-    val sequence = "GATAAA"
-    for (i <- 1L to 10L) {
-      records += AlignmentRecord.newBuilder()
-        .setStart(i)
-        .setEnd(i + sequence.length)
-        .setSequence(sequence)
-        .setRecordGroupSample("sample1")
-        .build
+    val region = new ReferenceRegion("chrM", 1, 5000)
+    var rdd = sc.loadIndexedBam(chrM, region)
+    val samples = List(rdd.first.getRecordGroupSample)
 
-      records += AlignmentRecord.newBuilder()
-        .setStart(i)
-        .setEnd(i + sequence.length)
-        .setSequence(sequence)
-        .setRecordGroupSample("sample2")
-        .build
-    }
+    val freq = new FrequencyRDD
 
-    val freq = FrequencyLayout(records.toIterator, region, binSize).toList
-    assert(freq.contains(("sample2", 5, 5)))
-    assert(freq.contains(("sample1", 9, 7)))
+    freq.put(rdd, region, stride = 100)
+    val results = freq.get(region, samples)
+    println(results(samples(0)).size)
+    assert(results(samples(0)).size == 50)
 
   }
 }

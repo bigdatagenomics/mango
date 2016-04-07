@@ -17,17 +17,23 @@
  */
 package org.bdgenomics.mango.models
 
+import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.apache.spark.storage.StorageLevel
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
 
 import scala.reflect.ClassTag
 
+/*
+ * Handles loading and tracking of data from persistent storage into memory for Genotype data.
+ * @see LazyMaterialization.scala
+ */
 class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Long) extends LazyMaterialization[Genotype, Genotype] {
 
   val sc = s
@@ -36,35 +42,64 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
   val chunkSize = chunkS
   val partitioner = setPartitioner
 
-  override def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, Genotype)] = {
+  override def loadAdam(region: ReferenceRegion, fp: String): RDD[Genotype] = {
     val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end) && (BinaryColumn("variant.contig.contigName") === (region.referenceName)))
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
     sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
-      .map(r => (ReferenceRegion(ReferencePosition(r)), r))
   }
 
   override def getFileReference(fp: String): String = {
     fp
   }
 
-  override def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, Genotype)] = {
+  override def loadFromFile(region: ReferenceRegion, k: String): RDD[Genotype] = {
     if (!fileMap.containsKey(k)) {
       log.error("Key not in FileMap")
       null
     }
     val fp = fileMap(k)
-    val data: RDD[(ReferenceRegion, Genotype)] =
-      if (fp.endsWith(".adam")) {
-        loadAdam(region, fp)
-      } else if (fp.endsWith(".vcf")) {
-        sc.loadGenotypes(fp).filterByOverlappingRegion(region).map(r => (ReferenceRegion(ReferencePosition(r)), r))
-      } else {
-        throw UnsupportedFileException("File type not supported")
-        null
-      }
-    data.partitionBy(partitioner)
+    if (fp.endsWith(".adam")) {
+      loadAdam(region, fp)
+    } else if (fp.endsWith(".vcf")) {
+      sc.loadGenotypes(fp).filterByOverlappingRegion(region)
+    } else {
+      throw UnsupportedFileException("File type not supported")
+      null
+    }
   }
 
+  /**
+   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
+   * Fetches the data from disk, using predicates and range filtering
+   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
+   *
+   * @param region ReferenceRegion in which data is retreived
+   * @param ks to be retreived
+   */
+  override def put(region: ReferenceRegion, ks: List[String]) = {
+    val seqRecord = dict(region.referenceName)
+    seqRecord match {
+      case Some(_) =>
+        val end =
+          Math.min(region.end, seqRecord.get.length)
+        val start = Math.min(region.start, end)
+        val reg = new ReferenceRegion(region.referenceName, start, end)
+        ks.map(k => {
+          val data = loadFromFile(reg, k)
+            .map(r => (ReferenceRegion(ReferencePosition(r)), r))
+            .partitionBy(partitioner)
+          if (intRDD == null) {
+            intRDD = IntervalRDD(data)
+            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+          } else {
+            intRDD = intRDD.multiput(data)
+            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+          }
+        })
+        rememberValues(region, ks)
+      case None =>
+    }
+  }
 }
 
 object GenotypeMaterialization {

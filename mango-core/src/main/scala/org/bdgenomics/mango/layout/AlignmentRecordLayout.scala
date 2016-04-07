@@ -111,7 +111,8 @@ object MergedAlignmentRecordLayout extends Logging {
   def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], binSize: Int): Map[String, List[MutationCount]] = {
 
     // collect and reduce mismatches for each sample
-    val mismatches: RDD[(String, List[MisMatch])] = rdd.map(r => (r._2.record.getRecordGroupSample, r._2.mismatches))
+    val mismatches: RDD[(String, List[MisMatch])] = rdd
+      .map(r => (r._2.record.getRecordGroupSample, r._2.mismatches))
       .reduceByKey(_ ++ _) // list of [sample, mismatches]
 
     // reduce point mismatches by start and end value
