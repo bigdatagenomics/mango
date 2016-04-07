@@ -43,8 +43,8 @@ class AlignmentRecordMaterialization(s: SparkContext, d: SequenceDictionary, par
   val partitioner = setPartitioner
 
   override def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, AlignmentRecord)] = {
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contig.contigName") === (region.referenceName)))
-    val proj = Projection(AlignmentRecordField.contig, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
+    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === (region.referenceName)))
+    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
     val alignedReadRDD: AlignmentRecordRDD = sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
     alignedReadRDD.rdd.map(r => (ReferenceRegion(r), r))
