@@ -32,6 +32,7 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
+import org.bdgenomics.mango.filters.VariantRecordFilter
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, GenotypeMaterialization, ReferenceRDD }
 import org.bdgenomics.utils.cli._
@@ -267,10 +268,13 @@ class VizServlet extends ScalatraServlet {
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
+              val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = dataOption.get.toRDD
+              // TODO: get rid of filter (now on front-end)
               val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
                 AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
               val binSize = VizUtils.getBinSize(region, VizReads.screenSize)
-
+              
+              val unfilteredAlignmentData: List[ReadJson] = AlignmentRecordLayout(data, sampleIds)
               val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
 
               val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2.record), region, binSize, sampleIds)
@@ -352,16 +356,19 @@ class VizServlet extends ScalatraServlet {
       contentType = "json"
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
         VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      // TODO: remove since filtering is on frontend now
+      val genotypeQuality = params("quality").toInt
       val variantRDDOption = VizReads.variantData.multiget(viewRegion, VizReads.variantsPaths)
       variantRDDOption match {
         case Some(_) => {
           val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD()
+          // TODO: remove since filtering is on frontend now
+          val filteredRDD = VariantRecordFilter.filterByGenotypeQuality(variantRDD, genotypeQuality)
           write(VariantLayout(variantRDD))
         } case None => {
           write("")
         }
       }
-
     }
   }
 

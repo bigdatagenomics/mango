@@ -24,6 +24,7 @@ import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.utils.instrumentation.Metrics
 
 import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
 
 object AlignmentLayoutTimers extends Metrics {
   val AlignmentLayout = timer("collect and filter alignment records")
@@ -33,28 +34,17 @@ object AlignmentRecordLayout extends Logging {
 
   /**
    * An implementation of AlignmentRecordLayout which takes in an RDD of (ReferenceRegion, AlignmentRecord) tuples, the reference String
-   * over the region, the region viewed and samples viewed.
+   * over the region, and the region viewed.
    *
    * @param rdd: RDD of (ReferenceRegion, AlignmentRecord) tuples
    * @param sampleIds: List of sample identifiers to be rendered
-   * @return List of Read Tracks containing json for reads, mismatches and mate pairs
+   * @return List of ReadJsons, which takes (AlignmentRecord, List[MisMatchJson]) tuples and picks the required information and mismatches
    */
-  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[String, SampleTrack] = {
-    val sampleTracks = new ListBuffer[(String, SampleTrack)]()
-
-    val tracks: Map[String, Array[ReadsTrack]] = rdd.mapPartitions(AlignmentRecordLayout(_)).collect.groupBy(_.sample)
-
-    tracks.foreach {
-      case (sample, track) => {
-        val indexedTrack = track.zipWithIndex
-        val matePairs = indexedTrack.flatMap(r => MatePairJson(r._1.matePairs, r._2))
-        val mismatches = indexedTrack.flatMap(r => MisMatchJson(r._1.misMatches, r._2))
-        val reads = indexedTrack.flatMap(r => ReadJson(r._1.records, r._2))
-        val sampleTrack = new SampleTrack(reads.toList, matePairs.toList, mismatches.toList)
-        sampleTracks += Tuple2(sample, sampleTrack)
-      }
+  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): ReadJson = {
+    val mappingTuples: List[(AlignmentRecord, List[MisMatchJson])] = {
+        rdd.mapPartitions(AlignmentRecordLayout(_)).collect
     }
-    sampleTracks.toMap
+    ReadJson(mappingTuples)
   }
 
   /**
@@ -62,12 +52,11 @@ object AlignmentRecordLayout extends Logging {
    * over the region, and the region viewed.
    *
    * @param iter: Iterator of (ReferenceRegion, AlignmentRecord) tuples
-   * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
+   * @return Iterator of tuples of alignment records to list of mismatches 
    */
-  def apply(iter: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]): Iterator[ReadsTrack] = {
+  def apply(iter: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]): Iterator[CalculatedAlignmentRecord] = {
     new AlignmentRecordLayout(iter).collect
   }
-
 }
 
 object MergedAlignmentRecordLayout extends Logging {
@@ -80,7 +69,7 @@ object MergedAlignmentRecordLayout extends Logging {
    * @param referenceOpt: reference string used to calculate mismatches
    * @param region: ReferenceRegion to be viewed
    * @param sampleIds: List of sample identifiers to be rendered
-   * @return List of Read Tracks containing json for reads, mismatches and mate pairs
+   * @return List of ReadJsons containing json for reads and corresponding mismatches
    */
   def apply(rdd: RDD[(ReferenceRegion, AlignmentRecord)], referenceOpt: Option[String], region: ReferenceRegion, sampleIds: List[String], binSize: Int): Map[String, List[MutationCount]] = {
 
@@ -121,37 +110,24 @@ object MergedAlignmentRecordLayout extends Logging {
 }
 
 /**
- * An extension of TrackedLayout for AlignmentRecord data
+ * AlignmentRecord data
  *
- * @param values The set of (Reference, AlignmentRecord) tuples to lay out in tracks
+ * @param values The set of (Reference, AlignmentRecord) tuples
  */
-class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackedLayout[CalculatedAlignmentRecord, ReadsTrackBuffer] with Logging {
+
+class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]) with Logging {
   val sequence = values.toList
-  var trackBuilder = new ListBuffer[ReadsTrackBuffer]()
 
-  val readPairs: Map[String, List[(ReferenceRegion, CalculatedAlignmentRecord)]] = sequence.groupBy(_._2.record.getReadName)
-  addTracks
-  trackBuilder = trackBuilder.filter(_.records.nonEmpty)
-
-  def addTracks {
-    readPairs.foreach {
+  def collect: Iterator[CalculatedAlignmentRecord] = {
+    val records = new ListBuffer[CalculatedAlignmentRecord]
+    sequence.foreach {
       p =>
         {
-          val recs: List[(ReferenceRegion, CalculatedAlignmentRecord)] = p._2
-          val track: Option[ReadsTrackBuffer] =
-            trackBuilder.find(track => !track.conflicts(recs))
-
-          track.map(trackval => {
-            trackval.records ++= recs
-            trackBuilder -= trackval
-            trackBuilder += trackval
-          }).getOrElse(addTrack(new ReadsTrackBuffer(recs)))
+          records += p._2
         }
     }
+    records.toIterator
   }
-
-  def collect: Iterator[ReadsTrack] =
-    trackBuilder.map(t => Track(t)).toIterator
 }
 
 /**
@@ -167,12 +143,11 @@ object ReadJson {
   /**
    * An implementation of ReadJson which converts AlignmentRecord data to ReadJson
    *
-   * @param recs The list of (Reference, AlignmentRecord) tuples to lay out in json
-   * @param track js track number
+   * @param recs The list of (AlignmentRecord, List[MisMatchJson]) tuples to lay out in json
    * @return List of Read Json objects
    */
-  def apply(recs: List[(ReferenceRegion, AlignmentRecord)], track: Int): List[ReadJson] = {
-    recs.map(rec => new ReadJson(rec._2.getReadName, rec._2.getStart, rec._2.getEnd, rec._2.getReadNegativeStrand, rec._2.getSequence, rec._2.getCigar, rec._2.getMapq, track))
+  def apply(recs: List[(AlignmentRecord, List[MisMatchJson])]): List[ReadJson] = {
+    recs.map(rec => new ReadJson(rec._1.getReadName, rec._1.getStart, rec._1.getEnd, rec._1.getReadNegativeStrand, rec._1.getSequence, rec._1.getCigar, rec._1.getMapq, rec._2)) //removed track
   }
 }
 
@@ -182,23 +157,15 @@ object MatePairJson {
    * An implementation of MatePairJson which converts a list of MatePairs into MatePair Json
    *
    * @param recs The list of MatePairs to be layed out in json
-   * @param track js track number
    * @return List of MatePair Json objects
    */
-  def apply(recs: List[MatePair], track: Int): List[MatePairJson] = {
-    recs.map(r => MatePairJson(r.start, r.end, track))
+  def apply(recs: List[MatePair]): List[MatePairJson] = {
+    recs.map(r => MatePairJson(r.start, r.end))
   }
 }
 
-// tracked json classes for alignmentrecord visual data
-case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, mapq: Int, track: Long)
-case class MatePairJson(val start: Long, val end: Long, track: Long)
-
-// complete json object of reads data containing matepairs and mismatches
-case class SampleTrack(val records: List[ReadJson], val matePairs: List[MatePairJson], val mismatches: List[MisMatchJson])
-
-// untracked json classes
-case class MatePair(start: Long, end: Long)
+// json classes for alignmentrecord visual data
+case class ReadJson(readName: String, start: Long, end: Long, readNegativeStrand: Boolean, sequence: String, cigar: String, mapq: Int, mismatches: List[MisMatchJson]) //removed track
+case class MatePairJson(val start: Long, val end: Long)
 
 case class CalculatedAlignmentRecord(record: AlignmentRecord, mismatches: List[MisMatch])
-
