@@ -34,7 +34,7 @@ if (featuresExist === true) {
   renderd3Line(featureSvgContainer, featHeight);
 }
 
-// send pixel size for bining and initialize autocomplete
+// send pixel size for bining and initialize autocomplete and refVis
 var initJson =  "/init/" + Math.round($(".samples").width());
 d3.json(initJson, function(error, seqDict) {
   sDict =seqDict;
