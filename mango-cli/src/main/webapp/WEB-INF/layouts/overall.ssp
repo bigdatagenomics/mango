@@ -7,29 +7,204 @@
 
 <html xmlns="http://www.w3.org/1999/html">
 
+<<<<<<< HEAD
     <% render("../templates/head.ssp")%>
     <% render("../navigation/navigation.ssp") %>
-
-    <nav id="menu" class="panel" role="navigation">
-        <h2> Reference Panel </h2>
-    </nav>
     <% render("../navigation/panAndZoom.ssp", Map("page" -> "reads")) %>
+=======
+<!-- Fixed navbar -->
+<div class="main push">
+  <nav class="navbar navbar-default">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
+      <div id="navbar" class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">File</a>
+            <ul class="dropdown-menu" id="menu1">
+              <li><label for="loadFile">Load File</label><input id="loadFile" type="file" style="position: fixed; top: -100em">
+              </li>
+              <li><label for="loadRef">Load Reference</label><input id="loadRef" type="file" style="position: fixed; top: -100em"></li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
+            <ul class="dropdown-menu" id="menu1">
+              <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
+              <li class="refDependancy"><label for="indelCheck">Indels</label></li>
+              <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
+              <li class="refDependancy"><label for="mismatchCheck">Mismatching Bases</label></li>
+              <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
+              <li><label for="coverageCheck">Coverage</label></li>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle">Tracks</a>
+            <ul class="dropdown-menu" id="menu1" style="min-width:100px">
+              <li><label for="sortTracks">Sort Tracks</label></li>
+              <li><label for="filterTracks">Filter tracks</label></li>
+              <li><label for="groupTracks">Group tracks</label></li>
+            </ul>
+          </li>
+
+          <li class="active"><a href="overall">Overall</a></li>
+          <li><a href="variants">Variant Frequency</a></li>
+        </ul>
+      </div><!--/.nav-collapse -->
+    </div>
+  </nav>
+    <nav id="menu" class="panel" role="navigation">
+    <h2 class="panel"> Reference Panel </h2>
+    <div id="refVis"></div>
+  </nav>
+
+  <div id = "navigation">
+      <ul>
+          <li>move:</li>
+          <li>
+              <input name="Move very far left button"
+                type="button"
+                value="<<<"
+                onclick="moveVeryFarLeft()"
+                class="btn btn-primary btn-xs"/>
+          </li>
+          <li>
+              <input name="Move far left button"
+                type="button"
+                value="<<"
+                onclick="moveFarLeft()"
+                class="btn btn-primary btn-xs"/>
+          </li>
+          <li>
+              <input name="Move left button"
+                type="button"
+                value="<"
+                onclick="moveLeft()"
+                class="btn btn-primary btn-xs"/>
+          </li>
+          <li>
+              <input name="Move right button"
+                type="button"
+                value=">"
+                onclick="moveRight()"
+                class="btn btn-info btn-xs"/>
+          </li>
+          <li>
+              <input name="Move far right button"
+                type="button"
+                value=">>"
+                onclick="moveFarRight()"
+                class="btn btn-info btn-xs"/>
+          </li>
+          <li>
+              <input name="Move very far right button"
+                type="button"
+                value=">>>"
+                onclick="moveVeryFarRight()"
+                class="btn btn-info btn-xs"/>
+          </li>
+          <li>zoom:</li>
+          <li>
+              <input name="Zoom in button"
+                type="button"
+                value="++"
+                onclick="zoomIn()"
+                class="btn btn-warning btn-xs"/>
+          </li>
+          <li>
+              <input name="Zoom out button"
+                type="button"
+                value="--"
+                onclick="zoomOut()"
+                class="btn btn-warning btn-xs"/>
+          </li>
+          <li>
+          <form id="regForm" name="regForm" method="GET" class="form-inline">
+          region:
+          <input id="autocomplete" type="text" name="info" size="20" class="alignment-search form-control" placeholder="sample:refName:start-end">
+          </li>
+          <li>
+            mapping quality:
+          </li>
+          <li>
+            <input type="range" name="quality" id="quality" min="0" max="100">
+          </li>
+          <li>
+            <input name="Submit button"
+                  type="button"
+                  value="Submit"
+                  onclick="checkForm(this.form)"
+                  class="btn btn-danger btn-xs"/>
+            </form>
+          </li>
+          <li><a href="#menu" class="menu-link">&#9776;</a></li>
+       </ul>
+      <br>
+  </div>
+
+<div class="row">
+    <div>
+        <div class="col-md-12">
+              <div class="graphArea" id="refArea"></div>
+              <div class="graphArea" id="featArea"></div>
+              <div class="graphArea" id="varArea"></div>
+              <div class="graphArea" id="readsArea"></div>
+        </div>
+    </div>
+</div>
+
+
+</div>
+>>>>>>> e31326e712fb495ddf1ced4b57bf05340c853751
 
     <div class="main">
           <div class="graphArea" id="refArea"></div>
           <div class="graphArea" id="featArea"></div>
           <div class="graphArea" id="varArea"></div>
           <div class="graphArea" id="readsArea"></div>
-    </div>
+    </div>    
+    
+  <% render("../templates/sidebar.ssp")%>
 
-    <script src="js/utilities.js"></script>
-    <script src="js/formSubmit.js"></script>
+<script src="js/utilities.js"></script>
+<script src="js/formSubmit.js"></script>
 
-    <script>
-      $(document).ready(function() {
-          $('.menu-link').bigSlide();
-      });
+<script>
+  <!-- Define Global Variables -->
+  var viewRefName = "${viewRegion._1}";
+  var viewRegStart = parseInt(${viewRegion._2}, 10);
+  var mapQuality = 100;
+  var viewRegEnd = parseInt(${viewRegion._3}, 10);
+  var readsExist = ${readsExist};
+  var variantsExist = ${variantsExist};
+  var featuresExist = ${featuresExist};
+  var refSequence = null;
 
+  var sampleId = "${samples}";
+  var rawSamples = sampleId.split(",").unique();
+  var samples = filterNames(rawSamples);
+
+  // object used to track sample names and their corresponding html identifiers
+  var sampleMap = {};
+  for (var i = 0; i < rawSamples.length; i++){
+    sampleMap[filterName(rawSamples[i])] = rawSamples[i];
+  }
+
+</script>
+<script src="js/utilities.js"></script>
+<script src="js/formSubmit.js"></script>
+
+<script>
       <!-- Define Global Variables -->
       var viewRefName = "${viewRegion._1}";
       var viewRegStart = parseInt(${viewRegion._2}, 10);
@@ -51,12 +226,12 @@
       }
 
       var width = window.innerWidth - 18;
-    </script>
+</script>
 
-    <script src="js/reads.js"></script>
-    <script src="js/freq.js"></script>
-    <script src="js/variants.js"></script>
-    <script src="js/reference.js"></script>
-    <script src="js/overall.js"></script>
+<script src="js/reads.js"></script>
+<script src="js/freq.js"></script>
+<script src="js/variants.js"></script>
+<script src="js/reference.js"></script>
+<script src="js/overall.js"></script>
 
 </html>
