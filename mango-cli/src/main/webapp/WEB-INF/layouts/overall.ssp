@@ -18,19 +18,12 @@
           <div class="graphArea" id="readsArea"></div>
     </div>    
     
-  <nav id="menu" class="panel" role="navigation">
-    <h2 class="panel"> Reference Panel </h2>
-    <div id="refVis"></div>
-  </nav>
+  <% render("../templates/sidebar.ssp")%>
 
 <script src="js/utilities.js"></script>
 <script src="js/formSubmit.js"></script>
 
 <script>
-  $(document).ready(function() {
-      $('.menu-link').bigSlide();
-  });
-
   <!-- Define Global Variables -->
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
@@ -50,16 +43,12 @@
   for (var i = 0; i < rawSamples.length; i++){
     sampleMap[filterName(rawSamples[i])] = rawSamples[i];
   }
->>>>>>> tooltip animation working now
 
-    <script src="js/utilities.js"></script>
-    <script src="js/formSubmit.js"></script>
+</script>
+<script src="js/utilities.js"></script>
+<script src="js/formSubmit.js"></script>
 
-    <script>
-      $(document).ready(function() {
-          $('.menu-link').bigSlide();
-      });
-
+<script>
       <!-- Define Global Variables -->
       var viewRefName = "${viewRegion._1}";
       var viewRegStart = parseInt(${viewRegion._2}, 10);
@@ -81,12 +70,12 @@
       }
 
       var width = window.innerWidth - 18;
-    </script>
+</script>
 
-    <script src="js/reads.js"></script>
-    <script src="js/freq.js"></script>
-    <script src="js/variants.js"></script>
-    <script src="js/reference.js"></script>
-    <script src="js/overall.js"></script>
+<script src="js/reads.js"></script>
+<script src="js/freq.js"></script>
+<script src="js/variants.js"></script>
+<script src="js/reference.js"></script>
+<script src="js/overall.js"></script>
 
 </html>
