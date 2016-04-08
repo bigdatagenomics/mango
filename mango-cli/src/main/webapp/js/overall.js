@@ -77,6 +77,7 @@ function render(refName, start, end, mapQuality) {
 }
 
 function refVis(dictionary){
+
   // Creating reference visualization from sequence dictionary
   var dataset = [];
   // var namelist=[];
