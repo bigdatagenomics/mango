@@ -21,6 +21,7 @@ package org.bdgenomics.mango.models
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
+import org.bdgenomics.mango.RDD.ReferenceRDD
 
 class LazyMaterializationSuite extends ADAMFunSuite {
 
@@ -32,44 +33,57 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     SequenceRecord("chrM", 20000L),
     SequenceRecord("chr3", 2000L)))
 
-  val bamFile = "./src/test/resources/mouse_chrM.bam"
-  val vcfFile = "./src/test/resources/truetest.vcf"
-  val vcfFile2 = "./src/test/resources/truetest2.vcf"
-  val referencePath = "./src/test/resources/mm10_chrM.fa"
+  val bamFile = resourcePath("mouse_chrM.bam")
+  val vcfFile = resourcePath("truetest.vcf")
+  val vcfFile2 = resourcePath("truetest2.vcf")
+  var referencePath = resourcePath("mm10_chrM.fa")
 
   sparkTest("assert the data pulled from a file is the same") {
     val refRDD = new ReferenceRDD(sc, referencePath)
 
     val sample = "sample1"
-    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
+    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD, true)
     lazyMat.loadSample(bamFile, Option(sample))
 
     val region = new ReferenceRegion("chrM", 0L, 1000L)
 
-    var results = lazyMat.get(region, sample).get
-    var lazySize = results.count
-    val dataSize = getDataCountFromBamFile(bamFile, region)
-    assert(dataSize == lazySize)
+    val results = lazyMat.get(region, sample).get
+    val lazySize = results.count
+    assert(lazySize == 1009)
   }
 
-  sparkTest("Get data from different samples at the same region") {
+  sparkTest("Get data from different samples at theƒ same region") {
     val refRDD = new ReferenceRDD(sc, referencePath)
 
     val sample1 = "person1"
     val sample2 = "person2"
 
-    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
+    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD, true)
     val region = new ReferenceRegion("chrM", 0L, 100L)
     lazyMat.loadSample(bamFile, Option(sample1))
     lazyMat.loadSample(bamFile, Option(sample2))
     val results1 = lazyMat.get(region, sample1).get
-    val lazySize1 = results1.count
-
     val results2 = lazyMat.get(region, sample2).get
-    assert(lazySize1 == getDataCountFromBamFile(bamFile, region))
+    assert(results1.count == results2.count)
   }
 
   sparkTest("Fetch region out of bounds") {
+    val refRDD = new ReferenceRDD(sc, referencePath)
+    val sample1 = "person1"
+
+    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD, true)
+    val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
+    lazyMat.loadSample(bamFile, Option(sample1))
+    val results1 = lazyMat.get(bigRegion, sample1).get
+    val lazySize = results1.collect
+
+    val smRegion = new ReferenceRegion("chrM", 0L, 16299L)
+    val results2 = lazyMat.get(smRegion, sample1).get
+    assert(results1.count == results2.count)
+
+  }
+
+  sparkTest("Test coverage and sampling") {
     val refRDD = new ReferenceRDD(sc, referencePath)
     val sample1 = "person1"
 
@@ -80,19 +94,32 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val lazySize = results.count
 
     val smRegion = new ReferenceRegion("chrM", 0L, 19299L)
-    assert(lazySize == getDataCountFromBamFile(bamFile, smRegion))
+    val sampleSize = getDataCountFromBamFile(bamFile, smRegion) / 2
+    assert(lazySize < sampleSize && lazySize > 0)
   }
 
   sparkTest("Fetch region whose name is not yet loaded") {
     val refRDD = new ReferenceRDD(sc, referencePath)
     val sample1 = "person1"
 
-    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD)
+    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD, true)
     val bigRegion = new ReferenceRegion("M", 0L, 20000L)
     lazyMat.loadSample(bamFile, Option(sample1))
     val results = lazyMat.get(bigRegion, sample1)
 
     assert(results == None)
+  }
+
+  sparkTest("Test frequency retrieval") {
+    val refRDD = new ReferenceRDD(sc, referencePath)
+    val sample1 = "person1"
+
+    val lazyMat = AlignmentRecordMaterialization(sc, sd, 10, refRDD, true)
+    val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
+    lazyMat.loadSample(bamFile, Option(sample1))
+    val results = lazyMat.get(bigRegion, sample1)
+    val freq = lazyMat.getFrequency(bigRegion, List(sample1))
+
   }
 
   sparkTest("Get data for variants") {

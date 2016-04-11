@@ -48,3 +48,23 @@ object VizUtils {
   }
 
 }
+
+/*
+ * Calculates sample size used to calculate frequency. This number defines the fraction to sample from RDD[AlignmentRecord]
+ * when calculating frequency
+ *
+ * @param partitions: number of partitions program is run with
+ */
+class SampleSize(partitions: Int) {
+
+  /*
+   * Normalizes the sample size by region. The larger the view region, the smaller the fraction of retrieved data should be.
+   *
+   * @param region: ReferenceRegion to be queried over
+   */
+  def normalizeByRegion(region: ReferenceRegion): Double = {
+    val l = Math.max(1, Math.log(region.end - region.start))
+    1 / l
+  }
+}
+

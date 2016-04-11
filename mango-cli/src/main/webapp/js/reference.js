@@ -58,7 +58,7 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
   d3.json(jsonLocation, function(error, data) {
     if (error) return error;
     if (!isValidHttpResponse(data)) {
-      return;
+      data = {position: "-1", reference: "None"}
     }
 
     toggleReferenceDependencies(data);
@@ -101,12 +101,14 @@ function renderLowResRef(data, refContainer, refDiv) {
       return i/(viewRegEnd-viewRegStart) * refWidth;
     })
     .attr("width", function(d) {
-      return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
-  })
-  .attr("fill", function(d) {
-    if (d.reference === "N") return nColor;
-    else return baseColors[d.reference];
-  });
+    if (d.position < 0) return refWidth;
+    else return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
+    })
+    .attr("fill", function(d) {
+      if (d.reference === "N") return nColor;
+      else if (d.position == -1) return brown;
+      else return baseColors[d.reference];
+    });
 
     var newData = rects.enter();
     newData
@@ -118,35 +120,37 @@ function renderLowResRef(data, refContainer, refDiv) {
       .attr("y", 30)
     .attr("fill", function(d) {
       if (d.reference === "N") return nColor;
+      else if (d.position == -1) return brown;
       else return baseColors[d.reference];
     })
     .attr("width", function(d) {
-      return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
+      if (d.position < 0) return refWidth;
+      else return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
     })
     .attr("height", refHeight)
     .on("click", function(d) {
-      refDiv.transition()
-        .duration(200)
-        .style("opacity", .9);
-      refDiv.html(
-        "Base: " + d.reference + "<br>" +
-        "Position: " + d.position)
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - 100) + "px");
-    })
-    .on("mouseover", function(d) {
-      refDiv.transition()
-        .duration(200)
-        .style("opacity", .9);
-      refDiv.html(d.reference)
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - 100) + "px");
-    })
-    .on("mouseout", function(d) {
         refDiv.transition()
-        .duration(500)
-        .style("opacity", 0);
-      });
+          .duration(200)
+          .style("opacity", .9);
+        refDiv.html(
+          "Base: " + d.reference + "<br>" +
+          "Position: " + d.position)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 100) + "px");
+      })
+      .on("mouseover", function(d) {
+        refDiv.transition()
+          .duration(200)
+          .style("opacity", .9);
+        refDiv.html(d.reference)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 100) + "px");
+      })
+      .on("mouseout", function(d) {
+          refDiv.transition()
+          .duration(500)
+          .style("opacity", 0);
+        });
 
     var removed = rects.exit();
     removed.remove();

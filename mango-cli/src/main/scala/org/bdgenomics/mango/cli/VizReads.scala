@@ -30,10 +30,11 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
+import org.bdgenomics.mango.RDD.{ FreqJson, ReferenceRDD }
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, GenotypeMaterialization, ReferenceRDD }
+import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, GenotypeMaterialization }
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
@@ -90,30 +91,6 @@ object VizReads extends BDGCommandCompanion with Logging {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
 
-  /**
-   * Prints java heap map availability and usage
-   */
-  def printSysUsage() = {
-    val mb: Int = 1024 * 1024
-    //Getting the runtime reference from system
-    val runtime: Runtime = Runtime.getRuntime
-
-    println("##### Heap utilization statistics [MB] #####")
-
-    //Print used memory
-    println("Used Memory:"
-      + (runtime.totalMemory() - runtime.freeMemory()) / mb)
-
-    //Print free memory
-    println("Free Memory:" + runtime.freeMemory() / mb)
-
-    //Print total available memory
-    println("Total Memory:" + runtime.totalMemory() / mb)
-
-    //Print Maximum available memory
-    println("Max Memory:" + runtime.maxMemory() / mb)
-  }
-
   def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
     val splitReferenceOpt: Option[String] = refRDD.getReference(region)
     splitReferenceOpt match {
@@ -130,7 +107,6 @@ object VizReads extends BDGCommandCompanion with Logging {
         List()
       }
     }
-
   }
 
   /**
@@ -223,6 +199,8 @@ class VizServlet extends ScalatraServlet {
             case Some(_) => {
               val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
                 AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
+                  .filter(_._2.mismatches.size > 0)
+
               val jsonData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, sampleIds)
               var readRetJson: String = ""
               for (sample <- sampleIds) {
@@ -242,11 +220,13 @@ class VizServlet extends ScalatraServlet {
               readRetJson = readRetJson.dropRight(1)
               readRetJson = "{" + readRetJson + "}"
               readRetJson
-            } case None => {
+            }
+            case None => {
               write("")
             }
           }
-        } case None => write("")
+        }
+        case None => write("")
       }
     }
   }
@@ -270,10 +250,9 @@ class VizServlet extends ScalatraServlet {
               val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
                 AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
               val binSize = VizUtils.getBinSize(region, VizReads.screenSize)
-
               val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
+              val freqData: Map[String, Iterable[FreqJson]] = VizReads.readsData.getFrequency(region, sampleIds, Option(VizReads.screenSize))
 
-              val freqData: Map[String, List[FreqJson]] = FrequencyLayout(filteredData.map(_._2.record), region, binSize, sampleIds)
               val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
               for (sample <- sampleIds) {
@@ -428,7 +407,9 @@ class VizServlet extends ScalatraServlet {
   get("/reference/:ref") {
     val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
       VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-    write(VizReads.printReferenceJson(viewRegion))
+    if (viewRegion.end - viewRegion.start > 2000)
+      write("")
+    else write(VizReads.printReferenceJson(viewRegion))
   }
 }
 

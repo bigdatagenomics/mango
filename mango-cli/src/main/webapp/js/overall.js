@@ -1,5 +1,4 @@
 //Configuration Variables
-var width = $(".mergedReads").width();
 var base = 50;
 var trackHeight = 6;
 
