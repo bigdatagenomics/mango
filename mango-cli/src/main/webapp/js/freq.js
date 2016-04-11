@@ -34,9 +34,7 @@ function renderJsonCoverage(data, i) {
   }
 
   // Create the scale for the x axis
-  var xAxisScale = d3.scale.linear()
-    .domain([viewRegStart, viewRegEnd])
-    .range([0, width]);
+  var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
 
   // Create the scale for the y axis
   var yAxisScale = d3.scale.linear()
@@ -50,7 +48,7 @@ function renderJsonCoverage(data, i) {
 
   // Specify the area for the data being displayed
   var freqArea = d3.svg.area()
-    .x(function(d){return (d.base-viewRegStart)/(viewRegEnd-viewRegStart) * width;})
+    .x(function(d){return xAxisScale(d.base);})
     .y0(height)
     .y1(function(d){return dataScale(maxFreq-d.freq);})
     .interpolate("basis");

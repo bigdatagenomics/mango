@@ -28,21 +28,21 @@
 
     </div>
 
-</div>
+    <script src="js/d3utilities.js"></script>
+    <script src="js/utilities.js"></script>
 
-<script>
-  var viewRefName = "${viewRegion._1}";
-  var viewRegStart = parseInt(${viewRegion._2}, 10);
-  var viewRegEnd = parseInt(${viewRegion._3}, 10);
-  var width = window.innerWidth - 18;
-</script>
-<script src="js/utilities.js"></script>
-<script src="js/variants.js"></script>
-<script src="js/formSubmit.js"></script>
-<script src="js/reference.js"></script>
-<script>
-  renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
-  renderVariants(viewRefName, viewRegStart, viewRegEnd);
-  renderReference(viewRefName, viewRegStart, viewRegEnd);
-</script>
+    <script>
+      var viewRefName = "${viewRegion._1}";
+      var viewRegStart = parseInt(${viewRegion._2}, 10);
+      var viewRegEnd = parseInt(${viewRegion._3}, 10);
+      var width = window.innerWidth - 18;
+    </script>
+
+    <script src="js/variants.js"></script>
+    <script src="js/reference.js"></script>
+
+    <script>
+        renderReference(viewRefName, viewRegStart, viewRegEnd);
+        renderVariants(viewRefName, viewRegStart, viewRegEnd);
+    </script>
 </html>

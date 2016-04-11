@@ -96,21 +96,28 @@ function renderAlignments(refName, start, end, quality, sample) {
 }
 
 function renderReads(refName, start, end, quality, isCountData, samples) {
+
+    // Define quality for reads
     quality = quality || 0;
+
+    // Get sample names
     var samples = typeof samples != "undefined" ? samples : sampleId;
+
+    // Define whether to render alignment reads or merged summary reads
     var jsonPage = "reads";
     if (isCountData)
          jsonPage = "mergedReads";
-    else
-        jsonPage = "reads";
+
+    // Define json location of reads data
     var readsJsonLocation = "/" + jsonPage + "/" + viewRefName + "?start=" + viewRegStart + "&end="
         + viewRegEnd + "&sample=" + samples + "&quality=" + quality;
 
+    // Render data for each sample
     if (isCountData) {
         renderJsonMergedReads(readsJsonLocation);
+
         var keys = Object.keys(readAlignmentSvgContainer);
         keys.forEach(function(sample) {
-            // if is checked
             var checkSelector = "#viewAlignments" + sample;
             if ($(checkSelector).is(':checked')) {
                 renderAlignments(refName, start, end, quality, sample);
@@ -191,7 +198,12 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
           .attr("class", "tooltip")
           .style("opacity", 0);
 
+        // Define x axis
+        var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+
         var selector = "#" + sample;
+
+        // Reformat data to account for emtpy Json
         data['tracks'] = typeof data['tracks'] != "undefined" ? data['tracks'] : [];
         data['mismatches'] = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
         data['indels'] = typeof data['indels'] != "undefined" ? data['indels'] : [];
@@ -211,7 +223,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         var modify = rects.transition();
 
       modify
-        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("x", (function(d) { return xAxisScale(d.start); }))
         .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
         .attr("height", (readTrackHeight-1))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
@@ -221,7 +233,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         .append("g")
         .append("rect")
         .attr("class", "readrect")
-            .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+            .attr("x", (function(d) { return xAxisScale(d.start); }))
         .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", (readTrackHeight-1))
@@ -266,7 +278,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         var bkgdsModify = arrowBkgds.transition();
         bkgdsModify
         .attr('points', function(d) {
-          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width - 1;
+          var rectStart = xAxisScale(d.start) - 1;
           var height = readTrackHeight - 2;
           var yCoord = readsHeight - readTrackHeight * (d.track + 1);
           if (d.readNegativeStrand === true) { // to the right
@@ -292,7 +304,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
             .append("polyline")
               .attr("class", "bkgd")
               .attr('points', function(d) {
-                var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width - 1;
+                var rectStart = xAxisScale(d.start) - 1;
                 var height = readTrackHeight - 2;
                 var yCoord = readsHeight - readTrackHeight * (d.track + 1);
                 if (d.readNegativeStrand === true) { // to the right
@@ -316,7 +328,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         var arrowModify = arrowHeads.transition();
         arrowModify
         .attr('points', function(d) {
-          var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+          var rectStart = xAxisScale(d.start);
           var height = readTrackHeight - 2;
           var yCoord = readsHeight - readTrackHeight * (d.track + 1);
           if (d.readNegativeStrand === true) { // to the right
@@ -341,7 +353,7 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
             .append("polyline")
               .attr("class", "arrow")
               .attr('points', function(d) {
-                var rectStart = (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width;
+                var rectStart = xAxisScale(d.start);
                 var height = readTrackHeight - 2;
                 var yCoord = readsHeight - readTrackHeight * (d.track + 1);
                 if (d.readNegativeStrand === true) { // to the right
@@ -370,18 +382,18 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         var mateLines = container.selectAll(".readPairs").data(data["matePairs"]);
         modify = mateLines.transition();
         modify
-          .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+          .attr("x1", (function(d) { return xAxisScale(d.start); }))
           .attr("y1", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
-          .attr("x2", (function(d) { return ((d.end)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+          .attr("x2", (function(d) { return xAxisScale(d.end); }))
           .attr("y2", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }));
         newData = mateLines.enter();
         newData
           .append("g")
           .append("line")
             .attr("class", "readPairs")
-            .attr("x1", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+            .attr("x1", (function(d) { return xAxisScale(d.start); }))
             .attr("y1", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
-            .attr("x2", (function(d) { return ((d.end)-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+            .attr("x2", (function(d) { return xAxisScale(d.end); }))
             .attr("y2", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
             .attr("strock-width", "1")
             .attr("stroke", "steelblue");
@@ -448,8 +460,11 @@ function renderIndelCounts(indels, sample) {
 
   var modMisRects = misRects.transition();
 
+  // Define x axis
+  var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+
     modMisRects
-      .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; });
+      .attr("transform", function(d) { return "translate(" + xAxisScale(d.refCurr) + ",0)"; });
 
     modMisRects
     .attr("y", (function(d) {
@@ -491,7 +506,7 @@ function renderIndelCounts(indels, sample) {
         }
     })
         .attr("transform", function(d) {
-        return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; })
+        return "translate(" + xAxisScale(d.refCurr) + ",0)"; })
       .on("click", function(d) {
         misMatchDiv.transition()
           .duration(200)
@@ -533,9 +548,12 @@ function renderAlignmentIndels(indels, sample) {
 
   var misRects = d3.select(getAlignmentSelector(sample) + ">." + alignmentSvgClass).selectAll(".indel").data(indels);
 
+  // Define x axis
+  var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+
   var modMisRects = misRects.transition()
     .attr("x", (function(d) {
-      return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      return xAxisScale(d.refCurr); }))
     .attr("y", (function(d) {
         return readsHeight - (readTrackHeight * (d.track+1));
     }))
@@ -557,7 +575,7 @@ function renderAlignmentIndels(indels, sample) {
     .append("rect")
       .attr("class", "indel")
       .attr("x", (function(d) {
-        return (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        return xAxisScale(d.refCurr); }))
       .attr("y", (function(d) {
           return readsHeight - (readTrackHeight * (d.track+1));
        }))
@@ -612,9 +630,9 @@ function renderAlignmentIndels(indels, sample) {
 
 //Render mismatching bases for cigar operator
 function renderMismatchCounts(data, sample) {
-  // Making hover box
-  var selector = "#" + sample;
-  var misMatchDiv = d3.select(selector)
+    // Making hover box
+    var selector = "#" + sample;
+    var misMatchDiv = d3.select(selector)
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
@@ -641,7 +659,10 @@ function renderMismatchCounts(data, sample) {
         .rangeRound([mismatchHeight - padding, 0]);
      y.domain([0, d3.max(data, function(d) { return d.sum; })]);
 
-  //Displays rects from the data we just calculated
+     // Define x axis
+     var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+
+    //Displays rects from the data we just calculated
     var mRects = readCountSvgContainer[sample].selectAll("g").data(data);
     var coloredRects = mRects.selectAll(".mrect").data(function(d) {return d.totals});
 
@@ -651,7 +672,7 @@ function renderMismatchCounts(data, sample) {
   var modifiedColoredRects = coloredRects.transition();
 
   modifiedMRects
-    .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; });
+    .attr("transform", function(d) { return "translate(" + xAxisScale(d.refCurr) + ",0)"; });
 
   modifiedColoredRects
     .attr("y", (function(d) { return y(d.y1); }))
@@ -662,7 +683,7 @@ function renderMismatchCounts(data, sample) {
   // new rectangles on initial page render
   var newMRects = mRects
         .enter().append("g")
-        .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; });
+        .attr("transform", function(d) { return "translate(" + xAxisScale(d.refCurr) + ",0)"; });
 
   newMRects.selectAll("rect")
     .append("rect")
@@ -720,6 +741,9 @@ function renderAlignmentMismatches(data, sample) {
   //Displays rects from the data we just calculated
   var mRects = d3.select(getAlignmentSelector(sample) + ">." + alignmentSvgClass).selectAll(".mrect").data(data);
 
+  // Define x axis
+  var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+
   // modified rectangles on update
   var modifiedMRects = mRects.transition();
   modifiedMRects
@@ -731,7 +755,7 @@ function renderAlignmentMismatches(data, sample) {
   var newMRects = mRects.enter();
   newMRects
     .append("g")
-        .attr("transform", function(d) { return "translate(" + (d.refCurr-viewRegStart)/(viewRegEnd-viewRegStart) * width + ",0)"; })
+        .attr("transform", function(d) { return "translate(" + xAxisScale(d.refCurr) + ",0)"; })
         .append("rect")
         .attr("class", "mrect")
         .attr("y", (function(d) {

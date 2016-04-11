@@ -40,20 +40,20 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
 
   refContainer.select(".axis").remove();
 
-  // Updating Axis
   // Create the scale for the axis
-  var refAxisScale = d3.scale.linear()
-      .domain([viewRegStart, viewRegEnd])
-      .range([0, refWidth]);
+ //  var xAxisScale = xAxis(viewRegStart, viewRegEnd, refWidth);
+ var xAxisScale = d3.scale.linear()
+        .domain([viewRegStart, viewRegEnd])
+        .range([0, refWidth]);
 
   // Create the axis
-  var refAxis = d3.svg.axis()
-     .scale(refAxisScale);
+  var xAxis = d3.svg.axis()
+     .scale(xAxisScale);
 
   // Add the axis to the container
   refContainer.append("g")
       .attr("class", "axis")
-      .call(refAxis);
+      .call(xAxis);
 
   d3.json(jsonLocation, function(error, data) {
     if (error) return error;
@@ -91,14 +91,17 @@ function toggleReferenceDependencies(data) {
 // Renders reference at colored base resolution
 function renderLowResRef(data, refContainer, refDiv) {
 
+ // Render x axis
+ var xAxisScale = xRange(viewRegStart, viewRegEnd, refWidth)
+
   refContainer.selectAll(".reftext").remove();
 
   var rects = refContainer.selectAll(".refrect").data(data);
 
   var modify = rects.transition();
   modify
-    .attr("x", function(d, i) {
-      return i/(viewRegEnd-viewRegStart) * refWidth;
+    .attr("x", function(d) {
+      return xAxisScale(d.position);
     })
     .attr("width", function(d) {
     if (d.position < 0) return refWidth;
@@ -114,8 +117,8 @@ function renderLowResRef(data, refContainer, refDiv) {
     newData
     .append("rect")
       .attr("class", "refrect")
-      .attr("x", function(d, i) {
-        return i/(viewRegEnd-viewRegStart) * refWidth;
+      .attr("x", function(d) {
+        return xAxisScale(d.position);
       })
       .attr("y", 30)
     .attr("fill", function(d) {
