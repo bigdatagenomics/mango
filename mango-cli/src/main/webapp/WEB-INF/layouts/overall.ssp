@@ -23,6 +23,7 @@
     </div>
 
     <script src="js/utilities.js"></script>
+    <script src="js/d3utilities.js"></script>
     <script src="js/formSubmit.js"></script>
 
     <script>

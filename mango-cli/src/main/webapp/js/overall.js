@@ -81,6 +81,9 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
 
   var featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
+  // define x axis
+  var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+
   // Making hover box
   var featDiv = d3.select("#featArea")
     .append("div")
@@ -95,14 +98,14 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
     var rects = featureSvgContainer.selectAll("rect").data(data);
     var modify = rects.transition();
     modify
-      .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+      .attr("x", (function(d) { return xAxisScale(d.start); }))
       .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
 
     var newData = rects.enter();
     newData
       .append("g")
       .append("rect")
-        .attr("x", (function(d) { return (d.start-viewRegStart)/(viewRegEnd-viewRegStart) * width; }))
+        .attr("x", (function(d) { return xAxisScale(d.start); }))
         .attr("y", 0)
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", featHeight)
