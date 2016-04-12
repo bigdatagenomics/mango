@@ -7,6 +7,13 @@ var varHeight = 0; //Default variable: this will change based on number of track
 var freqHeight = 200;
 var width = $("#varArea").width();
 
+// send pixel size for bining and initialize autocomplete and refVis
+var initJson =  "/init/" + Math.round($(".samples").width());
+d3.json(initJson, function(error, seqDict) {
+  sDict=seqDict;
+  autoComplete(seqDict);
+  refVis(sDict);
+});
 
 // Svg container for variant frequency
 var svg = d3.select("#varFreqArea")
