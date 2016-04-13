@@ -6,31 +6,23 @@
 <% attributes("page") = "reads" %>
 
 <html xmlns="http://www.w3.org/1999/html">
-
-    <% render("../templates/head.ssp") %>
+    <% render("../templates/head.ssp")%>
     <% render("../navigation/navigation.ssp") %>
-
-    <nav id="menu" class="panel" role="navigation">
-        <h2> Reference Panel </h2>
-    </nav>
     <% render("../navigation/panAndZoom.ssp", Map("page" -> "reads")) %>
-
     <div class="main">
           <div class="graphArea" id="refArea"></div>
           <div class="graphArea" id="featArea"></div>
           <div class="graphArea" id="varArea"></div>
           <div class="graphArea" id="readsArea"></div>
-    </div>
+    </div>    
+    
+  <% render("../templates/sidebar.ssp")%>
 
     <script src="js/utilities.js"></script>
     <script src="js/d3utilities.js"></script>
     <script src="js/formSubmit.js"></script>
 
     <script>
-      $(document).ready(function() {
-          $('.menu-link').bigSlide();
-      });
-
       <!-- Define Global Variables -->
       var viewRefName = "${viewRegion._1}";
       var viewRegStart = parseInt(${viewRegion._2}, 10);
