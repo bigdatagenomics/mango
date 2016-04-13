@@ -4,9 +4,9 @@
 
 <html>
 
-    <% render("../templates/head.ssp")%>
-    <% render("../navigation/navigation.ssp") %>
-    <% render("../navigation/panAndZoom.ssp") %>
+    <% render("templates/head.ssp")%>
+    <% render("navigation/navigation.ssp") %>
+    <% render("navigation/panAndZoom.ssp") %>
 
     <div class="main">
           <div class="graphArea" id="refArea"></div>
@@ -14,7 +14,7 @@
           <div class="graphArea" id="varArea"></div>
     </div>    
 
-<% render("../templates/sidebar.ssp")%>
+<% render("templates/sidebar.ssp")%>
 
 <script>
   var viewRefName = "${viewRegion._1}";

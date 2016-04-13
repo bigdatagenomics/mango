@@ -1,4 +1,6 @@
-// Filters invalid characters from string to create javascript descriptor
+function getAlignmentSelector(sample) {
+    return selector = "#" + sample + ">.alignmentData";
+}
 
 function setGlobalReferenceRegion(refName, start, end) {
     viewRefName = refName;
@@ -18,6 +20,7 @@ function setGlobalMapQ(mapq) {
     mapQuality = mapq;
 }
 
+// Filters invalid characters from string to create javascript descriptor
 function filterNames(arr) {
   var filteredArr = [];
   for (var i = 0; i < arr.length; i++) {

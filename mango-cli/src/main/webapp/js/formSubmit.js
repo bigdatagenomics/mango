@@ -14,13 +14,6 @@ function autoComplete(dictionary) {
     });
 }
 
-// on enter submits search form for chromosomal position
-$('.alignment-search').keypress(function (e) {
-  if (e.which == 13) {
-    checkForm(this.form);
-    return false;
-  }
-});
 
 // on enter submits search form for chromosomal position
 $('.variant-search').keypress(function (e) {
