@@ -64,6 +64,12 @@ function refVis(dictionary){
     tooltip.style('display', 'block');                          
   });                                                           
   
+  path.on('click', function(d) {
+    var end = 1000;// Show first 1000 , might want to so something more sophisticated here...//d.data.length/100;
+    render(d.data.name, 0,end, 50); 
+    document.getElementById("autocomplete").value = d.data.name+":0-"+end;
+  });  
+
   path.on('mouseout', function() {                              
     tooltip.style('display', 'none');                           
   });                                                           
