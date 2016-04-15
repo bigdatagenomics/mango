@@ -42,7 +42,7 @@ object FeatureLayout extends Logging {
   /**
    * An implementation of FeatureLayout
    *
-   * @param rdd: iterator of (ReferenceRegion, Features) tuples
+   * @param iter: iterator of (ReferenceRegion, Features) tuples
    * @return List of Tracks of Feature Data
    */
   def apply(iter: Iterator[(ReferenceRegion, Feature)]): Iterator[GenericTrack[Feature]] = {
@@ -56,7 +56,7 @@ object FeatureLayout extends Logging {
  * @param values The set of values (i.e. reads, variants) to lay out in tracks
  */
 class FeatureLayout(values: Iterator[(ReferenceRegion, Feature)]) extends TrackedLayout[Feature, GenericTrackBuffer[Feature]] with Logging {
-  val sequence = values.toList
+  val sequence = values.toArray
   var trackBuilder = new mutable.ListBuffer[GenericTrackBuffer[Feature]]()
   addTracks
 

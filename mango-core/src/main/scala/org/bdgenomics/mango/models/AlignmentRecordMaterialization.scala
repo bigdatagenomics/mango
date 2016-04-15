@@ -32,6 +32,7 @@ import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.RDD._
 import org.bdgenomics.mango.core.util.SampleSize
 import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, MismatchLayout }
+import org.bdgenomics.mango.util.Bookkeep
 
 import scala.reflect.ClassTag
 
@@ -42,7 +43,7 @@ import scala.reflect.ClassTag
  */
 class AlignmentRecordMaterialization(s: SparkContext,
                                      d: SequenceDictionary,
-                                     parts: Int, chunkS: Long,
+                                     parts: Int, chunkS: Int,
                                      refRDD: ReferenceRDD) extends LazyMaterialization[AlignmentRecord, CalculatedAlignmentRecord] with Serializable with Logging {
 
   val sc = s
@@ -50,18 +51,13 @@ class AlignmentRecordMaterialization(s: SparkContext,
   val partitions = parts
   val chunkSize = chunkS
   val partitioner = setPartitioner
+  val bookkeep = new Bookkeep(chunkSize)
 
-  override def loadAdam(region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === (region.referenceName)))
-    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
-      AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj)).rdd
-  }
-  /*
-   * RDD holding frequencies for all AlignmentRecord files
-   */
-  var freqRDD = new FrequencyRDD
 
+  //  var freqRDD = new FrequencyRDD(sc, chunkSize)
+  val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+  var freq: FrequencyMaterialization = new FrequencyMaterialization(sc, dict, chunkSize)
   /*
    * Determines granularity of frequency calculations. Funtion of partitions and region to be viewed
    */
@@ -77,25 +73,9 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
    * cooresponding frequency.
    */
-  def getFrequency(region: ReferenceRegion, sampleIds: List[String], sampleSize: Option[Int] = None): Map[String, Iterable[FreqJson]] = {
-    freqRDD.get(region, sampleIds, sampleSize)
-  }
 
-  /*
-   * Loads data from bam files (indexed or unindexed) from persistent storage
-   *
-   * @param region: ReferenceRegion to load AlignmentRecords from
-   * @param fp: String bam file pointer to load records from
-   *
-   * @return RDD[AlignmentRecord] records overlapping region
-   */
-  def loadFromBam(region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
-    val idxFile: File = new File(fp + ".bai")
-    if (!idxFile.exists()) {
-      sc.loadBam(fp).rdd.filterByOverlappingRegion(region)
-    } else {
-      sc.loadIndexedBam(fp, region)
-    }
+  def getFrequency(region: ReferenceRegion, sampleIds: List[String], binSize: Int = 1000): Array[String] = {
+    freq.multiget(region, sampleIds).collect
   }
 
   /*
@@ -107,8 +87,18 @@ class AlignmentRecordMaterialization(s: SparkContext,
         case Some(_) => sampleId.get
         case None    => filePath
       }
-    fileMap += ((sample, filePath))
 
+    fileMap += ((sample, filePath))
+    println(s"loading sample ${sample}")
+    freq.loadSample(filePath, sample)
+
+  }
+
+  override def loadADAMSample(filePath: String): String = {
+    val sample = getFileReference(filePath)
+    fileMap += ((sample, filePath))
+    freq.loadSample(filePath, sample)
+    sample
   }
 
   override def getFileReference(fp: String): String = {
@@ -121,15 +111,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
       null
     }
     val fp = fileMap(k)
-    val file: File = new File(fp)
-    if (fp.endsWith(".adam")) {
-      loadAdam(region, fp)
-    } else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
-      loadFromBam(region, fp)
-    } else {
-      throw UnsupportedFileException("File type not supported")
-      null
-    }
+    AlignmentRecordMaterialization.loadAlignmentData(sc: SparkContext, region, fp)
   }
 
   override def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, CalculatedAlignmentRecord]] = {
@@ -144,7 +126,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
 	*/
   override def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, CalculatedAlignmentRecord]] = {
     val seqRecord = dict(region.referenceName)
-    val regionsOpt = getMaterializedRegions(region, ks)
+    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
     seqRecord match {
       case Some(_) => {
         regionsOpt match {
@@ -177,30 +159,30 @@ class AlignmentRecordMaterialization(s: SparkContext,
       case Some(_) => {
         val (reg, ref) = refRDD.getPaddedReference(region)
 
+        var alignments: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
         ks.map(k => {
-          val alignmentData = loadFromFile(region, k)
-            .map(r => (ReferenceRegion(r), r))
-            .partitionBy(partitioner)
-
-          // Calculate Frequency
-          val f = alignmentData.map(_._2)
-          val ssz = sampleSize.normalizeByRegion(region)
-          val stride = Math.round(Math.log(region.end - region.start))
-          freqRDD.put(f.sample(false, ssz), region, Option(ssz), stride = stride)
-
-          var data = alignmentData.map(r => (r._1, CalculatedAlignmentRecord(r._2, MismatchLayout(r._2, ref.get, reg))))
-          data = data.filter(r => r._2.mismatches.size > 0)
-          //TODO:Resolve data materialization issue
-          val z = data.first()
-          if (intRDD == null) {
-            intRDD = IntervalRDD(data)
-            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-          } else {
-            intRDD = intRDD.multiput(data)
-            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-          }
+          val data = loadFromFile(region, k)
+          alignments = alignments.union(data)
         })
-        rememberValues(region, ks)
+
+        // key data by ReferenceRegion
+        val keyedAlignments = alignments
+          .map(r => (ReferenceRegion(r), r))
+          .partitionBy(partitioner)
+
+        // map to CalculatedAlignmentRecord
+        val data = keyedAlignments.map(r => (r._1, CalculatedAlignmentRecord(r._2, MismatchLayout(r._2, ref.get, reg))))
+          .filter(r => r._2.mismatches.size > 0)
+
+        // insert into IntervalRDD
+        if (intRDD == null) {
+          intRDD = IntervalRDD(data)
+          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        } else {
+          intRDD = intRDD.multiput(data)
+          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        }
+        bookkeep.rememberValues(region, ks)
       }
       case None => {
       }
@@ -214,8 +196,41 @@ object AlignmentRecordMaterialization {
     new AlignmentRecordMaterialization(sc, dict, partitions, 1000, refRDD)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long, refRDD: ReferenceRDD, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Int, refRDD: ReferenceRDD, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
     new AlignmentRecordMaterialization(sc, dict, partitions, chunkSize, refRDD)
+  }
+
+  def loadAlignmentData(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
+    if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
+    else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
+      AlignmentRecordMaterialization.loadFromBam(sc, region, fp)
+    } else {
+      throw UnsupportedFileException("File type not supported")
+      null
+    }
+  }
+  /*
+ * Loads data from bam files (indexed or unindexed) from persistent storage
+ *
+ * @param region: ReferenceRegion to load AlignmentRecords from
+ * @param fp: String bam file pointer to load records from
+ *
+ * @return RDD[AlignmentRecord] records overlapping region
+ */
+  def loadFromBam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
+    val idxFile: File = new File(fp + ".bai")
+    if (!idxFile.exists()) {
+      sc.loadBam(fp).rdd.filterByOverlappingRegion(region)
+    } else {
+      sc.loadIndexedBam(fp, region)
+    }
+  }
+
+  def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
+    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === (region.referenceName)))
+    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
+      AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
   }
 
 }

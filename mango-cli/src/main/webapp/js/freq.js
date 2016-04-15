@@ -2,35 +2,60 @@
 var maxFreq = 0;
 var covWidth = $(".sampleCoverage").width();
 var height = 100;
+var maxFreqs = {}
 
 var svgContainer = {};
 for (var i = 0; i < samples.length; i++) {
-  var selector = "#" + samples[i] + ">.sampleCoverage";
+  var selector = "#" + samples[i] + ">.sampleSummary";
   svgContainer[samples[i]] = d3.select(selector)
-    .select("svg")
-      .attr("class", "coverage-svg")
-      .attr("height", (height))
+    .select(".coverage-svg")
+      .attr("height", height)
       .attr("width", width);
 }
 
 // Function (accessor function) to return the position for the data that falls just left of the cursor
 var bisectData = d3.bisector(function(d) {
-  return d.base;
+  return d.position;
 }).left;
 
-function renderJsonCoverage(data, i) {
-  data = typeof data != "undefined" ? data : [];
-  maxFreq = d3.max(data, function(d) {return d.freq});
+function renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds) {
+
+  // Define json location of reads data
+  var jsonLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end="
+      + viewRegEnd + "&sample=" + sampleIds;
+
+    // Render data for each sample
+  d3.json(jsonLocation, function(error, ret) {
+    if (!isValidHttpResponse(ret)) {
+      return;
+    }
+    var data = ret.map(JSON.parse);
+
+    var frequencyBySample = d3.nest()
+      .key(function(d) { return d.sample; })
+      .entries(data);
+
+   frequencyBySample.map(function(value) {
+      renderJsonCoverage(value);
+   });
+
+  });
+}
+
+function renderJsonCoverage(data) {
+  var sample = filterName(data.key);
+  data = data.values
+  maxFreq = d3.max(data, function(d) {return d.count});
   maxFreq = typeof maxFreq != "undefined" ? maxFreq : 0;
 
-  data = data.sort(function(a, b){ return d3.ascending(a.base, b.base); })
+  data = data.sort(function(a, b){ return d3.ascending(a.position, b.position); })
 
   // add first and last elements which may be removed from sampling
-  if (data[0].base > viewRegStart) {
-    data.unshift({base: 0, freq: data[0].freq});
+  if (data[0].position > viewRegStart) {
+    data.unshift({position: 0, count: data[0].count});
   }
-  if (data[data.length -1].base < viewRegEnd) {
-     data.push({base: viewRegEnd, freq: data[data.length - 1].freq})
+  if (data[data.length -1].position < viewRegEnd) {
+     data.push({position: viewRegEnd, count: data[data.length - 1].count})
   }
 
   // Create the scale for the x axis
@@ -41,26 +66,21 @@ function renderJsonCoverage(data, i) {
     .domain([maxFreq, 0])
     .range([0, height]);
 
-  // Create the scale for the data
-  var dataScale = d3.scale.linear()
-    .domain([0, maxFreq])
-    .range([0, height]);
-
   // Specify the area for the data being displayed
   var freqArea = d3.svg.area()
-    .x(function(d){return xAxisScale(d.base);})
+    .x(function(d){return xAxisScale(d.position);})
     .y0(height)
-    .y1(function(d){return dataScale(maxFreq-d.freq);})
+    .y1(function(d){return yAxisScale(d.count);})
     .interpolate("basis");
 
-  var removed = svgContainer[samples[i]].selectAll("path").remove()
+  var removed = svgContainer[sample].selectAll("path").remove()
 
   // Add the data area shape to the graph
-  svgContainer[samples[i]]
+  svgContainer[sample]
     .append("path")
     .attr("d", freqArea(data))
     .style("fill", "#B8B8B8");
-  svgContainer[samples[i]].append("rect")
+  svgContainer[sample].append("rect")
     .attr("width", width)
     .attr("x", 0)
     .attr("height", height)
@@ -71,7 +91,7 @@ function renderJsonCoverage(data, i) {
     .on("mousemove", mousemove);
 
   // What we use to add tooltips
-  var focus = svgContainer[samples[i]].append("g")
+  var focus = svgContainer[sample].append("g")
     .style("display", "none");
 
   // Append the y guide line
@@ -103,8 +123,6 @@ function renderJsonCoverage(data, i) {
     .attr("dx", 8)
     .attr("dy", "1em");
 
-renderd3Line(svgContainer[samples[i]], height);
-
   function mousemove() {
     // Initial calibrates initial mouse offset due to y axis position
     var x0 = xAxisScale.invert(d3.mouse(this)[0]);
@@ -117,24 +135,24 @@ renderd3Line(svgContainer[samples[i]], height);
     }
 
     // Finds the position that is closest to the mouse cursor
-    var d = (x0 - opt1.base) > (opt2.base - x0) ? opt2 : opt1;
+    var d = (x0 - opt1.position) > (opt2.position - x0) ? opt2 : opt1;
 
     focus.select("text.above")
       .attr("transform",
-        "translate(" + xAxisScale(d.base) + "," +
-        yAxisScale(d.freq) + ")")
-      .text("Position: " + d.base);
+        "translate(" + xAxisScale(d.position) + "," +
+        yAxisScale(d.count) + ")")
+      .text("Position: " + d.position);
 
     focus.select("text.below")
       .attr("transform",
-        "translate(" + xAxisScale(d.base) + "," +
-        yAxisScale(d.freq) + ")")
-      .text("Freq: " + d.freq);
+        "translate(" + xAxisScale(d.position) + "," +
+        yAxisScale(d.count) + ")")
+      .text("Freq: " + d.count);
 
     focus.select(".yGuide")
       .attr("transform",
         "translate(" + (width - 50) * -1 + "," +
-          yAxisScale(d.freq) + ")")
+          yAxisScale(d.count) + ")")
       .attr("x2", width + width);
   }
 

@@ -22,6 +22,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, Sequenc
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.mango.RDD.ReferenceRDD
+import org.bdgenomics.mango.util.Bookkeep
 
 class LazyMaterializationSuite extends ADAMFunSuite {
 
@@ -31,11 +32,16 @@ class LazyMaterializationSuite extends ADAMFunSuite {
 
   val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000L),
     SequenceRecord("chrM", 20000L),
-    SequenceRecord("chr3", 2000L)))
+    SequenceRecord("20", 90000L)))
 
+  // test alignment data
   val bamFile = resourcePath("mouse_chrM.bam")
+
+  // test vcf data
   val vcfFile = resourcePath("truetest.vcf")
   val vcfFile2 = resourcePath("truetest2.vcf")
+
+  // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
 
   sparkTest("assert the data pulled from a file is the same") {
@@ -52,7 +58,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     assert(lazySize == 1009)
   }
 
-  sparkTest("Get data from different samples at theƒ same region") {
+  sparkTest("Get data from different samples at the same region") {
     val refRDD = new ReferenceRDD(sc, referencePath)
 
     val sample1 = "person1"
@@ -152,7 +158,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val r2 = new ReferenceRegion("chr1", 1000, 1999)
     val lazyMat = GenotypeMaterialization(sc, sd, 10)
 
-    val merged = lazyMat.mergeRegions(Option(List(r1, r2))).get
+    val merged = Bookkeep.mergeRegions(Option(List(r1, r2))).get
     assert(merged.size == 1)
     assert(merged.head.start == 0 && merged.head.end == 1999)
   }
@@ -163,7 +169,7 @@ class LazyMaterializationSuite extends ADAMFunSuite {
     val r3 = new ReferenceRegion("chr1", 3000, 3999)
     val lazyMat = GenotypeMaterialization(sc, sd, 10)
 
-    val merged = lazyMat.mergeRegions(Option(List(r1, r2, r3))).get
+    val merged = Bookkeep.mergeRegions(Option(List(r1, r2, r3))).get
     assert(merged.size == 2)
     assert(merged.head.end == 1999 && merged.last.end == 3999)
   }
