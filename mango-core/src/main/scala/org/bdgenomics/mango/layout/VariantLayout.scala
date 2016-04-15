@@ -75,7 +75,7 @@ object VariantFreqLayout extends Logging {
  * @param values Iterator of (ReferenceRegion, Genotype) tuples
  */
 class VariantLayout(values: Iterator[(ReferenceRegion, Genotype)]) extends TrackedLayout[Genotype, GenericTrackBuffer[Genotype]] with Logging {
-  val sequence = values.toList
+  val sequence = values.toArray
   var trackBuilder = new ListBuffer[GenericTrackBuffer[Genotype]]()
   val data = sequence.groupBy(_._2.getSampleId)
   addTracks
@@ -83,7 +83,7 @@ class VariantLayout(values: Iterator[(ReferenceRegion, Genotype)]) extends Track
 
   def addTracks {
     for (rec <- data) {
-      trackBuilder += GenericTrackBuffer[Genotype](rec._2)
+      trackBuilder += GenericTrackBuffer[Genotype](rec._2.toList)
     }
   }
   def collect: Iterator[GenericTrack[Genotype]] = trackBuilder.map(t => Track[Genotype](t)).toIterator

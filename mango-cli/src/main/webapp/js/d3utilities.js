@@ -19,7 +19,7 @@ var baseColors = {
 };
 
 // Create the scale for the x axis.
-// Used for frequency, variands, reads and reference
+// Used for variants and reference
 function xRange(start, end, width){
     return d3.scale.linear()
         .domain([start, end])

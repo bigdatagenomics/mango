@@ -35,14 +35,14 @@ object AlignmentRecordLayout extends Logging {
    * An implementation of AlignmentRecordLayout which takes in an RDD of (ReferenceRegion, AlignmentRecord) tuples, the reference String
    * over the region, the region viewed and samples viewed.
    *
-   * @param rdd: RDD of (ReferenceRegion, AlignmentRecord) tuples
+   * @param data: Array of (ReferenceRegion, AlignmentRecord) tuples
    * @param sampleIds: List of sample identifiers to be rendered
    * @return List of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[String, SampleTrack] = {
+  def apply(data: Array[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[String, SampleTrack] = {
     val sampleTracks = new ListBuffer[(String, SampleTrack)]()
 
-    val tracks: Map[String, Array[ReadsTrack]] = rdd.mapPartitions(AlignmentRecordLayout(_)).collect.groupBy(_.sample)
+    val tracks: Map[String, List[ReadsTrack]] = new AlignmentRecordLayout(data).collect.groupBy(_.sample)
 
     tracks.foreach {
       case (sample, track) => {
@@ -56,18 +56,6 @@ object AlignmentRecordLayout extends Logging {
     }
     sampleTracks.toMap
   }
-
-  /**
-   * An implementation of AlignmentRecordLayout which takes in an Iterator of (ReferenceRegion, AlignmentRecord) tuples, the reference String
-   * over the region, and the region viewed.
-   *
-   * @param iter: Iterator of (ReferenceRegion, AlignmentRecord) tuples
-   * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
-   */
-  def apply(iter: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]): Iterator[ReadsTrack] = {
-    new AlignmentRecordLayout(iter).collect
-  }
-
 }
 
 object MergedAlignmentRecordLayout extends Logging {
@@ -126,19 +114,19 @@ object MergedAlignmentRecordLayout extends Logging {
  *
  * @param values The set of (Reference, AlignmentRecord) tuples to lay out in tracks
  */
-class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackedLayout[CalculatedAlignmentRecord, ReadsTrackBuffer] with Logging {
-  val sequence = values.toList
+class AlignmentRecordLayout(values: Array[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackedLayout[CalculatedAlignmentRecord, ReadsTrackBuffer] with Logging {
+  val sequence = values
   var trackBuilder = new ListBuffer[ReadsTrackBuffer]()
 
-  val readPairs: Map[String, List[(ReferenceRegion, CalculatedAlignmentRecord)]] = sequence.groupBy(_._2.record.getReadName)
+  val readPairs = sequence.groupBy(_._2.record.getReadName).values.toList.sortBy(r => r.map(_._2.mismatches.length).sum)
+
   addTracks
   trackBuilder = trackBuilder.filter(_.records.nonEmpty)
 
   def addTracks {
     readPairs.foreach {
-      p =>
+      recs =>
         {
-          val recs: List[(ReferenceRegion, CalculatedAlignmentRecord)] = p._2
           val track: Option[ReadsTrackBuffer] =
             trackBuilder.find(track => !track.conflicts(recs))
 
@@ -151,8 +139,8 @@ class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignme
     }
   }
 
-  def collect: Iterator[ReadsTrack] =
-    trackBuilder.map(t => Track(t)).toIterator
+  def collect: List[ReadsTrack] =
+    trackBuilder.reverse.map(t => Track(t)).toList
 }
 
 /**

@@ -2,6 +2,17 @@
 @import 'partials/menu';
 @import 'partials/sampleLegend';
 
+
+.absolute {
+    position: absolute;
+}
+
+.alignmentData {
+    margin-top:3px;
+    padding-top: 3px;
+    border-top: 1px solid black;
+}
+
 .mergedReads {
     border-bottom: 1px solid $covBorder;
     margin-bottom: 5px;
@@ -156,7 +167,11 @@ h2.panel {
   padding: 3px;
 }
 
-.coverage-svg {
+.sampleSummary {
+    height: 100px;
+}
+
+.summary-svg {
   overflow: visible !important;
 }
 
@@ -164,7 +179,6 @@ h2.panel {
     border-radius: 5px;
     border: 1.5px solid $readBorder;
     padding: 3px;
-    padding-bottom: 8px;
 
     .col-md-10 {
       overflow-x: hidden;
