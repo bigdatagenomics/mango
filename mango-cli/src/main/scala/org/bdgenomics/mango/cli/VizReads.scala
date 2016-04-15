@@ -109,6 +109,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   //Correctly shuts down the server
   def quit() {
+    // TODO: save frequencies
     val thread = new Thread {
       override def run() {
         try {
