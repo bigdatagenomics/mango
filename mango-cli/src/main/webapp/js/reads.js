@@ -14,127 +14,38 @@ var readCountSvgContainer = {};
 var readAlignmentSvgContainer = {};
 // Contains 1 to 1 mapping of MODIFIED sample names to RAW sample names
 var sampleData = [];
-// bin size
+//bin size
 var binSize = 1;
-
-function getAlignmentSelector(sample) {
-    return selector = "#" + sample + ">.alignmentData";
-}
 
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
 
 for (var i = 0; i < samples.length; i++) {
-  $("#readsArea").append("<div id=\"" + samples[i] + "\" class=\"samples\"></div>");
-  $("#"+samples[i]).append("<div class=\"sampleLegend\"></div>");
-  $("#"+samples[i]).append("<div class=\"sampleCoverage\"></div>");
-  $("#"+samples[i]).append("<div class=\"mergedReads\"></div>");
-  $("#"+samples[i]).append("<div class=\"alignmentData\"></div>");
 
   var selector = "#" + samples[i] + ">.mergedReads";
   readCountSvgContainer[samples[i]] = d3.select(selector)
-    .append("svg")
+    .select("svg")
       .attr("height", (readsHeight))
       .attr("width", width);
 
-  renderd3Line(readCountSvgContainer[samples[i]], readsHeight);
-
-}
-
-// print file name
-function renderSamplename(i) {
-    if ($("#" + samples[i] + ">.sampleLegend>.title").length < 1) {
-        var selector = "#" + samples[i] + ">.sampleLegend";
-        $(selector + ">.title").remove();
-        $(selector).append("<div class='col-md-9 title'>" + rawSamples[i] + "</div>");
-        $(selector).append("<div class='col-md-3'><input value='viewAlignments' name='viewAlignments'" +
-                                "type='checkbox'onClick='toggleAlignments(\"" + samples[i] + "\")' id='viewAlignments" + samples[i] + "' class='viewAlignments'>" +
-                                "<label for='viewAlignments'>Alignments</label></div>");
-        var alignmentSelector = $( "#" + samples[i] + ">.alignmentData");
-        $(alignmentSelector).hide();
-
-
-    }
-}
-
-function toggleAlignments(sample) {
-    var alignmentSelector =  $("#" + sample + ">.alignmentData");
-    if (!alignmentSelector.is(':visible')) {
-       renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, sample);
-    }
-   $(alignmentSelector).slideToggle( "slow" );
 }
 
 function renderMergedReads(refName, start, end, quality) {
-    renderReads(refName, start, end, quality, true)
-}
-
-function renderAlignments(refName, start, end, quality, sample) {
-
-    var isData = sample in readAlignmentSvgContainer;
-    if (isData) {
-        var region = readAlignmentSvgContainer[sample];
-        if (region.refName != refName || region.start !=start || region.end != end) {
-            renderReads(refName, start, end, quality, false, sampleMap[sample]);
-
-            readAlignmentSvgContainer[sample] = {
-                                                    refName: refName,
-                                                    start: start,
-                                                    end: end
-                                                };
-        }
-
-    } else {
-        renderReads(refName, start, end, quality, false, sampleMap[sample]);
-
-        readAlignmentSvgContainer[sample] = {
-                                                refName: refName,
-                                                start: start,
-                                                end: end
-                                            };
-    }
-}
-
-function renderReads(refName, start, end, quality, isCountData, samples) {
-
     // Define quality for reads
     quality = quality || 0;
 
-    // Get sample names
-    var samples = typeof samples != "undefined" ? samples : sampleId;
-
-    // Define whether to render alignment reads or merged summary reads
-    var jsonPage = "reads";
-    if (isCountData)
-         jsonPage = "mergedReads";
-
     // Define json location of reads data
-    var readsJsonLocation = "/" + jsonPage + "/" + viewRefName + "?start=" + viewRegStart + "&end="
-        + viewRegEnd + "&sample=" + samples + "&quality=" + quality;
+    var readsJsonLocation = "/mergedReads/" + viewRefName + "?start=" + viewRegStart + "&end="
+        + viewRegEnd + "&sample=" + sampleIds + "&quality=" + quality;
 
     // Render data for each sample
-    if (isCountData) {
-        renderJsonMergedReads(readsJsonLocation);
-
-        var keys = Object.keys(readAlignmentSvgContainer);
-        keys.forEach(function(sample) {
-            var checkSelector = "#viewAlignments" + sample;
-            if ($(checkSelector).is(':checked')) {
-                renderAlignments(refName, start, end, quality, sample);
-            }
-        });
-    } else
-        renderJsonReads(readsJsonLocation, Array(samples));
-}
-
-function renderJsonMergedReads(readsJsonLocation) {
-
   d3.json(readsJsonLocation,function(error, ret) {
     if(error) console.log(error);
     if (!isValidHttpResponse(ret)) {
       return;
     }
 
+    // iterate through all samples and render merged reads
     for (var i = 0; i < samples.length; i++) {
         var data = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
         var selector = "#" + samples[i];
@@ -143,52 +54,68 @@ function renderJsonMergedReads(readsJsonLocation) {
         sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
         binSize = typeof data['binSize'] != "undefined" ? data['binSize'] : 1;
 
-        renderSamplename(i);
         renderJsonCoverage(data['freq'], i);
         renderMismatchCounts(sampleData[i].mismatches, samples[i]);
         renderIndelCounts(sampleData[i].indels, samples[i]);
     }
   });
+
+    var keys = Object.keys(readAlignmentSvgContainer);
+    keys.forEach(function(sample) {
+        var checkSelector = "#viewAlignments" + filterName(sample);
+        if ($(checkSelector).is(':checked')) {
+            renderAlignments(refName, start, end, quality, sample);
+        }
+    });
 }
 
-function renderJsonReads(readsJsonLocation, samples) {
-
-  d3.json(readsJsonLocation,function(error, ret) {
-  if (error) return error;
-  if (!isValidHttpResponse(ret)) {
-    return;
-  }
-  for (var i = 0; i < samples.length; i++) {
-      var readsData = typeof ret[samples[i]] != "undefined" ? ret[samples[i]] : [];
-     // render reads for low or high resolution depending on base range
-     if (viewRegEnd - viewRegStart > 100) {
-       renderReadsByResolution(false, readsData, samples[i]);
-     } else {
-       renderReadsByResolution(true, readsData, samples[i]);
-     }
+function renderAlignments(refName, start, end, quality, sample) {
+    var isData = sample in readAlignmentSvgContainer;
+    if (isData) {
+        var region = readAlignmentSvgContainer[sample];
+        if (region.refName == refName && region.start == start && region.end == end) {
+            return;
+        }
     }
-  });
+
+    // Define quality for reads
+    quality = quality || 0;
+
+    readAlignmentSvgContainer[sample] = {
+        refName: refName,
+        start: start,
+        end: end
+    };
+
+    // Define json location of reads data
+    var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
+    + viewRegEnd + "&sample=" + sample + "&quality=" + quality;
+
+   d3.json(readsJsonLocation,function(error, ret) {
+        if (error) return error;
+   if (!isValidHttpResponse(ret)) {
+    return;
+   }
+   var readsData = typeof ret[sample] != "undefined" ? ret[sample] : [];
+      renderReadsByResolution(readsData, sample);
+   });
 
 }
 
 // Renders reads by resolution
-function renderReadsByResolution(isHighRes, data, rawSample) {
+function renderReadsByResolution(data, rawSample) {
         var readDiv = [];
         var container = [];
 
         var sample = filterName(rawSample);
         var selector = getAlignmentSelector(sample);
 
-        // check whether alignment container for this sample was already rendered
-        if ($(selector + ">." + alignmentSvgClass).length == 0) {
-            container = d3.select(selector)
-                .append("svg")
-                .attr("class", alignmentSvgClass)
-                .attr("height", (readsHeight))
-                .attr("width", width);
-        } else {
-            container = d3.select(selector).selectAll("svg");
-        }
+        container = d3.select(selector)
+            .select("svg")
+            .attr("class", alignmentSvgClass)
+            .attr("height", (readsHeight))
+            .attr("width", width);
+
 
         var removed = container.selectAll("g").remove();
 
@@ -201,15 +128,12 @@ function renderReadsByResolution(isHighRes, data, rawSample) {
         // Define x axis
         var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
 
-        var selector = "#" + sample;
-
         // Reformat data to account for emtpy Json
         data['tracks'] = typeof data['tracks'] != "undefined" ? data['tracks'] : [];
         data['mismatches'] = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
         data['indels'] = typeof data['indels'] != "undefined" ? data['indels'] : [];
         data['matePairs'] = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
 
-        renderSamplename(i);
         var numTracks = d3.max(data["tracks"], function(d) {return d.track});
         numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
