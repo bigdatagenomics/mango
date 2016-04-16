@@ -119,6 +119,51 @@ object MergedAlignmentRecordLayout extends Logging {
     mismatches.map(r => (r._1, PointMisMatch(r._2, binSize))).collect.toMap
   }
 
+  /**
+   * An implementation of AlignmentRecordLayout which takes in an RDD of (ReferenceRegion, AlignmentRecord) tuples, the reference String
+   * over the region, the region viewed and samples viewed.
+   *
+   * @param sampleIds    : List of sample identifiers to be rendered
+   * @param alignmentData: Map of alignment data
+   * @return Map of Read Tracks containing json for reads, mismatches and mate pairs
+   */
+  def diffRecords(sampleIds: List[String], alignmentData: Map[String, List[MutationCount]]): Map[String, Iterable[SampleMisMatchCount]] = {
+    sampleIds.length match {
+      case 2 => {
+        val primarySampleIndels = alignmentData.get(sampleIds(0)).get.filter(f => f.op != "M")
+          .asInstanceOf[List[IndelCount]]
+          .map(f => SampleIndelCount(sampleIds(0), f))
+        val secondarySampleIndels = alignmentData.get(sampleIds(1)).get.filter(f => f.op != "M")
+          .asInstanceOf[List[IndelCount]]
+          .map(f => SampleIndelCount(sampleIds(1), f))
+        val mergedSampleIndels = primarySampleIndels ++ secondarySampleIndels
+        val baseIndelPairings = mergedSampleIndels.groupBy(f => f.mutation.refCurr).values
+        val singleIndelPairs = baseIndelPairings.filter(_.length == 1)
+        val doubleIndelPairs = baseIndelPairings.filter(_.length > 1)
+        val indelOutput = doubleIndelPairs.map(f => f(0).diffMisMatch(f(1)))
+        //TODO: Figure out how to merge indels with variable lengths and sequences
+
+        val primarySampleMismatch = alignmentData.get(sampleIds(0)).get.filter(f => f.op == "M")
+          .asInstanceOf[List[MisMatchCount]]
+          .map(f => SampleMisMatchCount(sampleIds(0), f))
+        val secondarySampleMismatch = alignmentData.get(sampleIds(1)).get.filter(f => f.op == "M")
+          .asInstanceOf[List[MisMatchCount]]
+          .map(f => SampleMisMatchCount(sampleIds(1), f))
+
+        val mergedSampleMismatches = primarySampleMismatch ++ secondarySampleMismatch
+        //List of base pairings
+        val basePairings = mergedSampleMismatches.groupBy(f => f.mutation.refCurr).values
+        val singleOutputPairs: Iterable[SampleMisMatchCount] = basePairings.filter(_.length == 1).map(f => f(0))
+        val doublePairs = basePairings.filter(_.length > 1)
+        val doubleOutputPairs: Iterable[SampleMisMatchCount] = doublePairs.flatMap(f => f(0).diffMisMatch(f(1))).filter(f => f.mutation.count.nonEmpty)
+        val mismatchPairs: Map[String, Iterable[SampleMisMatchCount]] = (singleOutputPairs ++ doubleOutputPairs).groupBy(f => f.sample)
+        mismatchPairs
+      }
+      case _ => {
+        Map[String, Iterable[SampleMisMatchCount]]()
+      }
+    }
+  }
 }
 
 /**

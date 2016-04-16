@@ -231,6 +231,58 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/readDiffs/:ref") {
+    VizTimers.AlignmentRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      contentType = "json"
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      dictOpt match {
+        case Some(_) => {
+          val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
+          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val readQuality = params.getOrElse("quality", "0")
+          val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
+          dataOption match {
+            case Some(_) => {
+              val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
+                AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
+              val binSize = VizUtils.getBinSize(region, VizReads.screenSize)
+              val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
+              val freqData: Map[String, Iterable[FreqJson]] = VizReads.readsData.getFrequency(region, sampleIds, Option(VizReads.screenSize))
+              val fileMap = VizReads.readsData.getFileMap
+              var readRetJson: String = ""
+              val mismatchPairs = MergedAlignmentRecordLayout.diffRecords(sampleIds, alignmentData)
+                for (sample <- sampleIds) {
+                  val sampleData = alignmentData.get(sample)
+                  sampleData match {
+                    case Some(_) =>
+                      readRetJson += "\"" + sample + "\":" +
+                        "{ \"filename\": " + write(fileMap(sample)) +
+                        ", \"indels\": " + write(sampleData.get.filter(_.op != "M")) +
+                        ", \"mismatches\": " + write(mismatchPairs.get(sample)) +
+                        ", \"binSize\": " + binSize +
+                        ", \"freq\": " + write(freqData.get(sample)) + "},"
+                    case None =>
+                      readRetJson += "\"" + sample + "\":" +
+                        "{ \"filename\": " + write(fileMap(sample)) + "},"
+                  }
+
+                }
+                readRetJson = readRetJson.dropRight(1)
+                readRetJson = "{" + readRetJson + "}"
+                readRetJson
+              }
+            case None => {
+              write("")
+            }
+          }
+        } case None => write("")
+      }
+    }
+  }
+
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
