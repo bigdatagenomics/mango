@@ -21,8 +21,8 @@
     <script src="js/utilities.js"></script>
     <script src="js/d3utilities.js"></script>
     <script src="js/formSubmit.js"></script>
-    <script>
 
+<script>
       <!-- Define Global Variables -->
       var viewRefName = "${viewRegion._1}";
       var viewRegStart = parseInt(${viewRegion._2}, 10);
