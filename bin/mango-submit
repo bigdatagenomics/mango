@@ -78,7 +78,7 @@ echo "Using SPARK_SUBMIT=$SPARK_SUBMIT"
 "$SPARK_SUBMIT" \
   --class org.bdgenomics.mango.cli.VizReads \
   --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
-  --conf spark.kryo.registrator=org.bdgenomics.adam.serialization.ADAMKryoRegistrator \
+  --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   $SPARK_ARGS \
   $MANGO_CLI_JAR \
   $MANGO_ARGS

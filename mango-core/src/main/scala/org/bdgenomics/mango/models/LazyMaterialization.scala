@@ -20,9 +20,8 @@ package org.bdgenomics.mango.models
 import com.github.erictu.intervaltree._
 import edu.berkeley.cs.amplab.spark.intervalrdd._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{ Logging, _ }
-import org.bdgenomics.adam.models.{ RecordGroupDictionary, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 
 import scala.collection.mutable
@@ -37,7 +36,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   def chunkSize: Long
   def partitioner: Partitioner
 
-  // TODO: once tracking is pushed to front end, add sc.local partitioning
   def setPartitioner: Partitioner = {
     if (sc.isLocal)
       new HashPartitioner(partitions)
@@ -89,9 +87,11 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def getFileReference(fp: String): String
 
-  def loadAdam(region: ReferenceRegion, fp: String): RDD[(ReferenceRegion, T)]
+  def loadAdam(region: ReferenceRegion, fp: String): RDD[T]
 
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[(ReferenceRegion, T)]
+  def loadFromFile(region: ReferenceRegion, k: String): RDD[T]
+
+  def put(region: ReferenceRegion, ks: List[String])
 
   def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, S]] = {
     multiget(region, List(k))
@@ -119,37 +119,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
         Option(intRDD.filterByInterval(region))
       case None =>
         None
-    }
-  }
-
-  /**
-   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
-   * Fetches the data from disk, using predicates and range filtering
-   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
-   *
-   * @param region ReferenceRegion in which data is retreived
-   * @param ks to be retreived
-   */
-  protected def put(region: ReferenceRegion, ks: List[String]) = {
-    val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) =>
-        val end =
-          Math.min(region.end, seqRecord.get.length)
-        val start = Math.min(region.start, end)
-        val reg = new ReferenceRegion(region.referenceName, start, end)
-        ks.map(k => {
-          val data = loadFromFile(reg, k).asInstanceOf[RDD[(ReferenceRegion, S)]]
-          if (intRDD == null) {
-            intRDD = IntervalRDD(data)
-            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-          } else {
-            intRDD = intRDD.multiput(data)
-            intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-          }
-        })
-        rememberValues(region, ks)
-      case None =>
     }
   }
 

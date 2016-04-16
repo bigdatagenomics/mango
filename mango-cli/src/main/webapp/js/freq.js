@@ -23,10 +23,18 @@ function renderJsonCoverage(data, i) {
   maxFreq = d3.max(data, function(d) {return d.freq});
   maxFreq = typeof maxFreq != "undefined" ? maxFreq : 0;
 
+  data = data.sort(function(a, b){ return d3.ascending(a.base, b.base); })
+
+  // add first and last elements which may be removed from sampling
+  if (data[0].base > viewRegStart) {
+    data.unshift({base: 0, freq: data[0].freq});
+  }
+  if (data[data.length -1].base < viewRegEnd) {
+     data.push({base: viewRegEnd, freq: data[data.length - 1].freq})
+  }
+
   // Create the scale for the x axis
-  var xAxisScale = d3.scale.linear()
-    .domain([viewRegStart, viewRegEnd])
-    .range([0, width]);
+  var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
 
   // Create the scale for the y axis
   var yAxisScale = d3.scale.linear()
@@ -40,9 +48,10 @@ function renderJsonCoverage(data, i) {
 
   // Specify the area for the data being displayed
   var freqArea = d3.svg.area()
-    .x(function(d){return (d.base-viewRegStart)/(viewRegEnd-viewRegStart) * width;})
+    .x(function(d){return xAxisScale(d.base);})
     .y0(height)
-    .y1(function(d){return dataScale(maxFreq-d.freq);});
+    .y1(function(d){return dataScale(maxFreq-d.freq);})
+    .interpolate("basis");
 
   var removed = svgContainer[samples[i]].selectAll("path").remove()
 
