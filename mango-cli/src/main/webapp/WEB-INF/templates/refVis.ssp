@@ -65,10 +65,9 @@ function refVis(dictionary){
   });                                                           
   
   path.on('click', function(d) {
-    var start = Math.round(d.data.length/2.);
-    var end =  Math.round(d.data.length/2. +1000);
-    render(d.data.name, start,end, 50); 
-    document.getElementById("autocomplete").value = d.data.name+":"+start.toString()+"-"+end;
+    var end = 1000;// Show first 1000 , might want to so something more sophisticated here...//d.data.length/100;
+    render(d.data.name, 0,end, 50); 
+    document.getElementById("autocomplete").value = d.data.name+":0-"+end;
   });  
 
   path.on('mouseout', function() {                              
@@ -76,5 +75,4 @@ function refVis(dictionary){
   });                                                           
              
 }
-
 </script>

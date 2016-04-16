@@ -16,7 +16,6 @@
     </div>    
 
 <% render("templates/sidebar.ssp")%>
-
 <script>
   var viewRefName = "${viewRegion._1}";
   var viewRegStart = parseInt(${viewRegion._2}, 10);
