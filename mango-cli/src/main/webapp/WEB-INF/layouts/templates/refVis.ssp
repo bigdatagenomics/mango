@@ -64,9 +64,17 @@ function refVis(dictionary){
     tooltip.style('display', 'block');                          
   });                                                           
   
+  path.on('click', function(d) {
+    var start = Math.round(d.data.length/2.);
+    var end =  Math.round(d.data.length/2. +1000);
+    render(d.data.name, start,end, 50); 
+    document.getElementById("autocomplete").value = d.data.name+":"+start.toString()+"-"+end;
+  });  
+
   path.on('mouseout', function() {                              
     tooltip.style('display', 'none');                           
   });                                                           
              
 }
+
 </script>
