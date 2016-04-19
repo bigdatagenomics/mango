@@ -127,7 +127,7 @@ object MergedAlignmentRecordLayout extends Logging {
    * @param alignmentData: Map of alignment data
    * @return Map of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def diffRecords(sampleIds: List[String], alignmentData: Map[String, List[MutationCount]]): Map[String, Iterable[SampleMisMatchCount]] = {
+  def diffRecords(sampleIds: List[String], alignmentData: Map[String, List[MutationCount]]): Map[String, List[MutationCount]] = {
     sampleIds.length match {
       case 2 => {
         val primarySampleIndels = alignmentData.get(sampleIds(0)).get.filter(f => f.op != "M")
@@ -156,11 +156,12 @@ object MergedAlignmentRecordLayout extends Logging {
         val singleOutputPairs: Iterable[SampleMisMatchCount] = basePairings.filter(_.length == 1).map(f => f(0))
         val doublePairs = basePairings.filter(_.length > 1)
         val doubleOutputPairs: Iterable[SampleMisMatchCount] = doublePairs.flatMap(f => f(0).diffMisMatch(f(1))).filter(f => f.mutation.count.nonEmpty)
-        val mismatchPairs: Map[String, Iterable[SampleMisMatchCount]] = (singleOutputPairs ++ doubleOutputPairs).groupBy(f => f.sample)
+        val mismatchPairs: Map[String, List[MutationCount]] = (singleOutputPairs ++ doubleOutputPairs)
+          .groupBy(f => f.sample).map(f => (f._1, f._2.map(b => b.mutation).toList))
         mismatchPairs
       }
       case _ => {
-        Map[String, Iterable[SampleMisMatchCount]]()
+        Map[String, List[MutationCount]]()
       }
     }
   }

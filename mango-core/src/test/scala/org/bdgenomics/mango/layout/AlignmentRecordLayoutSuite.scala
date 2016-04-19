@@ -226,8 +226,8 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     assert(diffs.keySet.contains(sampleIds(0)))
     assert(diffs.keySet.contains(sampleIds(1)))
-    assert(diffs.getOrElse(sampleIds(0), List()).asInstanceOf[List[MutationCount]].length == 1)
-    assert(diffs.getOrElse(sampleIds(1), List()).asInstanceOf[List[MutationCount]].length == 2)
+    assert(diffs.getOrElse(sampleIds(0), List()).length == 1)
+    assert(diffs.getOrElse(sampleIds(1), List()).length == 2)
   }
 
 }
