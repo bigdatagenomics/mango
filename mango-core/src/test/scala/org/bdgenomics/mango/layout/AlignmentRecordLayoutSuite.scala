@@ -24,7 +24,7 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 
 class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
-  sparkTest("test correct matePairs") {
+  /*sparkTest("test correct matePairs") {
 
     val read1 = AlignmentRecord.newBuilder
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
@@ -183,6 +183,170 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val result = alignmentData.head
     assert(result._2.matePairs.length == 2)
     assert(result._2.matePairs.filter(_.track == 0).length == 1)
+  }*/
+
+  sparkTest("test correct formatting and mismatches") {
+    val read1 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1L)
+      .setEnd(6L)
+      .setMapq(50)
+      .setReadName("read")
+      .setSequence("AAAAT")
+      .build
+
+    val read2 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setStart(7L)
+      .setRecordGroupSample("Sample")
+      .setEnd(11L)
+      .setMapq(50)
+      .setReadName("read")
+      .setSequence("AAAAT")
+      .build
+
+    val mismatch1 = List(MisMatch("M", 1, 1, "A", "T"))
+    val mismatch2 = List(MisMatch("M", 7, 1, "A", "T"))
+
+    val region = new ReferenceRegion("chrM", 1, 5)
+    val sampleIds: List[String] = List("Sample")
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(
+      List(CalculatedAlignmentRecord(read1, mismatch1),
+        CalculatedAlignmentRecord(read2, mismatch2)), 1).keyBy(r => ReferenceRegion(r.record))
+
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
+    val result = alignmentData.head
+    assert(result._2.length == 2)
+    assert(result._2.head.mismatches == mismatch1)
+    assert(result._2.head.readName == "read")
+    assert(result._2.head.start == 1L)
+    assert(result._2.head.end == 6L)
+    assert(result._2.head.sequence == "AAAAT")
+    assert(result._2.head.cigar == "5M")
+    assert(result._2.head.mapq == 50)
+  }
+
+  sparkTest("test multiple sample IDs") {
+    val read1 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1L)
+      .setEnd(6L)
+      .setMapq(50)
+      .setReadName("read1")
+      .setSequence("AAAAT")
+      .build
+
+    val read2 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("10M")
+      .setStart(30L)
+      .setRecordGroupSample("Sample")
+      .setEnd(40L)
+      .setMapq(50)
+      .setReadName("read1")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val read3 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(9L)
+      .setEnd(14L)
+      .setMapq(50)
+      .setReadName("read2")
+      .setSequence("AAAAT")
+      .build
+
+    val read4 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("10M")
+      .setStart(18L)
+      .setMapq(50)
+      .setRecordGroupSample("Sample2")
+      .setEnd(28L)
+      .setReadName("read2")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 40)
+    val sampleIds: List[String] = List("Sample", "Sample2")
+    val d: List[CalculatedAlignmentRecord] = List(
+      CalculatedAlignmentRecord(read1, List()),
+      CalculatedAlignmentRecord(read2, List()),
+      CalculatedAlignmentRecord(read3, List()),
+      CalculatedAlignmentRecord(read4, List()))
+
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
+    assert(alignmentData("Sample").length == 3)
+    assert(alignmentData("Sample2").length == 1)
+  }
+
+  sparkTest("testing filter") {
+    val read1 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1L)
+      .setEnd(6L)
+      .setMapq(50)
+      .setReadName("read1")
+      .setSequence("AAAAT")
+      .build
+
+    val read2 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("10M")
+      .setStart(30L)
+      .setRecordGroupSample("Sample2")
+      .setEnd(40L)
+      .setMapq(50)
+      .setReadName("read1")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val read3 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample3")
+      .setStart(9L)
+      .setEnd(14L)
+      .setMapq(50)
+      .setReadName("read2")
+      .setSequence("AAAAT")
+      .build
+
+    val read4 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("10M")
+      .setStart(18L)
+      .setMapq(50)
+      .setRecordGroupSample("Sample4")
+      .setEnd(28L)
+      .setReadName("read2")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 40)
+    val sampleIds: List[String] = List("Sample", "Sample2")
+    val d: List[CalculatedAlignmentRecord] = List(
+      CalculatedAlignmentRecord(read1, List()),
+      CalculatedAlignmentRecord(read2, List()),
+      CalculatedAlignmentRecord(read3, List()),
+      CalculatedAlignmentRecord(read4, List()))
+
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
+    assert(alignmentData("Sample").length == 1)
+    assert(alignmentData("Sample2").length == 1)
+    assert(!alignmentData.keySet.exists(_ == "Sample3"))
+    assert(!alignmentData.keySet.exists(_ == "Sample4"))
   }
 
 }
