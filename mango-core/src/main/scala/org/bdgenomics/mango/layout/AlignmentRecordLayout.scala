@@ -39,13 +39,12 @@ object AlignmentRecordLayout extends Logging {
    * @param sampleIds: List of sample identifiers to be rendered
    * @return List of ReadJsons, which takes (AlignmentRecord, List[MisMatch]) tuples and picks the required information and mismatches
    */
-  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[String, List[ReadJson]] = {
-    val mappingTuples: List[ReadJson] = {
-        rdd.mapPartitions(AlignmentRecordLayout(_)).collect
+  def apply(rdd: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[String, Array[ReadJson]] = {
+    val mappingTuples: Array[ReadJson] = {
+      rdd.mapPartitions(AlignmentRecordLayout(_)).collect
     }
-    mappingTuples.groupBy(_.sampleId)
-    mappingTuples.filterKeys { sampleIds.contains(_) }
-    mappingTuples
+    val sampleMappedTuples = mappingTuples.groupBy(_.sampleId)
+    sampleMappedTuples.filterKeys { sampleIds.contains(_) }
   }
 
   /**
@@ -56,7 +55,7 @@ object AlignmentRecordLayout extends Logging {
    * @return Iterator of Read Tracks containing json for reads, mismatches and mate pairs
    */
   def apply(iter: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]): Iterator[ReadJson] = {
-    new AlignmentRecordLayout(iter).toIterator
+    new AlignmentRecordLayout(iter).collect
   }
 
 }
@@ -117,16 +116,18 @@ object MergedAlignmentRecordLayout extends Logging {
  *
  * @param values The set of (Reference, AlignmentRecord) tuples to lay out in tracks
  */
-class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackedLayout[CalculatedAlignmentRecord, ReadsTrackBuffer] with Logging {
+class AlignmentRecordLayout(values: Iterator[(ReferenceRegion, CalculatedAlignmentRecord)]) extends Logging {
   val sequence = values.toList
-  groupBySample
+  val sequenceGroupedBySample = groupBySample
 
   def groupBySample: List[ReadJson] = {
     sequence.map(rec => ReadJson(rec, rec._2.record.getRecordGroupSample))
   }
 
-  def collect: Iterator[ReadsTrack] =
-    trackBuilder.map(t => Track(t)).toIterator
+  def collect: Iterator[ReadJson] = {
+    sequenceGroupedBySample.toIterator
+  }
+
 }
 
 /**
@@ -149,20 +150,6 @@ object ReadJson {
    */
   def apply(rec: (ReferenceRegion, CalculatedAlignmentRecord), sampleId: String): ReadJson = {
     new ReadJson(sampleId, rec._2.record.getReadName, rec._2.record.getStart, rec._2.record.getEnd, rec._2.record.getReadNegativeStrand, rec._2.record.getSequence, rec._2.record.getCigar, rec._2.record.getMapq, rec._2.mismatches) //removed track
-  }
-}
-
-object MatePairJson {
-
-  /**
-   * An implementation of MatePairJson which converts a list of MatePairs into MatePair Json
-   *
-   * @param recs The list of MatePairs to be layed out in json
-   * @param track js track number
-   * @return List of MatePair Json objects
-   */
-  def apply(recs: List[MatePair], track: Int): List[MatePairJson] = {
-    recs.map(r => MatePairJson(r.start, r.end, track))
   }
 }
 

@@ -272,9 +272,6 @@ case class MisMatch(op: String, refCurr: Long, length: Long, sequence: String, r
  */
 case class PointMisMatch(refCurr: Long, refBase: String, length: Long, indels: Map[String, Long], mismatches: Map[String, Long])
 
-// untracked Mismatch Json Object
-case class MisMatch(op: String, refCurr: Long, length: Long, sequence: String, refBase: String)
-
 //  count = Map[Base, Count]
 case class MisMatchCount(op: String, refCurr: Long, length: Long, refBase: String, count: Map[String, Long]) extends MutationCount
 // count = Map[indel (I or D), (Sequence, Count)
