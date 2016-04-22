@@ -201,7 +201,7 @@ class VizServlet extends ScalatraServlet {
                 AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
                   .filter(_._2.mismatches.size > 0)
 
-              val jsonData: Map[String, List[ReadJson]] = AlignmentRecordLayout(filteredData, sampleIds)
+              val jsonData: Map[String, Array[ReadJson]] = AlignmentRecordLayout(filteredData, sampleIds)
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = jsonData.get(sample)
@@ -246,7 +246,7 @@ class VizServlet extends ScalatraServlet {
               val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
                 AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
               val binSize = VizUtils.getBinSize(region, VizReads.screenSize)
-              val unfilteredAlignmentData: List[ReadJson] = AlignmentRecordLayout(data, sampleIds)
+              val unfilteredAlignmentData: Map[String, Array[ReadJson]] = AlignmentRecordLayout(dataOption.get.toRDD(), sampleIds)
               val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
               val freqData: Map[String, Iterable[FreqJson]] = VizReads.readsData.getFrequency(region, sampleIds, Option(VizReads.screenSize))
 
