@@ -1,0 +1,71 @@
+<!-- Sample Reads -->
+<%@ val rawSample: String %>
+<%@ val filteredSample: String %>
+
+<div id=${filteredSample} class="samples">
+
+    <div class="sampleLegend">
+        <div class="col-md-9 title">${rawSample}</div>
+        <div class='col-md-3'>
+            <input  value="viewAlignments"
+                    name="viewAlignments"
+                    type="checkbox"
+                    onClick='toggleAlignments()'
+                    id='viewAlignments${filteredSample}'
+                    class="viewAlignments">
+            <label for="viewAlignments">Alignments</label>
+        </div>
+    </div>
+
+    <div class="sampleCoverage">
+        <svg></svg>
+    </div>
+
+    <div class="mergedReads">
+        <svg></svg>
+    </div>
+
+    <div class="alignmentData">
+        <svg></svg>
+    </div>
+</div>
+
+<script>
+    var alignmentSelector = $(getAlignmentSelector('${filteredSample}'));
+    $(alignmentSelector).hide();
+
+    //Configuration Variables
+    var readsHeight = 100;
+    var padding = 3;
+    var readTrackHeight = 10;
+    var mismatchHeight = readsHeight - readTrackHeight;
+    var width = $(".graphArea").width();
+
+    // stores sample mismatch and indel data
+    var readCountSvgContainer = {};
+
+    // stores sample alignment data. Contains MODIFIED samples as keys
+    var readAlignmentRegion = {};
+
+    var yOffset = 200;
+
+    // bin size
+    var binSize = 1;
+
+
+    function toggleAlignments() {
+        if (!alignmentSelector.is(':visible')) {
+                renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, '${rawSample}');
+            }
+            $(alignmentSelector).slideToggle( "fast" );
+    }
+
+    // on enter submits search form for chromosomal position
+    $('.alignment-search').keypress(function (e) {
+        if (e.which == 13) {
+            checkForm(this.form);
+            return false;
+        }
+    });
+
+</script>

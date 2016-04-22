@@ -5,59 +5,63 @@
 <%@ val featuresExist: Boolean %>
 <% attributes("page") = "reads" %>
 
+<%@ val rawSamples: Array[String] = samples.split(",").distinct %>
+<%@ val filteredSamples: Map[String, String] = rawSamples.map(r =>  (r, r.replace("/",""))).toMap %>
+
+
 <html xmlns="http://www.w3.org/1999/html">
 
-    <% render("../templates/head.ssp") %>
-    <% render("../navigation/navigation.ssp") %>
+<% render("templates/head.ssp") %>
+<% render("navigation/navigation.ssp") %>
+<% render("navigation/panAndZoom.ssp", Map("page" -> "reads")) %>
 
-    <nav id="menu" class="panel" role="navigation">
-        <h2> Reference Panel </h2>
-    </nav>
-    <% render("../navigation/panAndZoom.ssp", Map("page" -> "reads")) %>
-
-    <div class="main">
-          <div class="graphArea" id="refArea"></div>
-          <div class="graphArea" id="featArea"></div>
-          <div class="graphArea" id="varArea"></div>
-          <div class="graphArea" id="readsArea"></div>
+<div class="main">
+    <div class="graphArea" id="refArea"></div>
+    <div class="graphArea" id="featArea"></div>
+    <div class="graphArea" id="varArea"></div>
+    <div class="graphArea" id="readsArea">
+        <% rawSamples.foreach(s =>
+            render("templates/reads.ssp", Map(("rawSample" -> s), ("filteredSample" -> filteredSamples.get(s).get))))
+        %>
     </div>
+</div>
 
-    <script src="js/utilities.js"></script>
-    <script src="js/d3utilities.js"></script>
-    <script src="js/formSubmit.js"></script>
+<% render("templates/sidebar.ssp") %>
 
-    <script>
-      $(document).ready(function() {
-          $('.menu-link').bigSlide();
-      });
+<script>
+    $(document).ready(function() {
+        $('.menu-link').bigSlide();
+    });
 
-      <!-- Define Global Variables -->
-      var viewRefName = "${viewRegion._1}";
-      var viewRegStart = parseInt(${viewRegion._2}, 10);
-      var mapQuality = 100;
-      var viewRegEnd = parseInt(${viewRegion._3}, 10);
-      var readsExist = ${readsExist};
-      var variantsExist = ${variantsExist};
-      var featuresExist = ${featuresExist};
-      var refSequence = null;
+    <!-- Define Global Variables -->
+    var viewRefName = "${viewRegion._1}";
+    var viewRegStart = parseInt(${viewRegion._2}, 10);
+    var mapQuality = 100;
+    var viewRegEnd = parseInt(${viewRegion._3}, 10);
+    var readsExist = ${readsExist};
+    var variantsExist = ${variantsExist};
+    var featuresExist = ${featuresExist};
+    var refSequence = null;
 
-      var sampleId = "${samples}";
-      var rawSamples = sampleId.split(",").unique();
-      var samples = filterNames(rawSamples);
+    var sampleIds = "${samples}";
+    var rawSamples = sampleIds.split(",").unique();
+    var samples = filterNames(rawSamples);
 
-      // object used to track sample names and their corresponding html identifiers
-      var sampleMap = {};
-      for (var i = 0; i < rawSamples.length; i++){
-        sampleMap[filterName(rawSamples[i])] = rawSamples[i];
-      }
+    // object used to track sample names and their corresponding html identifiers
+    var sampleMap = {};
+    for (var i = 0; i < rawSamples.length; i++){
+    sampleMap[filterName(rawSamples[i])] = rawSamples[i];
+    }
 
-      var width = window.innerWidth - 18;
-    </script>
+    var width = window.innerWidth - 18;
 
-    <script src="js/reads.js"></script>
-    <script src="js/freq.js"></script>
-    <script src="js/variants.js"></script>
-    <script src="js/reference.js"></script>
-    <script src="js/overall.js"></script>
+
+</script>
+
+<script src="js/reads.js"></script>
+<script src="js/freq.js"></script>
+<script src="js/variants.js"></script>
+<script src="js/reference.js"></script>
+<script src="js/overall.js"></script>
 
 </html>
