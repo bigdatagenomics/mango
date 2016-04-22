@@ -190,7 +190,8 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
           var data = alignmentData.map(r => (r._1, CalculatedAlignmentRecord(r._2, MismatchLayout(r._2, ref.get, reg))))
           data = data.filter(r => r._2.mismatches.size > 0)
-
+          //TODO:Resolve data materialization issue
+          val z = data.first()
           if (intRDD == null) {
             intRDD = IntervalRDD(data)
             intRDD.persist(StorageLevel.MEMORY_AND_DISK)

@@ -267,7 +267,7 @@ class VizServlet extends ScalatraServlet {
                       ", \"indels\": " + write(sampleData.get.filter(_.op != "M")) +
                       ", \"mismatches\": " + write(sampleData.get.filter(_.op == "M")) +
                       ", \"binSize\": " + binSize +
-                      ", \"freq\": " + write(freqData.get(sample)) + "},"
+                      ", \"freq\": " + write(freqData.getOrElse(sample, "")) + "},"
                   case None =>
                     readRetJson += "\"" + sample + "\":" +
                       "{ \"filename\": " + write(fileMap(sample)) + "},"
