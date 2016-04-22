@@ -288,4 +288,65 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     assert(alignmentData("Sample2").length == 1)
   }
 
+  sparkTest("testing filter") {
+    val read1 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1L)
+      .setEnd(6L)
+      .setMapq(50)
+      .setReadName("read1")
+      .setSequence("AAAAT")
+      .build
+
+    val read2 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("10M")
+      .setStart(30L)
+      .setRecordGroupSample("Sample2")
+      .setEnd(40L)
+      .setMapq(50)
+      .setReadName("read1")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val read3 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample3")
+      .setStart(9L)
+      .setEnd(14L)
+      .setMapq(50)
+      .setReadName("read2")
+      .setSequence("AAAAT")
+      .build
+
+    val read4 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("10M")
+      .setStart(18L)
+      .setMapq(50)
+      .setRecordGroupSample("Sample4")
+      .setEnd(28L)
+      .setReadName("read2")
+      .setSequence("AAAAAAAAAA")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 40)
+    val sampleIds: List[String] = List("Sample", "Sample2")
+    val d: List[CalculatedAlignmentRecord] = List(
+      CalculatedAlignmentRecord(read1, List()),
+      CalculatedAlignmentRecord(read2, List()),
+      CalculatedAlignmentRecord(read3, List()),
+      CalculatedAlignmentRecord(read4, List()))
+
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val alignmentData = AlignmentRecordLayout(data, sampleIds)
+    assert(alignmentData("Sample").length == 1)
+    assert(alignmentData("Sample2").length == 1)
+    assert(!alignmentData.keySet.exists(_ == "Sample3"))
+    assert(!alignmentData.keySet.exists(_ == "Sample4"))
+  }
+
 }
