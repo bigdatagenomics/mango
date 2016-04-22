@@ -36,7 +36,7 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
 
   if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || referencePath.endsWith(".adam")) {
     setSequenceDictionary(referencePath)
-    refRDD = sc.loadSequence(referencePath)
+    refRDD = sc.loadSequences(referencePath)
     if (!ResourceUtils.isLocal(referencePath, sc)) {
       refRDD.persist(StorageLevel.MEMORY_AND_DISK)
       log.info("Loaded reference file, size: ", refRDD.count)
@@ -57,13 +57,13 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
         val dict: SAMSequenceDictionary = createObj.makeSequenceDictionary(new File(filePath))
         SequenceDictionary(dict)
       } else if (filePath.endsWith(".adam")) {
-        sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
+        sc.loadDictionary[NucleotideContigFragment](filePath)
       } else {
         throw UnsupportedFileException("File type not supported")
       }
     } else {
       require(filePath.endsWith(".adam"), "To generate SequenceDictionary on remote cluster, must use adam files")
-      sc.adamDictionaryLoad[NucleotideContigFragment](filePath)
+      sc.loadDictionary[NucleotideContigFragment](filePath)
     }
   }
 
@@ -101,7 +101,7 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
       case Some(_) => {
         val end: Long = VizUtils.getEnd(region.end, seqRecord)
         val newRegion = ReferenceRegion(region.referenceName, region.start, end)
-        Option(refRDD.adamGetReferenceString(region).toUpperCase)
+        Option(refRDD.getReferenceString(region).toUpperCase)
       } case None => {
         None
       }
