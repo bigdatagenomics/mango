@@ -89,6 +89,16 @@ input[type="text"] {
     margin-left:15px;
 }
 
+.chart div {
+  font: 8px sans-serif;
+  background-color: steelblue;
+  text-align: left;
+  padding: 3px 3px 3px 10px;
+  margin: 1px;
+  color: white;
+  height:12px;
+}
+
 #refVis {
   height: 180px;
   position: relative;

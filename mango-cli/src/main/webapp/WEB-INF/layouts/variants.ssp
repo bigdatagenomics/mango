@@ -4,16 +4,15 @@
 
 <html>
 
-    <% render("templates/head.ssp")%>
-    <% render("navigation/navigation.ssp") %>
-    <% render("navigation/panAndZoom.ssp") %>
-
+    <% render("../templates/head.ssp")%>
+    <% render("../navigation/navigation.ssp") %>
+    <% render("../navigation/panAndZoom.ssp") %>
 
     <div class="main">
           <div class="graphArea" id="refArea"></div>
           <div class="graphArea" id="varFreqArea"></div>
           <div class="graphArea" id="varArea"></div>
-    </div>    
+    </div>
 
 <% render("templates/sidebar.ssp")%>
 <script>

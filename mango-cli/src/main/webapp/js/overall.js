@@ -12,6 +12,7 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 var refSequence;
 var sampleData;
 var sDict;
+
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
 
@@ -36,8 +37,9 @@ if (featuresExist === true) {
 // send pixel size for bining and initialize autocomplete
 var initJson =  "/init/" + Math.round($(".samples").width());
 d3.json(initJson, function(error, seqDict) {
-  sDict =seqDict;
+  sDict = seqDict;
   autoComplete(seqDict);
+  home(seqDict);
 });
 
 //All rendering of data, and everything setting new region parameters, is done here
