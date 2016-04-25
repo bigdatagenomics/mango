@@ -19,36 +19,42 @@ package org.bdgenomics.mango.RDD
 
 import java.io.File
 
+import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import htsjdk.samtools.SAMSequenceDictionary
-import org.apache.spark.rdd.RDD
+import net.liftweb.json.Serialization.write
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{ Logging, _ }
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.NucleotideContigFragment
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import org.bdgenomics.mango.layout.ConvolutionalSequence
 import org.bdgenomics.mango.models.UnsupportedFileException
+import org.bdgenomics.mango.tiling._
 import picard.sam.CreateSequenceDictionary
 
-class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable with Logging {
-
-  var refRDD: RDD[NucleotideContigFragment] = null
-
-  if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || referencePath.endsWith(".adam")) {
-    setSequenceDictionary(referencePath)
-    refRDD = sc.loadSequences(referencePath)
-    if (!ResourceUtils.isLocal(referencePath, sc)) {
-      refRDD.persist(StorageLevel.MEMORY_AND_DISK)
-      log.info("Loaded reference file, size: ", refRDD.count)
-    }
-  } else {
-    log.info("WARNING: Invalid reference file")
-    println("WARNING: Invalid reference file")
-  }
+class ReferenceRDD(sc: SparkContext, referencePath: String) extends LayeredTile with Serializable with Logging {
 
   val dict: SequenceDictionary = setSequenceDictionary(referencePath)
+  val refRDD: IntervalRDD[ReferenceRegion, String] = init
 
   def getSequenceDictionary: SequenceDictionary = dict
+
+  def init: IntervalRDD[ReferenceRegion, String] = {
+    if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || referencePath.endsWith(".adam")) {
+      val refRDD = IntervalRDD(sc.loadSequences(referencePath).map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength), r.getFragmentSequence)))
+      refRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      if (!ResourceUtils.isLocal(referencePath, sc)) {
+        refRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        log.info("Loaded reference file, size: ", refRDD.count)
+      }
+      refRDD
+    } else {
+      log.info("WARNING: Invalid reference file")
+      println("WARNING: Invalid reference file")
+      null
+    }
+  }
 
   def setSequenceDictionary(filePath: String): SequenceDictionary = {
     if (ResourceUtils.isLocal(filePath, sc)) {
@@ -74,16 +80,16 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
    * @param region: ReferenceRegion to be viewed
    * @return Option of Padded Reference
    */
-  def getPaddedReference(region: ReferenceRegion, isPlaceholder: Boolean = false): (ReferenceRegion, Option[String]) = {
+  def getPaddedReference(region: ReferenceRegion, isPlaceholder: Boolean = false): (ReferenceRegion, String) = {
     val padding = 200
     val start = Math.max(0, region.start - padding)
     val end = VizUtils.getEnd(region.end, dict(region.referenceName))
     val paddedRegion = ReferenceRegion(region.referenceName, start, end)
     if (isPlaceholder) {
       val n = (end - start).toInt
-      (paddedRegion, Option(List.fill(n)("N").mkString))
+      (paddedRegion, List.fill(n)("N").mkString)
     } else {
-      val reference = getReference(paddedRegion)
+      val reference = this.get(paddedRegion)
       (paddedRegion, reference)
 
     }
@@ -95,17 +101,25 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends Serializable
    * @param region: ReferenceRegion to be viewed
    * @return Option of Padded Reference
    */
-  def getReference(region: ReferenceRegion): Option[String] = {
+  def getL0(region: ReferenceRegion, ids: Option[List[String]] = None): String = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
         val end: Long = VizUtils.getEnd(region.end, seqRecord)
         val newRegion = ReferenceRegion(region.referenceName, region.start, end)
-        Option(refRDD.getReferenceString(region).toUpperCase)
-      } case None => {
-        None
+        refRDD.filterByInterval(region).collect.map(_._2).reduce((s1, s2) => s1 + s2)
+      }
+      case None => {
+        "N" * (region.end - region.start).toInt
       }
     }
   }
-}
 
+  def getConvolved(region: ReferenceRegion, ids: Option[List[String]] = None, patchSize: Int, stride: Int): String = {
+    val str = getL0(ReferenceRegion(region.referenceName, region.start, region.end))
+    println(str)
+    ConvolutionalSequence.convolveSequence(str, patchSize, stride).foreach(r => print(r + " "))
+    write(ConvolutionalSequence.convolveSequence(str, patchSize, stride))
+  }
+
+}

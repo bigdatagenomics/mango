@@ -73,8 +73,8 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * cooresponding frequency.
    */
 
-  def getFrequency(region: ReferenceRegion, sampleIds: List[String], binSize: Int = 1000): Array[String] = {
-    freq.multiget(region, sampleIds).collect
+  def getFrequency(region: ReferenceRegion, sampleIds: List[String]): String = {
+    freq.get(region, sampleIds)
   }
 
   /*
@@ -105,12 +105,15 @@ class AlignmentRecordMaterialization(s: SparkContext,
   }
 
   override def loadFromFile(region: ReferenceRegion, k: String): RDD[AlignmentRecord] = {
-    if (!fileMap.containsKey(k)) {
-      log.error("Key not in FileMap")
-      null
+    try {
+      val fp = fileMap(k)
+      AlignmentRecordMaterialization.loadAlignmentData(sc: SparkContext, region, fp)
+    } catch {
+      case e: NoSuchElementException => {
+        log.error("Key not in FileMap")
+        null
+      }
     }
-    val fp = fileMap(k)
-    AlignmentRecordMaterialization.loadAlignmentData(sc: SparkContext, region, fp)
   }
 
   override def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, CalculatedAlignmentRecord]] = {
@@ -126,6 +129,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
   override def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, CalculatedAlignmentRecord]] = {
     val seqRecord = dict(region.referenceName)
     val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+    val (reg, ref) = refRDD.getPaddedReference(region)
     seqRecord match {
       case Some(_) => {
         regionsOpt match {
@@ -137,13 +141,92 @@ class AlignmentRecordMaterialization(s: SparkContext,
             // DO NOTHING
           }
         }
-        // TODO: return data to multiget instead of making subsequent call to RDD
+        // Calculate mismatches not yet calculated in reference region specifiecd above
+        intRDD = intRDD.mapValues(r => {
+          if (r._1.overlaps(region)) {
+            (r._1, CalculatedAlignmentRecord(r._2.record, Some(MismatchLayout(r._2.record, ref, reg))))
+          } else r
+        })
+
         Option(intRDD.filterByInterval(region))
       } case None => {
         None
       }
     }
   }
+
+  /*
+   * gets raw alignment data from persistent storage. Does not calculate mismatches
+   *
+   * @param region: ReferenceRegion to be queried
+   * @param ks: List[String] sample ids to get data for
+   * @return RDD of Alignment records matching query
+   */
+  def getRaw(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, AlignmentRecord]] = {
+    val seqRecord = dict(region.referenceName)
+    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+    seqRecord match {
+      case Some(_) => {
+        regionsOpt match {
+          case Some(_) => {
+            for (r <- regionsOpt.get) {
+              putRaw(r, ks)
+            }
+          } case None => {
+            // DO NOTHING
+          }
+        }
+        // TODO: return data to multiget instead of making subsequent call to RDD
+        Option(intRDD.filterByInterval(region).mapValues(r => (r._1, r._2.record)))
+      } case None => {
+        None
+      }
+    }
+  }
+
+  /**
+   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
+   * Fetches the data from disk, using predicates and range filtering
+   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
+   *
+   * @param region ReferenceRegion in which data is retreived
+   * @param ks to be retreived
+   */
+  private def putRaw(region: ReferenceRegion, ks: List[String]) = {
+    val seqRecord = dict(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val (reg, ref) = refRDD.getPaddedReference(region)
+
+        var alignments: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
+        ks.map(k => {
+          val data = loadFromFile(region, k)
+          alignments = alignments.union(data)
+        })
+
+        // key data by ReferenceRegion
+        val keyedAlignments = alignments
+          .map(r => (ReferenceRegion(r), r))
+          .partitionBy(partitioner)
+
+        // map to CalculatedAlignmentRecord
+        val data = keyedAlignments.map(r => (r._1, CalculatedAlignmentRecord(r._2)))
+
+        // insert into IntervalRDD
+        if (intRDD == null) {
+          intRDD = IntervalRDD(data)
+          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        } else {
+          intRDD = intRDD.multiput(data)
+          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        }
+        bookkeep.rememberValues(region, ks)
+      }
+      case None => {
+      }
+    }
+  }
+
   /**
    *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
    * Fetches the data from disk, using predicates and range filtering
@@ -169,9 +252,8 @@ class AlignmentRecordMaterialization(s: SparkContext,
           .map(r => (ReferenceRegion(r), r))
           .partitionBy(partitioner)
 
-        // map to CalculatedAlignmentRecord
-        val data = keyedAlignments.map(r => (r._1, CalculatedAlignmentRecord(r._2, MismatchLayout(r._2, ref.get, reg))))
-        // .filter(r => r._2.mismatches.size > 0)
+        val data = keyedAlignments.map(r => (r._1, CalculatedAlignmentRecord(r._2, Some(MismatchLayout(r._2, ref, reg)))))
+          .filter(r => r._2.mismatches.size > 0)
 
         // insert into IntervalRDD
         if (intRDD == null) {

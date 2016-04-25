@@ -53,8 +53,8 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
     val data =
-      Array(CalculatedAlignmentRecord(read1, mismatch1),
-        CalculatedAlignmentRecord(read2, mismatch2)).map(r => (ReferenceRegion(r.record), r))
+      Array(CalculatedAlignmentRecord(read1, Some(mismatch1)),
+        CalculatedAlignmentRecord(read2, Some(mismatch2))).map(r => (ReferenceRegion(r.record), r))
 
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     assert(alignmentData.head._2.matePairs.length == 1)
@@ -109,10 +109,10 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 1, 40)
     val sampleIds: List[String] = List("Sample")
     val d: Array[CalculatedAlignmentRecord] = Array(
-      CalculatedAlignmentRecord(read1, List()),
-      CalculatedAlignmentRecord(read2, List()),
-      CalculatedAlignmentRecord(read3, List()),
-      CalculatedAlignmentRecord(read4, List()))
+      CalculatedAlignmentRecord(read1),
+      CalculatedAlignmentRecord(read2),
+      CalculatedAlignmentRecord(read3),
+      CalculatedAlignmentRecord(read4))
 
     val data: Array[(ReferenceRegion, CalculatedAlignmentRecord)] = d.map(r => (ReferenceRegion(r.record), r))
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
@@ -171,10 +171,10 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
     val sampleIds: List[String] = List("Sample")
 
     val d: Array[CalculatedAlignmentRecord] = Array(
-      CalculatedAlignmentRecord(read1, List()),
-      CalculatedAlignmentRecord(read2, List()),
-      CalculatedAlignmentRecord(read3, List()),
-      CalculatedAlignmentRecord(read4, List()))
+      CalculatedAlignmentRecord(read1),
+      CalculatedAlignmentRecord(read2),
+      CalculatedAlignmentRecord(read3),
+      CalculatedAlignmentRecord(read4))
 
     val data = d.map(r => (ReferenceRegion(r.record), r))
 

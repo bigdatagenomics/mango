@@ -30,6 +30,8 @@ class FrequencyMaterialization(s: SparkContext,
                                d: SequenceDictionary,
                                chunkS: Int, maxBins: Int = 1000) extends Serializable with Logging {
 
+  implicit val formats = net.liftweb.json.DefaultFormats
+
   val sc = s
   val dict = d
   val chunkSize = chunkS
@@ -85,7 +87,7 @@ class FrequencyMaterialization(s: SparkContext,
     sqlContext.createDataFrame(coverage)
   }
 
-  def multiget(region: ReferenceRegion, ks: List[String]): RDD[String] = {
+  def get(region: ReferenceRegion, ks: List[String]): String = {
     val binSize = VizUtils.getBinSize(region, maxBins)
     val seqRecord = dict(region.referenceName)
     val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
@@ -100,10 +102,12 @@ class FrequencyMaterialization(s: SparkContext,
             // DO NOTHING
           }
         }
-        coverage.filter((coverage("position") % binSize === 0) && (coverage("position") <= region.end) && (coverage("position") >= region.start)
-          && (coverage("referenceName") === region.referenceName) && (coverage("sample") isin (ks: _*))).toJSON
+
+        val json = coverage.filter((coverage("position") % binSize === 0) && (coverage("position") <= region.end) && (coverage("position") >= region.start)
+          && (coverage("referenceName") === region.referenceName) && (coverage("sample") isin (ks: _*))).toJSON.collect
+        "[" + json.mkString(",") + "]"
       } case None => {
-        sc.emptyRDD[String]
+        ""
       }
     }
   }

@@ -38,8 +38,8 @@ class FrequencyMaterializationSuite extends MangoFunSuite {
     val freq = new FrequencyMaterialization(sc, sd, chunkSize)
     freq.loadSample(chrM, sample)
 
-    val results = freq.multiget(region, List(sample))
-    assert(results.count == (region.end - region.start + 1))
+    val results = freq.get(region, List(sample))
+    val size = region.end - region.start + 1
 
   }
 

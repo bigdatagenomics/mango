@@ -57,13 +57,25 @@ function renderMergedReads(refName, start, end) {
         var selector = "#" + samples[i];
         renderd3Line(readCountSvgContainer[samples[i]], height);
 
+
         sampleData[i] = [];
         sampleData[i].mismatches = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
         sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
-        binSize = typeof data['binSize'] != "undefined" ? data['binSize'] : 1;
+        sampleData[i].layers = typeof data['layers'] != "undefined" ? data['layers'] : 0;
 
-        renderMismatchCounts(sampleData[i].mismatches, samples[i]);
-        renderIndelCounts(sampleData[i].indels, samples[i]);
+        // Zoomed out too far for resolution. print mismatch path instead.
+        if(sampleData[i].layers > 0) {
+            sampleData[i] = data.data;
+            indelSvgContainer[samples[i]].selectAll(".indel").remove();
+            readCountSvgContainer[samples[i]].selectAll("g").remove();
+            renderMismatchPath(sampleData[i], samples[i]);
+        } else {
+            var removed = readCountSvgContainer[samples[i]].selectAll("path").remove();
+            renderMismatchCounts(sampleData[i].mismatches, samples[i]);
+            renderIndelCounts(sampleData[i].indels, samples[i]);
+        }
+
+
     }
     stopWait("#readsArea");
   });
