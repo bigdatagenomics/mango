@@ -420,6 +420,11 @@
         <version>1.6.1</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-sql_2.10</artifactId>
+        <version>${spark.version}</version>
+      </dependency>
+      <dependency>
         <groupId>net.liftweb</groupId>
         <artifactId>lift-json_2.10</artifactId>
         <version>2.6.2</version>

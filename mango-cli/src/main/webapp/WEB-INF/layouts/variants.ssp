@@ -8,6 +8,7 @@
     <% render("navigation/navigation.ssp") %>
     <% render("navigation/panAndZoom.ssp") %>
 
+
     <div class="main">
           <div class="graphArea" id="refArea"></div>
           <div class="graphArea" id="varFreqArea"></div>

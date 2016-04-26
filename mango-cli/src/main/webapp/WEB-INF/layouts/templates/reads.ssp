@@ -1,8 +1,9 @@
 <!-- Sample Reads -->
 <%@ val rawSample: String %>
 <%@ val filteredSample: String %>
+<% val alignment = filteredSample.concat(">.alignmentData") %>
 
-<div id=${filteredSample} class="samples">
+<div id="${filteredSample}" class="samples">
 
     <div class="sampleLegend">
         <div class="col-md-9 title">${rawSample}</div>
@@ -10,24 +11,26 @@
             <input  value="viewAlignments"
                     name="viewAlignments"
                     type="checkbox"
-                    onClick='toggleAlignments()'
+                    onClick="toggleAlignments('${rawSample}')"
                     id='viewAlignments${filteredSample}'
                     class="viewAlignments">
             <label for="viewAlignments">Alignments</label>
         </div>
     </div>
 
-    <div class="sampleCoverage">
-        <svg></svg>
+    <div class="sampleSummary">
+        <svg class="coverage-svg absolute"></svg>
+        <svg class="mismatch-svg absolute"></svg>
     </div>
 
-    <div class="mergedReads">
+    <div class="sampleIndels">
         <svg></svg>
     </div>
 
     <div class="alignmentData">
         <svg></svg>
     </div>
+
 </div>
 
 <script>
@@ -38,7 +41,8 @@
     var readsHeight = 100;
     var padding = 3;
     var readTrackHeight = 10;
-    var mismatchHeight = readsHeight - readTrackHeight;
+
+    var mismatchHeight = readsHeight;
     var width = $(".graphArea").width();
 
     // stores sample mismatch and indel data
@@ -48,17 +52,6 @@
     var readAlignmentRegion = {};
 
     var yOffset = 200;
-
-    // bin size
-    var binSize = 1;
-
-
-    function toggleAlignments() {
-        if (!alignmentSelector.is(':visible')) {
-                renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, '${rawSample}');
-            }
-            $(alignmentSelector).slideToggle( "fast" );
-    }
 
     // on enter submits search form for chromosomal position
     $('.alignment-search').keypress(function (e) {

@@ -17,7 +17,6 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
@@ -53,9 +52,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(
-      List(CalculatedAlignmentRecord(read1, mismatch1),
-        CalculatedAlignmentRecord(read2, mismatch2)), 1).keyBy(r => ReferenceRegion(r.record))
+    val data =
+      Array(CalculatedAlignmentRecord(read1, mismatch1),
+        CalculatedAlignmentRecord(read2, mismatch2)).map(r => (ReferenceRegion(r.record), r))
 
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     assert(alignmentData.head._2.matePairs.length == 1)
@@ -109,13 +108,13 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 40)
     val sampleIds: List[String] = List("Sample")
-    val d: List[CalculatedAlignmentRecord] = List(
+    val d: Array[CalculatedAlignmentRecord] = Array(
       CalculatedAlignmentRecord(read1, List()),
       CalculatedAlignmentRecord(read2, List()),
       CalculatedAlignmentRecord(read3, List()),
       CalculatedAlignmentRecord(read4, List()))
 
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val data: Array[(ReferenceRegion, CalculatedAlignmentRecord)] = d.map(r => (ReferenceRegion(r.record), r))
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     val result = alignmentData.head
     assert(result._2.matePairs.length == 2)
@@ -171,13 +170,13 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val region = new ReferenceRegion("chrM", 1, 48)
     val sampleIds: List[String] = List("Sample")
 
-    val d: List[CalculatedAlignmentRecord] = List(
+    val d: Array[CalculatedAlignmentRecord] = Array(
       CalculatedAlignmentRecord(read1, List()),
       CalculatedAlignmentRecord(read2, List()),
       CalculatedAlignmentRecord(read3, List()),
       CalculatedAlignmentRecord(read4, List()))
 
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val data = d.map(r => (ReferenceRegion(r.record), r))
 
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     val result = alignmentData.head

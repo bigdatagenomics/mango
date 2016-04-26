@@ -27,6 +27,7 @@ import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, Sequence
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
+import org.bdgenomics.mango.util.Bookkeep
 
 import scala.reflect.ClassTag
 
@@ -34,15 +35,16 @@ import scala.reflect.ClassTag
  * Handles loading and tracking of data from persistent storage into memory for Genotype data.
  * @see LazyMaterialization.scala
  */
-class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Long) extends LazyMaterialization[Genotype, Genotype] {
+class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Int) extends LazyMaterialization[Genotype, Genotype] {
 
   val sc = s
   val dict = d
   val partitions = parts
   val chunkSize = chunkS
   val partitioner = setPartitioner
+  val bookkeep = new Bookkeep(chunkSize)
 
-  override def loadAdam(region: ReferenceRegion, fp: String): RDD[Genotype] = {
+  def loadAdam(region: ReferenceRegion, fp: String): RDD[Genotype] = {
     val pred: FilterPredicate = ((LongColumn("variant.end") >= region.start) && (LongColumn("variant.start") <= region.end) && (BinaryColumn("variant.contig.contigName") === (region.referenceName)))
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
     sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
@@ -96,7 +98,7 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
             intRDD.persist(StorageLevel.MEMORY_AND_DISK)
           }
         })
-        rememberValues(region, ks)
+        bookkeep.rememberValues(region, ks)
       case None =>
     }
   }
@@ -108,7 +110,7 @@ object GenotypeMaterialization {
     new GenotypeMaterialization(sc, dict, partitions, 1000)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Long): GenotypeMaterialization = {
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
     new GenotypeMaterialization(sc, dict, partitions, chunkSize)
   }
 }

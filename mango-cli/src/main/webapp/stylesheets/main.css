@@ -27,6 +27,14 @@
   .sampleLegend label, .sampleLegend input {
     float: right; }
 
+.absolute {
+  position: absolute; }
+
+.alignmentData {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid black; }
+
 .mergedReads {
   border-bottom: 1px solid #e7e7e7;
   margin-bottom: 5px; }
@@ -158,14 +166,16 @@ h2.panel {
 .graphArea {
   padding: 3px; }
 
-.coverage-svg {
+.sampleSummary {
+  height: 100px; }
+
+.summary-svg {
   overflow: visible !important; }
 
 .samples {
   border-radius: 5px;
   border: 1.5px solid #996633;
-  padding: 3px;
-  padding-bottom: 8px; }
+  padding: 3px; }
   .samples .col-md-10 {
     overflow-x: hidden; }
 
