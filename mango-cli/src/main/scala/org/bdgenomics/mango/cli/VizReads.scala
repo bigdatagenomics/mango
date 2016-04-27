@@ -197,25 +197,17 @@ class VizServlet extends ScalatraServlet {
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
-              val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
-                AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
-                  .filter(_._2.mismatches.size > 0)
-
-              val jsonData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, sampleIds)
+              val jsonData: Map[String, Array[ReadJson]] = AlignmentRecordLayout(dataOption.get.toRDD(), sampleIds)
               var readRetJson: String = ""
               for (sample <- sampleIds) {
                 val sampleData = jsonData.get(sample)
                 sampleData match {
                   case Some(_) =>
                     readRetJson += "\"" + sample + "\":" +
-                      "{ \"tracks\": " + write(sampleData.get.records) +
-                      ", \"indels\": " + write(sampleData.get.mismatches.filter(_.op != "M")) +
-                      ", \"mismatches\": " + write(sampleData.get.mismatches.filter(_.op == "M")) +
-                      ", \"matePairs\": " + write(sampleData.get.matePairs) + "},"
+                      "{ \"alignmentRecord\": " + write(sampleData.get) + "},"
                   case None =>
                     readRetJson += "\"" + sample + "\""
                 }
-
               }
               readRetJson = readRetJson.dropRight(1)
               readRetJson = "{" + readRetJson + "}"

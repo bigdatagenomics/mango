@@ -24,8 +24,7 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 
 class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
-  sparkTest("test correct matePairs") {
-
+  sparkTest("test correct formatting and mismatches") {
     val read1 = AlignmentRecord.newBuilder
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
@@ -58,11 +57,18 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
         CalculatedAlignmentRecord(read2, mismatch2)), 1).keyBy(r => ReferenceRegion(r.record))
 
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
-    assert(alignmentData.head._2.matePairs.length == 1)
+    val result = alignmentData.head
+    assert(result._2.length == 2)
+    assert(result._2.head.mismatches == mismatch1)
+    assert(result._2.head.readName == "read")
+    assert(result._2.head.start == 1L)
+    assert(result._2.head.end == 6L)
+    assert(result._2.head.sequence == "AAAAT")
+    assert(result._2.head.cigar == "5M")
+    assert(result._2.head.mapq == 50)
   }
 
-  sparkTest("test mate pairs do not overlap for multiple pairs") {
-
+  sparkTest("test multiple sample IDs") {
     val read1 = AlignmentRecord.newBuilder
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
@@ -101,14 +107,14 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setCigar("10M")
       .setStart(18L)
       .setMapq(50)
-      .setRecordGroupSample("Sample")
+      .setRecordGroupSample("Sample2")
       .setEnd(28L)
       .setReadName("read2")
       .setSequence("AAAAAAAAAA")
       .build
 
     val region = new ReferenceRegion("chrM", 1, 40)
-    val sampleIds: List[String] = List("Sample")
+    val sampleIds: List[String] = List("Sample", "Sample2")
     val d: List[CalculatedAlignmentRecord] = List(
       CalculatedAlignmentRecord(read1, List()),
       CalculatedAlignmentRecord(read2, List()),
@@ -117,20 +123,18 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
-    val result = alignmentData.head
-    assert(result._2.matePairs.length == 2)
-    assert(result._2.matePairs.filter(_.track == 0).length == 1)
+    assert(alignmentData("Sample").length == 3)
+    assert(alignmentData("Sample2").length == 1)
   }
 
-  sparkTest("test mate pairs do not overlap in interspersed pattern") {
-
+  sparkTest("testing filter") {
     val read1 = AlignmentRecord.newBuilder
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
       .setRecordGroupSample("Sample")
       .setStart(1L)
-      .setMapq(50)
       .setEnd(6L)
+      .setMapq(50)
       .setReadName("read1")
       .setSequence("AAAAT")
       .build
@@ -139,9 +143,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("10M")
       .setStart(30L)
-      .setMapq(50)
-      .setRecordGroupSample("Sample")
+      .setRecordGroupSample("Sample2")
       .setEnd(40L)
+      .setMapq(50)
       .setReadName("read1")
       .setSequence("AAAAAAAAAA")
       .build
@@ -149,28 +153,27 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val read3 = AlignmentRecord.newBuilder
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
       .setCigar("5M")
-      .setRecordGroupSample("Sample")
+      .setRecordGroupSample("Sample3")
       .setStart(9L)
-      .setMapq(50)
       .setEnd(14L)
+      .setMapq(50)
       .setReadName("read2")
       .setSequence("AAAAT")
       .build
 
     val read4 = AlignmentRecord.newBuilder
       .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
-      .setCigar("6M")
-      .setStart(42L)
-      .setRecordGroupSample("Sample")
-      .setEnd(48L)
+      .setCigar("10M")
+      .setStart(18L)
       .setMapq(50)
+      .setRecordGroupSample("Sample4")
+      .setEnd(28L)
       .setReadName("read2")
-      .setSequence("AAAAAA")
+      .setSequence("AAAAAAAAAA")
       .build
 
-    val region = new ReferenceRegion("chrM", 1, 48)
-    val sampleIds: List[String] = List("Sample")
-
+    val region = new ReferenceRegion("chrM", 1, 40)
+    val sampleIds: List[String] = List("Sample", "Sample2")
     val d: List[CalculatedAlignmentRecord] = List(
       CalculatedAlignmentRecord(read1, List()),
       CalculatedAlignmentRecord(read2, List()),
@@ -178,11 +181,11 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       CalculatedAlignmentRecord(read4, List()))
 
     val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
-
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
-    val result = alignmentData.head
-    assert(result._2.matePairs.length == 2)
-    assert(result._2.matePairs.filter(_.track == 0).length == 1)
+    assert(alignmentData("Sample").length == 1)
+    assert(alignmentData("Sample2").length == 1)
+    assert(!alignmentData.keySet.exists(_ == "Sample3"))
+    assert(!alignmentData.keySet.exists(_ == "Sample4"))
   }
 
 }

@@ -177,28 +177,28 @@ object MismatchLayout extends Logging {
   //  private def getPosition(idx: Long, start: Long): Int = (idx - start).toInt
 }
 
-object MisMatchJson {
+object MisMatch {
 
   /**
-   * An implementation of MismatchJson which converts a list of Mismatches into MisMatch Json
+   * An implementation of MisMatch which converts a list of Mismatches into MisMatch Json
    *
    * @param recs The list of MisMatches to lay out in json
-   * @param track js track number
-   * @return List of MisMatch Json objects
+   * @return List of MisMatch objects
    */
-  def apply(recs: List[MisMatch], track: Int): List[MisMatchJson] = {
-    recs.map(rec => MisMatchJson(rec, track))
+  def apply(recs: List[MisMatch]): List[MisMatch] = {
+    //removed track
+    recs.map(rec => MisMatch(rec))
   }
 
   /**
-   * An implementation of MismatchJson which converts a single Mismatch into MisMatch Json
+   * An implementation of MisMatch which converts a single Mismatch into MisMatch Json
    *
    * @param rec The single MisMatch to lay out in json
-   * @param track js track number
-   * @return List of MisMatch Json objects
+   * @return List of MisMatch objects
    */
-  def apply(rec: MisMatch, track: Int): MisMatchJson = {
-    new MisMatchJson(rec.op, rec.refCurr, rec.length, rec.sequence, rec.refBase, track)
+  def apply(rec: MisMatch): MisMatch = {
+    //removed track
+    new MisMatch(rec.op, rec.refCurr, rec.length, rec.sequence, rec.refBase)
   }
 }
 
@@ -259,8 +259,8 @@ object PointMisMatch {
   }
 }
 
-// tracked MisMatch Json Object
-case class MisMatchJson(op: String, refCurr: Long, length: Long, sequence: String, refBase: String, track: Long)
+// MisMatch Object
+case class MisMatch(op: String, refCurr: Long, length: Long, sequence: String, refBase: String)
 
 /**
  * aggregated point mismatch at a specific location
@@ -271,9 +271,6 @@ case class MisMatchJson(op: String, refCurr: Long, length: Long, sequence: Strin
  * @param mismatches: Map of either [String, Long] for I,D or N or [String, (sequence, Long)] for M
  */
 case class PointMisMatch(refCurr: Long, refBase: String, length: Long, indels: Map[String, Long], mismatches: Map[String, Long])
-
-// untracked Mismatch Json Object
-case class MisMatch(op: String, refCurr: Long, length: Long, sequence: String, refBase: String)
 
 //  count = Map[Base, Count]
 case class MisMatchCount(op: String, refCurr: Long, length: Long, refBase: String, count: Map[String, Long]) extends MutationCount
