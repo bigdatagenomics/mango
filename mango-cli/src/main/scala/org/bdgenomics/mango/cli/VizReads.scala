@@ -30,7 +30,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
-import org.bdgenomics.mango.RDD.{ FreqJson, ReferenceRDD }
+import org.bdgenomics.mango.RDD.ReferenceRDD
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.mango.layout._
@@ -197,10 +197,8 @@ class VizServlet extends ScalatraServlet {
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
-              val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
-                AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
-                  .filter(_._2.mismatches.size > 0)
-
+              val filteredData =
+                AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality).collect
               val jsonData: Map[String, SampleTrack] = AlignmentRecordLayout(filteredData, sampleIds)
               var readRetJson: String = ""
               for (sample <- sampleIds) {
@@ -231,6 +229,23 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/freq/:ref") {
+    VizTimers.AlignmentRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      contentType = "json"
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      dictOpt match {
+        case Some(_) => {
+          val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
+          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
+          val sampleIds: List[String] = params("sample").split(",").toList
+          write(VizReads.readsData.getFrequency(region, sampleIds))
+        } case None => write("")
+      }
+    }
+  }
+
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -251,7 +266,6 @@ class VizServlet extends ScalatraServlet {
                 AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
               val binSize = VizUtils.getBinSize(region, VizReads.screenSize)
               var alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
-              val freqData: Map[String, Iterable[FreqJson]] = VizReads.readsData.getFrequency(region, sampleIds, Option(VizReads.screenSize))
 
               val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
@@ -266,8 +280,7 @@ class VizServlet extends ScalatraServlet {
                       "{ \"filename\": " + write(fileMap(sample)) +
                       ", \"indels\": " + write(sampleData.get.filter(_.op != "M")) +
                       ", \"mismatches\": " + write(sampleData.get.filter(_.op == "M")) +
-                      ", \"binSize\": " + binSize +
-                      ", \"freq\": " + write(freqData.getOrElse(sample, "")) + "},"
+                      ", \"binSize\": " + binSize + "},"
                   case None =>
                     readRetJson += "\"" + sample + "\":" +
                       "{ \"filename\": " + write(fileMap(sample)) + "},"

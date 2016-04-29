@@ -122,7 +122,7 @@ case class GenericTrackBuffer[T: ClassTag](recs: List[(ReferenceRegion, T)]) ext
  *
  * @param recs: List of (ReferenceRegion, AlignmentRecord) tuples in a ReadsTrackBuffer
  */
-case class ReadsTrackBuffer(recs: List[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackBuffer[CalculatedAlignmentRecord] {
+case class ReadsTrackBuffer(recs: Iterable[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackBuffer[CalculatedAlignmentRecord] {
   records ++= recs
   val sample: Option[String] = Option(records.head._2.record.getRecordGroupSample)
 

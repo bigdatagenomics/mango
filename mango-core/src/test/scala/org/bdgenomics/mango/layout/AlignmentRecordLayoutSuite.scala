@@ -17,7 +17,6 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
@@ -54,9 +53,9 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 5)
     val sampleIds: List[String] = List("Sample")
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(
-      List(CalculatedAlignmentRecord(read1, mismatch1),
-        CalculatedAlignmentRecord(read2, mismatch2)), 1).keyBy(r => ReferenceRegion(r.record))
+    val data =
+      Array(CalculatedAlignmentRecord(read1, mismatch1),
+        CalculatedAlignmentRecord(read2, mismatch2)).map(r => (ReferenceRegion(r.record), r))
 
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     assert(alignmentData.head._2.matePairs.length == 1)
@@ -110,13 +109,13 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
     val region = new ReferenceRegion("chrM", 1, 40)
     val sampleIds: List[String] = List("Sample")
-    val d: List[CalculatedAlignmentRecord] = List(
+    val d: Array[CalculatedAlignmentRecord] = Array(
       CalculatedAlignmentRecord(read1, List()),
       CalculatedAlignmentRecord(read2, List()),
       CalculatedAlignmentRecord(read3, List()),
       CalculatedAlignmentRecord(read4, List()))
 
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val data: Array[(ReferenceRegion, CalculatedAlignmentRecord)] = d.map(r => (ReferenceRegion(r.record), r))
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     val result = alignmentData.head
     assert(result._2.matePairs.length == 2)
@@ -172,13 +171,13 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val region = new ReferenceRegion("chrM", 1, 48)
     val sampleIds: List[String] = List("Sample")
 
-    val d: List[CalculatedAlignmentRecord] = List(
+    val d: Array[CalculatedAlignmentRecord] = Array(
       CalculatedAlignmentRecord(read1, List()),
       CalculatedAlignmentRecord(read2, List()),
       CalculatedAlignmentRecord(read3, List()),
       CalculatedAlignmentRecord(read4, List()))
 
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val data = d.map(r => (ReferenceRegion(r.record), r))
 
     val alignmentData = AlignmentRecordLayout(data, sampleIds)
     val result = alignmentData.head
@@ -194,7 +193,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setRecordGroupSample("Sample")
       .setStart(1L)
       .setMapq(50)
-      .setEnd(5000000L)
+      .setEnd(6L)
       .setReadName("read1")
       .setSequence("AAAAA")
       .build
@@ -205,7 +204,7 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
       .setRecordGroupSample("Sample2")
       .setStart(1L)
       .setMapq(50)
-      .setEnd(5000000L)
+      .setEnd(6L)
       .setReadName("read1")
       .setSequence("TTTTT")
       .build
@@ -213,30 +212,21 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val region = new ReferenceRegion("chrM", 1, 48)
     val sampleIds: List[String] = List("Sample", "Sample2")
 
-    var mutation1b = new ListBuffer[MisMatch]()
-    var mutation2b = new ListBuffer[MisMatch]()
-    val readLength = 100000
-    for(x <- 1 to readLength) {
-      mutation1b += MisMatch("M", x, 1, "A", "C")
-      mutation2b += MisMatch("M", x, 1, "T", "C")
-    }
-    var mutation1 = mutation1b.toList
-    var mutation2 = mutation2b.toList
-
-    val d: List[CalculatedAlignmentRecord] = List(
+    val mutation1 = List(MisMatch("M", 2l, 1, "A", "C"), MisMatch("M", 1l, 1, "A", "C"))
+    val mutation2 = List(MisMatch("M", 2l, 1, "T", "C"), MisMatch("M", 3l, 1, "C", "C"), MisMatch("M", 1l, 1, "A", "C"))
+    val d: Array[CalculatedAlignmentRecord] = Array(
       CalculatedAlignmentRecord(read1, mutation1),
       CalculatedAlignmentRecord(read1_2, mutation2))
 
-    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+    val data = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
 
     val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(data, 1)
-    val t0 = System.nanoTime()
+
     val diffs = MergedAlignmentRecordLayout.diffRecords(sampleIds, alignmentData)
-    print("Elapsed time: " + (System.nanoTime - t0)/1000000000 + "s")
+
     assert(diffs.keySet.contains(sampleIds(0)))
     assert(diffs.keySet.contains(sampleIds(1)))
-    assert(diffs.getOrElse(sampleIds(0), List()).length == readLength)
-    assert(diffs.getOrElse(sampleIds(1), List()).length == readLength)
+    assert(diffs.getOrElse(sampleIds(0), List()).length == 1)
+    assert(diffs.getOrElse(sampleIds(1), List()).length == 2)
   }
-
 }

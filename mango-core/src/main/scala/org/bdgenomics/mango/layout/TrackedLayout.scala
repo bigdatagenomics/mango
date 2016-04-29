@@ -70,7 +70,7 @@ object TrackedLayout {
  */
 abstract class TrackedLayout[T, U <: TrackBuffer[T]] {
 
-  def sequence: List[(ReferenceRegion, T)]
+  def sequence: Array[(ReferenceRegion, T)]
   def trackBuilder: ListBuffer[U]
 
   def addTracks

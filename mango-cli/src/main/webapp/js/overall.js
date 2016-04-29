@@ -70,6 +70,15 @@ function render(refName, start, end, mapQuality) {
 
   // Reads and Coverage
   if (readsExist) {
+    // Disable alignments if region is too big
+
+    // hide reads and disable checkbox
+    if (end - start > 5000) {
+      $(".viewAlignments").attr("checked", false);
+      $(".alignmentData").hide();
+
+      $(".viewAlignments").prop("disabled", true)
+    } else $(".viewAlignments").prop("disabled", false)
     renderMergedReads(refName, start, end, mapQuality);
   }
 }
