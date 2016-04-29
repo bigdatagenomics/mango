@@ -20,6 +20,7 @@ package org.bdgenomics.mango.layout
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import scala.collection.mutable.ListBuffer
 
 class AlignmentRecordLayoutSuite extends ADAMFunSuite {
 
@@ -182,6 +183,59 @@ class AlignmentRecordLayoutSuite extends ADAMFunSuite {
     val result = alignmentData.head
     assert(result._2.matePairs.length == 2)
     assert(result._2.matePairs.filter(_.track == 0).length == 1)
+  }
+
+  sparkTest("test diffing reads works correctly") {
+
+    val read1 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1L)
+      .setMapq(50)
+      .setEnd(5000000L)
+      .setReadName("read1")
+      .setSequence("AAAAA")
+      .build
+
+    val read1_2 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample2")
+      .setStart(1L)
+      .setMapq(50)
+      .setEnd(5000000L)
+      .setReadName("read1")
+      .setSequence("TTTTT")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 48)
+    val sampleIds: List[String] = List("Sample", "Sample2")
+
+    var mutation1b = new ListBuffer[MisMatch]()
+    var mutation2b = new ListBuffer[MisMatch]()
+    val readLength = 100000
+    for(x <- 1 to readLength) {
+      mutation1b += MisMatch("M", x, 1, "A", "C")
+      mutation2b += MisMatch("M", x, 1, "T", "C")
+    }
+    var mutation1 = mutation1b.toList
+    var mutation2 = mutation2b.toList
+
+    val d: List[CalculatedAlignmentRecord] = List(
+      CalculatedAlignmentRecord(read1, mutation1),
+      CalculatedAlignmentRecord(read1_2, mutation2))
+
+    val data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+
+    val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(data, 1)
+    val t0 = System.nanoTime()
+    val diffs = MergedAlignmentRecordLayout.diffRecords(sampleIds, alignmentData)
+    print("Elapsed time: " + (System.nanoTime - t0)/1000000000 + "s")
+    assert(diffs.keySet.contains(sampleIds(0)))
+    assert(diffs.keySet.contains(sampleIds(1)))
+    assert(diffs.getOrElse(sampleIds(0), List()).length == readLength)
+    assert(diffs.getOrElse(sampleIds(1), List()).length == readLength)
   }
 
 }

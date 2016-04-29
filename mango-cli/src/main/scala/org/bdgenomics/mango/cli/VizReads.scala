@@ -259,7 +259,7 @@ class VizServlet extends ScalatraServlet {
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
           val readQuality = params.getOrElse("quality", "0")
-
+          val diffReads = params.getOrElse("diff", "0") != "0"
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
@@ -270,6 +270,9 @@ class VizServlet extends ScalatraServlet {
 
               val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
+              if (diffReads) {
+                alignmentData = MergedAlignmentRecordLayout.diffRecords(sampleIds, alignmentData)
+              }
               for (sample <- sampleIds) {
                 val sampleData = alignmentData.get(sample)
                 sampleData match {

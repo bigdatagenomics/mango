@@ -285,3 +285,34 @@ trait MutationCount {
   def refCurr: Long
   def count: Map[String, Any]
 }
+
+case class SampleIndelCount(sample: String, mutation: IndelCount) extends SampleCount {
+  def diffMisMatch(other: SampleIndelCount): List[MisMatchCount] = {
+    //TODO: Diff indels
+    val primaryCount = mutation.count
+    val secondaryCount = other.mutation.count
+    List[MisMatchCount]()
+  }
+}
+
+case class SampleMisMatchCount(sample: String, mutation: MisMatchCount) extends SampleCount {
+  def diffMisMatch(other: SampleMisMatchCount): List[SampleMisMatchCount] = {
+    val primaryCount = mutation.count
+    val secondaryCount = other.mutation.count
+    val diffCount = (primaryCount.toSet diff secondaryCount.toSet).toMap.filter(_._2 > 0)
+    val diffCount2 = (secondaryCount.toSet diff primaryCount.toSet).toMap.filter(_._2 > 0)
+    val primaryMutation = MisMatchCount(mutation.op, mutation.refCurr, mutation.length,
+      mutation.refBase, diffCount.filter(_._2 > 0))
+
+    val secondaryMutation = MisMatchCount(other.mutation.op, other.mutation.refCurr, other.mutation.length,
+      other.mutation.refBase, diffCount2.filter(_._2 > 0))
+    List(SampleMisMatchCount(sample, primaryMutation), SampleMisMatchCount(other.sample, secondaryMutation))
+  }
+}
+
+case class SampleMutationCount(sample: String, mutation: MutationCount)
+
+trait SampleCount {
+  def sample: String
+  def mutation: MutationCount
+}
