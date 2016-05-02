@@ -1,5 +1,4 @@
 // Section Heights
-var refHeight = 38;
 var varHeight = 0; //Default variable: this will change based on number of tracks
 var freqHeight = 200;
 
@@ -11,9 +10,14 @@ var svg = d3.select("#varFreqArea")
 
 // Functions
 function renderVariants(refName, start, end) {
-  varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-  varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-  renderJsonVariants();
+  varJsonLocation = "/variants/" + refName + "?start=" + start + "&end=" + end;
+  varFreqJsonLocation = "/variantfreq/" + refName + "?start=" + start + "&end=" + end;
+  setGlobalReferenceRegion(refName, start, end);
+  renderVariantFrequency();
+  if ((end - start) <= 1000) {
+    renderJsonVariants();
+  }
+
 }
 
 var varSvgContainer = d3.select("#varArea")
@@ -37,8 +41,8 @@ function renderJsonVariants() {
       return;
     }
 
-   // Render xaxis
-   var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
+    // Render xaxis
+    var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
 
     //dynamically setting height of svg containers
     var numTracks = d3.max(data, function(d) {return d.track});
@@ -68,7 +72,7 @@ function renderJsonVariants() {
           } else if (d.reference === "Ref / Ref") {
             return '#99FF33'; //NEON GREEN
           } else {
-            return '#FFFF66'; //YELLOW
+            return '#990000'; //RED
           }
         })
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
@@ -79,19 +83,22 @@ function renderJsonVariants() {
             .style("opacity", .9);
           varDiv.html(
             "Contig: " + d.contigName + "<br>" +
+            "SampleId: " + d.sampleId + "<br>" +
+            "Position: " + d.start + "<br>" +
+            "Track: " + d.track + "<br>" +
             "Alleles: " + d.alleles)
-            .style("left", d3.event.pageX + 10 + "px")
-            .style("top", d3.event.pageY - 100 +  "px");
+            .style("left", d3.event.pageX + "px")
+            .style("top", d3.event.pageY + "px");
         })
         .on("mouseover", function(d) {
           varDiv.transition()
             .duration(200)
             .style("opacity", .9);
-          varDiv.html(d.alleles)
-            .style("left", d3.event.pageX + 10 +  "px")
-            .style("top", d3.event.pageY - 100 +  "px");
+          varDiv.html(d.start)
+            .style("left", d3.event.pageX + "px")
+            .style("top", d3.event.pageY + "px");
         })
-        .on("mouseout", function(d) {
+        .on("mouseout", function() {
           varDiv.transition()
           .duration(500)
           .style("opacity", 0);
@@ -100,8 +107,8 @@ function renderJsonVariants() {
     var removed = variants.exit();
     removed.remove();
 
-    // Render Frequencies for variants
-    renderVariantFrequency();
+    var prefetch = "/prefetchvariants/"+ viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+    d3.json(prefetch, function(error, data) {});
 
   });
 }
@@ -135,17 +142,22 @@ function renderVariantFrequency() {
     .orient("left")
     .ticks(10, "%");
 
+
   d3.json(varFreqJsonLocation, function(error, data) {
     if (error) throw error;
     if (!isValidHttpResponse(data)) {
+      stopWait("#varFreqArea");
       return;
     }
 
+    console.log(svg.selectAll(".axis"));
+    svg.selectAll(".axis").remove();
+
+    data = data.map(JSON.parse);
     y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
-    svg.select(".axis").remove();
     svg.append("g")
-      .attr("class", "x axis")
+      .attr("class", "axis")
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis);
 
@@ -163,32 +175,40 @@ function renderVariantFrequency() {
 
     var modifyBars = freqBars.transition();
     modifyBars
-      .attr("x", (function(d) { return xAxisScale(d.start); }))
-      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
+      .attr("x", (function(d) { return xAxisScale(d.variant__start); }))
+      .attr("width", (function() { return Math.max(1, (width/(viewRegEnd-viewRegStart))); }));
 
     var newBars = freqBars.enter();
     newBars.append("rect")
       .attr("class", "bar")
       .attr("fill", '#2E6DA4')
-      .attr("x", (function(d) { return xAxisScale(d.start); }))
-      .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
+      .attr("x", (function(d) { return xAxisScale(d.variant__start); }))
+      .attr("width", (function() { return Math.max(1, (width/(viewRegEnd-viewRegStart))); }))
       .attr("y", function(d) { return y(d.count); })
       .attr("height", function(d) { return height - y(d.count); })
       .on("mouseover", function(d) {
         varDiv.transition()
           .duration(200)
           .style("opacity", .9);
-        varDiv.html("Samples with variant: " + d.count)
-          .style("left", (d3.event.pageX - 120) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
+        varDiv.html("Samples with variant: " + d.count + "<br>" +
+          "Position: " + d.variant__start)
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY + "px");
       })
-      .on("mouseout", function(d) {
+      .on("mouseout", function() {
         varDiv.transition()
         .duration(500)
         .style("opacity", 0);
       });
     var removedBars = freqBars.exit();
     removedBars.remove();
+
+<<<<<<< HEAD
+    stopWait("#varFreqArea");
+=======
+>>>>>>> 236f88f... implemented prefetching and binning
+    var prefetch = "/prefetchvfreq/"+ viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+    d3.json(prefetch, function(error, data) {});
     
   });
 }

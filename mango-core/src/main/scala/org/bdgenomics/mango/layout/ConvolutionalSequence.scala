@@ -21,6 +21,9 @@ import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.mango.tiling.L1
+
+import scala.collection.mutable.ListBuffer
 
 object ConvolutionalSequence extends Serializable with Logging {
 
@@ -39,6 +42,27 @@ object ConvolutionalSequence extends Serializable with Logging {
       i => averageChars(seqArray.slice(i, i + patchSize)))
   }
 
+  def convolveArray(sequence: Array[Double], patchSize: Int, stride: Int): Array[Double] = {
+
+    getConvolutionIndices(sequence.length, patchSize, stride).map(
+      i => {
+        val arr = sequence.slice(i, i + patchSize)
+        arr.sum / arr.length
+      })
+  }
+
+  def convolveToEnd(sequence: String, layers: Int): Map[Int, Array[Byte]] = {
+
+    val map: ListBuffer[(Int, Array[Byte])] = ListBuffer[(Int, Array[Byte])]((0, sequence.getBytes()))
+
+    for (i <- 0 to layers) {
+      if (i < 1) map += ((i + 1, convolveSequence(sequence, L1.patchSize, L1.stride).map(_.toByte)))
+      else map += ((i + 1, convolveArray(map(i)._2.map(_.toDouble), L1.patchSize, L1.stride).map(_.toByte)))
+    }
+    map.toMap
+
+  }
+
   /*
    * Convolves an RDD of alignment records and calculates the diff compared to a reference
    *
@@ -50,8 +74,21 @@ object ConvolutionalSequence extends Serializable with Logging {
    */
   def convolveRDD(region: ReferenceRegion, reference: String, alignments: RDD[AlignmentRecord], patchSize: Int, stride: Int): Array[Double] = {
     val convolvedReference = convolveSequence(reference.toUpperCase(), patchSize, stride)
+    convolveRDD(region, convolvedReference, alignments, patchSize, stride)
+  }
+
+  /*
+  * Convolves an RDD of alignment records and calculates the diff compared to a reference
+  *
+  * @param region: ReferenceRegion over original reference string
+  * @param reference: String to convolved and compared to
+  * @param alignments: RDD[AlignmentRecord] to convolve
+  *
+  * @return: Array[Double] total diff of AlignmentRecords compared to region
+  */
+  def convolveRDD(region: ReferenceRegion, reference: Array[Double], alignments: RDD[AlignmentRecord], patchSize: Int, stride: Int): Array[Double] = {
     val x: RDD[Array[Double]] = alignments.map(r => convolveAlignmentRecord(region,
-      convolvedReference,
+      reference,
       r,
       patchSize,
       stride))
@@ -100,6 +137,10 @@ object ConvolutionalSequence extends Serializable with Logging {
                                   sequence2: Array[Double]): Array[Double] = {
     assert(sequence1.length == sequence2.length)
     sequence1.zip(sequence2).map { case (a, b) => Math.abs(a - b) }
+  }
+
+  def getFinalSize(startSize: Long, patchSize: Int, stride: Int): Int = {
+    ((startSize - patchSize) / stride + 1).toInt
   }
 
   def getPatchSize(startSize: Int, finalSize: Int, strideOpt: Option[Int] = None): (Int, Int) = {

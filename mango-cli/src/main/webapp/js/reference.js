@@ -136,16 +136,16 @@ function renderLowResRef(data, refContainer, refDiv) {
         refDiv.html(
           "Base: " + d.reference + "<br>" +
           "Position: " + d.position)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 100) + "px");
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY + "px");
       })
       .on("mouseover", function(d) {
         refDiv.transition()
           .duration(200)
           .style("opacity", .9);
         refDiv.html(d.reference)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 100) + "px");
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY + "px");
       })
       .on("mouseout", function(d) {
           refDiv.transition()

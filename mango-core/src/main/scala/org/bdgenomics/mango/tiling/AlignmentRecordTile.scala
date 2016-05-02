@@ -99,8 +99,9 @@ class AlignmentRecordTile(sc: SparkContext,
     }
   }
 
-  def getConvolved(region: ReferenceRegion, ks: Option[List[String]], patchSize: Int, stride: Int): String = {
+  def getConvolved(region: ReferenceRegion, layer: Int, ks: Option[List[String]]): String = {
     var sampleMap: Map[String, Array[Double]] = Map()
+    val layerType = LayeredTile.layers(layer)
 
     ks match {
       case Some(_) => {
@@ -109,10 +110,10 @@ class AlignmentRecordTile(sc: SparkContext,
         alignments match {
           case Some(_) => {
 
-            val ref = refRDD.getL0(region)
+            val ref = refRDD.getConvolvedArray(region, layer)
 
             ks.get.map(k => {
-              val c = ConvolutionalSequence.convolveRDD(region, ref, alignments.get.toRDD.map(_._2).filter(r => r.getRecordGroupSample == k), patchSize, stride)
+              val c = ConvolutionalSequence.convolveRDD(region, ref, alignments.get.toRDD.map(_._2).filter(r => r.getRecordGroupSample == k), layerType.patchSize, layerType.stride)
               sampleMap = sampleMap + (k -> c)
             })
           } case None => {

@@ -36,14 +36,20 @@ import picard.sam.CreateSequenceDictionary
 class ReferenceRDD(sc: SparkContext, referencePath: String) extends LayeredTile with Serializable with Logging {
 
   val dict: SequenceDictionary = setSequenceDictionary(referencePath)
-  val refRDD: IntervalRDD[ReferenceRegion, String] = init
+  var chunkSize = 0L
+  val refRDD: IntervalRDD[ReferenceRegion, Map[Int, Array[Byte]]] = init
 
   def getSequenceDictionary: SequenceDictionary = dict
 
-  def init: IntervalRDD[ReferenceRegion, String] = {
+  def init: IntervalRDD[ReferenceRegion, Map[Int, Array[Byte]]] = {
     if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || referencePath.endsWith(".adam")) {
-      val refRDD = IntervalRDD(sc.loadSequences(referencePath).map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength), r.getFragmentSequence)))
+      val sequences = sc.loadSequences(referencePath)
+      chunkSize = sequences.first.getFragmentLength
+      val refRDD: IntervalRDD[ReferenceRegion, Map[Int, Array[Byte]]] = IntervalRDD(sequences.map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength), r.getFragmentSequence)))
+        .mapValues(r => (r._1, ConvolutionalSequence.convolveToEnd(r._2, LayeredTile.layerCount)))
+
       refRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      log.info("Loaded reference file, size: ", refRDD.count)
       if (!ResourceUtils.isLocal(referencePath, sc)) {
         refRDD.persist(StorageLevel.MEMORY_AND_DISK)
         log.info("Loaded reference file, size: ", refRDD.count)
@@ -103,23 +109,37 @@ class ReferenceRDD(sc: SparkContext, referencePath: String) extends LayeredTile 
    */
   def getL0(region: ReferenceRegion, ids: Option[List[String]] = None): String = {
     val seqRecord = dict(region.referenceName)
+    val start = (region.start % chunkSize).toInt
+    val regionSize = region.end - region.start
     seqRecord match {
       case Some(_) => {
         val end: Long = VizUtils.getEnd(region.end, seqRecord)
         val newRegion = ReferenceRegion(region.referenceName, region.start, end)
-        refRDD.filterByInterval(region).collect.map(_._2).reduce((s1, s2) => s1 + s2)
+        refRDD.filterByInterval(region).collect.map(_._2.get(0))
+          .map(r => r.get.map(_.toChar).mkString(""))
+          .reduce((s1, s2) => s1 + s2).substring(start, (start + regionSize).toInt)
       }
       case None => {
-        "N" * (region.end - region.start).toInt
+        "N" * regionSize.toInt
       }
     }
   }
 
-  def getConvolved(region: ReferenceRegion, ids: Option[List[String]] = None, patchSize: Int, stride: Int): String = {
-    val str = getL0(ReferenceRegion(region.referenceName, region.start, region.end))
-    println(str)
-    ConvolutionalSequence.convolveSequence(str, patchSize, stride).foreach(r => print(r + " "))
-    write(ConvolutionalSequence.convolveSequence(str, patchSize, stride))
+  def getConvolved(region: ReferenceRegion, layer: Int, ids: Option[List[String]] = None): String = {
+    write(getConvolvedArray(region, layer))
+  }
+
+  def getConvolvedArray(region: ReferenceRegion, layer: Int): Array[Double] = {
+    val layerType = LayeredTile.layers.get(layer)
+    // get convolution start location
+    val start = ConvolutionalSequence.getFinalSize((region.start % chunkSize), layerType.get.patchSize, layerType.get.stride)
+    val regionSize = region.end - region.start
+    // get final size of array after convolution
+    val finalSize = ConvolutionalSequence.getFinalSize(regionSize, layerType.get.patchSize, layerType.get.stride)
+    val y = refRDD.filterByInterval(region).collect.map(_._2.get(layer))
+      .map(r => r.get.map(_.toDouble))
+      .reduce((s1, s2) => s1 ++ s2)
+    y.slice(start, start + finalSize)
   }
 
 }

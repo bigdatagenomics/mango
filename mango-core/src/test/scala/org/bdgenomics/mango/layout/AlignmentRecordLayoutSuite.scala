@@ -214,8 +214,8 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
     val mutation1 = List(MisMatch("M", 2l, 1, "A", "C"), MisMatch("M", 1l, 1, "A", "C"))
     val mutation2 = List(MisMatch("M", 2l, 1, "T", "C"), MisMatch("M", 3l, 1, "C", "C"), MisMatch("M", 1l, 1, "A", "C"))
     val d: Array[CalculatedAlignmentRecord] = Array(
-      CalculatedAlignmentRecord(read1, mutation1),
-      CalculatedAlignmentRecord(read1_2, mutation2))
+      CalculatedAlignmentRecord(read1, Some(mutation1)),
+      CalculatedAlignmentRecord(read1_2, Some(mutation2)))
 
     val data = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
 

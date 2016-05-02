@@ -36,9 +36,9 @@ function render(refName, start, end) {
   }
 
   // Variants
-  if (variantsExist) {
-    renderVariants(refName, start, end);
-  }
+  //if (variantsExist) {
+  //  renderVariants(refName, start, end);
+  //}
 
   // Reads and Coverage
   if (readsExist) {

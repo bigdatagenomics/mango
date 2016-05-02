@@ -23,23 +23,26 @@ import org.bdgenomics.adam.models.ReferenceRegion
 abstract class LayeredTile extends Serializable with Logging {
   implicit val formats = net.liftweb.json.DefaultFormats
 
-  val layers = 2
-
   def getL0(region: ReferenceRegion, args: Option[List[String]]): String
-  def getConvolved(region: ReferenceRegion, args: Option[List[String]], patchSize: Int, stride: Int): String
+  def getConvolved(region: ReferenceRegion, layer: Int, args: Option[List[String]]): String
 
   def get(region: ReferenceRegion, args: Option[List[String]] = None): String = {
     val size = region.end - region.start
     size match {
       case x if (x < L1.range._1) => getL0(region, args)
-      case x if (x >= L1.range._1 && x < L1.range._2) => getConvolved(region, args, L1.patchSize, L1.stride)
-      case x if (x >= L2.range._1 && x < L2.range._2) => getConvolved(region, args, L2.patchSize, L2.stride)
-      case x if (x >= L3.range._1 && x < L3.range._2) => getConvolved(region, args, L3.patchSize, L3.stride)
-      case _ => getConvolved(region, args, L4.patchSize, L4.stride)
+      case x if (x >= L1.range._1 && x < L1.range._2) => getConvolved(region, 1, args)
+      case x if (x >= L2.range._1 && x < L2.range._2) => getConvolved(region, 2, args)
+      case x if (x >= L3.range._1 && x < L3.range._2) => getConvolved(region, 3, args)
+      case _ => getConvolved(region, 4, args)
     }
 
   }
 
+}
+
+object LayeredTile {
+  val layerCount = 5
+  val layers = Map(1 -> L1, 2 -> L2, 3 -> L3, 4 -> L4)
 }
 
 trait Layer {

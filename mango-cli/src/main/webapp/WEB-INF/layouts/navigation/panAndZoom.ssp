@@ -1,3 +1,4 @@
+<%@ val page: String %>
 <div id = "navigation">
     <ul>
         <li>move:</li>
@@ -63,14 +64,27 @@
             region:
             <input id="autocomplete" type="text" name="info" size="20" class="alignment-search form-control" placeholder="sample:refName:start-end">
         </li>
-        <li>
-            <input name="Submit button"
-            type="button"
-            value="Submit"
-            onclick="checkForm(this.form)"
-            class="btn btn-danger btn-xs"/>
-            </form>
-        </li>
+
+        #if (page == "reads")
+            <li>
+                <input name="Submit button"
+                type="button"
+                value="Submit"
+                onclick="checkForm(this.form)"
+                class="btn btn-danger btn-xs"/>
+                </form>
+            </li>
+        #end
+        #if (page == "variants")
+            <li>
+                <input name="Submit button"
+                type="button"
+                value="Submit"
+                onclick="checkVariantForm(this.form)"
+                class="btn btn-danger btn-xs"/>
+                </form>
+            </li>
+        #end
         <li><a href="#menu" class="menu-link">&#9776;</a></li>
     </ul>
 <br>

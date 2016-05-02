@@ -10,6 +10,17 @@
     <div class="main">
           <div class="graphArea" id="refArea"></div>
           <div class="graphArea" id="varFreqArea"></div>
+            <div class="sampleLegend">
+                <div class='col-md-3'>
+                    <input  value="viewVariants"
+                        name="viewVariants"
+                        type="checkbox"
+                        onClick="toggleVariants()"
+                        id='viewVariants'
+                        class="viewVariants">
+                        <label for="viewVariants">Variants</label>
+                    </div>
+                </div>
           <div class="graphArea" id="varArea"></div>
     </div>
 
@@ -25,8 +36,8 @@
 <script src="js/formSubmit.js"></script>
 <script src="js/reference.js"></script>
 <script>
-  renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
+  // renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
   renderVariants(viewRefName, viewRegStart, viewRegEnd);
-  renderReference(viewRefName, viewRegStart, viewRegEnd);
+  // renderReference(viewRefName, viewRegStart, viewRegEnd);
 </script>
 </html>

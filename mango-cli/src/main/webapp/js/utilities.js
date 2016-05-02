@@ -26,6 +26,16 @@ function toggleAlignments(sample, selector) {
         $(selector).slideToggle( "fast" );
 }
 
+// Toggles alignment record contained in the selector for a given sample
+function toggleVariants() {
+    renderJsonVariants();
+    httpGet("/prefetchvariants/"+ viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd);
+}
+
+function setGlobalMapQ(mapq) {
+    mapQuality = mapq;
+}
+
 // Filters invalid characters from string to create javascript descriptor
 function filterNames(arr) {
   var filteredArr = [];
