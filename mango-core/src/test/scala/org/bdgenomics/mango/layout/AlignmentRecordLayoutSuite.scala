@@ -184,4 +184,48 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
     assert(result._2.matePairs.filter(_.track == 0).length == 1)
   }
 
+  sparkTest("test diffing reads works correctly") {
+
+    val read1 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample")
+      .setStart(1L)
+      .setMapq(50)
+      .setEnd(6L)
+      .setReadName("read1")
+      .setSequence("AAAAA")
+      .build
+
+    val read1_2 = AlignmentRecord.newBuilder
+      .setContigName(Contig.newBuilder.setContigName("chrM").build().getContigName)
+      .setCigar("5M")
+      .setRecordGroupSample("Sample2")
+      .setStart(1L)
+      .setMapq(50)
+      .setEnd(6L)
+      .setReadName("read1")
+      .setSequence("TTTTT")
+      .build
+
+    val region = new ReferenceRegion("chrM", 1, 48)
+    val sampleIds: List[String] = List("Sample", "Sample2")
+
+    val mutation1 = List(MisMatch("M", 2l, 1, "A", "C"), MisMatch("M", 1l, 1, "A", "C"))
+    val mutation2 = List(MisMatch("M", 2l, 1, "T", "C"), MisMatch("M", 3l, 1, "C", "C"), MisMatch("M", 1l, 1, "A", "C"))
+    val d: Array[CalculatedAlignmentRecord] = Array(
+      CalculatedAlignmentRecord(read1, mutation1),
+      CalculatedAlignmentRecord(read1_2, mutation2))
+
+    val data = sc.parallelize(d, 1).keyBy(r => ReferenceRegion(r.record))
+
+    val alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(data, 1)
+
+    val diffs = MergedAlignmentRecordLayout.diffRecords(sampleIds, alignmentData)
+
+    assert(diffs.keySet.contains(sampleIds(0)))
+    assert(diffs.keySet.contains(sampleIds(1)))
+    assert(diffs.getOrElse(sampleIds(0), List()).length == 1)
+    assert(diffs.getOrElse(sampleIds(1), List()).length == 2)
+  }
 }
