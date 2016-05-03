@@ -18,10 +18,10 @@
 package org.bdgenomics.mango.layout
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
+import org.bdgenomics.mango.util.MangoFunSuite
 
-class AlignmentRecordLayoutSuite extends ADAMFunSuite {
+class AlignmentRecordLayoutSuite extends MangoFunSuite {
 
   sparkTest("test correct matePairs") {
 

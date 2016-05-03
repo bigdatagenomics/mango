@@ -20,8 +20,9 @@ package org.bdgenomics.mango.layout
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ Contig, Feature }
+import org.bdgenomics.mango.util.MangoFunSuite
 
-class FeatureLayoutSuite extends ADAMFunSuite {
+class FeatureLayoutSuite extends MangoFunSuite {
 
   sparkTest("test correct json format of 2 overlapping features") {
     val feature1 = Feature.newBuilder()

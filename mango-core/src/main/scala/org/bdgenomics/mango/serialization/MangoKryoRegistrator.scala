@@ -24,6 +24,7 @@ import org.bdgenomics.adam.rdd.read.realignment._
 import org.bdgenomics.adam.serialization._
 import org.bdgenomics.adam.util.{ TwoBitFile, TwoBitFileSerializer }
 import org.bdgenomics.formats.avro._
+import org.bdgenomics.mango.layout.CalculatedAlignmentRecord
 
 import scala.collection.mutable.{ ArrayBuffer, ListBuffer }
 
@@ -33,6 +34,9 @@ class MangoKryoRegistrator extends KryoRegistrator {
     kryo.register(classOf[ArrayBuffer[AlignmentRecord]])
     kryo.register(classOf[ListBuffer[Genotype]])
     kryo.register(classOf[ArrayBuffer[Genotype]])
+
+    kryo.register(classOf[CalculatedAlignmentRecord])
+
     kryo.register(classOf[AlignmentRecord], new AvroSerializer[AlignmentRecord]())
     kryo.register(classOf[Genotype], new AvroSerializer[Genotype]())
     kryo.register(classOf[Variant], new AvroSerializer[Variant]())

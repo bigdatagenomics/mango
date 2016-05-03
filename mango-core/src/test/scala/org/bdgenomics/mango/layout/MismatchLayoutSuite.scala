@@ -25,8 +25,9 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.mango.util.MangoFunSuite
 
-class MismatchLayoutSuite extends ADAMFunSuite {
+class MismatchLayoutSuite extends MangoFunSuite {
 
   def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): RDD[AlignmentRecord] = {
     sc.loadIndexedBam(file, viewRegion)

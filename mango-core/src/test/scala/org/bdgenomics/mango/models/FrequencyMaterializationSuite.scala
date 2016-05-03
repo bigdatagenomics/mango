@@ -18,9 +18,9 @@
 package org.bdgenomics.mango.models
 
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
-import org.bdgenomics.adam.util.ADAMFunSuite
+import org.bdgenomics.mango.util.MangoFunSuite
 
-class FrequencyMaterializationSuite extends ADAMFunSuite {
+class FrequencyMaterializationSuite extends MangoFunSuite {
   val binSize = 2
 
   val chrM = resourcePath("mouse_chrM.bam")
