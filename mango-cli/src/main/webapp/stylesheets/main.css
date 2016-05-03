@@ -85,7 +85,8 @@ div.tooltip {
   background: #999999;
   border: 0px;
   pointer-events: none;
-  color: white; }
+  color: white;
+  margin-top: 50px; }
   div.tooltip p {
     margin: 0px; }
 
