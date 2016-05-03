@@ -53,7 +53,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
   val partitioner = setPartitioner
   val bookkeep = new Bookkeep(chunkSize)
 
-
   //  var freqRDD = new FrequencyRDD(sc, chunkSize)
   val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 

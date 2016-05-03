@@ -20,11 +20,10 @@ package org.bdgenomics.mango.models
 
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.mango.RDD.ReferenceRDD
-import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.mango.util.{ Bookkeep, MangoFunSuite }
 
-class LazyMaterializationSuite extends ADAMFunSuite {
+class LazyMaterializationSuite extends MangoFunSuite {
 
   def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): Long = {
     sc.loadIndexedBam(file, viewRegion).count
