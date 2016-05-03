@@ -21,8 +21,9 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion }
 import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.{ Contig, Genotype, Variant }
+import org.bdgenomics.mango.util.MangoFunSuite
 
-class VariantLayoutSuite extends ADAMFunSuite {
+class VariantLayoutSuite extends MangoFunSuite {
 
   sparkTest("test correct json format of 2 non overlapping variants") {
     val variant1 = Genotype.newBuilder
