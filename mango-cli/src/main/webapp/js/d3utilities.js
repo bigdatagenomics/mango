@@ -18,6 +18,22 @@ var baseColors = {
   'G': gColor
 };
 
+
+// mouse loading functionality
+function startWait(div) {
+    $(div).css( 'cursor', 'wait' );
+    $(div).css( 'background-color', 'rgba(204, 204, 204, 0.3)' );
+
+}
+
+// mouse loading functionality
+function stopWait(div) {
+    $(div).css( 'cursor', 'default' );
+    $(div).css( 'background-color', 'white' );
+
+}
+
+
 // Create the scale for the x axis.
 // Used for variants and reference
 function xRange(start, end, width){

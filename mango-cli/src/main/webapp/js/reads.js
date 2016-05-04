@@ -43,7 +43,7 @@ for (var i = 0; i < samples.length; i++) {
 }
 
 function renderMergedReads(refName, start, end, quality) {
-
+    startWait("#readsArea");
     // Define quality for reads
     quality = quality || 0;
 
@@ -56,6 +56,7 @@ function renderMergedReads(refName, start, end, quality) {
   d3.json(readsJsonLocation,function(error, ret) {
     if(error) console.log(error);
     if (!isValidHttpResponse(ret)) {
+      stopWait("#readsArea");
       return;
     }
 
@@ -73,6 +74,7 @@ function renderMergedReads(refName, start, end, quality) {
         renderMismatchCounts(sampleData[i].mismatches, samples[i]);
         renderIndelCounts(sampleData[i].indels, samples[i]);
     }
+    stopWait("#readsArea");
   });
 
     var keys = Object.keys(readAlignmentSvgContainer);
