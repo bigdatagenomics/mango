@@ -1,5 +1,6 @@
 function getAlignmentSelector(sample) {
-    return selector = "#" + sample + ">.alignmentData";
+    var selector = "#" + sample + ">.alignmentData";
+    return selector;
 }
 
 function setGlobalReferenceRegion(refName, start, end) {

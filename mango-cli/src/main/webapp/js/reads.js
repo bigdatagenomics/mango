@@ -18,10 +18,6 @@ var sampleData = [];
 //bin size
 var binSize = 1;
 
-function getAlignmentSelector(sample) {
-    return selector = sample + ">.alignmentData";
-}
-
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
 

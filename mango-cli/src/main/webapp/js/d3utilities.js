@@ -22,7 +22,7 @@ var baseColors = {
 // mouse loading functionality
 function startWait(div) {
     $(div).css( 'cursor', 'wait' );
-    $(div).css( 'background-color', 'rgba(204, 204, 204, 0.3)' );
+    $(div).css( 'background-color', 'rgba(204, 204, 204, 0.8)' );
 
 }
 
