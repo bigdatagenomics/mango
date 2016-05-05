@@ -203,10 +203,7 @@ function renderVariantFrequency() {
     var removedBars = freqBars.exit();
     removedBars.remove();
 
-<<<<<<< HEAD
     stopWait("#varFreqArea");
-=======
->>>>>>> 236f88f... implemented prefetching and binning
     var prefetch = "/prefetchvfreq/"+ viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
     d3.json(prefetch, function(error, data) {});
     

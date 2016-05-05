@@ -26,21 +26,19 @@ import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{ Logging, SparkContext }
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.{ Feature, Genotype }
+import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.RDD.ReferenceRDD
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.GenotypeMaterialization
+import org.bdgenomics.mango.models.AlignmentRecordMaterialization
 import org.bdgenomics.mango.tiling.AlignmentRecordTile
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
-import org.apache.spark.sql.{ DataFrame, SQLContext }
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
@@ -86,7 +84,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var featuresExist: Boolean = false
   var globalDict: SequenceDictionary = null
   var refRDD: ReferenceRDD = null
-  var readsData: AlignmentRecordTile = null
+  var readsData: AlignmentRecordMaterialization = null
   var varData: VariantLayout = null
   var server: org.eclipse.jetty.server.Server = null
   var screenSize: Int = 1000
@@ -182,7 +180,6 @@ class VizServlet extends ScalatraServlet {
         case Some(_) => {
           val sampleIds: List[String] = params("sample").split(",").toList
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
-
           dataOption match {
             case Some(_) => {
               val jsonData: Map[String, SampleTrack] = AlignmentRecordLayout(dataOption.get.toRDD().collect, sampleIds)
@@ -229,29 +226,29 @@ class VizServlet extends ScalatraServlet {
           val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
-          val d = VizReads.readsData.layer0.getFrequency(region, sampleIds)
+          val d = VizReads.readsData.getFrequency(region, sampleIds)
           Ok(d)
-        } case None => VizReads.errors.outOfBounds
+        }
+        case None => VizReads.errors.outOfBounds
       }
     }
   }
 
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       contentType = "json"
-      val dictOpt = VizReads.globalDict(params("ref"))
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, VizUtils.getEnd(params("end").toLong, dictOpt))
-      dictOpt match {
-        case Some(_) => {
-          if (viewRegion.end > dictOpt.get.length) {
-            VizReads.errors.outOfBounds
-          }
-          val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
-          val sampleIds: List[String] = params("sample").split(",").toList
-          Ok(VizReads.readsData.get(viewRegion, Some(sampleIds)))
-        } case None => VizReads.errors.outOfBounds
-      }
-    }
+
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      // if region is in bounds of reference, return data
+      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
+        val sampleIds: List[String] = params("sample").split(",").toList
+        val data = VizReads.readsData.multiget(viewRegion, sampleIds)
+        data match {
+          case Some(_) => Ok(write(data.get))
+          case None    => VizReads.errors.outOfBounds
+        }
+      } else VizReads.errors.outOfBounds
   }
 
   get("/overall") {
@@ -265,128 +262,148 @@ class VizServlet extends ScalatraServlet {
         "featuresExist" -> VizReads.featuresExist))
   }
 
-  get("/variants") {
-    contentType = "text/html"
-    if (!session.contains("ref")) {
-      session("ref") = "chr"
-      session("start") = "1"
-      session("end") = "100"
+    get("/overall") {
+      contentType = "text/html"
+      val templateEngine = new TemplateEngine
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
+        Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
+          "readsSamples" -> VizReads.sampNames,
+          "readsExist" -> VizReads.readsExist,
+          "variantsExist" -> VizReads.variantsExist,
+          "featuresExist" -> VizReads.featuresExist))
     }
-    val globalViewRegion: ReferenceRegion =
-      ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
-    val templateEngine = new TemplateEngine
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-      Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
 
-  }
+    get("/variants") {
+      contentType = "text/html"
+      if (!session.contains("ref")) {
+        session("ref") = "chr"
+        session("start") = "1"
+        session("end") = "100"
+      }
+      val globalViewRegion: ReferenceRegion =
+        ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
+      val templateEngine = new TemplateEngine
+      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
+        Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
 
-  get("/viewregion/:ref") {
-    contentType = "json"
-    session("ref") = params("ref")
-    session("start") = params("start")
-    session("end") = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)).toString
-  }
+    }
 
-  get("/variants/:ref") {
-    VizTimers.VarRequest.time {
+    get("/viewregion/:ref") {
       contentType = "json"
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-      write(VizReads.varData.get(viewRegion))
+      session("ref") = params("ref")
+      session("start") = params("start")
+      session("end") = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)).toString
     }
-  }
 
-  get("/variantfreq/:ref") {
-    VizTimers.VarFreqRequest.time {
-      contentType = "json"
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-      write(VizReads.varData.getFreq(viewRegion))
+    get("/variants/:ref") {
+      VizTimers.VarRequest.time {
+        contentType = "json"
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+        write(VizReads.varData.get(viewRegion))
+      }
     }
-  }
 
-  get("/features/:ref") {
-    if (!VizReads.featuresExist)
-      VizReads.errors.notFound
-    else {
-      val viewRegion =
-        ReferenceRegion(params("ref"), params("start").toLong,
-          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-      VizTimers.FeatRequest.time {
-        val featureRDD: Option[RDD[Feature]] = {
-          if (VizReads.featuresPath.endsWith(".adam")) {
-            val pred: FilterPredicate = (LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end)
-            val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-            Option(VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj)))
-          } else if (VizReads.featuresPath.endsWith(".bed")) {
-            Option(VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion))
-          } else {
-            None
+    get("/variantfreq/:ref") {
+      VizTimers.VarFreqRequest.time {
+        contentType = "json"
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+        write(VizReads.varData.getFreq(viewRegion))
+      }
+    }
+
+    get("/features/:ref") {
+      if (!VizReads.featuresExist)
+        VizReads.errors.notFound
+      else {
+        val viewRegion =
+          ReferenceRegion(params("ref"), params("start").toLong,
+            VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+        VizTimers.FeatRequest.time {
+          val featureRDD: Option[RDD[Feature]] = {
+            if (VizReads.featuresPath.endsWith(".adam")) {
+              val pred: FilterPredicate = (LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end)
+              val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
+              Option(VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj)))
+            } else if (VizReads.featuresPath.endsWith(".bed")) {
+              Option(VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion))
+            } else {
+              None
+            }
           }
-        }
-        featureRDD match {
-          case Some(_) => {
-            Ok(write(FeatureLayout(featureRDD.get)))
-          } case None => {
-            VizReads.errors.unprocessableFile
+          featureRDD match {
+            case Some(_) => {
+              Ok(write(FeatureLayout(featureRDD.get)))
+            }
+            case None => {
+              VizReads.errors.unprocessableFile
+            }
           }
         }
       }
     }
+
+    get("/reference/:ref") {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+      if (viewRegion.end - viewRegion.start > 2000)
+        VizReads.errors.largeRegion
+      else {
+        val d = VizReads.refRDD.get(viewRegion)
+        Ok(write(d))
+      }
+    }
+
+    //  after("/mergedReads/:ref") {
+    //    val matSize = 2000L
+    //    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+    //      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+    //    contentType = "json"
+    //    val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+    //    dictOpt match {
+    //      case Some(_) => {
+    //        val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
+    //        val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
+    //        val sampleIds: List[String] = params("sample").split(",").toList
+    //        VizReads.readsData.multiget(left, sampleIds)
+    //        VizReads.readsData.multiget(right, sampleIds)
+    //      } case None => // Do Nothing
+    //    }
+    //
+    //  }
+    //
+    //    get("/prefetchvfreq/:ref") {
+    //    after("/variantfreq/:ref") {
+    //      println("IN PREFETCH FREQ")
+    //      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+    //        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+    //      val matSize = 100001L
+    //      val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
+    //      val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
+    //      println("pretching freq:...")
+    //      println(left)
+    //      println(right)
+    //      VizReads.varData.fetchVarFreqData(left, true)
+    //      VizReads.varData.fetchVarFreqData(right, true)
+    //    }
+    //
+    //    get("/prefetchvariants/:ref") {
+    //    after("/variants/:ref") {
+    //      println("IN PREFETCH VAR")
+    //      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+    //        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+    //      val matSize = 1001L
+    //      val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
+    //      val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
+    //      println("prefetching var:...")
+    //      println(left)
+    //      println(right)
+    //      VizReads.varData.fetchVarData(left, true)
+    //      VizReads.varData.fetchVarData(right, true)
+    //    }
+
   }
-
-  get("/reference/:ref") {
-    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-    if (viewRegion.end - viewRegion.start > 2000)
-      VizReads.errors.largeRegion
-     else Ok(VizReads.refRDD.get(viewRegion))
-  }
-
-  //  after("/mergedReads/:ref") {
-  //    println("IN PREFETCH FREQ")
-  //    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //    val matSize = 1001L
-  //    val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
-  //    val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
-  //    VizReads.readsData.get(left)
-  //    VizReads.readsData.get(right)
-  //  }
-
-  //uncomment out for actual application
-  //  get("/prefetchvfreq/:ref") {
-  //  after("/variantfreq/:ref") {
-  //    println("IN PREFETCH FREQ")
-  //    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //    val matSize = 100001L
-  //    val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
-  //    val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
-  //    println("pretching freq:...")
-  //    println(left)
-  //    println(right)
-  //    VizReads.varData.fetchVarFreqData(left, true)
-  //    VizReads.varData.fetchVarFreqData(right, true)
-  //  }
-
-  //uncomment out for actual application
-  //  get("/prefetchvariants/:ref") {
-  //  after("/variants/:ref") {
-  //    println("IN PREFETCH VAR")
-  //    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //    val matSize = 1001L
-  //    val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
-  //    val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
-  //    println("prefetching var:...")
-  //    println(left)
-  //    println(right)
-  //    VizReads.varData.fetchVarData(left, true)
-  //    VizReads.varData.fetchVarData(right, true)
-  //  }
-
-
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
@@ -408,7 +425,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     initFeatures()
 
     // run preprocessing if preprocessing file was provided
-    preprocess()
+    preprocess
 
     // start server
     if (!args.testMode) startServer()
@@ -419,11 +436,12 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     def initReference() = {
       val referencePath = Option(args.referencePath)
 
-      VizReads.referencePath =
+      VizReads.referencePath = {
         referencePath match {
           case Some(_) => referencePath.get
           case None    => throw new FileNotFoundException("reference file not provided")
         }
+      }
 
       VizReads.refRDD = new ReferenceRDD(sc, VizReads.referencePath)
       VizReads.globalDict = VizReads.refRDD.getSequenceDictionary
@@ -433,7 +451,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded alignment files
      */
     def initAlignments = {
-      VizReads.readsData = new AlignmentRecordTile(sc, VizReads.globalDict, VizReads.partitionCount, VizReads.refRDD)
+      VizReads.readsData = AlignmentRecordMaterialization(sc, VizReads.globalDict, VizReads.partitionCount, VizReads.refRDD)
       val readsPaths = Option(args.readsPaths)
       if (readsPaths.isDefined) {
         VizReads.readsPaths = args.readsPaths.split(",").toList
@@ -453,20 +471,20 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           VizReads.variantsPaths = args.variantsPaths.split(",").toList
           VizReads.variantsExist = true
           for (varPath <- VizReads.variantsPaths) {
-            if (varPath.endsWith(".vcf")) {
-              VizReads.variantData.loadSample(varPath)
-            } else if (varPath.endsWith(".adam")) {
-              VizReads.variantData.loadSample(varPath)
+            if (varPath.endsWith(".adam")) {
+              VizReads.varData = new VariantLayout(VizReads.sc)
+              VizReads.varData.loadChr(varPath)
             } else {
               log.info("WARNING: Invalid input for variants file")
+              println("WARNING: Invalid input for variants file")
             }
           }
         }
         case None => {
           log.info("WARNING: No variants file provided")
+          println("WARNING: No variants file provided")
         }
       }
-
     }
 
     /*
@@ -495,7 +513,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Preloads data specified in optional text file int the format Name, Start, End where Name is
      * the chromosomal location, start is start position and end is end position
      */
-    def preprocess() = {
+    def preprocess = {
       val path = Option(args.preprocessPath)
       if (path.isDefined && VizReads.sampNames.isDefined) {
         val file = new File(path.get)
@@ -505,8 +523,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             val line = r.split(",")
             try {
               val region = ReferenceRegion(line(0), line(1).toLong, line(2).toLong)
-              VizReads.readsData.get(region,
-                VizReads.sampNames)
+              VizReads.readsData.multiget(region,
+                VizReads.sampNames.get)
             } catch {
               case e: Exception => log.warn("preprocessing file requires format referenceName,start,end")
             }

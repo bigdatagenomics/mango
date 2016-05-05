@@ -132,12 +132,18 @@ object MismatchLayout extends Logging {
               }
             }
           } else if (op == CigarOperator.D || op == CigarOperator.N) {
-            val start = Math.min(refIdx, refLength)
-            val end = Math.min(refIdx + misLen, refLength)
-            val indel = ref.substring(start, end)
-            misMatches += new MisMatch(op.toString, refPos, misLen, "", indel)
-            refIdx += misLen
-            refPos += misLen
+            try {
+              val start = Math.min(refIdx, refLength)
+              val end = Math.min(refIdx + misLen, refLength)
+              val indel = ref.substring(start, end)
+              misMatches += new MisMatch(op.toString, refPos, misLen, "", indel)
+              refIdx += misLen
+              refPos += misLen
+            } catch {
+              case e: Exception => {
+                log.warn(e.toString)
+              }
+            }
           } else if (op == CigarOperator.S) {
             recIdx += misLen
           }

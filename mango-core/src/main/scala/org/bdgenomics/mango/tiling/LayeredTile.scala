@@ -23,20 +23,32 @@ import org.bdgenomics.adam.models.ReferenceRegion
 abstract class LayeredTile extends Serializable with Logging {
   implicit val formats = net.liftweb.json.DefaultFormats
 
-  def getL0(region: ReferenceRegion, args: Option[List[String]]): String
-  def getConvolved(region: ReferenceRegion, layer: Int, args: Option[List[String]]): String
+  //  def getL0(region: ReferenceRegion, args: Option[List[String]]): String
+  //  def getConvolved(region: ReferenceRegion, layer: Int, args: Option[List[String]]): String
+  def layerMap: Map[Int, String]
 
   def get(region: ReferenceRegion, args: Option[List[String]] = None): String = {
     val size = region.end - region.start
     size match {
-      case x if (x < L1.range._1) => getL0(region, args)
-      case x if (x >= L1.range._1 && x < L1.range._2) => getConvolved(region, 1, args)
-      case x if (x >= L2.range._1 && x < L2.range._2) => getConvolved(region, 2, args)
-      case x if (x >= L3.range._1 && x < L3.range._2) => getConvolved(region, 3, args)
-      case _ => getConvolved(region, 4, args)
+      case x if (x < L1.range._1) => layerMap(0)
+      case x if (x >= L1.range._1 && x < L1.range._2) => layerMap(1)
+      case x if (x >= L2.range._1 && x < L2.range._2) => layerMap(2)
+      case x if (x >= L3.range._1 && x < L3.range._2) => layerMap(3)
+      case _ => layerMap(4)
     }
-
   }
+
+  //  def get(region: ReferenceRegion, args: Option[List[String]] = None): String = {
+  //    val size = region.end - region.start
+  //    size match {
+  //      case x if (x < L1.range._1) => getL0(region, args)
+  //      case x if (x >= L1.range._1 && x < L1.range._2) => getConvolved(region, 1, args)
+  //      case x if (x >= L2.range._1 && x < L2.range._2) => getConvolved(region, 2, args)
+  //      case x if (x >= L3.range._1 && x < L3.range._2) => getConvolved(region, 3, args)
+  //      case _ => getConvolved(region, 4, args)
+  //    }
+  //
+  //  }
 
 }
 
@@ -88,6 +100,5 @@ object L4 extends Layer {
   val range = (L3.maxSize, maxSize)
   val patchSize = 10000
   val stride = patchSize
-
 }
 

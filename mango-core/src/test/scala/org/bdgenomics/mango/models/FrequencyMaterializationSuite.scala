@@ -49,15 +49,15 @@ class FrequencyMaterializationSuite extends MangoFunSuite {
     val freq = new FrequencyMaterialization(sc, sd, chunkSize)
     freq.loadSample(chrM, sample)
 
-    val results = freq.multiget(region, List(sample))
+    val results = freq.get(region, List(sample))
 
     val reads = sc.loadBam(chrM).rdd.filterByOverlappingRegion(region)
 
     val ones = reads.flatMap(r => (r.getStart.toLong to r.getEnd.toLong)).filter(_ == 1).count
     val threes = reads.flatMap(r => (r.getStart.toLong to r.getEnd.toLong)).filter(_ == 3).count
 
-    val firstCoverage: SampleCoverage = parse(freq.multiget(ReferenceRegion("chrM", 1, 1), List(sample)).first).extract[SampleCoverage]
-    val thirdCoverage: SampleCoverage = parse(freq.multiget(ReferenceRegion("chrM", 3, 3), List(sample)).first).extract[SampleCoverage]
+    val firstCoverage: SampleCoverage = parse(freq.get(ReferenceRegion("chrM", 1, 1), List(sample))).extract[SampleCoverage]
+    val thirdCoverage: SampleCoverage = parse(freq.get(ReferenceRegion("chrM", 3, 3), List(sample))).extract[SampleCoverage]
 
     assert(firstCoverage.count == ones)
     assert(thirdCoverage.count == threes)

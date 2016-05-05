@@ -5,7 +5,7 @@
 <html>
     <% render("templates/head.ssp")%>
     <% render("navigation/navigation.ssp", Map("isOverall" -> false)) %>
-    <% render("navigation/panAndZoom.ssp") %>
+    <% render("navigation/panAndZoom.ssp",Map("isOverall" -> false)) %>
 
     <div class="main">
           <div class="graphArea" id="refArea"></div>
@@ -35,9 +35,4 @@
 <script src="js/variants.js"></script>
 <script src="js/formSubmit.js"></script>
 <script src="js/reference.js"></script>
-<script>
-  // renderVariantFrequency(viewRefName, viewRegStart, viewRegEnd);
-  renderVariants(viewRefName, viewRegStart, viewRegEnd);
-  // renderReference(viewRefName, viewRegStart, viewRegEnd);
-</script>
 </html>

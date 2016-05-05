@@ -91,7 +91,7 @@ class ReadsTrack(recs: List[(ReferenceRegion, CalculatedAlignmentRecord)], sampO
   val sample = sampOpt.get
   val records = recs.map(r => (r._1, r._2.record))
   val matePairs: List[MatePair] = getMatePairs
-  val misMatches: List[MisMatch] = recs.flatMap(_._2.mismatches.get)
+  val misMatches: List[MisMatch] = recs.flatMap(_._2.mismatches)
 
   def getMatePairs(): List[MatePair] = {
     val pairs = records.groupBy(_._2.getReadName).filter(_._2.size == 2).map(_._2)

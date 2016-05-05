@@ -29,7 +29,7 @@ function toggleAlignments(sample, selector) {
 // Toggles alignment record contained in the selector for a given sample
 function toggleVariants() {
     renderJsonVariants();
-    httpGet("/prefetchvariants/"+ viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd);
+//    httpGet("/prefetchvariants/"+ viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd);
 }
 
 function setGlobalMapQ(mapq) {

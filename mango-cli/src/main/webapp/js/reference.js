@@ -74,6 +74,16 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd, callback) {
         }
     });
 
+    var positions = []
+    var regionSize = viewRegEnd - viewRegStart;
+    for (var i = 0; i < regionSize; i++) {
+        positions[i] = i + viewRegStart;
+    }
+
+    data = data.split('');
+    data = d3.zip(positions, data);
+
+
     // render reference for low or high resolution depending on base range
     if (viewRegEnd - viewRegStart > 100) {
       renderLowResRef(data, refContainer, refDiv);
@@ -99,16 +109,16 @@ function renderLowResRef(data, refContainer, refDiv) {
   var modify = rects.transition();
   modify
     .attr("x", function(d) {
-      return xAxisScale(d.position);
+      return xAxisScale(d[0]);
     })
     .attr("width", function(d) {
-    if (d.position < 0) return width;
+    if (d[0] < 0) return width;
     else return Math.max(1, width/(viewRegEnd-viewRegStart));
     })
     .attr("fill", function(d) {
-      if (d.reference === "N") return nColor;
-      else if (d.position == -1) return brown;
-      else return baseColors[d.reference];
+      if (d[1] === "N") return nColor;
+      else if (d[0] == -1) return brown;
+      else return baseColors[d[1]];
     });
 
     var newData = rects.enter();
@@ -116,16 +126,16 @@ function renderLowResRef(data, refContainer, refDiv) {
     .append("rect")
       .attr("class", "refrect")
       .attr("x", function(d) {
-        return xAxisScale(d.position);
+        return xAxisScale(d[0]);
       })
       .attr("y", 30)
     .attr("fill", function(d) {
-      if (d.reference === "N") return nColor;
-      else if (d.position == -1) return brown;
-      else return baseColors[d.reference];
+      if (d[1] === "N") return nColor;
+      else if (d[0] == -1) return brown;
+      else return baseColors[d[1]];
     })
     .attr("width", function(d) {
-      if (d.position < 0) return width;
+      if (d[0] < 0) return width;
       else return Math.max(1, width/(viewRegEnd-viewRegStart));
     })
     .attr("height", refHeight)
@@ -134,8 +144,8 @@ function renderLowResRef(data, refContainer, refDiv) {
           .duration(200)
           .style("opacity", .9);
         refDiv.html(
-          "Base: " + d.reference + "<br>" +
-          "Position: " + d.position)
+          "Base: " + d[1] + "<br>" +
+          "Position: " + d[0])
           .style("left", d3.event.pageX + "px")
           .style("top", d3.event.pageY + "px");
       })
@@ -143,7 +153,7 @@ function renderLowResRef(data, refContainer, refDiv) {
         refDiv.transition()
           .duration(200)
           .style("opacity", .9);
-        refDiv.html(d.reference)
+        refDiv.html(d[1])
           .style("left", d3.event.pageX + "px")
           .style("top", d3.event.pageY + "px");
       })
@@ -169,10 +179,10 @@ function renderHighResRef(data, refContainer) {
       .attr("dx", function(d, i) {
            return i/(viewRegEnd-viewRegStart) * width - (width/(viewRegEnd-viewRegStart))/2 ;
       })
-      .text( function (d) { return d.reference; })
+      .text( function (d) { return d[1]; })
       .attr("fill", function(d) {
-        if (d.reference === "N") return nColor;
-        else return baseColors[d.reference];
+        if (d[1] === "N") return nColor;
+        else return baseColors[d[1]];
       });
 
   var newData = refString.enter();
@@ -184,13 +194,13 @@ function renderHighResRef(data, refContainer) {
       .attr("dx", function(d, i) {
         return i/(viewRegEnd-viewRegStart) * width - (width/(viewRegEnd-viewRegStart))/2 ;
           })
-      .text( function (d) { return d.reference; })
+      .text( function (d) { return d[1]; })
       .attr("font-family", "Sans-serif")
       .attr("font-weight", "bold")
       .attr("font-size", "12px")
       .attr("fill", function(d) {
-        if (d.reference === "N") return nColor;
-        else return baseColors[d.reference];
+        if (d[1] === "N") return nColor;
+        else return baseColors[d[1]];
       });
 
     var removed = refString.exit();

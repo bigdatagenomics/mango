@@ -70,7 +70,6 @@ class FrequencyMaterialization(s: SparkContext,
    */
   def loadCoverage(sampleId: String, regionOpt: Option[ReferenceRegion] = None): DataFrame = {
     val file = fileMap(sampleId)
-
     val coverage: RDD[SampleCoverage] =
       if (file.containsCoverage) {
         val df = sqlContext.read.load(file.filePath)

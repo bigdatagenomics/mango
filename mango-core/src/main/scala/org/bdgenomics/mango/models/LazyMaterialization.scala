@@ -76,34 +76,34 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def put(region: ReferenceRegion, ks: List[String])
 
-  def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, S]] = {
-    multiget(region, List(k))
-  }
-
-  /* If the RDD has not been initialized, initialize it to the first get request
-	* Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-	* If it exists, call get on the IntervalRDD
-	* Otherwise call put on the sections of data that don't exist
-	* Here, ks, is an option of list of personids (String)
-	*/
-  def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
-    val seqRecord = dict(region.referenceName)
-    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
-    seqRecord match {
-      case Some(_) =>
-        regionsOpt match {
-          case Some(_) =>
-            for (r <- regionsOpt.get) {
-              put(r, ks)
-            }
-          case None =>
-          // DO NOTHING
-        }
-        Option(intRDD.filterByInterval(region))
-      case None =>
-        None
-    }
-  }
+  //  def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, S]] = {
+  //    multiget(region, List(k))
+  //  }
+  //
+  //  /* If the RDD has not been initialized, initialize it to the first get request
+  //	* Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
+  //	* If it exists, call get on the IntervalRDD
+  //	* Otherwise call put on the sections of data that don't exist
+  //	* Here, ks, is an option of list of personids (String)
+  //	*/
+  //  def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
+  //    val seqRecord = dict(region.referenceName)
+  //    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+  //    seqRecord match {
+  //      case Some(_) =>
+  //        regionsOpt match {
+  //          case Some(_) =>
+  //            for (r <- regionsOpt.get) {
+  //              put(r, ks)
+  //            }
+  //          case None =>
+  //          // DO NOTHING
+  //        }
+  //        Option(intRDD.filterByInterval(region))
+  //      case None =>
+  //        None
+  //    }
+  //  }
 
 }
 

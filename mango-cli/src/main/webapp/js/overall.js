@@ -33,12 +33,14 @@ function render(refName, start, end) {
   // Features
   if (featuresExist) {
     renderFeatures(refName, start, end);
+  } else {
+    $("#featArea").css( ' display', 'none' );
   }
 
-  // Variants
-  //if (variantsExist) {
-  //  renderVariants(refName, start, end);
-  //}
+//  // Variants
+//  if (variantsExist) {
+//    renderVariants(refName, start, end);
+//  } else }
 
   // Reads and Coverage
   if (readsExist) {

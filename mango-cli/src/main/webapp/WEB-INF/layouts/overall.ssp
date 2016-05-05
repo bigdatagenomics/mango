@@ -7,7 +7,7 @@
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
 <% render("navigation/navigation.ssp", Map("isOverall" -> true)) %>
-<% render("navigation/panAndZoom.ssp") %>
+<% render("navigation/panAndZoom.ssp", Map("isOverall" -> true)) %>
 
 <% render("templates/sidebar.ssp") %>
 
