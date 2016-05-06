@@ -185,12 +185,14 @@ class VizServlet extends ScalatraServlet {
 
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
-      val end = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString))
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, end)
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       contentType = "json"
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       dictOpt match {
         case Some(_) => {
+          if (viewRegion.end > dictOpt.get.length) {
+            write("")
+          }
           val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val sampleIds: List[String] = params("sample").split(",").toList
           val readQuality = params.getOrElse("quality", "0")
@@ -231,12 +233,14 @@ class VizServlet extends ScalatraServlet {
 
   get("/freq/:ref") {
     VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,params("end").toLong)
       contentType = "json"
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       dictOpt match {
         case Some(_) => {
+          if (viewRegion.end > dictOpt.get.length) {
+            write("")
+          }
           val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
@@ -248,12 +252,15 @@ class VizServlet extends ScalatraServlet {
 
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,params("end").toLong)
+
       contentType = "json"
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       dictOpt match {
         case Some(_) => {
+          if (viewRegion.end > dictOpt.get.length) {
+            write("")
+          }
           val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
