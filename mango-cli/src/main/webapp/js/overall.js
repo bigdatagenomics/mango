@@ -46,6 +46,10 @@ render(viewRefName, viewRegStart, viewRegEnd);
 
 // Functions
 function render(refName, start, end, mapQuality) {
+
+  //Updating Search Bar 
+  document.getElementById("autocomplete").value = refName+":"+start.toString()+"-"+end.toString();
+  
   //Adding Reference rectangles
   setGlobalReferenceRegion(refName, start, end);
   setGlobalMapQ(mapQuality);
