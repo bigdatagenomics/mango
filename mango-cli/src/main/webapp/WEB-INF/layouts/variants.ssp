@@ -3,10 +3,9 @@
 
 
 <html>
-
-    <% render("../templates/head.ssp")%>
-    <% render("../navigation/navigation.ssp") %>
-    <% render("../navigation/panAndZoom.ssp") %>
+    <% render("templates/head.ssp")%>
+    <% render("navigation/navigation.ssp", Map("isOverall" -> false)) %>
+    <% render("navigation/panAndZoom.ssp") %>
 
     <div class="main">
           <div class="graphArea" id="refArea"></div>

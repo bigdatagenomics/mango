@@ -27,6 +27,17 @@
   .sampleLegend label, .sampleLegend input {
     float: right; }
 
+.chrChart {
+  width: 1000px;
+  margin-left: auto;
+  margin-right: auto; }
+  .chrChart div {
+    background-color: steelblue;
+    text-align: left;
+    padding: 1px 1px 1px 10px;
+    margin: 1px;
+    color: white; }
+
 .absolute {
   position: absolute; }
 
@@ -96,15 +107,6 @@ input[type="text"] {
 
 .checkbox-inline {
   margin-left: 15px; }
-
-.chart div {
-  font: 8px sans-serif;
-  background-color: steelblue;
-  text-align: left;
-  padding: 3px 3px 3px 10px;
-  margin: 1px;
-  color: white;
-  height: 12px; }
 
 #refVis {
   height: 180px;
@@ -224,11 +226,6 @@ h2.panel {
 
 .col-md-10 {
   border-left: 1px solid #e7e7e7; }
-
-.refDisabled {
-  pointer-events: none;
-  cursor: default;
-  color: grey; }
 
 #searchfield {
   display: block;

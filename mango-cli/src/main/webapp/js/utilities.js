@@ -10,7 +10,7 @@ function setGlobalReferenceRegion(refName, start, end) {
 }
 
 function isValidHttpResponse(data) {
-  if (data == undefined || jQuery.isEmptyObject(data) || data.length == 0) {
+  if (data == undefined) {
     return false;
   } else {
     return true;
@@ -76,9 +76,9 @@ function checkboxChange() {
   }
 
   if (coverageCheck.checked) {
-    $(".sampleCoverage").show();
+    $(".coverage-svg").show();
   } else {
-    $(".sampleCoverage").hide();
+    $(".coverage-svg").hide();
   }
 }
 

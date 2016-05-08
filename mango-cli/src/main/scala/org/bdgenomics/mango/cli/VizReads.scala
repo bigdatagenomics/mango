@@ -39,7 +39,7 @@ import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
-import org.scalatra.ScalatraServlet
+import org.scalatra._
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -68,13 +68,14 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   val commandName: String = "viz"
   val commandDescription: String = "Genomic visualization for ADAM"
+  implicit val formats = net.liftweb.json.DefaultFormats
 
   var sc: SparkContext = null
   var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var partitionCount: Int = 0
   var referencePath: String = ""
   var readsPaths: List[String] = null
-  var sampNames: List[String] = null
+  var sampNames: Option[List[String]] = None
   var readsExist: Boolean = false
   var variantsPaths: List[String] = null
   var variantsExist: Boolean = false
@@ -85,13 +86,20 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsData: AlignmentRecordMaterialization = null
   var variantData: GenotypeMaterialization = null
   var server: org.eclipse.jetty.server.Server = null
-  var screenSize: Int = 1
+  var screenSize: Int = 1000
+
+  // HTTP ERROR RESPONSES
+  object errors {
+    var outOfBounds = NotFound("Region Out of Bounds")
+    var largeRegion = RequestEntityTooLarge("Region too large")
+  }
 
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
 
-  def printReferenceJson(region: ReferenceRegion): List[ReferenceJson] = VizTimers.PrintReferenceTimer.time {
+  def printReferenceJson(region: ReferenceRegion): ActionResult = VizTimers.PrintReferenceTimer.time {
+
     val splitReferenceOpt: Option[String] = refRDD.getReference(region)
     splitReferenceOpt match {
       case Some(_) => {
@@ -102,9 +110,9 @@ object VizReads extends BDGCommandCompanion with Logging {
           tracks += new ReferenceJson(base.toUpperCase, positionCount)
           positionCount += 1
         }
-        tracks.toList
+        Ok(write(tracks.toList))
       } case None => {
-        List()
+        VizReads.errors.outOfBounds
       }
     }
   }
@@ -115,8 +123,8 @@ object VizReads extends BDGCommandCompanion with Logging {
    * @param dict: dictionary to format to a string
    * @return List of sequence dictionary strings of form referenceName:0-referenceName.length
    */
-  def formatDictionaryOpts(dict: SequenceDictionary): List[String] = {
-    dict.records.map(r => r.name + ":0-" + r.length).toList
+  def formatDictionaryOpts(dict: SequenceDictionary): String = {
+    dict.records.map(r => r.name + ":0-" + r.length).mkString(",")
   }
 
   //Correctly shuts down the server
@@ -178,11 +186,6 @@ class VizServlet extends ScalatraServlet {
     VizReads.quit()
   }
 
-  get("/init/:pixels") {
-    VizReads.screenSize = params("pixels").toInt
-    write(VizReads.formatDictionaryOpts(VizReads.globalDict))
-  }
-
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
@@ -191,7 +194,7 @@ class VizServlet extends ScalatraServlet {
       dictOpt match {
         case Some(_) => {
           if (viewRegion.end > dictOpt.get.length) {
-            write("")
+            VizReads.errors.outOfBounds
           }
           val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val sampleIds: List[String] = params("sample").split(",").toList
@@ -219,21 +222,21 @@ class VizServlet extends ScalatraServlet {
               }
               readRetJson = readRetJson.dropRight(1)
               readRetJson = "{" + readRetJson + "}"
-              readRetJson
+              Ok(readRetJson)
             }
             case None => {
               write("")
             }
           }
         }
-        case None => write("")
+        case None => VizReads.errors.outOfBounds
       }
     }
   }
 
   get("/freq/:ref") {
     VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,params("end").toLong)
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       contentType = "json"
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       dictOpt match {
@@ -244,15 +247,15 @@ class VizServlet extends ScalatraServlet {
           val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
-          write(VizReads.readsData.getFrequency(region, sampleIds))
-        } case None => write("")
+          Ok(write(VizReads.readsData.getFrequency(region, sampleIds)))
+        } case None => VizReads.errors.outOfBounds
       }
     }
   }
 
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,params("end").toLong)
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
 
       contentType = "json"
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
@@ -301,24 +304,17 @@ class VizServlet extends ScalatraServlet {
               write("")
             }
           }
-        } case None => write("")
+        } case None => VizReads.errors.outOfBounds
       }
     }
   }
 
   get("/overall") {
     contentType = "text/html"
-    if (!session.contains("ref")) {
-      session("ref") = "chr"
-      session("start") = "1"
-      session("end") = "100"
-    }
-    val globalViewRegion: ReferenceRegion =
-      ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
-      Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString),
-        "samples" -> VizReads.sampNames.mkString(","),
+      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
+        "readsSamples" -> VizReads.sampNames,
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
         "featuresExist" -> VizReads.featuresExist))
@@ -334,12 +330,9 @@ class VizServlet extends ScalatraServlet {
     val globalViewRegion: ReferenceRegion =
       ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
     val templateEngine = new TemplateEngine
-    if (VizReads.variantsExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-        Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/novariants.ssp")
-    }
+    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
+      Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
+
   }
 
   get("/viewregion/:ref") {
@@ -384,24 +377,6 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/features") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    if (!session.contains("ref")) {
-      session("ref") = "chr"
-      session("start") = "1"
-      session("end") = "100"
-    }
-    val globalViewRegion: ReferenceRegion =
-      ReferenceRegion(session("ref").toString, session("start").toString.toInt, session("end").toString.toInt)
-    if (VizReads.featuresExist) {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/features.ssp",
-        Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
-    } else {
-      templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/nofeatures.ssp")
-    }
-  }
-
   get("/features/:ref") {
     val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
       VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
@@ -431,8 +406,8 @@ class VizServlet extends ScalatraServlet {
     val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
       VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
     if (viewRegion.end - viewRegion.start > 2000)
-      write("")
-    else write(VizReads.printReferenceJson(viewRegion))
+      VizReads.errors.largeRegion
+    else VizReads.printReferenceJson(viewRegion)
   }
 }
 
@@ -447,21 +422,44 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         VizReads.sc.defaultParallelism
       else
         args.partitionCount
-    val referencePath = Option(args.referencePath)
-    VizReads.referencePath =
-      referencePath match {
-        case Some(_) => referencePath.get
-      }
 
-    VizReads.refRDD = new ReferenceRDD(sc, VizReads.referencePath)
-    VizReads.globalDict = VizReads.refRDD.getSequenceDictionary
+    // initialize all datasets
+    initReference
+    initAlignments
+    initVariants
+    initFeatures
 
-    VizReads.readsData = AlignmentRecordMaterialization(sc, VizReads.globalDict, VizReads.partitionCount, VizReads.refRDD)
-    val readsPaths = Option(args.readsPaths)
-    readsPaths match {
-      case Some(_) => {
+    // run preprocessing if preprocessing file was provided
+    preprocess
+
+    // start server
+    startServer
+
+    /*
+     * Initialize required reference file
+     */
+    def initReference = {
+      val referencePath = Option(args.referencePath)
+
+      VizReads.referencePath =
+        referencePath match {
+          case Some(_) => referencePath.get
+          // TODO: throw exception
+        }
+
+      VizReads.refRDD = new ReferenceRDD(sc, VizReads.referencePath)
+      VizReads.globalDict = VizReads.refRDD.getSequenceDictionary
+    }
+
+    /*
+     * Initialize loaded alignment files
+     */
+    def initAlignments = {
+      val readsPaths = Option(args.readsPaths)
+      if (readsPaths.isDefined) {
         VizReads.readsPaths = args.readsPaths.split(",").toList
         VizReads.readsExist = true
+        VizReads.readsData = AlignmentRecordMaterialization(sc, VizReads.globalDict, VizReads.partitionCount, VizReads.refRDD)
         var sampNamesBuffer = new scala.collection.mutable.ListBuffer[String]
         for (readsPath <- VizReads.readsPaths) {
           if (ResourceUtils.isLocal(readsPath, sc)) {
@@ -476,28 +474,75 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
               sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
             } else {
               log.info("WARNING: Invalid input for reads file on local fs")
-              println("WARNING: Invalid input for reads file on local fs")
             }
           } else {
             if (readsPath.endsWith(".adam")) {
               sampNamesBuffer += VizReads.readsData.loadADAMSample(readsPath)
             } else {
               log.info("WARNING: Invalid input for reads file on remote fs")
-              println("WARNING: Invalid input for reads file on remote fs")
             }
           }
         }
-        VizReads.sampNames = sampNamesBuffer.toList
-      } case None => {
-        log.info("WARNING: No reads file provided")
-        println("WARNING: No reads file provided")
+        VizReads.sampNames = Option(sampNamesBuffer.toList)
       }
     }
 
-    // preprocessing data
-    val path = Option(args.preprocessPath)
-    path match {
-      case Some(_) =>
+    /*
+     * Initialize loaded variant files
+     */
+    def initVariants = {
+      VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
+      val variantsPath = Option(args.variantsPaths)
+      variantsPath match {
+        case Some(_) => {
+          VizReads.variantsPaths = args.variantsPaths.split(",").toList
+          VizReads.variantsExist = true
+          for (varPath <- VizReads.variantsPaths) {
+            if (varPath.endsWith(".vcf")) {
+              VizReads.variantData.loadSample(varPath)
+            } else if (varPath.endsWith(".adam")) {
+              VizReads.variantData.loadSample(varPath)
+            } else {
+              log.info("WARNING: Invalid input for variants file")
+            }
+          }
+        }
+        case None => {
+          log.info("WARNING: No variants file provided")
+        }
+      }
+
+    }
+
+    /*
+     * Initialize loaded feature files
+     */
+    def initFeatures = {
+      val featuresPath = Option(args.featuresPath)
+      featuresPath match {
+        case Some(_) => {
+          if (args.featuresPath.endsWith(".bed") || args.featuresPath.endsWith(".adam")) {
+            VizReads.featuresPath = args.featuresPath
+            VizReads.featuresExist = true
+          } else {
+            log.info("WARNING: Invalid input for features file")
+            println("WARNING: Invalid input for features file")
+          }
+        }
+        case None => {
+          log.info("WARNING: No features file provided")
+          println("WARNING: No features file provided")
+        }
+      }
+    }
+
+    /*
+     * Preloads data specified in optional text file int the format Name, Start, End where Name is
+     * the chromosomal location, start is start position and end is end position
+     */
+    def preprocess = {
+      val path = Option(args.preprocessPath)
+      if (path.isDefined && VizReads.sampNames.isDefined) {
         val file = new File(path.get)
         if (file.exists()) {
           val lines = scala.io.Source.fromFile(path.get).getLines
@@ -506,7 +551,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             try {
               val region = ReferenceRegion(line(0), line(1).toLong, line(2).toLong)
               val rdd = VizReads.readsData.multiget(region,
-                VizReads.sampNames)
+                VizReads.sampNames.get)
               val recordCount = rdd match {
                 case Some(_) => rdd.get.count
                 case None    => 0
@@ -516,60 +561,28 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
               case e: Exception => log.warn("preprocessing file requires format referenceName,start,end")
             }
           })
-        } else {
-          log.warn("invalid prepocessing file path")
         }
-      case None => log.info("No preprocessing file provided")
-    }
-    VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
-    val variantsPath = Option(args.variantsPaths)
-    variantsPath match {
-      case Some(_) => {
-        VizReads.variantsPaths = args.variantsPaths.split(",").toList
-        VizReads.variantsExist = true
-        for (varPath <- VizReads.variantsPaths) {
-          if (varPath.endsWith(".vcf")) {
-            VizReads.variantData.loadSample(varPath)
-          } else if (varPath.endsWith(".adam")) {
-            VizReads.variantData.loadSample(varPath)
-          } else {
-            log.info("WARNING: Invalid input for variants file")
-            println("WARNING: Invalid input for variants file")
-          }
-        }
-      }
-      case None => {
-        log.info("WARNING: No variants file provided")
-        println("WARNING: No variants file provided")
       }
     }
 
-    val featuresPath = Option(args.featuresPath)
-    featuresPath match {
-      case Some(_) => {
-        if (args.featuresPath.endsWith(".bed") || args.featuresPath.endsWith(".adam")) {
-          VizReads.featuresPath = args.featuresPath
-          VizReads.featuresExist = true
-        } else {
-          log.info("WARNING: Invalid input for features file")
-          println("WARNING: Invalid input for features file")
-        }
-      }
-      case None => {
-        log.info("WARNING: No features file provided")
-        println("WARNING: No features file provided")
-      }
+    /*
+     * Starts server once on startup
+     */
+    def startServer = {
+      VizReads.server = new org.eclipse.jetty.server.Server(args.port)
+      val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
+      VizReads.server.setHandler(handlers)
+      handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
+      VizReads.server.start()
+      println("View the visualization at: " + args.port)
+      println("Variant visualization at: /variants")
+      println("Overall visualization at: /overall")
+      println("Quit at: /quit")
+      VizReads.server.join()
     }
 
-    VizReads.server = new org.eclipse.jetty.server.Server(args.port)
-    val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
-    VizReads.server.setHandler(handlers)
-    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
-    VizReads.server.start()
-    println("View the visualization at: " + args.port)
-    println("Variant visualization at: /variants")
-    println("Overall visualization at: /overall")
-    println("Quit at: /quit")
-    VizReads.server.join()
   }
 }
+
+case class Record(name: String, length: Long)
+

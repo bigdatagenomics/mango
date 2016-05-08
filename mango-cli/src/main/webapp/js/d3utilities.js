@@ -2,6 +2,7 @@
 var barWidth = 21;
 $(".main").width($("body").width() - barWidth);
 var width = $(".graphArea").width();
+var trackHeight = 14;
 
 // colors for base pairs [A, T, G, C]
 var aColor = '#5050FF'; //AZURE
@@ -72,16 +73,3 @@ function renderd3Line(container, height) {
   }
 }
 
-// calulates reads track height based on viewing range
-function getTrackHeight() {
-  var range = viewRegEnd - viewRegStart;
-  var baseHeight = 14;
-
-  if (range <= 1000)  {
-    return baseHeight;
-  } else if (range > 1000 && range < 10000)  {
-    return baseHeight - 7;
-  } else {
-    return 4;
-  }
-}

@@ -29,7 +29,9 @@ function renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds) {
     if (!isValidHttpResponse(ret)) {
       return;
     }
-    var data = ret.map(JSON.parse);
+    var data
+    if (ret === "") data = ret;
+    else data = ret.map(JSON.parse);
 
     var frequencyBySample = d3.nest()
       .key(function(d) { return d.sample; })
