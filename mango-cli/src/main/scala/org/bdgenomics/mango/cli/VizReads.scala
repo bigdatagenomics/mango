@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.cli
 
-import java.io.File
+import java.io.{ FileNotFoundException, File }
 
 import htsjdk.samtools.reference.IndexedFastaSequenceFile
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
@@ -71,7 +71,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   implicit val formats = net.liftweb.json.DefaultFormats
 
   var sc: SparkContext = null
-  var faWithIndex: Option[IndexedFastaSequenceFile] = None
   var partitionCount: Int = 0
   var referencePath: String = ""
   var readsPaths: List[String] = null
@@ -92,6 +91,8 @@ object VizReads extends BDGCommandCompanion with Logging {
   object errors {
     var outOfBounds = NotFound("Region Out of Bounds")
     var largeRegion = RequestEntityTooLarge("Region too large")
+    var unprocessableFile = UnprocessableEntity("File type not supported")
+    var notFound = NotFound("File not found")
   }
 
   def apply(cmdLine: Array[String]): BDGCommand = {
@@ -133,14 +134,11 @@ object VizReads extends BDGCommandCompanion with Logging {
       override def run() {
         try {
           log.info("Shutting down the server")
-          println("Shutting down the server")
           server.stop()
           log.info("Server has stopped")
-          println("Server has stopped")
         } catch {
           case e: Exception => {
             log.info("Error when stopping Jetty server: " + e.getMessage, e)
-            println("Error when stopping Jetty server: " + e.getMessage, e)
           }
         }
       }
@@ -173,6 +171,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
   var port: Int = 8080
+
+  @Args4jOption(required = false, name = "-test", usage = "The port to bind to for visualization. The default is 8080.")
+  var testMode: Boolean = false
 }
 
 class VizServlet extends ScalatraServlet {
@@ -376,25 +377,30 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/features/:ref") {
-    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-    VizTimers.FeatRequest.time {
-      val featureRDD: Option[RDD[Feature]] = {
-        if (VizReads.featuresPath.endsWith(".adam")) {
-          val pred: FilterPredicate = (LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end)
-          val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
-          Option(VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj)))
-        } else if (VizReads.featuresPath.endsWith(".bed")) {
-          Option(VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion))
-        } else {
-          None
+    if (!VizReads.featuresExist)
+      VizReads.errors.notFound
+    else {
+      val viewRegion =
+        ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+      VizTimers.FeatRequest.time {
+        val featureRDD: Option[RDD[Feature]] = {
+          if (VizReads.featuresPath.endsWith(".adam")) {
+            val pred: FilterPredicate = (LongColumn("end") >= viewRegion.start) && (LongColumn("start") <= viewRegion.end)
+            val proj = Projection(FeatureField.contig, FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end)
+            Option(VizReads.sc.loadParquetFeatures(VizReads.featuresPath, predicate = Some(pred), projection = Some(proj)))
+          } else if (VizReads.featuresPath.endsWith(".bed")) {
+            Option(VizReads.sc.loadFeatures(VizReads.featuresPath).filterByOverlappingRegion(viewRegion))
+          } else {
+            None
+          }
         }
-      }
-      featureRDD match {
-        case Some(_) => {
-          write(FeatureLayout(featureRDD.get))
-        } case None => {
-          write("")
+        featureRDD match {
+          case Some(_) => {
+            Ok(write(FeatureLayout(featureRDD.get)))
+          } case None => {
+            VizReads.errors.unprocessableFile
+          }
         }
       }
     }
@@ -431,7 +437,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     preprocess
 
     // start server
-    startServer
+    if (!args.testMode) startServer
 
     /*
      * Initialize required reference file
@@ -442,7 +448,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       VizReads.referencePath =
         referencePath match {
           case Some(_) => referencePath.get
-          // TODO: throw exception
+          case None    => throw new FileNotFoundException("reference file not provided")
         }
 
       VizReads.refRDD = new ReferenceRDD(sc, VizReads.referencePath)
@@ -523,13 +529,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             VizReads.featuresPath = args.featuresPath
             VizReads.featuresExist = true
           } else {
+            VizReads.featuresExist = false
             log.info("WARNING: Invalid input for features file")
-            println("WARNING: Invalid input for features file")
           }
         }
         case None => {
+          VizReads.featuresExist = false
           log.info("WARNING: No features file provided")
-          println("WARNING: No features file provided")
         }
       }
     }
