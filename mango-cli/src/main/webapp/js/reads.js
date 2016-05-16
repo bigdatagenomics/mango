@@ -1,8 +1,6 @@
 //Configuration Variables
 var readsHeight = 100;
 var padding = 3;
-var readTrackHeight = getTrackHeight();
-var width = $(".graphArea").width();
 
 var yOffset = 200;
 // svg class for alignment data
@@ -50,7 +48,6 @@ function renderMergedReads(refName, start, end, quality) {
 
     // Render data for each sample
   d3.json(readsJsonLocation,function(error, ret) {
-    if(error) console.log(error);
     if (!isValidHttpResponse(ret)) {
       stopWait("#readsArea");
       return;
@@ -149,7 +146,7 @@ function renderReadsByResolution(data, rawSample) {
         var numTracks = d3.max(data["tracks"], function(d) {return d.track});
         numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
-        readsHeight = (numTracks+1)*readTrackHeight;
+        readsHeight = (numTracks+1)*trackHeight;
 
         // Reset size of svg container
         container.attr("height", (readsHeight));
@@ -160,8 +157,8 @@ function renderReadsByResolution(data, rawSample) {
 
       modify
         .attr("x", (function(d) { return xAxisScale(d.start); }))
-        .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
-        .attr("height", (readTrackHeight-1))
+        .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
+        .attr("height", (trackHeight-1))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
 
       var newData = rects.enter();
@@ -170,9 +167,9 @@ function renderReadsByResolution(data, rawSample) {
         .append("rect")
         .attr("class", "readrect")
             .attr("x", (function(d) { return xAxisScale(d.start); }))
-        .attr("y", (function(d) { return readsHeight - readTrackHeight * (d.track+1); }))
+        .attr("y", (function(d) { return readsHeight - trackHeight * (d.track+1); }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-        .attr("height", (readTrackHeight-1))
+        .attr("height", (trackHeight-1))
         .style("fill", "#B8B8B8")
           .on("click", function(d) {
             readDiv[i].transition()
@@ -215,20 +212,20 @@ function renderReadsByResolution(data, rawSample) {
         bkgdsModify
         .attr('points', function(d) {
           var rectStart = xAxisScale(d.start) - 1;
-          var height = readTrackHeight - 2;
-          var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+          var height = trackHeight - 2;
+          var yCoord = readsHeight - trackHeight * (d.track + 1);
           if (d.readNegativeStrand === true) { // to the right
             var rectWidth = Math.max(1,(d.end - d.start)*(width/(viewRegEnd-viewRegStart)));
             var xCoord = rectStart + rectWidth + 1;
             return ((xCoord - height) + ' ' + yCoord + ","
-                + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
-                + (xCoord+1) + ' ' + (yCoord + readTrackHeight) + ","
+                + (xCoord - height) + ' ' + (yCoord + trackHeight) + ","
+                + (xCoord+1) + ' ' + (yCoord + trackHeight) + ","
                 + (xCoord+1) + ' ' + yCoord + ","
                 + (xCoord - height) + ' ' + yCoord);
           } else if (d.readNegativeStrand === false) { // to the left
             return ((rectStart + height) + ' ' + yCoord + ","
-                + (rectStart + height) + ' ' + (yCoord + readTrackHeight) + ","
-                + rectStart + ' ' + (yCoord + readTrackHeight) + ","
+                + (rectStart + height) + ' ' + (yCoord + trackHeight) + ","
+                + rectStart + ' ' + (yCoord + trackHeight) + ","
                 + rectStart + ' ' + yCoord + ","
                 + (rectStart + height) + ' ' + yCoord);
           }
@@ -241,20 +238,20 @@ function renderReadsByResolution(data, rawSample) {
               .attr("class", "bkgd")
               .attr('points', function(d) {
                 var rectStart = xAxisScale(d.start) - 1;
-                var height = readTrackHeight - 2;
-                var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+                var height = trackHeight - 2;
+                var yCoord = readsHeight - trackHeight * (d.track + 1);
                 if (d.readNegativeStrand === true) { // to the right
                   var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
                   var xCoord = rectStart + rectWidth + 1;
                   return ((xCoord - height) + ' ' + yCoord + ","
-                      + (xCoord - height) + ' ' + (yCoord + readTrackHeight) + ","
-                      + (xCoord+1) + ' ' + (yCoord + readTrackHeight) + ","
+                      + (xCoord - height) + ' ' + (yCoord + trackHeight) + ","
+                      + (xCoord+1) + ' ' + (yCoord + trackHeight) + ","
                       + (xCoord+1) + ' ' + yCoord + ","
                       + (xCoord - height) + ' ' + yCoord);
                 } else if (d.readNegativeStrand === false) { // to the left
                   return ((rectStart + height) + ' ' + yCoord + ","
-                      + (rectStart + height) + ' ' + (yCoord + readTrackHeight) + ","
-                      + rectStart + ' ' + (yCoord + readTrackHeight) + ","
+                      + (rectStart + height) + ' ' + (yCoord + trackHeight) + ","
+                      + rectStart + ' ' + (yCoord + trackHeight) + ","
                       + rectStart + ' ' + yCoord + ","
                       + (rectStart + height) + ' ' + yCoord);
                 }
@@ -265,8 +262,8 @@ function renderReadsByResolution(data, rawSample) {
         arrowModify
         .attr('points', function(d) {
           var rectStart = xAxisScale(d.start);
-          var height = readTrackHeight - 2;
-          var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+          var height = trackHeight - 2;
+          var yCoord = readsHeight - trackHeight * (d.track + 1);
           if (d.readNegativeStrand === true) { // to the right
             var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
             var xCoord = rectStart + rectWidth;
@@ -290,8 +287,8 @@ function renderReadsByResolution(data, rawSample) {
               .attr("class", "arrow")
               .attr('points', function(d) {
                 var rectStart = xAxisScale(d.start);
-                var height = readTrackHeight - 2;
-                var yCoord = readsHeight - readTrackHeight * (d.track + 1);
+                var height = trackHeight - 2;
+                var yCoord = readsHeight - trackHeight * (d.track + 1);
                 if (d.readNegativeStrand === true) { // to the right
                   var rectWidth = Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart)));
                   var xCoord = rectStart + rectWidth;
@@ -319,18 +316,18 @@ function renderReadsByResolution(data, rawSample) {
         modify = mateLines.transition();
         modify
           .attr("x1", (function(d) { return xAxisScale(d.start); }))
-          .attr("y1", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
+          .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
           .attr("x2", (function(d) { return xAxisScale(d.end); }))
-          .attr("y2", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }));
+          .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }));
         newData = mateLines.enter();
         newData
           .append("g")
           .append("line")
             .attr("class", "readPairs")
             .attr("x1", (function(d) { return xAxisScale(d.start); }))
-            .attr("y1", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
+            .attr("y1", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
             .attr("x2", (function(d) { return xAxisScale(d.end); }))
-            .attr("y2", (function(d) { return readsHeight - readTrackHeight * (d.track+1) + readTrackHeight/2 - 1; }))
+            .attr("y2", (function(d) { return readsHeight - trackHeight * (d.track+1) + trackHeight/2 - 1; }))
             .attr("strock-width", "1")
             .attr("stroke", "steelblue");
 
@@ -426,7 +423,7 @@ function renderIndelCounts(indels, sample) {
      }))
     .attr("width", (function(d) {
       return Math.max(1,(binSize * width/(viewRegEnd-viewRegStart))); }))
-    .attr("height", (readTrackHeight-1))
+    .attr("height", (trackHeight-1))
     .attr("fill", function(d) {
         var is = getIndelCounts("I", d.count.I);
         var ds = getIndelCounts("D", d.count.D);
@@ -510,11 +507,11 @@ function renderAlignmentIndels(indels, sample) {
       .attr("x", (function(d) {
         return xAxisScale(d.refCurr); }))
       .attr("y", (function(d) {
-          return readsHeight - (readTrackHeight * (d.track+1));
+          return readsHeight - (trackHeight * (d.track+1));
        }))
       .attr("width", (function(d) {
         return Math.max(1,(d.length)*(width/(viewRegEnd-viewRegStart))); }))
-      .attr("height", (readTrackHeight-1))
+      .attr("height", (trackHeight-1))
       .attr("fill", function(d) {
         if (d.op == "I") {
           return "pink";
@@ -693,10 +690,10 @@ function renderAlignmentMismatches(data, sample) {
         .append("rect")
         .attr("class", "mrect")
         .attr("y", (function(d) {
-            return readsHeight - (readTrackHeight * (d.track+1));
+            return readsHeight - (trackHeight * (d.track+1));
         })).attr("width", Math.max(1, width/(viewRegEnd-viewRegStart)))
         .attr("height", function(d) {
-            return (readTrackHeight-1);
+            return (trackHeight-1);
         }).attr("fill", function(d) {
               currBase = d.sequence;
               if (currBase === "N") {

@@ -1,19 +1,7 @@
-var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-var varFreqJsonLocation = "/variantfreq/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-
 // Section Heights
 var refHeight = 38;
 var varHeight = 0; //Default variable: this will change based on number of tracks
 var freqHeight = 200;
-var width = $("#varArea").width();
-
-// send pixel size for bining and initialize autocomplete and refVis
-var initJson =  "/init/" + Math.round($(".samples").width());
-d3.json(initJson, function(error, seqDict) {
-  sDict=seqDict;
-  autoComplete(seqDict);
-  refVis(sDict);
-});
 
 // Svg container for variant frequency
 var svg = d3.select("#varFreqArea")
@@ -54,8 +42,7 @@ function renderJsonVariants() {
 
     //dynamically setting height of svg containers
     var numTracks = d3.max(data, function(d) {return d.track});
-    var varTrackHeight = getTrackHeight();
-    varHeight = (numTracks+1)*varTrackHeight;
+    varHeight = (numTracks+1)*trackHeight;
     varSvgContainer.attr("height", varHeight);
     renderd3Line(varSvgContainer, varHeight);
 
@@ -72,7 +59,7 @@ function renderJsonVariants() {
       .append("rect")
         .attr("class", "variant")
         .attr("x", (function(d) { return xAxisScale(d.start); }))
-        .attr("y", (function(d) { return varHeight - varTrackHeight * (d.track+1);}))
+        .attr("y", (function(d) { return varHeight - trackHeight * (d.track+1);}))
         .attr("fill", function(d) {
           if (d.alleles === "Ref / Alt") {
             return '#00FFFF'; //CYAN
@@ -85,7 +72,7 @@ function renderJsonVariants() {
           }
         })
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
-        .attr("height", varTrackHeight)
+        .attr("height", trackHeight)
         .on("click", function(d) {
           varDiv.transition()
             .duration(200)

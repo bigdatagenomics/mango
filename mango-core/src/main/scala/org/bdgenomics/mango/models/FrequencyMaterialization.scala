@@ -61,7 +61,7 @@ class FrequencyMaterialization(s: SparkContext,
   }
 
   /*
-   * Loads coverage from precomputed adam file
+   * Loads coverage from precomputed adam file or from scratch from an alignment record file
    *
    * @param filePath: String where file is located
    * @param region: ReferenceRegion to take from
@@ -80,8 +80,7 @@ class FrequencyMaterialization(s: SparkContext,
         rdd.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
           .filter(r => (r >= region.start && r <= region.end))
           .map(r => (r, 1)).reduceByKey((k, v) => k + v)
-          .map(r => Coverage(region.referenceName, r._1, r._2))
-          .map(r => SampleCoverage(sampleId, r))
+          .map(r => SampleCoverage(sampleId, region.referenceName, r._1, r._2))
       }
     sqlContext.createDataFrame(coverage)
   }
@@ -102,7 +101,7 @@ class FrequencyMaterialization(s: SparkContext,
           }
         }
         coverage.filter((coverage("position") % binSize === 0) && (coverage("position") <= region.end) && (coverage("position") >= region.start)
-          && (coverage("referenceName") === region.referenceName) && (coverage("sample") isin (ks: _*)))toJSON
+          && (coverage("referenceName") === region.referenceName) && (coverage("sample") isin (ks: _*))).toJSON
       } case None => {
         sc.emptyRDD[String]
       }
@@ -140,18 +139,6 @@ class FrequencyMaterialization(s: SparkContext,
 
 }
 
-// TODO: remove. This is defined in adam
-case class Coverage(referenceName: String, position: Long, count: Int)
-
 case class CoverageFile(filePath: String, containsCoverage: Boolean)
-
-case class SampleCoverage(sample: String, referenceName: String, position: Long, count: Int) {
-
-}
-
-object SampleCoverage {
-  def apply(sample: String, c: Coverage): SampleCoverage = {
-    SampleCoverage(sample, c.referenceName, c.position, c.count)
-  }
-}
+case class SampleCoverage(sample: String, referenceName: String, position: Long, count: Int)
 

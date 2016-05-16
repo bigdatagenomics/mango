@@ -1,18 +1,21 @@
 // Filters invalid characters from string to create javascript descriptor
 // Svg Containers for refArea (exists is all views)
 var refHeight = 38;
-var refWidth = $(".graphArea").width();
+var width = $(".graphArea").width();
 
 var refContainer = d3.select("#refArea")
   .append("svg")
-  .attr("width", refWidth)
+  .attr("width", width)
   .attr("height", refHeight);
 
-function renderReference(viewRefName, viewRegStart, viewRegEnd) {
-  var jsonLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
+// Making hover box
+var refDiv = d3.select("#refArea")
+.append("div")
+.attr("class", "tooltip")
+.style("opacity", 0);
 
-  // Vertical Guidance Line for refContainer
-  var refVertLine = refContainer.append('line')
+// Vertical Guidance Line for refContainer
+var refVertLine = refContainer.append('line')
     .attr({
       'x1': 0,
       'y1': 0,
@@ -22,29 +25,26 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
     .attr("stroke", "#002900")
     .attr("class", "verticalLine");
 
-  // Mousemove for ref containers
-  refContainer.on('mousemove', function () {
-      var xPosition = d3.mouse(this)[0];
-      d3.selectAll(".verticalLine")
-        .attr({
-          "x1" : xPosition,
-          "x2" : xPosition
-        })
-  });
+// Mousemove for ref containers
+refContainer.on('mousemove', function () {
+  var xPosition = d3.mouse(this)[0];
+  d3.selectAll(".verticalLine")
+    .attr({
+      "x1" : xPosition,
+      "x2" : xPosition
+    })
+});
 
-  // Making hover box
-  var refDiv = d3.select("#refArea")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
+function renderReference(viewRefName, viewRegStart, viewRegEnd, callback) {
+  var jsonLocation = "/reference/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
   refContainer.select(".axis").remove();
 
   // Create the scale for the axis
- //  var xAxisScale = xAxis(viewRegStart, viewRegEnd, refWidth);
+ //  var xAxisScale = xAxis(viewRegStart, viewRegEnd, width);
  var xAxisScale = d3.scale.linear()
         .domain([viewRegStart, viewRegEnd])
-        .range([0, refWidth]);
+        .range([0, width]);
 
   // Create the axis
   var xAxis = d3.svg.axis()
@@ -56,14 +56,16 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
       .call(xAxis);
 
   d3.json(jsonLocation, function(error, data) {
-    if (error) return error;
-    if (!isValidHttpResponse(data)) {
-      data = {position: "-1", reference: "None"}
+    if (error != null) {
+        if (error.status == 404) { // data not found
+            callback(false);      // if data not found, redirect to home page
+            return;
+        } else if (error.status == 413) { // entity too large
+            //return;
+        }
     }
 
-    toggleReferenceDependencies(data);
-
-    refSequence = data;
+    data = typeof data != "undefined" ? data : [];
 
     // render reference for low or high resolution depending on base range
     if (viewRegEnd - viewRegStart > 100) {
@@ -71,28 +73,17 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd) {
     } else {
       renderHighResRef(data, refContainer);
     }
+    callback(true);
   });
 
 
 }
 
-/**
-* Toggles DOM elements based on whether reference is provided
-*/
-function toggleReferenceDependencies(data) {
-  if (data.length == 0) {
-    $(".refDependancy").addClass("refDisabled");
-  } else {
-    $(".refDependancy").removeClass("refDisabled");
-  }
-}
-
-
 // Renders reference at colored base resolution
 function renderLowResRef(data, refContainer, refDiv) {
 
  // Render x axis
- var xAxisScale = xRange(viewRegStart, viewRegEnd, refWidth)
+ var xAxisScale = xRange(viewRegStart, viewRegEnd, width)
 
   refContainer.selectAll(".reftext").remove();
 
@@ -104,8 +95,8 @@ function renderLowResRef(data, refContainer, refDiv) {
       return xAxisScale(d.position);
     })
     .attr("width", function(d) {
-    if (d.position < 0) return refWidth;
-    else return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
+    if (d.position < 0) return width;
+    else return Math.max(1, width/(viewRegEnd-viewRegStart));
     })
     .attr("fill", function(d) {
       if (d.reference === "N") return nColor;
@@ -127,8 +118,8 @@ function renderLowResRef(data, refContainer, refDiv) {
       else return baseColors[d.reference];
     })
     .attr("width", function(d) {
-      if (d.position < 0) return refWidth;
-      else return Math.max(1, refWidth/(viewRegEnd-viewRegStart));
+      if (d.position < 0) return width;
+      else return Math.max(1, width/(viewRegEnd-viewRegStart));
     })
     .attr("height", refHeight)
     .on("click", function(d) {
@@ -169,7 +160,7 @@ function renderHighResRef(data, refContainer) {
   modify
       .attr("x", 0)
       .attr("dx", function(d, i) {
-           return i/(viewRegEnd-viewRegStart) * refWidth - (refWidth/(viewRegEnd-viewRegStart))/2 ;
+           return i/(viewRegEnd-viewRegStart) * width - (width/(viewRegEnd-viewRegStart))/2 ;
       })
       .text( function (d) { return d.reference; })
       .attr("fill", function(d) {
@@ -184,7 +175,7 @@ function renderHighResRef(data, refContainer) {
       .attr("y", 30)
       .attr("x", 0)
       .attr("dx", function(d, i) {
-        return i/(viewRegEnd-viewRegStart) * refWidth - (refWidth/(viewRegEnd-viewRegStart))/2 ;
+        return i/(viewRegEnd-viewRegStart) * width - (width/(viewRegEnd-viewRegStart))/2 ;
           })
       .text( function (d) { return d.reference; })
       .attr("font-family", "Sans-serif")

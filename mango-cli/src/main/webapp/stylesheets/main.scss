@@ -3,6 +3,20 @@
 @import 'partials/sampleLegend';
 
 
+.chrChart {
+    width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+
+    div {
+      background-color: steelblue;
+      text-align: left;
+      padding: 1px 1px 1px 10px;
+      margin: 1px;
+      color: white;
+    }
+}
+
 .absolute {
     position: absolute;
 }
@@ -225,12 +239,6 @@ h2.panel {
 
 .col-md-10 {
   border-left: 1px solid $covBorder;
-}
-
-.refDisabled {
-  pointer-events: none;
-  cursor: default;
-  color: grey;
 }
 
 #searchfield { display: block; width: 100%; text-align: center; margin-bottom: 35px; }
