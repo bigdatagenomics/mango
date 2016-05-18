@@ -216,5 +216,15 @@
       <groupId>org.scalatra</groupId>
       <artifactId>scalatra_2.10</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.scalatra</groupId>
+      <artifactId>scalatra-scalatest_2.10</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.scalatra</groupId>
+      <artifactId>scalatra-specs2_2.10</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

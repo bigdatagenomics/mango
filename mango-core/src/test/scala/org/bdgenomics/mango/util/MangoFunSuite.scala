@@ -21,10 +21,11 @@ import java.nio.file.Files
 
 import com.google.common.io.Resources
 import org.bdgenomics.utils.misc.SparkFunSuite
+import org.scalatest.FunSuiteLike
 
 import scala.io.Source
 
-trait MangoFunSuite extends SparkFunSuite {
+trait MangoFunSuite extends SparkFunSuite with FunSuiteLike {
 
   override val appName: String = "mango"
   override val properties: Map[String, String] = Map(

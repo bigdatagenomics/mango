@@ -38,12 +38,12 @@ class LazyMaterializationSuite extends MangoFunSuite {
 
   // test vcf data
   val vcfFile = resourcePath("truetest.vcf")
-  val vcfFile2 = resourcePath("truetest2.vcf")
 
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
 
   sparkTest("assert the data pulled from a file is the same") {
+
     val refRDD = new ReferenceRDD(sc, referencePath)
 
     val sample = "sample1"
@@ -54,7 +54,8 @@ class LazyMaterializationSuite extends MangoFunSuite {
 
     val results = lazyMat.get(region, sample).get
     val lazySize = results.count
-    assert(lazySize == 1009)
+    val rawCount = getDataCountFromBamFile(bamFile, region)
+    assert(lazySize == rawCount)
   }
 
   sparkTest("Get data from different samples at the same region") {
@@ -98,9 +99,9 @@ class LazyMaterializationSuite extends MangoFunSuite {
     val results = lazyMat.get(bigRegion, sample1).get
     val lazySize = results.count
 
-    val smRegion = new ReferenceRegion("chrM", 0L, 19299L)
-    val sampleSize = getDataCountFromBamFile(bamFile, smRegion) / 2
-    assert(lazySize < sampleSize && lazySize > 0)
+    val smRegion = new ReferenceRegion("chrM", 0L, 16299L)
+    val rawSize = getDataCountFromBamFile(bamFile, smRegion)
+    assert(rawSize == lazySize)
   }
 
   sparkTest("Fetch region whose name is not yet loaded") {
@@ -134,21 +135,6 @@ class LazyMaterializationSuite extends MangoFunSuite {
 
     val results = lazyMat.get(region, vcfFile).get
     assert(results.count == 3)
-
-  }
-
-  sparkTest("Get data for 2 variant files") {
-    val region = new ReferenceRegion("chrM", 0L, 100L)
-    val lazyMat = GenotypeMaterialization(sc, sd, 10)
-    lazyMat.loadSample(vcfFile)
-    lazyMat.loadSample(vcfFile2)
-    val vcfFiles = List(vcfFile, vcfFile2)
-    val results1 = lazyMat.get(region, vcfFile).get
-    val results2 = lazyMat.get(region, vcfFile2).get
-    val recordCount = results1.count + results2.count
-
-    val results = lazyMat.multiget(region, vcfFiles).get
-    assert(results.count == recordCount)
 
   }
 

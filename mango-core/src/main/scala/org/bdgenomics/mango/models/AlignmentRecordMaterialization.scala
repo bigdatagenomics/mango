@@ -171,7 +171,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
         // map to CalculatedAlignmentRecord
         val data = keyedAlignments.map(r => (r._1, CalculatedAlignmentRecord(r._2, MismatchLayout(r._2, ref.get, reg))))
-          .filter(r => r._2.mismatches.size > 0)
+        // .filter(r => r._2.mismatches.size > 0)
 
         // insert into IntervalRDD
         if (intRDD == null) {
