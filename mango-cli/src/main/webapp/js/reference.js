@@ -61,11 +61,18 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd, callback) {
             callback(false);      // if data not found, redirect to home page
             return;
         } else if (error.status == 413) { // entity too large
-            //return;
         }
     }
 
-    data = typeof data != "undefined" ? data : [];
+    var positions = Array.apply(null, {length: data.length}).map(Number.call, Number);
+
+    data = typeof data != "undefined" ? d3.zip(positions, data.split("")) : [];
+    data = data.map(function(v) {
+        return {
+            "position": v[0] + viewRegStart,
+            "reference": v[1]
+        }
+    });
 
     // render reference for low or high resolution depending on base range
     if (viewRegEnd - viewRegStart > 100) {

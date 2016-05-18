@@ -98,26 +98,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
-
-  def printReferenceJson(region: ReferenceRegion): ActionResult = VizTimers.PrintReferenceTimer.time {
-
-    val splitReferenceOpt: Option[String] = refRDD.getReference(region)
-    splitReferenceOpt match {
-      case Some(_) => {
-        val splitReference = splitReferenceOpt.get.split("")
-        var tracks = new scala.collection.mutable.ListBuffer[ReferenceJson]
-        var positionCount: Long = region.start
-        for (base <- splitReference) {
-          tracks += new ReferenceJson(base.toUpperCase, positionCount)
-          positionCount += 1
-        }
-        Ok(write(tracks.toList))
-      } case None => {
-        VizReads.errors.outOfBounds
-      }
-    }
-  }
-
+  
   /**
    * Returns stringified version of sequence dictionary
    *
@@ -411,8 +392,18 @@ class VizServlet extends ScalatraServlet {
       VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
     if (viewRegion.end - viewRegion.start > 2000)
       VizReads.errors.largeRegion
-    else VizReads.printReferenceJson(viewRegion)
+    else {
+      val splitReferenceOpt: Option[String] = VizReads.refRDD.getReference(viewRegion)
+      splitReferenceOpt match {
+        case Some(_) => {
+          Ok(write(splitReferenceOpt.get))
+        } case None => {
+          VizReads.errors.outOfBounds
+        }
+      }
+    }
   }
+
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
