@@ -12,14 +12,13 @@ var readsHeight = 0; //Default variable: this will change based on number of rea
 var sampleData;
 
 // Functions
-function render(refName, start, end, mapQuality) {
+function render(refName, start, end) {
 
   //Updating Search Bar 
   document.getElementById("autocomplete").value = refName+":"+start.toString()+"-"+end.toString();
   
   //Adding Reference rectangles
   setGlobalReferenceRegion(refName, start, end);
-  setGlobalMapQ(mapQuality);
 
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
@@ -50,7 +49,7 @@ function render(refName, start, end, mapQuality) {
 
       $(".viewAlignments").prop("disabled", true)
     } else $(".viewAlignments").prop("disabled", false)
-    renderMergedReads(refName, start, end, mapQuality);
+    renderMergedReads(refName, start, end);
   }
 }
 

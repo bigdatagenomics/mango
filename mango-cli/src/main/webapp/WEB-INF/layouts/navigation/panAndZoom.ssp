@@ -64,12 +64,6 @@
             <input id="autocomplete" type="text" name="info" size="20" class="alignment-search form-control" placeholder="sample:refName:start-end">
         </li>
         <li>
-            mapping quality:
-        </li>
-        <li>
-        <input type="range" name="quality" id="quality" min="0" max="100">
-        </li>
-        <li>
             <input name="Submit button"
             type="button"
             value="Submit"

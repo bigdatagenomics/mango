@@ -36,15 +36,13 @@ for (var i = 0; i < samples.length; i++) {
 
 }
 
-function renderMergedReads(refName, start, end, quality) {
+function renderMergedReads(refName, start, end) {
     startWait("#readsArea");
-    // Define quality for reads
-    quality = quality || 0;
 
     renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds);
     // Define json location of reads data
     var readsJsonLocation = "/mergedReads/" + viewRefName + "?start=" + viewRegStart + "&end="
-        + viewRegEnd + "&sample=" + sampleIds + "&quality=" + quality;
+        + viewRegEnd + "&sample=" + sampleIds;
 
     // Render data for each sample
   d3.json(readsJsonLocation,function(error, ret) {
@@ -74,12 +72,12 @@ function renderMergedReads(refName, start, end, quality) {
     keys.forEach(function(sample) {
         var checkSelector = "#viewAlignments" + filterName(sample);
         if ($(checkSelector).is(':checked')) {
-            renderAlignments(refName, start, end, quality, sample);
+            renderAlignments(refName, start, end, sample);
         }
     });
 }
 
-function renderAlignments(refName, start, end, quality, sample) {
+function renderAlignments(refName, start, end, sample) {
     var isData = sample in readAlignmentSvgContainer;
     if (isData) {
         var region = readAlignmentSvgContainer[sample];
@@ -87,8 +85,6 @@ function renderAlignments(refName, start, end, quality, sample) {
             return;
         }
     }
-    // Define quality for reads
-    quality = quality || 0;
 
     readAlignmentSvgContainer[sample] = {
         refName: refName,
@@ -98,7 +94,7 @@ function renderAlignments(refName, start, end, quality, sample) {
 
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
-    + viewRegEnd + "&sample=" + sample + "&quality=" + quality;
+    + viewRegEnd + "&sample=" + sample;
 
    d3.json(readsJsonLocation,function(error, ret) {
         if (error) return error;

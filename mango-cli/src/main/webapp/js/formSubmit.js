@@ -59,9 +59,8 @@ function validateFormElements(form) {
 // Redirect based on form input
 function checkForm(form) {
   var elements = validateFormElements(form);
-  var quality = form.elements["quality"].value;
   if (elements != undefined) {
-    render(elements.refName, elements.newStart, elements.newEnd, quality);
+    render(elements.refName, elements.newStart, elements.newEnd);
   }
 }
 
