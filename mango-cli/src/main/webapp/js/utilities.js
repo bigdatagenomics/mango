@@ -21,13 +21,9 @@ function isValidHttpResponse(data) {
 function toggleAlignments(sample, selector) {
     var selector = $(getAlignmentSelector(filterName(sample)));
     if (!selector.is(':visible')) {
-            renderAlignments(viewRefName, viewRegStart, viewRegEnd, mapQuality, sample);
+            renderAlignments(viewRefName, viewRegStart, viewRegEnd, sample);
         }
         $(selector).slideToggle( "fast" );
-}
-
-function setGlobalMapQ(mapq) {
-    mapQuality = mapq;
 }
 
 // Filters invalid characters from string to create javascript descriptor

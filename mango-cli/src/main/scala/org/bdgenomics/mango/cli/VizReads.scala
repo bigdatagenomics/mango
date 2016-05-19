@@ -19,7 +19,6 @@ package org.bdgenomics.mango.cli
 
 import java.io.{ FileNotFoundException, File }
 
-import htsjdk.samtools.reference.IndexedFastaSequenceFile
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -32,7 +31,6 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.RDD.ReferenceRDD
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.filters.AlignmentRecordFilter
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, GenotypeMaterialization }
 import org.bdgenomics.utils.cli._
@@ -98,7 +96,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   def apply(cmdLine: Array[String]): BDGCommand = {
     new VizReads(Args4j[VizReadsArgs](cmdLine))
   }
-  
+
   /**
    * Returns stringified version of sequence dictionary
    *
@@ -170,17 +168,12 @@ class VizServlet extends ScalatraServlet {
 
   get("/reads/:ref") {
     VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       contentType = "json"
-      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      val dictOpt = VizReads.globalDict(params("ref"))
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, VizUtils.getEnd(params("end").toLong, dictOpt))
       dictOpt match {
         case Some(_) => {
-          if (viewRegion.end > dictOpt.get.length) {
-            VizReads.errors.outOfBounds
-          }
-          val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
           val sampleIds: List[String] = params("sample").split(",").toList
-          val readQuality = params.getOrElse("quality", "0")
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
@@ -235,28 +228,18 @@ class VizServlet extends ScalatraServlet {
 
   get("/mergedReads/:ref") {
     VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-
       contentType = "json"
-      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      val dictOpt = VizReads.globalDict(params("ref"))
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, VizUtils.getEnd(params("end").toLong, dictOpt))
       dictOpt match {
         case Some(_) => {
-          if (viewRegion.end > dictOpt.get.length) {
-            write("")
-          }
-          val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
-          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
           val sampleIds: List[String] = params("sample").split(",").toList
-          val readQuality = params.getOrElse("quality", "0")
           val diffReads = params.getOrElse("diff", "0") != "0"
           val dataOption = VizReads.readsData.multiget(viewRegion, sampleIds)
           dataOption match {
             case Some(_) => {
-              val filteredData: RDD[(ReferenceRegion, CalculatedAlignmentRecord)] =
-                AlignmentRecordFilter.filterByRecordQuality(dataOption.get.toRDD(), readQuality)
-              val binSize = VizUtils.getBinSize(region, VizReads.screenSize)
-              var alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(filteredData, binSize)
-
+              val binSize = VizUtils.getBinSize(viewRegion, VizReads.screenSize)
+              var alignmentData: Map[String, List[MutationCount]] = MergedAlignmentRecordLayout(dataOption.get.toRDD, binSize)
               val fileMap = VizReads.readsData.getFileMap
               var readRetJson: String = ""
               if (diffReads) {
@@ -419,21 +402,21 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         args.partitionCount
 
     // initialize all datasets
-    initReference
-    initAlignments
-    initVariants
-    initFeatures
+    initReference()
+    initAlignments()
+    initVariants()
+    initFeatures()
 
     // run preprocessing if preprocessing file was provided
-    preprocess
+    preprocess()
 
     // start server
-    if (!args.testMode) startServer
+    if (!args.testMode) startServer()
 
     /*
      * Initialize required reference file
      */
-    def initReference = {
+    def initReference() = {
       val referencePath = Option(args.referencePath)
 
       VizReads.referencePath =
@@ -449,7 +432,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     /*
      * Initialize loaded alignment files
      */
-    def initAlignments = {
+    def initAlignments() = {
       val readsPaths = Option(args.readsPaths)
       if (readsPaths.isDefined) {
         VizReads.readsPaths = args.readsPaths.split(",").toList
@@ -485,7 +468,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     /*
      * Initialize loaded variant files
      */
-    def initVariants = {
+    def initVariants() = {
       VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
       val variantsPath = Option(args.variantsPaths)
       variantsPath match {
@@ -512,7 +495,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     /*
      * Initialize loaded feature files
      */
-    def initFeatures = {
+    def initFeatures() = {
       val featuresPath = Option(args.featuresPath)
       featuresPath match {
         case Some(_) => {
@@ -535,7 +518,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Preloads data specified in optional text file int the format Name, Start, End where Name is
      * the chromosomal location, start is start position and end is end position
      */
-    def preprocess = {
+    def preprocess() = {
       val path = Option(args.preprocessPath)
       if (path.isDefined && VizReads.sampNames.isDefined) {
         val file = new File(path.get)
@@ -563,7 +546,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     /*
      * Starts server once on startup
      */
-    def startServer = {
+    def startServer() = {
       VizReads.server = new org.eclipse.jetty.server.Server(args.port)
       val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
       VizReads.server.setHandler(handlers)
