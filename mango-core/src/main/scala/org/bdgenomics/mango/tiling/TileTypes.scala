@@ -17,12 +17,12 @@
  */
 package org.bdgenomics.mango.tiling
 
-import net.liftweb.json.Serialization.write
-import org.apache.spark.rdd.RDD
 import org.apache.spark.{ Logging, SparkContext }
+import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
+import net.liftweb.json.Serialization.write
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.layout._
+import org.bdgenomics.mango.layout.{ MismatchLayout, CalculatedAlignmentRecord, ConvolutionalSequence }
 
 class AlignmentRecordTile(sc: SparkContext,
                           alignments: RDD[AlignmentRecord],
@@ -30,17 +30,21 @@ class AlignmentRecordTile(sc: SparkContext,
                           region: ReferenceRegion,
                           ks: List[String]) extends LayeredTile with Logging {
 
-  // map to samples
+  // TODO map to samples
+  implicit val formats = net.liftweb.json.DefaultFormats
 
   // map to CalculatedAlignmentRecord alignment records and
-  val layer0 = alignments.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region))).map(write(_)).collect
-  val x: String = write(layer0)
-  val layerMap = Map(0 -> x)
+  val layer0 = alignments.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region))).map(write(_)).collect.map(_.toByte)
+  val layerMap = Map(0 -> layer0)
 
   // TODO: get convolutions
 
-  //    val c = ConvolutionalSequence.convolveRDD(region, ref, alignments.get.toRDD.map(_._2).filter(r => r.getRecordGroupSample == k), layerType.patchSize, layerType.stride)
+  //  val c = ConvolutionalSequence.convolveRDD(region, ref, alignments.get.toRDD.map(_._2).filter(r => r.getRecordGroupSample == k), layerType.patchSize, layerType.stride)
   // format to data
   // put in layermap sca
 
+}
+
+case class ReferenceTile(sequence: String) extends LayeredTile with Serializable {
+  val layerMap = ConvolutionalSequence.convolveToEnd(sequence, LayeredTile.layerCount)
 }

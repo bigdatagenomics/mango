@@ -32,16 +32,15 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def sc: SparkContext
   def dict: SequenceDictionary
-  def partitions: Int
   def chunkSize: Int
   def partitioner: Partitioner
   def bookkeep: Bookkeep
 
   def setPartitioner: Partitioner = {
     if (sc.isLocal)
-      new HashPartitioner(partitions)
+      new HashPartitioner(sc.defaultParallelism)
     else
-      GenomicRegionPartitioner(partitions, dict)
+      GenomicRegionPartitioner(sc.defaultParallelism, dict)
   }
 
   def getDictionary: SequenceDictionary = {

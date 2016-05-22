@@ -21,6 +21,7 @@ import java.io.File
 
 import edu.berkeley.cs.amplab.spark.intervalrdd._
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
+import net.liftweb.json.Serialization._
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.rdd.RDD
@@ -30,9 +31,8 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.RDD._
-import org.bdgenomics.mango.core.util.{ ResourceUtils, SampleSize }
-import org.bdgenomics.mango.tiling.AlignmentRecordTile
+import org.bdgenomics.mango.core.util.ResourceUtils
+import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, L0, LayeredTile }
 import org.bdgenomics.mango.util.Bookkeep
 
 import scala.reflect.ClassTag
@@ -44,12 +44,11 @@ import scala.reflect.ClassTag
  */
 class AlignmentRecordMaterialization(s: SparkContext,
                                      d: SequenceDictionary,
-                                     parts: Int, chunkS: Int,
-                                     refRDD: ReferenceRDD) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with Serializable with Logging {
+                                     chunkS: Int,
+                                     refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with Serializable with Logging {
 
   val sc = s
   val dict = d
-  val partitions = parts
   val chunkSize = chunkS
   val partitioner = setPartitioner
   val bookkeep = new Bookkeep(chunkSize)
@@ -58,10 +57,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
   val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 
   var freq: FrequencyMaterialization = new FrequencyMaterialization(sc, dict, chunkSize)
-  /*
-   * Determines granularity of frequency calculations. Funtion of partitions and region to be viewed
-   */
-  val sampleSize = new SampleSize(partitions)
 
   /*
    * Gets Frequency over a given region for each specified sample
@@ -151,11 +146,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
   }
 
   /* If the RDD has not been initialized, initialize it to the first get request
-	* Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-	* If it exists, call get on the IntervalRDD
-	* Otherwise call put on the sections of data that don't exist
-	* Here, ks, is an option of list of personids (String)
-	*/
+    * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
+    * If it exists, call get on the IntervalRDD
+    * Otherwise call put on the sections of data that don't exist
+    * Here, ks, is an option of list of personids (String)
+    */
   def multiget(region: ReferenceRegion, ks: List[String]): Option[String] = {
     val seqRecord = dict(region.referenceName)
     val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
@@ -166,9 +161,19 @@ class AlignmentRecordMaterialization(s: SparkContext,
             put(r, ks)
           }
         }
-        val concat = intRDD.filterByInterval(region).mapValues(r => (r._1, r._2.get(region, Some(ks))))
-          .sortByKey().map(_._2).reduce(_ + _)
-        Some(concat)
+        // TODO: Alyssa account for samples
+        // TODO: Alyssa this is already defined in trait LayeredTile
+        implicit val formats = net.liftweb.json.DefaultFormats
+
+        val d = intRDD.filterByInterval(region)
+          .mapValues(r => (r._1, r._2.get(region)))
+          .toRDD.sortBy(_._1.start).map(_._2)
+
+        val layer = LayeredTile.getLayer(region)
+        val result =
+          if (layer == L0) d.map(L0.fromCharBytes(_)).reduce(_ + _)
+          else d.map(layer.fromDoubleBytes(_)).collect.map(write(_)).reduce(_ + _)
+        Some(result)
       } case None => {
         None
       }
@@ -210,12 +215,12 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
 object AlignmentRecordMaterialization {
 
-  def apply(sc: SparkContext, dict: SequenceDictionary, partitions: Int, refRDD: ReferenceRDD, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, dict, partitions, 1000, refRDD)
+  def apply(sc: SparkContext, dict: SequenceDictionary, refRDD: ReferenceMaterialization, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
+    new AlignmentRecordMaterialization(sc, dict, 1000, refRDD)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Int, refRDD: ReferenceRDD, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, dict, partitions, chunkSize, refRDD)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, chunkSize: Int, refRDD: ReferenceMaterialization, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
+    new AlignmentRecordMaterialization(sc, dict, chunkSize, refRDD)
   }
 
   def loadAlignmentData(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {

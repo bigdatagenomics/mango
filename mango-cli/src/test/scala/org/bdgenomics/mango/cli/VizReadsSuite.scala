@@ -19,7 +19,7 @@ package org.bdgenomics.mango.cli
 
 import net.liftweb.json._
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.Ok
+import org.scalatra.{ RequestEntityTooLarge, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
@@ -48,26 +48,26 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(ref.length == 99)
     }
 
-    //    // should return no data
-    //    get("/reference/chrM?start=0&end=5000") {
-    //      assert(status == RequestEntityTooLarge("").status.code)
-    //    }
+    // should return no data
+    get("/reference/chrM?start=0&end=5000") {
+      assert(status == RequestEntityTooLarge("").status.code)
+    }
   }
-  //
-  //  sparkTest("/reads/:ref") {
-  //    implicit val VizReads = runVizReads(args)
-  //    get("/reads/chrM?start=0&end=100&sample=C57BL/6J") {
-  //      assert(status == Ok("").status.code)
-  //    }
-  //  }
-  //
-  //  sparkTest("/freq/:ref") {
-  //    implicit val VizReads = runVizReads(args)
-  //    get("/freq/chrM?start=0&end=100&sample=C57BL/6J") {
-  //      assert(status == Ok("").status.code)
-  //    }
-  //
-  //  }
+
+  sparkTest("/reads/:ref") {
+    implicit val VizReads = runVizReads(args)
+    get("/reads/chrM?start=0&end=100&sample=C57BL/6J") {
+      assert(status == Ok("").status.code)
+    }
+  }
+
+  sparkTest("/freq/:ref") {
+    implicit val VizReads = runVizReads(args)
+    get("/freq/chrM?start=0&end=100&sample=C57BL/6J") {
+      assert(status == Ok("").status.code)
+    }
+
+  }
 
   sparkTest("/mergedReads/:ref") {
     implicit val VizReads = runVizReads(args)
@@ -75,28 +75,28 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == Ok("").status.code)
     }
   }
-  //
-  //  sparkTest("/features/chrM?start=0&end=2000") {
-  //    implicit val vizReads = runVizReads(args)
-  //    get("/features/chrM?start=0&end=2000") {
-  //      assert(status == 200)
-  //      val features = parse(response.getContent()).extract[List[FeatureJson]]
-  //      assert(features.length == 2)
-  //    }
-  //  }
-  //
-  //  sparkTest("Should not crash with incorrect feature file") {
-  //    val args = new VizReadsArgs()
-  //    args.referencePath = referenceFile
-  //    args.featuresPath = vcfFile
-  //    args.testMode = true
-  //
-  //    implicit val vizReadNoFeatures = runVizReads(args)
-  //    get("/features/chrM?start=0&end=2000") {
-  //      println(status)
-  //      assert(status == NotFound("").status.code)
-  //    }
-  //  }
+
+  sparkTest("/features/chrM?start=0&end=2000") {
+    implicit val vizReads = runVizReads(args)
+    get("/features/chrM?start=0&end=2000") {
+      assert(status == 200)
+      val features = parse(response.getContent()).extract[List[FeatureJson]]
+      assert(features.length == 2)
+    }
+  }
+
+  sparkTest("Should not crash with incorrect feature file") {
+    val args = new VizReadsArgs()
+    args.referencePath = referenceFile
+    args.featuresPath = vcfFile
+    args.testMode = true
+
+    implicit val vizReadNoFeatures = runVizReads(args)
+    get("/features/chrM?start=0&end=2000") {
+      println(status)
+      assert(status == NotFound("").status.code)
+    }
+  }
 
 }
 
