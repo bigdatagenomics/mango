@@ -581,9 +581,6 @@ function renderMismatchCounts(data, sample) {
         }
         d.sum = d.totals[d.totals.length - 1].y1;
     });
-
-    var margin = {top: 0, right: 100, bottom: 30, left: 30};
-    // var svg = d3.select("#readsArea").append("svg")
     
     var y = d3.scale.linear()
         .rangeRound([mismatchHeight, 0]);
@@ -664,20 +661,25 @@ function renderMismatchCounts(data, sample) {
     var removedMRects = mRects.exit();
     removedMRects.remove()
 
-    var svg = d3.select(selector).append("svg")
+    var svg = d3.select(selector).select(".mismatch-svg")
+          .append("svg")
             .attr("width", "100%")
-            .attr("height", 100)
+            .attr("height", 110)
           .append("g")
-            .attr("transform", "translate(" + 1130 + "," + -80 + ")");
+            .attr("transform", "translate(" + parseInt(width-30) + "," + -0.5 + ")");
+    
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis)
       .append("text")
+        // .attr("transform", "translate(0,10)")
         .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", ".71em")
+        .attr("x",2)
+        .attr("y", 8)
+        .attr("dy", ".70em")
         .style("text-anchor", "end")
         .text("Mismatch Frequency");
+        
 
 }
 
