@@ -17,34 +17,27 @@
  */
 package org.bdgenomics.mango.tiling
 
-import org.apache.spark.{ Logging, SparkContext }
-import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.ReferenceRegion
-import net.liftweb.json.Serialization.write
-import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.layout.{ MismatchLayout, CalculatedAlignmentRecord, ConvolutionalSequence }
+import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, ConvolutionalSequence }
 
-class AlignmentRecordTile(sc: SparkContext,
-                          alignments: RDD[AlignmentRecord],
-                          reference: String,
-                          region: ReferenceRegion,
-                          ks: List[String]) extends LayeredTile with Logging {
+case class AlignmentRecordTile(alignments: Array[CalculatedAlignmentRecord],
+                               layer1: Map[String, Array[Double]],
+                               keys: List[String]) extends KLayeredTile[Array[CalculatedAlignmentRecord]] with Serializable {
 
   // TODO map to samples
-  implicit val formats = net.liftweb.json.DefaultFormats
+  val rawData = alignments.groupBy(_.record.getRecordGroupSample)
 
-  // map to CalculatedAlignmentRecord alignment records and
-  val layer0 = alignments.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region))).map(write(_)).collect.map(_.toByte)
-  val layerMap = Map(0 -> layer0)
+  // TODO: verify layer sizes
+  val layer2 = layer1.mapValues(r => ConvolutionalSequence.convolveArray(r, L1.patchSize, L1.stride))
+  val layer3 = layer2.mapValues(r => ConvolutionalSequence.convolveArray(r, L1.patchSize, L1.stride))
+  val layer4 = layer3.mapValues(r => ConvolutionalSequence.convolveArray(r, L1.patchSize, L1.stride))
 
-  // TODO: get convolutions
-
-  //  val c = ConvolutionalSequence.convolveRDD(region, ref, alignments.get.toRDD.map(_._2).filter(r => r.getRecordGroupSample == k), layerType.patchSize, layerType.stride)
-  // format to data
-  // put in layermap sca
-
+  val layerMap = Map(1 -> layer1.mapValues(_.map(_.toByte)),
+    2 -> layer2.mapValues(_.map(_.toByte)),
+    3 -> layer3.mapValues(_.map(_.toByte)),
+    4 -> layer4.mapValues(_.map(_.toByte)))
 }
 
-case class ReferenceTile(sequence: String) extends LayeredTile with Serializable {
+case class ReferenceTile(sequence: String) extends LayeredTile[String] with Serializable {
+  val rawData = sequence
   val layerMap = ConvolutionalSequence.convolveToEnd(sequence, LayeredTile.layerCount)
 }

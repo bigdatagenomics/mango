@@ -235,5 +235,5 @@ case class SampleTrack(val records: List[ReadJson], val matePairs: List[MatePair
 // untracked json classes
 case class MatePair(start: Long, end: Long)
 
-case class CalculatedAlignmentRecord(record: AlignmentRecord, mismatches: List[MisMatch])
+case class CalculatedAlignmentRecord(record: AlignmentRecord, mismatches: List[MisMatch]) extends Serializable
 

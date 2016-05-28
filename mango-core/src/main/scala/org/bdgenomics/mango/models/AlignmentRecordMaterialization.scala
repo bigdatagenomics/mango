@@ -21,7 +21,7 @@ import java.io.File
 
 import edu.berkeley.cs.amplab.spark.intervalrdd._
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
-import net.liftweb.json.Serialization._
+import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.rdd.RDD
@@ -31,10 +31,12 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.core.util.ResourceUtils
-import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, L0, LayeredTile }
+import org.bdgenomics.mango.core.util.{ VizUtils, ResourceUtils }
+import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, ConvolutionalSequence, MismatchLayout }
+import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, KTiles, L1 }
 import org.bdgenomics.mango.util.Bookkeep
 
+import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 /*
@@ -45,8 +47,9 @@ import scala.reflect.ClassTag
 class AlignmentRecordMaterialization(s: SparkContext,
                                      d: SequenceDictionary,
                                      chunkS: Int,
-                                     refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with Serializable with Logging {
+                                     refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[Array[CalculatedAlignmentRecord], AlignmentRecordTile] with Serializable with Logging {
 
+  protected def tag = reflect.classTag[Array[CalculatedAlignmentRecord]]
   val sc = s
   val dict = d
   val chunkSize = chunkS
@@ -135,14 +138,13 @@ class AlignmentRecordMaterialization(s: SparkContext,
       AlignmentRecordMaterialization.loadAlignmentData(sc: SparkContext, region, fp)
     } catch {
       case e: NoSuchElementException => {
-        log.error("Key not in FileMap")
-        null
+        throw e
       }
     }
   }
 
-  def get(region: ReferenceRegion, k: String): Option[String] = {
-    multiget(region, List(k))
+  def get(region: ReferenceRegion, k: String): String = {
+    multiget(region, List(k)).get(k).get
   }
 
   /* If the RDD has not been initialized, initialize it to the first get request
@@ -151,33 +153,30 @@ class AlignmentRecordMaterialization(s: SparkContext,
     * Otherwise call put on the sections of data that don't exist
     * Here, ks, is an option of list of personids (String)
     */
-  def multiget(region: ReferenceRegion, ks: List[String]): Option[String] = {
+  def multiget(region: ReferenceRegion, ks: List[String]): Map[String, String] = {
     val seqRecord = dict(region.referenceName)
-    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
     seqRecord match {
       case Some(_) => {
+        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
             put(r, ks)
           }
         }
         // TODO: Alyssa account for samples
-        // TODO: Alyssa this is already defined in trait LayeredTile
-        implicit val formats = net.liftweb.json.DefaultFormats
-
-        val d = intRDD.filterByInterval(region)
-          .mapValues(r => (r._1, r._2.get(region)))
-          .toRDD.sortBy(_._1.start).map(_._2)
-
-        val layer = LayeredTile.getLayer(region)
-        val result =
-          if (layer == L0) d.map(L0.fromCharBytes(_)).reduce(_ + _)
-          else d.map(layer.fromDoubleBytes(_)).collect.map(write(_)).reduce(_ + _)
-        Some(result)
+        getTiles(region, ks)
       } case None => {
-        None
+        throw new Exception("Not found in dictionary")
       }
     }
+  }
+
+  def stringifyRaw(rdd: RDD[(String, Array[CalculatedAlignmentRecord])], region: ReferenceRegion): Map[String, String] = {
+    implicit val formats = net.liftweb.json.DefaultFormats
+
+    val data: Array[(String, Array[CalculatedAlignmentRecord])] = rdd.mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start)).collect
+
+    data.map(r => (r._1, write(r._2))).toMap
   }
 
   /**
@@ -191,21 +190,29 @@ class AlignmentRecordMaterialization(s: SparkContext,
   override def put(region: ReferenceRegion, ks: List[String]) = {
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
-      val (reg, ref) = refRDD.getPaddedReference(region)
-      var alignments: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
+      val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))
+      val (reg, ref) = refRDD.getPaddedReference(trimmedRegion)
+      val layer1: ListBuffer[(String, Array[Double])] = ListBuffer[(String, Array[Double])]()
+      var data: RDD[CalculatedAlignmentRecord] = sc.emptyRDD[CalculatedAlignmentRecord]
+
       ks.map(k => {
-        val data = loadFromFile(region, k)
-        alignments = alignments.union(data)
+        val kdata = loadFromFile(trimmedRegion, k)
+          .map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, ref, trimmedRegion)))
+          .filter(r => !r.mismatches.isEmpty)
+        data = data.union(kdata)
+        println(data.count)
+        layer1 += ((k, ConvolutionalSequence.convolveCalculatedRDD(trimmedRegion, ref, data, L1.patchSize, L1.stride)))
+
       })
+      val tiles = Array((region, new AlignmentRecordTile(data.collect, layer1.toMap, ks)))
 
       // TODO: IntervalRDD should allow insertions of individual elements
-      val data = Array((region, new AlignmentRecordTile(sc, alignments, ref, reg, ks)))
       // insert into IntervalRDD
       if (intRDD == null) {
-        intRDD = IntervalRDD(sc.parallelize(data))
+        intRDD = IntervalRDD(sc.parallelize(tiles))
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       } else {
-        intRDD = intRDD.multiput(data)
+        intRDD = intRDD.multiput(tiles)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
       bookkeep.rememberValues(region, ks)
@@ -215,11 +222,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
 object AlignmentRecordMaterialization {
 
-  def apply(sc: SparkContext, dict: SequenceDictionary, refRDD: ReferenceMaterialization, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
+  def apply(sc: SparkContext, dict: SequenceDictionary, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
     new AlignmentRecordMaterialization(sc, dict, 1000, refRDD)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, chunkSize: Int, refRDD: ReferenceMaterialization, filterEmptyMismatches: Boolean = true): AlignmentRecordMaterialization = {
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, chunkSize: Int, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
     new AlignmentRecordMaterialization(sc, dict, chunkSize, refRDD)
   }
 
@@ -229,7 +236,6 @@ object AlignmentRecordMaterialization {
       AlignmentRecordMaterialization.loadFromBam(sc, region, fp)
     } else {
       throw UnsupportedFileException("File type not supported")
-      null
     }
   }
   /*

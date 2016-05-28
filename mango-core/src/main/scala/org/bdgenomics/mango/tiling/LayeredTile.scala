@@ -18,16 +18,21 @@
 package org.bdgenomics.mango.tiling
 
 import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
+import net.liftweb.json.Serialization.write
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
-import net.liftweb.json.Serialization.write
 
-abstract class Tiles[T <: LayeredTile] extends Serializable {
+import scala.reflect.ClassTag
+
+trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
   implicit val formats = net.liftweb.json.DefaultFormats
+  implicit protected def tag: ClassTag[S]
 
   def intRDD: IntervalRDD[ReferenceRegion, T]
-  def chunkSize: Long
+  def chunkSize: Int
+
+  def stringifyRaw(data: RDD[S], region: ReferenceRegion): String
 
   /*
    * Trims level one strings to reference region
@@ -36,59 +41,85 @@ abstract class Tiles[T <: LayeredTile] extends Serializable {
    *
    * @return trimmed string
    */
-  private def trim(str: String, region: ReferenceRegion): String = {
+  def trimSequence(str: String, region: ReferenceRegion): String = {
     val size = region.length.toInt
     val start = (region.start % chunkSize).toInt
     str.substring(start, start + size)
   }
 
-  def get(region: ReferenceRegion): String = {
-    val regionSize = region.end - region.start
+  def getTiles(region: ReferenceRegion): String = {
 
     val layer = LayeredTile.getLayer(region)
     if (layer == L0) return getRaw(region)
 
-    // bypass sorting if only accessing one node
-    val data =
-      if (chunkSize >= regionSize) {
-        intRDD.filterByInterval(region)
-          .mapValues(r => (r._1, r._2.get(region)))
-          .toRDD.map(_._2)
-      } else {
-        intRDD.filterByInterval(region)
-          .mapValues(r => (r._1, r._2.get(region)))
-          .toRDD.sortBy(_._1.start).map(_._2)
-      }
+    // if not raw layer, fetch from other layers
+    val data = getAggregated(region)
     write(data.flatMap(layer.fromDoubleBytes(_)).collect)
   }
 
   def getRaw(region: ReferenceRegion): String = {
-    val d: RDD[Array[Byte]] = intRDD.filterByInterval(region)
-      .mapValues(r => (r._1, r._2.layerMap(0)))
-      .toRDD.sortBy(_._1.start).map(_._2)
+    val regionSize = region.length()
 
-    val str = d.map(L0.fromCharBytes(_)).reduce(_ + _)
-    trim(str, region)
+    val data: RDD[S] =
+      if (chunkSize >= regionSize) {
+        intRDD.filterByInterval(region)
+          .mapValues(r => (r._1, r._2.rawData))
+          .toRDD.map(_._2)
+      } else {
+        intRDD.filterByInterval(region)
+          .mapValues(r => (r._1, r._2.rawData))
+          .toRDD.sortBy(_._1.start).map(_._2)
+      }
+    stringifyRaw(data, region)
   }
+
+  /*
+   * Fetches bytes from layers containing aggregated data
+   *
+   * @param region
+   * @param layer: Optional layer to force data collect from. Defaults to reference size
+   *
+   * @return byte data from aggregated layers
+   */
+  def getAggregated(region: ReferenceRegion): RDD[Array[Byte]] = {
+
+    val regionSize = region.length()
+    // type cast data on whether or not it was raw data from L0
+
+    if (chunkSize >= regionSize) {
+      intRDD.filterByInterval(region)
+        .mapValues(r => (r._1, r._2.getAggregated(region)))
+        .toRDD.map(_._2)
+    } else {
+      intRDD.filterByInterval(region)
+        .mapValues(r => (r._1, r._2.getAggregated(region)))
+        .toRDD.sortBy(_._1.start).map(_._2)
+    }
+
+  }
+
 }
 
-abstract class LayeredTile extends Serializable with Logging {
-
+abstract class LayeredTile[S: ClassTag] extends Serializable with Logging {
+  def rawData: S
   def layerMap: Map[Int, Array[Byte]]
 
-  def get(region: ReferenceRegion): Array[Byte] = {
+  def getAggregated(region: ReferenceRegion): Array[Byte] = {
     val size = region.length()
+
     size match {
-      case x if (x < L1.range._1) => layerMap(0)
+      case x if (x < L1.range._1) => throw new Exception(s"Should fetch raw data for regions < ${L1.range._1}")
       case x if (x >= L1.range._1 && x < L1.range._2) => layerMap(1)
       case x if (x >= L2.range._1 && x < L2.range._2) => layerMap(2)
       case x if (x >= L3.range._1 && x < L3.range._2) => layerMap(3)
       case _ => layerMap(4)
     }
   }
+
 }
 
 object LayeredTile extends Serializable {
+
   val layerCount = 5
   val layers = Map(1 -> L1, 2 -> L2, 3 -> L3, 4 -> L4)
 
@@ -105,7 +136,7 @@ object LayeredTile extends Serializable {
 }
 
 trait Layer extends Serializable {
-
+  def id: Int
   def maxSize: Long
   def range: Tuple2[Long, Long]
   val finalSize = 1000
@@ -119,7 +150,7 @@ trait Layer extends Serializable {
 
 /* For raw data */
 object L0 extends Layer {
-  implicit val formats = net.liftweb.json.DefaultFormats
+  val id = 0
   val maxSize = 5000L
   val range = (0L, maxSize)
   val patchSize = 0
@@ -130,6 +161,7 @@ object L0 extends Layer {
 
 /* For objects 5000 to 10000 */
 object L1 extends Layer {
+  val id = 1
   val maxSize = 10000L
   val range = (5000L, maxSize)
   val patchSize = 10
@@ -138,6 +170,7 @@ object L1 extends Layer {
 
 /* For objects 10,000 to 100,000 */
 object L2 extends Layer {
+  val id = 2
   val maxSize = 100000L
   val range = (L1.maxSize, maxSize)
   val patchSize = 100
@@ -146,6 +179,7 @@ object L2 extends Layer {
 
 /* For objects 100,000 to 1,000,000 */
 object L3 extends Layer {
+  val id = 3
   val maxSize = 1000000L
   val range = (L2.maxSize, maxSize)
   val patchSize = 1000
@@ -154,6 +188,7 @@ object L3 extends Layer {
 
 /* For objects 1000000 + */
 object L4 extends Layer {
+  val id = 4
   val maxSize = 10000000L
   val range = (L3.maxSize, maxSize)
   val patchSize = 10000

@@ -53,14 +53,13 @@ object ConvolutionalSequence extends Serializable with Logging {
 
   def convolveToEnd(sequence: String, layers: Int): Map[Int, Array[Byte]] = {
 
-    val map: ListBuffer[(Int, Array[Byte])] = ListBuffer[(Int, Array[Byte])]((0, sequence.getBytes()))
+    val map: ListBuffer[(Int, Array[Byte])] = ListBuffer()
 
     for (i <- 0 to layers) {
       if (i < 1) map += ((i + 1, convolveSequence(sequence, L1.patchSize, L1.stride).map(_.toByte)))
-      else map += ((i + 1, convolveArray(map(i)._2.map(_.toDouble), L1.patchSize, L1.stride).map(_.toByte)))
+      else map += ((i + 1, convolveArray(map(i - 1)._2.map(_.toDouble), L1.patchSize, L1.stride).map(_.toByte)))
     }
     map.toMap
-
   }
 
   /*
@@ -78,6 +77,20 @@ object ConvolutionalSequence extends Serializable with Logging {
   }
 
   /*
+ * Convolves an RDD of alignment records and calculates the diff compared to a reference
+ *
+ * @param region: ReferenceRegion over original reference string
+ * @param reference: String to convolved and compared to
+ * @param alignments: RDD[AlignmentRecord] to convolve
+ *
+ * @return: Array[Double] total diff of AlignmentRecords compared to region
+ */
+  def convolveCalculatedRDD(region: ReferenceRegion, reference: String, alignments: RDD[CalculatedAlignmentRecord], patchSize: Int, stride: Int): Array[Double] = {
+    val convolvedReference = convolveSequence(reference.toUpperCase(), patchSize, stride)
+    convolveCalculatedRDD(region, convolvedReference, alignments, patchSize, stride)
+  }
+
+  /*
   * Convolves an RDD of alignment records and calculates the diff compared to a reference
   *
   * @param region: ReferenceRegion over original reference string
@@ -87,7 +100,7 @@ object ConvolutionalSequence extends Serializable with Logging {
   * @return: Array[Double] total diff of AlignmentRecords compared to region
   */
   def convolveRDD(region: ReferenceRegion, reference: Array[Double], alignments: RDD[AlignmentRecord], patchSize: Int, stride: Int): Array[Double] = {
-    val x: RDD[Array[Double]] = alignments.map(r => convolveAlignmentRecord(region,
+    val x: RDD[Array[Double]] = alignments.sample(false, 0.1).map(r => convolveAlignmentRecord(region,
       reference,
       r,
       patchSize,
@@ -95,6 +108,25 @@ object ConvolutionalSequence extends Serializable with Logging {
 
     val k = x.reduce((x, y) => (x, y).zipped.map(_ + _))
     k
+  }
+
+  /*
+* Convolves an RDD of alignment records and calculates the diff compared to a reference
+*
+* @param region: ReferenceRegion over original reference string
+* @param reference: String to convolved and compared to
+* @param alignments: RDD[AlignmentRecord] to convolve
+*
+* @return: Array[Double] total diff of AlignmentRecords compared to region
+*/
+  def convolveCalculatedRDD(region: ReferenceRegion, reference: Array[Double], alignments: RDD[CalculatedAlignmentRecord], patchSize: Int, stride: Int): Array[Double] = {
+    val x: RDD[Array[Double]] = alignments.map(r => convolveAlignmentRecord(region,
+      reference,
+      r.record,
+      patchSize,
+      stride))
+
+    x.reduce((x, y) => (x, y).zipped.map(_ + _))
   }
 
   /*

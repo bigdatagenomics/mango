@@ -21,41 +21,86 @@ import java.io.File
 
 import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import htsjdk.samtools.SAMSequenceDictionary
-import org.apache.parquet.filter2.dsl.Dsl._
+import org.apache.parquet.filter2.dsl.Dsl.BinaryColumn
 import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.{ Logging, _ }
-import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.formats.avro.NucleotideContigFragment
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.tiling._
+import org.bdgenomics.mango.tiling.{ Tiles, ReferenceTile }
 import picard.sam.CreateSequenceDictionary
+import org.apache.parquet.filter2.dsl.Dsl._
 
 class ReferenceMaterialization(sc: SparkContext,
-                               referencePath: String) extends Tiles[ReferenceTile] with Serializable with Logging {
+                               referencePath: String,
+                               chunkS: Int = 10000) extends Tiles[String, ReferenceTile] with Serializable with Logging {
+
+  //Regex for splitting fragments to the chunk size specified above
+
+  protected def tag = reflect.classTag[String]
 
   var bookkeep = Array[String]()
-  val chunkSize = 10000L // TODO
+  val chunkSize = chunkS
   var intRDD: IntervalRDD[ReferenceRegion, ReferenceTile] = null
   val dict = init
 
   def getSequenceDictionary: SequenceDictionary = dict
 
-  def put(region: ReferenceRegion) = {
-    // TODO: check if query in dict
-    val pred: FilterPredicate = (BinaryColumn("contig.contigName") === (region.referenceName))
-    val sequences: RDD[NucleotideContigFragment] = sc.loadParquetContigFragments(referencePath, predicate = Some(pred))
-    val refRDD: IntervalRDD[ReferenceRegion, ReferenceTile] = IntervalRDD(sequences.map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength), r.getFragmentSequence.toUpperCase)))
-      .mapValues(r => (r._1, ReferenceTile(r._2)))
+  /*
+   * Puts data into reference RDD
+   *
+   * @param region: ReferenceRegion. Loads chromosome from the specified region into reference RDD
+   */
+  def put(region: ReferenceRegion): Unit = {
+    put(Some(region))
+    bookkeep ++= Array(region.referenceName)
+  }
 
-    // insert whole chromosome in strucutre
+  /*
+   * Puts data into reference RDD
+   *
+   * @param region: Option[ReferenceRegion] if region is none,
+   * loads whole reference file into rdd. Otherwise loads whole chromosome from region.
+   */
+  def put(region: Option[ReferenceRegion]): Unit = {
+    // TODO: check if query in dict
+    val pred: Option[FilterPredicate] =
+      region match {
+        case Some(_) => Some((BinaryColumn("contig.contigName") === (region.get.referenceName)))
+        case None    => None
+      }
+    val sequences: RDD[NucleotideContigFragment] =
+      if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta"))
+        sc.loadSequences(referencePath)
+      else if (referencePath.endsWith(".adam"))
+        sc.loadParquetContigFragments(referencePath, predicate = pred)
+      else
+        throw new UnsupportedFileException("File Types supported for reference are fa, fasta and adam")
+
+    val splitRegex = "(?<=\\G.{" + chunkSize + "})"
+    val c = chunkSize
+
+    // map sequences and divy fragment lengths by chunk size
+    val fragments: RDD[(ReferenceRegion, Array[(String, Int)])] = sequences.map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength),
+      r.getFragmentSequence.toUpperCase.split(splitRegex).zipWithIndex))
+
+    // map fragmented sequences to smaller referenceregions the size of chunksize
+    val splitFragments: RDD[(ReferenceRegion, String)] = fragments.flatMap(r => r._2.map(x =>
+      (ReferenceRegion(r._1.referenceName, r._1.start + x._2 * c, r._1.start + x._2 * c + x._1.length), x._1)))
+
+    // convert to interval RDD
+    val refRDD: IntervalRDD[ReferenceRegion, ReferenceTile] =
+      IntervalRDD(splitFragments)
+        .mapValues(r => (r._1, ReferenceTile(r._2)))
+
+    // insert whole chromosome in structure
     if (intRDD == null)
       intRDD = refRDD
     else intRDD = intRDD.multiput(refRDD)
     intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    bookkeep ++= Array(region.referenceName)
 
   }
 
@@ -63,7 +108,7 @@ class ReferenceMaterialization(sc: SparkContext,
     if (!bookkeep.contains(region.referenceName)) {
       put(region)
     }
-    get(region)
+    getTiles(region)
   }
 
   def init: SequenceDictionary = {
@@ -71,15 +116,19 @@ class ReferenceMaterialization(sc: SparkContext,
       throw new UnsupportedFileException("WARNING: Invalid reference file")
     }
     val dictionary = setSequenceDictionary(referencePath)
-    if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta")) {
+
+    // because fastas do not support predicate pushdown, must load all data into index
+    if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || !sc.isLocal) {
       // load whole reference file
-      val sequences: RDD[NucleotideContigFragment] = sc.loadSequences(referencePath)
-      intRDD = IntervalRDD(sequences.map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength), r.getFragmentSequence.toUpperCase)))
-        .mapValues(r => (r._1, ReferenceTile(r._2)))
-      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-      bookkeep = dictionary.records.map(_.name).toArray
+      put(None)
+      bookkeep ++= dictionary.records.map(_.name)
     }
     dictionary
+  }
+
+  def stringifyRaw(data: RDD[String], region: ReferenceRegion): String = {
+    val str = data.reduce(_ + _)
+    trimSequence(str, region)
   }
 
   def setSequenceDictionary(filePath: String): SequenceDictionary = {
