@@ -581,10 +581,16 @@ function renderMismatchCounts(data, sample) {
         }
         d.sum = d.totals[d.totals.length - 1].y1;
     });
-
+    
     var y = d3.scale.linear()
         .rangeRound([mismatchHeight, 0]);
     y.domain([0, d3.max(data, function(d) { return d.sum; })]);
+
+    var yAxis = d3.svg.axis()
+              .scale(y)
+              .orient("left")
+              .ticks(10);
+    
 
      // Define x axis
      var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
@@ -654,6 +660,27 @@ function renderMismatchCounts(data, sample) {
 
     var removedMRects = mRects.exit();
     removedMRects.remove()
+
+    var svg = d3.select(selector).select(".mismatch-svg")
+          .append("svg")
+            .attr("width", "100%")
+            .attr("height", 110)
+          .append("g")
+            .attr("transform", "translate(" + parseInt(width-30) + "," + -0.5 + ")");
+    
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+      .append("text")
+        // .attr("transform", "translate(0,10)")
+        .attr("transform", "rotate(-90)")
+        .attr("x",2)
+        .attr("y", 8)
+        .attr("dy", ".70em")
+        .style("text-anchor", "end")
+        .text("Mismatch Frequency");
+        
+
 }
 
 //Render mismatching bases for cigar operator

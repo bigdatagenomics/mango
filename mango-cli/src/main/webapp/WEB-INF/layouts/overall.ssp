@@ -23,9 +23,7 @@
         #if (featuresExist)
             <div class="graphArea" id="featArea"></div>
         #end
-        #if (variantsExist)
-            <div class="graphArea" id="varArea"></div>
-        #end
+        
         #if (readsExist)
             <div class="graphArea" id="readsArea">
                 <% readsSamples.get.foreach(s =>
