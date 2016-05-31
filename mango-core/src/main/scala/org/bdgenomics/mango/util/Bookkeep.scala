@@ -96,6 +96,21 @@ class Bookkeep(chunkSize: Int) {
 }
 object Bookkeep {
 
+  def unmergeRegions(region: ReferenceRegion, chunkSize: Int): List[ReferenceRegion] = {
+    var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
+    var start = region.start / chunkSize * chunkSize
+    var end = start + (chunkSize - 1)
+
+    while (start <= region.end) {
+      val r = new ReferenceRegion(region.referenceName, start, end)
+      regions += r
+      start += chunkSize
+      end += chunkSize
+    }
+
+    regions.toList
+  }
+
   /**
    * generates a list of closely overlapping regions, counting for gaps in the list
    *

@@ -19,7 +19,7 @@ package org.bdgenomics.mango.models
 
 import java.io.File
 
-import edu.berkeley.cs.amplab.spark.intervalrdd._
+import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -31,12 +31,11 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.core.util.{ VizUtils, ResourceUtils }
-import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, ConvolutionalSequence, MismatchLayout }
-import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, KTiles, L1 }
+import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import org.bdgenomics.mango.layout.{ MutationCount, CalculatedAlignmentRecord }
+import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, KTiles }
 import org.bdgenomics.mango.util.Bookkeep
 
-import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 /*
@@ -47,9 +46,9 @@ import scala.reflect.ClassTag
 class AlignmentRecordMaterialization(s: SparkContext,
                                      d: SequenceDictionary,
                                      chunkS: Int,
-                                     refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[Array[CalculatedAlignmentRecord], AlignmentRecordTile] with Serializable with Logging {
+                                     refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[AlignmentRecordTile] with Serializable with Logging {
 
-  protected def tag = reflect.classTag[Array[CalculatedAlignmentRecord]]
+  protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
   val sc = s
   val dict = d
   val chunkSize = chunkS
@@ -153,28 +152,40 @@ class AlignmentRecordMaterialization(s: SparkContext,
     * Otherwise call put on the sections of data that don't exist
     * Here, ks, is an option of list of personids (String)
     */
-  def multiget(region: ReferenceRegion, ks: List[String]): Map[String, String] = {
+  def multiget(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): Map[String, String] = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
         val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
+            println(r)
             put(r, ks)
           }
         }
-        // TODO: Alyssa account for samples
-        getTiles(region, ks)
+        getTiles(region, ks, isRaw)
       } case None => {
         throw new Exception("Not found in dictionary")
       }
     }
   }
 
-  def stringifyRaw(rdd: RDD[(String, Array[CalculatedAlignmentRecord])], region: ReferenceRegion): Map[String, String] = {
+  def stringifyL0(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
     implicit val formats = net.liftweb.json.DefaultFormats
 
-    val data: Array[(String, Array[CalculatedAlignmentRecord])] = rdd.mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start)).collect
+    val data = rdd
+      .mapValues(_.asInstanceOf[Iterable[CalculatedAlignmentRecord]])
+      .mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start)).collect
+
+    data.map(r => (r._1, write(r._2))).toMap
+  }
+
+  def stringifyL1(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
+    implicit val formats = net.liftweb.json.DefaultFormats
+
+    val data = rdd
+      .mapValues(_.asInstanceOf[Iterable[MutationCount]])
+      .mapValues(r => r.filter(r => r.refCurr <= region.end && r.refCurr >= region.start)).collect
 
     data.map(r => (r._1, write(r._2))).toMap
   }
@@ -192,27 +203,37 @@ class AlignmentRecordMaterialization(s: SparkContext,
     if (seqRecord.isDefined) {
       val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))
       val (reg, ref) = refRDD.getPaddedReference(trimmedRegion)
-      val layer1: ListBuffer[(String, Array[Double])] = ListBuffer[(String, Array[Double])]()
-      var data: RDD[CalculatedAlignmentRecord] = sc.emptyRDD[CalculatedAlignmentRecord]
+      var data: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
 
       ks.map(k => {
         val kdata = loadFromFile(trimmedRegion, k)
-          .map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, ref, trimmedRegion)))
-          .filter(r => !r.mismatches.isEmpty)
         data = data.union(kdata)
-        println(data.count)
-        layer1 += ((k, ConvolutionalSequence.convolveCalculatedRDD(trimmedRegion, ref, data, L1.patchSize, L1.stride)))
-
+        //        layer1 += ((k, ConvolutionalSequence.convolveCalculatedRDD(trimmedRegion, ref, data, L1.patchSize, L1.stride)))
       })
-      val tiles = Array((region, new AlignmentRecordTile(data.collect, layer1.toMap, ks)))
 
-      // TODO: IntervalRDD should allow insertions of individual elements
+      // divide regions by chunksize
+      val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
+
+      // for each chunk, filter groupedRecords by start,end and make into tile
+      // TODO: this does not account for overlapping data crossing 2 borders of tiles
+      val c = chunkSize
+      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
+        data.map(r => (ReferenceRegion(r.record.getContigName, r.record.getStart / c * c, r.record.getStart / c * c + c - 1), r))
+          .groupBy(_._1)
+          .filter(r => regions.contains(r._1))
+          .map(r => (r._1, r._2.map(_._2)))
+
+      val tiles = groupedRecords.map(r => (r._1, new AlignmentRecordTile(r._2, ref, reg)))
+
       // insert into IntervalRDD
       if (intRDD == null) {
-        intRDD = IntervalRDD(sc.parallelize(tiles))
+        intRDD = IntervalRDD(tiles)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       } else {
+        val t = intRDD
         intRDD = intRDD.multiput(tiles)
+        // TODO: can we do this incrementally instead?
+        t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
       bookkeep.rememberValues(region, ks)

@@ -199,17 +199,18 @@ class VizServlet extends ScalatraServlet {
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      val isRaw =
+        try {
+          params("isRaw").toBoolean
+        } catch {
+          case e: Exception => false
+        }
       contentType = "json"
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       // if region is in bounds of reference, return data
       if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
         val sampleIds: List[String] = params("sample").split(",").toList
-        val data = VizReads.readsData.multiget(viewRegion, sampleIds)
-        data match {
-          case Some(_) => Ok(write(data.get))
-          case None => VizReads.errors.outOfBounds
-        }
-        val data: Map[String, String] = VizReads.readsData.multiget(viewRegion, sampleIds)
+        val data: Map[String, String] = VizReads.readsData.multiget(viewRegion, sampleIds, isRaw)
         Ok(write(data))
       } else VizReads.errors.outOfBounds
     }

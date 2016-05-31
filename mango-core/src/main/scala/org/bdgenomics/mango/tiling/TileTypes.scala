@@ -17,27 +17,26 @@
  */
 package org.bdgenomics.mango.tiling
 
-import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, ConvolutionalSequence }
+import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.mango.layout._
 
-case class AlignmentRecordTile(alignments: Array[CalculatedAlignmentRecord],
-                               layer1: Map[String, Array[Double]],
-                               keys: List[String]) extends KLayeredTile[Array[CalculatedAlignmentRecord]] with Serializable {
+case class AlignmentRecordTile(data: Iterable[AlignmentRecord],
+                               reference: String,
+                               paddedRegion: ReferenceRegion) extends KLayeredTile with Serializable {
 
-  // TODO map to samples
-  val rawData = alignments.groupBy(_.record.getRecordGroupSample)
+  // raw data is alignments and mismatches
+  lazy val rawData = data.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, paddedRegion)))
+    .filter(r => !r.mismatches.isEmpty).groupBy(_.record.getRecordGroupSample)
 
-  // TODO: verify layer sizes
-  val layer2 = layer1.mapValues(r => ConvolutionalSequence.convolveArray(r, L1.patchSize, L1.stride))
-  val layer3 = layer2.mapValues(r => ConvolutionalSequence.convolveArray(r, L1.patchSize, L1.stride))
-  val layer4 = layer3.mapValues(r => ConvolutionalSequence.convolveArray(r, L1.patchSize, L1.stride))
+  // layer 1 is point mismatches
+  lazy val layer1 = rawData.mapValues(rs => PointMisMatch(rs.flatMap(_.mismatches).toList))
 
-  val layerMap = Map(1 -> layer1.mapValues(_.map(_.toByte)),
-    2 -> layer2.mapValues(_.map(_.toByte)),
-    3 -> layer3.mapValues(_.map(_.toByte)),
-    4 -> layer4.mapValues(_.map(_.toByte)))
+  val layerMap: Map[Int, Map[String, Iterable[Any]]] = Map(0 -> rawData, 1 -> layer1)
+
 }
 
 case class ReferenceTile(sequence: String) extends LayeredTile[String] with Serializable {
   val rawData = sequence
-  val layerMap = ConvolutionalSequence.convolveToEnd(sequence, LayeredTile.layerCount)
+  val layerMap = null
 }

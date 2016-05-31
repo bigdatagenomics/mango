@@ -61,15 +61,10 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
     val regionSize = region.length()
 
     val data: RDD[S] =
-      if (chunkSize >= regionSize) {
-        intRDD.filterByInterval(region)
-          .mapValues(r => (r._1, r._2.rawData))
-          .toRDD.map(_._2)
-      } else {
-        intRDD.filterByInterval(region)
-          .mapValues(r => (r._1, r._2.rawData))
-          .toRDD.sortBy(_._1.start).map(_._2)
-      }
+      intRDD.filterByInterval(region)
+        .mapValues(r => (r._1, r._2.rawData))
+        .toRDD.map(_._2)
+
     stringifyRaw(data, region)
   }
 

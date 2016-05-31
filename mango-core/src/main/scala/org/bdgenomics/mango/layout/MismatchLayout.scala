@@ -226,6 +226,18 @@ object PointMisMatch {
    * aggregated point mismatch at a specific location
    *
    * @param mismatches: List of mismatches to be grouped by start value
+   * @return List of aggregated mismatches and their corresponding counts
+   */
+  def apply(mismatches: List[MisMatch]): List[MutationCount] = {
+    val grouped = mismatches.groupBy(_.refCurr)
+    val g = grouped.map(_._2).flatMap(reducePoints(_)).toList
+    return g
+  }
+
+  /**
+   * aggregated point mismatch at a specific location
+   *
+   * @param mismatches: List of mismatches to be grouped by start value
    * @return aggregated mismatches and their corresponding counts
    */
   private def reducePoints(mismatches: List[MisMatch]): List[MutationCount] = {

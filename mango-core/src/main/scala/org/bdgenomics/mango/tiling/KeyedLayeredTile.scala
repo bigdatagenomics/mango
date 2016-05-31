@@ -18,56 +18,47 @@
 package org.bdgenomics.mango.tiling
 
 import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
-import net.liftweb.json.Serialization.write
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 
-import scala.reflect.ClassTag
-
-trait KTiles[S, T <: KLayeredTile[S]] extends Serializable {
+trait KTiles[T <: KLayeredTile] extends Serializable {
   implicit val formats = net.liftweb.json.DefaultFormats
-
-  implicit protected def tag: ClassTag[S]
 
   def intRDD: IntervalRDD[ReferenceRegion, T]
 
   def chunkSize: Int
 
-  def stringifyRaw(data: RDD[(String, S)], region: ReferenceRegion): Map[String, String]
+  def stringifyL0(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String]
+  def stringifyL1(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String]
 
-  def stringifyBytes(data: RDD[(String, Array[Byte])], region: ReferenceRegion): Map[String, String] = {
-    val layer = LayeredTile.getLayer(region)
+  def getTiles(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): Map[String, String] = {
 
-    val x: Map[String, Array[Double]] = data.reduceByKey((x, y) => x ++ y)
-      .mapValues(r => layer.fromDoubleBytes(r)).collect.toMap
+    val layerOpt = KLayeredTile.getLayer(region)
+    val layer = layerOpt.getOrElse(L2)
 
-    x.mapValues(r => write(r))
-  }
+    val data: RDD[(String, Iterable[Any])] = get(region, ks, isRaw)
 
-  def getTiles(region: ReferenceRegion, ks: List[String]): Map[String, String] = {
-
-    val layer = LayeredTile.getLayer(region)
-    if (layer == L0) return getRaw(region, ks)
-
-    // if not raw layer, fetch from other layers
-    val data = getAggregated(region, ks)
-    stringifyBytes(data, region)
-  }
-
-  def getRaw(region: ReferenceRegion, ks: List[String]): Map[String, String] = {
-    val regionSize = region.length()
-
-    val data: RDD[(String, S)] =
-      if (chunkSize >= regionSize) {
-        intRDD.filterByInterval(region)
-          .toRDD.flatMap(r => (r._2.rawData.filter(r => ks.contains(r._1))))
-      } else {
-        intRDD.filterByInterval(region)
-          .toRDD.sortBy(_._1.start)
-          .flatMap(r => (r._2.rawData.filter(r => ks.contains(r._1))))
+    if (isRaw)
+      stringifyL0(data, region)
+    else
+      layer match {
+        case L0 => stringifyL0(data, region)
+        case L1 => stringifyL1(data, region)
+        case _  => Map.empty[String, String]
       }
-    stringifyRaw(data, region)
+  }
+
+  object KLayeredTile extends Serializable {
+
+    def getLayer(region: ReferenceRegion): Option[Layer] = {
+      val size = region.length()
+
+      size match {
+        case x if (x < L1.range._1) => Some(L1)
+        case _                      => None
+      }
+    }
   }
 
   /*
@@ -78,41 +69,33 @@ trait KTiles[S, T <: KLayeredTile[S]] extends Serializable {
  *
  * @return byte data from aggregated layers
  */
-  def getAggregated(region: ReferenceRegion, ks: List[String]): RDD[(String, Array[Byte])] = {
+  def get(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): RDD[(String, Iterable[Any])] = {
 
-    val regionSize = region.length()
-    // type cast data on whether or not it was raw data from L0
-
-    if (chunkSize >= regionSize) {
-      intRDD.filterByInterval(region)
-        .mapValues(r => (r._1, r._2.getAggregated(region, ks)))
-        .toRDD.flatMap(_._2)
-    } else {
-      intRDD.filterByInterval(region)
-        .mapValues(r => (r._1, r._2.getAggregated(region, ks)))
-        .toRDD.sortBy(_._1.start).flatMap(_._2)
-    }
+    intRDD.filterByInterval(region)
+      .mapValues(r => (r._1, r._2.get(region, ks, isRaw)))
+      .toRDD.flatMap(_._2)
 
   }
 }
 
-abstract class KLayeredTile[S: ClassTag] extends Serializable with Logging {
-  def rawData: Map[String, S]
-  def keys: List[String]
-  def layerMap: Map[Int, Map[String, Array[Byte]]]
+abstract class KLayeredTile extends Serializable with Logging {
+  def layerMap: Map[Int, Map[String, Iterable[Any]]]
 
-  def getAggregated(region: ReferenceRegion, ks: List[String]): Map[String, Array[Byte]] = {
+  def get(region: ReferenceRegion, ks: List[String], isRaw: Boolean): Map[String, Iterable[Any]] = {
+
     val size = region.length()
 
     val data =
-      size match {
-        case x if (x < L1.range._1) => throw new Exception(s"Should fetch raw data for regions < ${L1.range._1}")
-        case x if (x >= L1.range._1 && x < L1.range._2) => layerMap(1)
-        case x if (x >= L2.range._1 && x < L2.range._2) => layerMap(2)
-        case x if (x >= L3.range._1 && x < L3.range._2) => layerMap(3)
-        case _ => layerMap(4)
-      }
-    data.filter(r => ks.contains(r._1))
+      if (isRaw) layerMap.get(0)
+      else
+        size match {
+          case x if (x < L1.range._1) => layerMap.get(1)
+          case _                      => None
+        }
+    // if no data exists return empty map
+    val m = data.getOrElse(Map.empty[String, Iterable[Any]])
+    // filter out irrelevent keys
+    m.filter(r => ks.contains(r._1))
   }
 
 }
