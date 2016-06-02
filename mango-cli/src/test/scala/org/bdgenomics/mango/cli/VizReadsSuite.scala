@@ -58,7 +58,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   sparkTest("/reads/:ref") {
     implicit val VizReads = runVizReads(args)
     get("/reads/chrM?start=0&end=100&sample=C57BL/6J") {
-      println(response)
       assert(status == Ok("").status.code)
     }
   }

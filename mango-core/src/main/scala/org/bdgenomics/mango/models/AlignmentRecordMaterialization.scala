@@ -182,10 +182,13 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
   def stringifyL1(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
     implicit val formats = net.liftweb.json.DefaultFormats
+    val binSize = region.length / 1000
 
     val data = rdd
       .mapValues(_.asInstanceOf[Iterable[MutationCount]])
-      .mapValues(r => r.filter(r => r.refCurr <= region.end && r.refCurr >= region.start)).collect
+      .mapValues(r => r.filter(r => r.refCurr <= region.end && r.refCurr >= region.start))
+      .map(r => (r._1, r._2.filter(r => r.refCurr % binSize == 0)))
+      .collect
 
     data.map(r => (r._1, write(r._2))).toMap
   }
