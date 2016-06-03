@@ -21,6 +21,11 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceRecord }
 
 object VizUtils {
 
+  /*
+   * Defualy bin size for screen resolution
+   */
+  def binSize: Int = 1000
+
   /**
    * Returns the very last base in a given chromosome that
    * can be viewed relative to the reference

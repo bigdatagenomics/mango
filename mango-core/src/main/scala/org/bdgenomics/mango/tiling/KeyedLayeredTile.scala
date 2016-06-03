@@ -29,10 +29,10 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
 
   def chunkSize: Int
 
-  def stringifyL0(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String]
-  def stringifyL1(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String]
+  def stringifyL0(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): String
+  def stringifyL1(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): String
 
-  def getTiles(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): Map[String, String] = {
+  def getTiles(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): String = {
 
     val layerOpt = KLayeredTile.getLayer(region)
     val layer = layerOpt.getOrElse(L2)
@@ -45,7 +45,7 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
       layer match {
         case L0 => stringifyL0(data, region)
         case L1 => stringifyL1(data, region)
-        case _  => Map.empty[String, String]
+        case _  => ""
       }
   }
 
@@ -61,19 +61,21 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
     }
   }
 
-  /*
- * Fetches bytes from layers containing aggregated data
- *
- * @param region
- * @param layer: Optional layer to force data collect from. Defaults to reference size
- *
- * @return byte data from aggregated layers
- */
+  /**
+   * Fetches bytes from layers containing aggregated data
+   *
+   * @param region
+   * @param ks: ks to processes
+   * @param isRaw: Boolean to force data formatting to layer 0
+   *
+   * @return byte data from aggregated layers keyed by String id
+   */
   def get(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): RDD[(String, Iterable[Any])] = {
 
-    intRDD.filterByInterval(region)
+    val x = intRDD.filterByInterval(region)
       .mapValues(r => (r._1, r._2.get(region, ks, isRaw)))
-      .toRDD.flatMap(_._2)
+
+    x.toRDD.flatMap(_._2)
 
   }
 }

@@ -1,6 +1,6 @@
 //Configuration Variables
 var base = 50;
-var trackHeight = 6;
+var trackHeight = 14;
 
 // Section Heights
 var refHeight = 38;

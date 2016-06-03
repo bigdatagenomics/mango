@@ -80,8 +80,8 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 0L, 10000L)
 
     val results = data.multiget(region, samples)
-    val json: Array[Double] = parse(results.values.head).extract[Array[Double]]
-    println(json.length == 99)
+    val json: Map[String, Array[Double]] = parse(results).extract[Map[String, Array[Double]]]
+    println(json.head._2.length == 99)
   }
 
   sparkTest("Fetch region out of bounds") {

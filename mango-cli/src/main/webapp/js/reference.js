@@ -61,28 +61,19 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd, callback) {
             callback(false);      // if data not found, redirect to home page
             return;
         } else if (error.status == 413) { // entity too large
+            data = "";
         }
     }
 
     var positions = Array.apply(null, {length: data.length}).map(Number.call, Number);
 
-    data = typeof data != "undefined" ? d3.zip(positions, data.split("")) : [];
+    data = d3.zip(positions, data.split(""));
     data = data.map(function(v) {
         return {
             "position": v[0] + viewRegStart,
             "reference": v[1]
         }
     });
-
-    var positions = []
-    var regionSize = viewRegEnd - viewRegStart;
-    for (var i = 0; i < regionSize; i++) {
-        positions[i] = i + viewRegStart;
-    }
-
-    data = data.split('');
-    data = d3.zip(positions, data);
-
 
     // render reference for low or high resolution depending on base range
     if (viewRegEnd - viewRegStart > 100) {
@@ -109,16 +100,16 @@ function renderLowResRef(data, refContainer, refDiv) {
   var modify = rects.transition();
   modify
     .attr("x", function(d) {
-      return xAxisScale(d[0]);
+      return xAxisScale(d.position);
     })
     .attr("width", function(d) {
-    if (d[0] < 0) return width;
+    if (d.position < 0) return width;
     else return Math.max(1, width/(viewRegEnd-viewRegStart));
     })
     .attr("fill", function(d) {
-      if (d[1] === "N") return nColor;
-      else if (d[0] == -1) return brown;
-      else return baseColors[d[1]];
+      if (d.reference === "N") return nColor;
+      else if (d.reference == -1) return brown;
+      else return baseColors[d.reference];
     });
 
     var newData = rects.enter();
@@ -126,16 +117,16 @@ function renderLowResRef(data, refContainer, refDiv) {
     .append("rect")
       .attr("class", "refrect")
       .attr("x", function(d) {
-        return xAxisScale(d[0]);
+        return xAxisScale(d.position);
       })
       .attr("y", 30)
     .attr("fill", function(d) {
-      if (d[1] === "N") return nColor;
-      else if (d[0] == -1) return brown;
-      else return baseColors[d[1]];
+      if (d.reference === "N") return nColor;
+      else if (d.position == -1) return brown;
+      else return baseColors[d.reference];
     })
     .attr("width", function(d) {
-      if (d[0] < 0) return width;
+      if (d.position < 0) return width;
       else return Math.max(1, width/(viewRegEnd-viewRegStart));
     })
     .attr("height", refHeight)
@@ -144,8 +135,8 @@ function renderLowResRef(data, refContainer, refDiv) {
           .duration(200)
           .style("opacity", .9);
         refDiv.html(
-          "Base: " + d[1] + "<br>" +
-          "Position: " + d[0])
+          "Base: " + d.reference + "<br>" +
+          "Position: " + d.position)
           .style("left", d3.event.pageX + "px")
           .style("top", d3.event.pageY + "px");
       })
@@ -153,7 +144,7 @@ function renderLowResRef(data, refContainer, refDiv) {
         refDiv.transition()
           .duration(200)
           .style("opacity", .9);
-        refDiv.html(d[1])
+        refDiv.html(d.reference)
           .style("left", d3.event.pageX + "px")
           .style("top", d3.event.pageY + "px");
       })
@@ -179,10 +170,10 @@ function renderHighResRef(data, refContainer) {
       .attr("dx", function(d, i) {
            return i/(viewRegEnd-viewRegStart) * width - (width/(viewRegEnd-viewRegStart))/2 ;
       })
-      .text( function (d) { return d[1]; })
+      .text( function (d) { return d.reference; })
       .attr("fill", function(d) {
-        if (d[1] === "N") return nColor;
-        else return baseColors[d[1]];
+        if (d.reference === "N") return nColor;
+        else return baseColors[d.reference];
       });
 
   var newData = refString.enter();
@@ -194,13 +185,13 @@ function renderHighResRef(data, refContainer) {
       .attr("dx", function(d, i) {
         return i/(viewRegEnd-viewRegStart) * width - (width/(viewRegEnd-viewRegStart))/2 ;
           })
-      .text( function (d) { return d[1]; })
+      .text( function (d) { return d.reference; })
       .attr("font-family", "Sans-serif")
       .attr("font-weight", "bold")
       .attr("font-size", "12px")
       .attr("fill", function(d) {
-        if (d[1] === "N") return nColor;
-        else return baseColors[d[1]];
+        if (d.reference === "N") return nColor;
+        else return baseColors[d.reference];
       });
 
     var removed = refString.exit();

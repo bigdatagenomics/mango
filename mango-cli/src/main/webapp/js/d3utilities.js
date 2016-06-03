@@ -2,7 +2,6 @@
 var barWidth = 21;
 $(".main").width($("body").width() - barWidth);
 var width = $(".graphArea").width();
-var trackHeight = 14;
 
 // colors for base pairs [A, T, G, C]
 var aColor = '#5050FF'; //AZURE
