@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.util
 
-import com.github.erictu.intervaltree.IntervalTree
+import org.bdgenomics.utils.intervaltree.IntervalTree
 import org.bdgenomics.adam.models.ReferenceRegion
 
 import scala.collection.mutable.{ HashMap, ListBuffer }

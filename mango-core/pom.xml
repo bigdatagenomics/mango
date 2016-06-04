@@ -132,6 +132,10 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
+      <artifactId>utils-intervalrdd_2.10</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.utils</groupId>
       <artifactId>utils-io_2.10</artifactId>
     </dependency>
     <dependency>
@@ -141,14 +145,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.erictu</groupId>
-      <artifactId>spark-intervalrdd_2.10</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.erictu</groupId>
-      <artifactId>interval-tree_2.10</artifactId>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.adam</groupId>

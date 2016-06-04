@@ -23,7 +23,7 @@ import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{ Logging, SparkContext }
+import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -33,6 +33,7 @@ import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, ReferenceMaterialization }
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
+import org.bdgenomics.utils.misc.Logging
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._

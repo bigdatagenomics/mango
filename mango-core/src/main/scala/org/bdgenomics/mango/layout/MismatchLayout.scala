@@ -97,7 +97,10 @@ object MismatchLayout extends Logging {
             recBase = rec.getSequence.charAt(recIdx)
             refBase = ref.charAt(refIdx)
           } catch {
-            case e: Exception => misMatches.toList
+            case e: Exception => {
+              log.warn(e.getMessage)
+              return misMatches.toList
+            }
           }
           if (op == CigarOperator.X || op == CigarOperator.M) {
             try {

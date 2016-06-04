@@ -19,7 +19,6 @@ package org.bdgenomics.mango.models
 
 import java.io.File
 
-import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import htsjdk.samtools.SAMSequenceDictionary
 import org.apache.parquet.filter2.dsl.Dsl.BinaryColumn
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -31,6 +30,7 @@ import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.formats.avro.NucleotideContigFragment
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.tiling.{ Tiles, ReferenceTile }
+import org.bdgenomics.utils.intervalrdd.IntervalRDD
 import picard.sam.CreateSequenceDictionary
 import org.apache.parquet.filter2.dsl.Dsl._
 
@@ -94,7 +94,7 @@ class ReferenceMaterialization(sc: SparkContext,
     // convert to interval RDD
     val refRDD: IntervalRDD[ReferenceRegion, ReferenceTile] =
       IntervalRDD(splitFragments)
-        .mapValues(r => (r._1, ReferenceTile(r._2)))
+        .mapValues(r => ReferenceTile(r))
 
     // insert whole chromosome in structure
     if (intRDD == null)

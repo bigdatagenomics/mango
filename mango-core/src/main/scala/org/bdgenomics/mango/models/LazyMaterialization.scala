@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.models
 
-import edu.berkeley.cs.amplab.spark.intervalrdd._
+import org.bdgenomics.utils.intervalrdd._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{ Logging, _ }
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }

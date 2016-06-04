@@ -17,11 +17,11 @@
  */
 package org.bdgenomics.mango.tiling
 
-import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import net.liftweb.json.Serialization.write
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.utils.intervalrdd.IntervalRDD
 
 import scala.reflect.ClassTag
 
@@ -62,7 +62,7 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
 
     val data: RDD[S] =
       intRDD.filterByInterval(region)
-        .mapValues(r => (r._1, r._2.rawData))
+        .mapValues(r => r.rawData)
         .toRDD.map(_._2)
 
     stringifyRaw(data, region)
@@ -83,11 +83,11 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
 
     if (chunkSize >= regionSize) {
       intRDD.filterByInterval(region)
-        .mapValues(r => (r._1, r._2.getAggregated(region)))
+        .mapValues(r => r.getAggregated(region))
         .toRDD.map(_._2)
     } else {
       intRDD.filterByInterval(region)
-        .mapValues(r => (r._1, r._2.getAggregated(region)))
+        .mapValues(r => r.getAggregated(region))
         .toRDD.sortBy(_._1.start).map(_._2)
     }
 

@@ -18,8 +18,6 @@
 package org.bdgenomics.mango.models
 
 import java.io.File
-
-import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -35,6 +33,7 @@ import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.layout.{ AlignmentRecordLayout, CalculatedAlignmentRecord, MutationCount }
 import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, KTiles }
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.utils.intervalrdd.IntervalRDD
 
 import scala.reflect.ClassTag
 
@@ -238,8 +237,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
           .groupBy(_._1)
           .map(r => (r._1, r._2.map(_._2)))
 
-      val tiles = groupedRecords.map(r => (r._1, new AlignmentRecordTile(r._2, ref, reg)))
-      println("tiles count", tiles.count)
+      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, new AlignmentRecordTile(r._2, ref, reg)))
 
       // insert into IntervalRDD
       if (intRDD == null) {
@@ -252,7 +250,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
-      println("intrdD", intRDD.count)
       bookkeep.rememberValues(region, ks)
     }
   }

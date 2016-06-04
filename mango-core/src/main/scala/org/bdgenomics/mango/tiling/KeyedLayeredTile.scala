@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.tiling
 
-import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
+import org.bdgenomics.utils.intervalrdd._
 import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
@@ -73,7 +73,7 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
   def get(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): RDD[(String, Iterable[Any])] = {
 
     val x = intRDD.filterByInterval(region)
-      .mapValues(r => (r._1, r._2.get(region, ks, isRaw)))
+      .mapValues(r => r.get(region, ks, isRaw))
 
     x.toRDD.flatMap(_._2)
 
