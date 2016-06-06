@@ -47,10 +47,10 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
     str.substring(start, start + size)
   }
 
-  def getTiles(region: ReferenceRegion): String = {
+  def getTiles(region: ReferenceRegion, isRaw: Boolean = false): String = {
 
     val layer = LayeredTile.getLayer(region)
-    if (layer == L0) return getRaw(region)
+    if (layer == L0 || isRaw) return getRaw(region)
 
     // if not raw layer, fetch from other layers
     val data = getAggregated(region)

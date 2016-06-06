@@ -48,7 +48,6 @@ class MangoKryoRegistrator extends KryoRegistrator {
     kryo.register(classOf[RecordGroupMetadata], new AvroSerializer[RecordGroupMetadata]())
     kryo.register(classOf[StructuralVariant], new AvroSerializer[StructuralVariant]())
     kryo.register(classOf[VariantCallingAnnotations], new AvroSerializer[VariantCallingAnnotations]())
-    kryo.register(classOf[VariantEffect], new AvroSerializer[VariantEffect]())
     kryo.register(classOf[DatabaseVariantAnnotation], new AvroSerializer[DatabaseVariantAnnotation]())
     kryo.register(classOf[Dbxref], new AvroSerializer[Dbxref]())
     kryo.register(classOf[Feature], new AvroSerializer[Feature]())

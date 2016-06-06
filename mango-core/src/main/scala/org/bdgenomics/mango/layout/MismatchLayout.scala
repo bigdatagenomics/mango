@@ -77,7 +77,7 @@ object MismatchLayout extends Logging {
     val cigar = TextCigarCodec.decode(rec.getCigar).getCigarElements()
 
     // string position
-    var refIdx: Int = (rec.getStart - region.start).toInt
+    var refIdx: Int = (regionSize).toInt
     var recIdx: Int = 0
 
     // actual position relative to reference region

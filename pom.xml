@@ -28,6 +28,7 @@
     <parquet.version>1.8.1</parquet.version>
     <utils.version>0.2.7-SNAPSHOT</utils.version>
     <htsjdk.version>1.139</htsjdk.version>
+    <bdg-formats.version>0.8.0</bdg-formats.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
     <hadoop.version>2.6.0</hadoop.version>
   </properties>
@@ -252,7 +253,7 @@
       <dependency>
         <groupId>org.bdgenomics.bdg-formats</groupId>
         <artifactId>bdg-formats</artifactId>
-        <version>0.7.1</version>
+        <version>${bdg-formats.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.mango</groupId>

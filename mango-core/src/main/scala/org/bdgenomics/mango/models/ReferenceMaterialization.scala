@@ -108,7 +108,7 @@ class ReferenceMaterialization(sc: SparkContext,
     if (!bookkeep.contains(region.referenceName)) {
       put(region)
     }
-    getTiles(region)
+    getTiles(region, true)
   }
 
   def init: SequenceDictionary = {
@@ -164,7 +164,7 @@ class ReferenceMaterialization(sc: SparkContext,
       val n = (end - start).toInt
       (paddedRegion, List.fill(n)("N").mkString)
     } else {
-      (paddedRegion, getRaw(paddedRegion))
+      (paddedRegion, getReferenceString(paddedRegion))
     }
   }
 }
