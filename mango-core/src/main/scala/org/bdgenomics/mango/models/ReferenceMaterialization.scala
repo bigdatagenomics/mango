@@ -20,19 +20,18 @@ package org.bdgenomics.mango.models
 import java.io.File
 
 import htsjdk.samtools.SAMSequenceDictionary
-import org.apache.parquet.filter2.dsl.Dsl.BinaryColumn
+import org.apache.parquet.filter2.dsl.Dsl.{ BinaryColumn, _ }
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.formats.avro.NucleotideContigFragment
-import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.tiling.{ Tiles, ReferenceTile }
+import org.bdgenomics.mango.core.util.ResourceUtils
+import org.bdgenomics.mango.tiling.{ ReferenceTile, Tiles }
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
 import picard.sam.CreateSequenceDictionary
-import org.apache.parquet.filter2.dsl.Dsl._
 
 class ReferenceMaterialization(sc: SparkContext,
                                referencePath: String,
@@ -148,23 +147,4 @@ class ReferenceMaterialization(sc: SparkContext,
     }
   }
 
-  /**
-   * Returns reference region string that is padded to encompass all reads for
-   * mismatch calculation
-   *
-   * @param region: ReferenceRegion to be viewed
-   * @return Option of Padded Reference
-   */
-  def getPaddedReference(region: ReferenceRegion, isPlaceholder: Boolean = false): (ReferenceRegion, String) = {
-    val padding = 200
-    val start = Math.max(0, region.start - padding)
-    val end = VizUtils.getEnd(region.end, dict(region.referenceName))
-    val paddedRegion = ReferenceRegion(region.referenceName, start, end)
-    if (isPlaceholder) {
-      val n = (end - start).toInt
-      (paddedRegion, List.fill(n)("N").mkString)
-    } else {
-      (paddedRegion, getReferenceString(paddedRegion))
-    }
-  }
 }

@@ -72,7 +72,7 @@ class Bookkeep(chunkSize: Int) {
       end += chunkSize
     }
 
-    if (regions.size < 1) {
+    if (regions.isEmpty) {
       None
     } else {
       Bookkeep.mergeRegions(Option(regions.toList))

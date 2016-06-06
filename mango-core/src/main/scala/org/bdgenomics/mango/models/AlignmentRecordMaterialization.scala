@@ -211,7 +211,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))
-      val (reg, ref) = refRDD.getPaddedReference(trimmedRegion)
+      val reference = refRDD.getRaw(trimmedRegion)
       var data: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
 
       // divide regions by chunksize
@@ -237,8 +237,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
         mappedRecords
           .groupBy(_._1)
           .map(r => (r._1, r._2.map(_._2)))
-
-      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, new AlignmentRecordTile(r._2, ref, reg)))
+      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, trimmedRegion)))
 
       // insert into IntervalRDD
       if (intRDD == null) {
