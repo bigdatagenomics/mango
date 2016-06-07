@@ -37,10 +37,10 @@ function render(refName, start, end) {
     $("#featArea").css( ' display', 'none' );
   }
 
-//  // Variants
-//  if (variantsExist) {
-//    renderVariants(refName, start, end);
-//  } else }
+  // Variants
+  if (variantsExist) {
+    renderVariants(refName, start, end);
+  } else }
 
   // Reads and Coverage
   if (readsExist) {

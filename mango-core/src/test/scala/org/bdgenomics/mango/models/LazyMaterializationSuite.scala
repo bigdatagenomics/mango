@@ -38,16 +38,6 @@ class LazyMaterializationSuite extends MangoFunSuite {
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
 
-  //  sparkTest("Get data for variants") {
-  //    val region = new ReferenceRegion("chrM", 0L, 100L)
-  //    val lazyMat = GenotypeMaterialization(sc, sd, 10)
-  //    lazyMat.loadSample(vcfFile)
-  //
-  //    val results = lazyMat.get(region, vcfFile).get
-  //    assert(results.count == 3)
-  //
-  //  }
-
   sparkTest("Merge Regions") {
     val r1 = new ReferenceRegion("chr1", 0, 999)
     val r2 = new ReferenceRegion("chr1", 1000, 1999)

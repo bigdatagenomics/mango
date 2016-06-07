@@ -368,7 +368,10 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           case None    => throw new FileNotFoundException("reference file not provided")
         }
       }
-      VizReads.refRDD = new ReferenceMaterialization(sc, VizReads.referencePath, 1000)
+      val chunkSize =
+        if (sc.isLocal) 1000
+        else 5000
+      VizReads.refRDD = new ReferenceMaterialization(sc, VizReads.referencePath, chunkSize)
       VizReads.chunkSize = VizReads.refRDD.chunkSize
       VizReads.globalDict = VizReads.refRDD.getSequenceDictionary
     }
