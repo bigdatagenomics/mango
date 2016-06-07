@@ -26,7 +26,7 @@
     <scalatra.version>2.4.+</scalatra.version>
     <spark.version>1.5.2</spark.version>
     <parquet.version>1.8.1</parquet.version>
-    <utils.version>0.2.7-SNAPSHOT</utils.version>
+    <utils.version>0.2.7</utils.version>
     <htsjdk.version>1.139</htsjdk.version>
     <bdg-formats.version>0.8.0</bdg-formats.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
