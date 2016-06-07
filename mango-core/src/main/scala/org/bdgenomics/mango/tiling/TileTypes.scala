@@ -19,7 +19,8 @@ package org.bdgenomics.mango.tiling
 
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.layout.{ PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
+import org.bdgenomics.mango.layout.{ MismatchLayout, CalculatedAlignmentRecord, PointMisMatch }
+import org.bdgenomics.mango.models.PositionCount
 
 case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
@@ -33,14 +34,25 @@ object AlignmentRecordTile {
             reference: String,
             region: ReferenceRegion): AlignmentRecordTile = {
 
+    /* Calculate Coverage at each position */
+    val grouped: Map[String, Iterable[AlignmentRecord]] = data.groupBy(_.getRecordGroupSample)
+    val coverage: Map[String, Iterable[PositionCount]] = grouped.mapValues(v => {
+      v.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
+        .filter(r => (r >= region.start && r <= region.end))
+        .map(r => (r, 1)).groupBy(_._1)
+        .map { case (group, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
+        .map(r => PositionCount(r._1, r._2))
+
+    })
+
     // raw data is alignments and mismatches
-    val rawData = data.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region)))
-      .filter(r => !r.mismatches.isEmpty).groupBy(_.record.getRecordGroupSample)
+    lazy val rawData = grouped.mapValues(iter => iter.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region)))
+      .filter(r => !r.mismatches.isEmpty))
 
     // layer 1 is point mismatches
-    val layer1 = rawData.mapValues(rs => PointMisMatch(rs.flatMap(_.mismatches).toList))
+    lazy val layer1 = rawData.mapValues(rs => PointMisMatch(rs.flatMap(_.mismatches).toList))
 
-    new AlignmentRecordTile(Map(0 -> rawData, 1 -> layer1))
+    new AlignmentRecordTile(Map(0 -> rawData, 1 -> layer1, 2 -> coverage))
 
   }
 }

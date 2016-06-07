@@ -55,24 +55,16 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("/reads/:ref") {
+  sparkTest("/reads/:ref raw data") {
+    implicit val VizReads = runVizReads(args)
+    get("/reads/chrM?start=0&end=100&sample=C57BL/6J&isRaw=true") {
+      assert(status == Ok("").status.code)
+    }
+  }
+
+  sparkTest("/reads/:ref mismatch data") {
     implicit val VizReads = runVizReads(args)
     get("/reads/chrM?start=0&end=100&sample=C57BL/6J") {
-      assert(status == Ok("").status.code)
-    }
-  }
-
-  sparkTest("/freq/:ref") {
-    implicit val VizReads = runVizReads(args)
-    get("/freq/chrM?start=0&end=100&sample=C57BL/6J") {
-      assert(status == Ok("").status.code)
-    }
-
-  }
-
-  sparkTest("/mergedReads/:ref") {
-    implicit val VizReads = runVizReads(args)
-    get("/mergedReads/chrM?start=0&end=100&sample=C57BL/6J") {
       assert(status == Ok("").status.code)
     }
   }

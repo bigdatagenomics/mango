@@ -31,6 +31,7 @@ import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.{ GenotypeMaterialization, AlignmentRecordMaterialization, ReferenceMaterialization }
+import org.bdgenomics.mango.tiling.Layer
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
@@ -176,48 +177,34 @@ class VizServlet extends ScalatraServlet {
         "featuresExist" -> VizReads.featuresExist))
   }
 
-  get("/freq/:ref") {
-    VizTimers.AlignmentRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      contentType = "json"
-      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-      dictOpt match {
-        case Some(_) => {
-          if (viewRegion.end > dictOpt.get.length) {
-            write("")
-          }
-          val end: Long = VizUtils.getEnd(viewRegion.end, VizReads.globalDict(viewRegion.referenceName))
-          val region = new ReferenceRegion(params("ref").toString, params("start").toLong, end)
-          val sampleIds: List[String] = params("sample").split(",").toList
-          val d = VizReads.readsData.getFrequency(region, sampleIds)
-          Ok(d)
-        }
-        case None => VizReads.errors.outOfBounds
-      }
-    }
-  }
-
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      if (viewRegion.length() > 5000) {
-        VizReads.errors.largeRegion
-      } else {
-        val isRaw =
-          try {
-            params("isRaw").toBoolean
-          } catch {
-            case e: Exception => false
+      contentType = "json"
+
+      // if region is in bounds of reference, return data
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+
+      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
+        val sampleIds: List[String] = params("sample").split(",").toList
+        val data =
+          if (viewRegion.length() < 5000) {
+            val isRaw =
+              try {
+                params("isRaw").toBoolean
+              } catch {
+                case e: Exception => false
+              }
+            val layer: Option[Layer] =
+              if (isRaw) Some(VizReads.readsData.rawLayer)
+              else None
+            VizReads.readsData.multiget(viewRegion, sampleIds, layer)
+          } else {
+            // Large Region. just return read frequencies
+            VizReads.readsData.getFrequency(viewRegion, sampleIds)
           }
-        contentType = "json"
-        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-        // if region is in bounds of reference, return data
-        if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-          val sampleIds: List[String] = params("sample").split(",").toList
-          val data = VizReads.readsData.multiget(viewRegion, sampleIds, isRaw)
-          Ok(data)
-        } else VizReads.errors.outOfBounds
-      }
+        Ok(data)
+      } else VizReads.errors.outOfBounds
     }
   }
 

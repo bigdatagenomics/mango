@@ -32,7 +32,7 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.layout.{ AlignmentRecordLayout, CalculatedAlignmentRecord, MutationCount }
-import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, KTiles }
+import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
 import org.bdgenomics.utils.misc.Logging
@@ -59,15 +59,12 @@ class AlignmentRecordMaterialization(s: SparkContext,
   val partitioner = setPartitioner
   val bookkeep = new Bookkeep(chunkSize)
 
-  /*
-   * sqlContext used for frequency DataFrame
+  /**
+   * Define layers and underlying data types
    */
-  val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-
-  /*
-  * Frequency data stored in materialization format
-  */
-  var freq: FrequencyMaterialization = new FrequencyMaterialization(sc, dict, chunkSize)
+  val rawLayer: Layer = L0
+  val mismatchLayer: Layer = L1
+  val coverageLayer: Layer = L2
 
   /*
    * Gets Frequency over a given region for each specified sample
@@ -79,8 +76,9 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
    * cooresponding frequency.
    */
-  def getFrequency(region: ReferenceRegion, sampleIds: List[String]): String = {
-    freq.get(region, sampleIds)
+  def getFrequency(region: ReferenceRegion, ks: List[String]): String = {
+    // TODO: check if in RDD
+    multiget(region, ks, Some(coverageLayer))
   }
 
   /**
@@ -132,8 +130,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
     fileMap += ((sample, filePath))
     println(s"loading sample ${sample}")
-    freq.loadSample(filePath, sample)
-
   }
 
   /**
@@ -144,7 +140,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
   override def loadADAMSample(filePath: String): String = {
     val sample = getFileReference(filePath)
     fileMap += ((sample, filePath))
-    freq.loadSample(filePath, sample)
     sample
   }
 
@@ -180,8 +175,8 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param k key corresponding to file to fetch from
    * @return Jsonified data
    */
-  def get(region: ReferenceRegion, k: String): String = {
-    multiget(region, List(k))
+  def get(region: ReferenceRegion, k: String, layerOpt: Option[Layer] = None): String = {
+    multiget(region, List(k), layerOpt)
   }
 
   /**
@@ -193,10 +188,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * Here, ks, is a list of personids (String)
    * @param region: ReferenceRegion to fetch
    * @param ks: keys to fetch data for
-   * @param isRaw: Boolean determining weather to fetch raw data
+   * @param layerOpt: Option to force data retrieval from specific layer
    * @return JSONified data
    */
-  def multiget(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): String = {
+  def multiget(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
+    implicit val formats = net.liftweb.json.DefaultFormats
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
@@ -206,10 +202,23 @@ class AlignmentRecordMaterialization(s: SparkContext,
             put(r, ks)
           }
         }
-        getTiles(region, ks, isRaw)
+        val dataLayer: Layer = layerOpt.getOrElse(getLayer(region))
+        val layers = getTiles(region, ks, List(coverageLayer, dataLayer))
+        val coverage = layers.get(coverageLayer).get
+        val reads = layers.get(dataLayer).get
+        write(Map("coverage" -> coverage, "reads" -> reads))
       } case None => {
         throw new Exception("Not found in dictionary")
       }
+    }
+  }
+
+  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
+    layer match {
+      case `rawLayer`      => stringifyRawAlignments(data, region)
+      case `mismatchLayer` => stringifyPointMismatches(data, region)
+      case `coverageLayer` => stringifyCoverage(data, region)
+      case _               => ""
     }
   }
 
@@ -219,7 +228,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param region region to futher filter by
    * @return JSONified data
    */
-  def stringifyL0(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
+  def stringifyRawAlignments(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
 
     val data: Array[(String, Iterable[CalculatedAlignmentRecord])] = rdd
@@ -239,17 +248,39 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param region region to futher filter by
    * @return JSONified data
    */
-  def stringifyL1(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
+  def stringifyPointMismatches(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
-    val binSize = Math.max(1, region.length / VizUtils.binSize)
+    val binSize = VizUtils.getBinSize(region)
 
     val data = rdd
       .mapValues(_.asInstanceOf[Iterable[MutationCount]])
       .mapValues(r => r.filter(r => r.refCurr <= region.end && r.refCurr >= region.start))
+      .mapValues(r => r.toList.distinct)
       .map(r => (r._1, r._2.filter(r => r.refCurr % binSize == 0)))
       .collect
 
     val flattened: Map[String, Array[MutationCount]] = data.groupBy(_._1)
+      .map(r => (r._1, r._2.flatMap(_._2)))
+
+    write(flattened)
+  }
+
+  /**
+   * Formats coverage data from Iterable[Int for each string
+   * @param rdd
+   * @param region
+   * @return
+   */
+  def stringifyCoverage(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
+    // get bin size to mod by
+    val binSize = VizUtils.getBinSize(region)
+    val regions = Bookkeep.unmergeRegions(region, chunkSize)
+    val data = rdd
+      .mapValues(_.asInstanceOf[Iterable[PositionCount]])
+      .mapValues(r => r.filter(r => r.position <= region.end && r.position >= region.start && r.position % binSize == 0))
+      .collect
+
+    val flattened: Map[String, Array[PositionCount]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
 
     write(flattened)
