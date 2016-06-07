@@ -27,7 +27,7 @@ import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.Feature
+import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.{ GenotypeMaterialization, AlignmentRecordMaterialization, ReferenceMaterialization }
@@ -235,9 +235,9 @@ class VizServlet extends ScalatraServlet {
   get("/variants") {
     contentType = "text/html"
     if (!session.contains("ref")) {
-      //        session("ref") = "chr"
-      //        session("start") = "1"
-      //        session("end") = "100"
+      session("ref") = "chr"
+      session("start") = "1"
+      session("end") = "100"
     }
     val globalViewRegion: ReferenceRegion =
       ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
@@ -249,28 +249,45 @@ class VizServlet extends ScalatraServlet {
 
   get("/viewregion/:ref") {
     contentType = "json"
-    //      session("ref") = params("ref")
-    //      session("start") = params("start")
-    //      session("end") = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)).toString
+    session("ref") = params("ref")
+    session("start") = params("start")
+    session("end") = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)).toString
   }
-  //
-  //    get("/variants/:ref") {
-  //      VizTimers.VarRequest.time {
-  //        contentType = "json"
-  //        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //        write(VizReads.varData.get(viewRegion))
-  //      }
-  //    }
-  //
-  //    get("/variantfreq/:ref") {
-  //      VizTimers.VarFreqRequest.time {
-  //        contentType = "json"
-  //        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //        write(VizReads.varData.getFreq(viewRegion))
-  //      }
-  //    }
+
+  get("/variants/:ref") {
+    VizTimers.VarRequest.time {
+      contentType = "json"
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      val variantRDDOption = VizReads.variantData.getTree(viewRegion, VizReads.variantsPaths)
+      variantRDDOption match {
+        case Some(_) => {
+          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
+          write(VariantLayout(variantRDD))
+        } case None => {
+          write("")
+        }
+      }
+
+    }
+  }
+
+  get("/variantfreq/:ref") {
+    VizTimers.VarFreqRequest.time {
+      contentType = "json"
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
+      val variantRDDOption = VizReads.variantData.getTree(viewRegion, VizReads.variantsPaths)
+      variantRDDOption match {
+        case Some(_) => {
+          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
+          write(VariantFreqLayout(variantRDD))
+        } case None => {
+          write("")
+        }
+      }
+    }
+  }
 
   get("/features/:ref") {
     if (!VizReads.featuresExist)
@@ -312,54 +329,6 @@ class VizServlet extends ScalatraServlet {
       Ok(write(VizReads.refRDD.getReferenceString(viewRegion)))
     }
   }
-
-  //  after("/mergedReads/:ref") {
-  //    val matSize = 2000L
-  //    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //    contentType = "json"
-  //    val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-  //    dictOpt match {
-  //      case Some(_) => {
-  //        val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
-  //        val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
-  //        val sampleIds: List[String] = params("sample").split(",").toList
-  //        VizReads.readsData.multiget(left, sampleIds)
-  //        VizReads.readsData.multiget(right, sampleIds)
-  //      } case None => // Do Nothing
-  //    }
-  //
-  //  }
-  //
-  //    get("/prefetchvfreq/:ref") {
-  //    after("/variantfreq/:ref") {
-  //      println("IN PREFETCH FREQ")
-  //      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //      val matSize = 100001L
-  //      val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
-  //      val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
-  //      println("pretching freq:...")
-  //      println(left)
-  //      println(right)
-  //      VizReads.varData.fetchVarFreqData(left, true)
-  //      VizReads.varData.fetchVarFreqData(right, true)
-  //    }
-  //
-  //    get("/prefetchvariants/:ref") {
-  //    after("/variants/:ref") {
-  //      println("IN PREFETCH VAR")
-  //      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-  //        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-  //      val matSize = 1001L
-  //      val left = ReferenceRegion(viewRegion.referenceName, math.max(viewRegion.start - matSize, 0L), viewRegion.start)
-  //      val right = ReferenceRegion(viewRegion.referenceName, viewRegion.end, VizUtils.getEnd(viewRegion.end + matSize, VizReads.globalDict(params("ref").toString)))
-  //      println("prefetching var:...")
-  //      println(left)
-  //      println(right)
-  //      VizReads.varData.fetchVarData(left, true)
-  //      VizReads.varData.fetchVarData(right, true)
-  //    }
 
 }
 
@@ -408,7 +377,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded alignment files
      */
     def initAlignments = {
-      VizReads.readsData = new AlignmentRecordMaterialization(sc, VizReads.globalDict, (VizReads.chunkSize).toInt, VizReads.refRDD)
+      VizReads.readsData = new AlignmentRecordMaterialization(sc, (VizReads.chunkSize).toInt, VizReads.refRDD)
       val readsPaths = Option(args.readsPaths)
       if (readsPaths.isDefined) {
         VizReads.readsPaths = args.readsPaths.split(",").toList
@@ -421,18 +390,24 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded variant files
      */
     def initVariants() = {
+      VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
       val variantsPath = Option(args.variantsPaths)
       variantsPath match {
         case Some(_) => {
           VizReads.variantsPaths = args.variantsPaths.split(",").toList
           VizReads.variantsExist = true
           for (varPath <- VizReads.variantsPaths) {
-            VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
+            if (varPath.endsWith(".vcf")) {
+              VizReads.variantData.loadSample(varPath)
+            } else if (varPath.endsWith(".adam")) {
+              VizReads.variantData.loadSample(varPath)
+            } else {
+              log.info("WARNING: Invalid input for variants file")
+            }
           }
         }
         case None => {
           log.info("WARNING: No variants file provided")
-          println("WARNING: No variants file provided")
         }
       }
     }

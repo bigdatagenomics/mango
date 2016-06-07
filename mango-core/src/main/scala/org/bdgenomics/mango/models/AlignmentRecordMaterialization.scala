@@ -26,8 +26,7 @@ import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.utils.misc.Logging
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
@@ -36,29 +35,38 @@ import org.bdgenomics.mango.layout.{ AlignmentRecordLayout, CalculatedAlignmentR
 import org.bdgenomics.mango.tiling.{ AlignmentRecordTile, KTiles }
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
+import org.bdgenomics.utils.misc.Logging
 
 import scala.reflect.ClassTag
 
-/*
- * Handles loading and tracking of data from persistent storage into memory for Alignment Records, and the corresponding
- * frequency and mismatches.
- * @see LazyMaterialization.scala
+/**
+ *
+ * @param s SparkContext
+ * @param chunkS chunkSize to size nodes in interval trees in IntervalRDD
+ * @param refRDD reference RDD to get reference string from for mismatch computations
+ * extends LazyMaterialization and KTiles
+ * @see LazyMaterialization
+ * @see KTiles
  */
 class AlignmentRecordMaterialization(s: SparkContext,
-                                     d: SequenceDictionary,
                                      chunkS: Int,
                                      refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[AlignmentRecordTile] with Serializable with Logging {
 
   protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
   val sc = s
-  val dict = d
+  val dict = refRDD.dict
   val chunkSize = chunkS
   val partitioner = setPartitioner
   val bookkeep = new Bookkeep(chunkSize)
 
-  //  var freqRDD = new FrequencyRDD(sc, chunkSize)
+  /*
+   * sqlContext used for frequency DataFrame
+   */
   val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 
+  /*
+  * Frequency data stored in materialization format
+  */
   var freq: FrequencyMaterialization = new FrequencyMaterialization(sc, dict, chunkSize)
 
   /*
@@ -71,11 +79,15 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
    * cooresponding frequency.
    */
-
   def getFrequency(region: ReferenceRegion, sampleIds: List[String]): String = {
     freq.get(region, sampleIds)
   }
 
+  /**
+   * Initializes AlignmentRecords by loading readpaths and their corresponding sample names.
+   * @param readsPaths absolute paths of AlignmentRecord files to load. Takes formats sam, bam and adam.
+   * @return Returns list of keys associated with each file. This is set to the sampleGroupName
+   */
   def init(readsPaths: List[String]): List[String] = {
     var sampNamesBuffer = new scala.collection.mutable.ListBuffer[String]
     for (readsPath <- readsPaths) {
@@ -105,8 +117,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
     sampNamesBuffer.toList
   }
 
-  /*
-   * Override files from LazyMaterialization
+  /**
+   * Overrides sample loading from LazyMaterailziation. Adds (id, filepath)
+   * tuple to fileMap
+   * @param filePath Filepath to load
+   * @param sampleId id to associate with file
    */
   override def loadSample(filePath: String, sampleId: Option[String] = None) {
     val sample =
@@ -121,6 +136,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
   }
 
+  /**
+   * Loads ADAM Sample and saves the (id, filepath) tuple to filemap
+   * @param filePath Filepath to load
+   * @return id associated with file
+   */
   override def loadADAMSample(filePath: String): String = {
     val sample = getFileReference(filePath)
     fileMap += ((sample, filePath))
@@ -128,10 +148,21 @@ class AlignmentRecordMaterialization(s: SparkContext,
     sample
   }
 
+  /**
+   * Gets file identifier associated with file
+   * @param fp path of AlignmentRecord file
+   * @return id associated with file
+   */
   override def getFileReference(fp: String): String = {
     sc.loadParquetAlignments(fp).recordGroups.recordGroups.head.sample
   }
 
+  /**
+   * Loads data from file
+   * @param region Region to load
+   * @param k k associated with the file to load from
+   * @return RDD of loaded AlignmentRecords
+   */
   override def loadFromFile(region: ReferenceRegion, k: String): RDD[AlignmentRecord] = {
     try {
       val fp = fileMap(k)
@@ -143,16 +174,28 @@ class AlignmentRecordMaterialization(s: SparkContext,
     }
   }
 
+  /**
+   * Gets data over specified region and keys
+   * @param region Region to fetch
+   * @param k key corresponding to file to fetch from
+   * @return Jsonified data
+   */
   def get(region: ReferenceRegion, k: String): String = {
     multiget(region, List(k))
   }
 
-  /* If the RDD has not been initialized, initialize it to the first get request
-    * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-    * If it exists, call get on the IntervalRDD
-    * Otherwise call put on the sections of data that don't exist
-    * Here, ks, is an option of list of personids (String)
-    */
+  /**
+   * Gets data for multiple keys.
+   * If the RDD has not been initialized, initialize it to the first get request
+   * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
+   * If it exists, call get on the IntervalRDD
+   * Otherwise call put on the sections of data that don't exist
+   * Here, ks, is a list of personids (String)
+   * @param region: ReferenceRegion to fetch
+   * @param ks: keys to fetch data for
+   * @param isRaw: Boolean determining weather to fetch raw data
+   * @return JSONified data
+   */
   def multiget(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): String = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
@@ -170,6 +213,12 @@ class AlignmentRecordMaterialization(s: SparkContext,
     }
   }
 
+  /**
+   * Formats raw data from KLayeredTile to JSON. This is requied by KTiles
+   * @param rdd RDD of (id, data) tuples
+   * @param region region to futher filter by
+   * @return JSONified data
+   */
   def stringifyL0(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
 
@@ -184,6 +233,12 @@ class AlignmentRecordMaterialization(s: SparkContext,
     write(AlignmentRecordLayout(flattened))
   }
 
+  /**
+   * Formats layer 1 data from KLayeredTile to JSON. This is requied by KTiles
+   * @param rdd RDD of (id, data) tuples
+   * @param region region to futher filter by
+   * @return JSONified data
+   */
   def stringifyL1(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
     val binSize = Math.max(1, region.length / VizUtils.binSize)
@@ -258,14 +313,21 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
 object AlignmentRecordMaterialization {
 
-  def apply(sc: SparkContext, dict: SequenceDictionary, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, dict, 1000, refRDD)
+  def apply(sc: SparkContext, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
+    new AlignmentRecordMaterialization(sc, 1000, refRDD)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, chunkSize: Int, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, dict, chunkSize, refRDD)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, chunkSize: Int, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
+    new AlignmentRecordMaterialization(sc, chunkSize, refRDD)
   }
 
+  /**
+   * Loads alignment data from bam, sam and ADAM file formats
+   * @param sc SparkContext
+   * @param region Region to load
+   * @param fp filepath to load from
+   * @return RDD of data from the file over specified ReferenceRegion
+   */
   def loadAlignmentData(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
     else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
@@ -274,14 +336,14 @@ object AlignmentRecordMaterialization {
       throw UnsupportedFileException("File type not supported")
     }
   }
-  /*
- * Loads data from bam files (indexed or unindexed) from persistent storage
- *
- * @param region: ReferenceRegion to load AlignmentRecords from
- * @param fp: String bam file pointer to load records from
- *
- * @return RDD[AlignmentRecord] records overlapping region
- */
+
+  /**
+   * Loads data from bam files (indexed or unindexed) from persistent storage
+   * @param sc SparkContext
+   * @param region Region to load
+   * @param fp filepath to load from
+   * @return RDD of data from the file over specified ReferenceRegion
+   */
   def loadFromBam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     val idxFile: File = new File(fp + ".bai")
     if (!idxFile.exists()) {
@@ -291,6 +353,13 @@ object AlignmentRecordMaterialization {
     }
   }
 
+  /**
+   * Loads ADAM data using predicate pushdowns
+   * @param sc SparkContext
+   * @param region Region to load
+   * @param fp filepath to load from
+   * @return RDD of data from the file over specified ReferenceRegion
+   */
   def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     val name = Binary.fromString(region.referenceName)
     val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name))

@@ -19,7 +19,7 @@
 package org.bdgenomics.mango.models
 
 import net.liftweb.json._
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.util.MangoFunSuite
@@ -36,10 +36,6 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     sc.loadBam(file).first
   }
 
-  val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000L),
-    SequenceRecord("chrM", 16299L),
-    SequenceRecord("20", 90000L)))
-
   // test alignment data
   val bamFile = resourcePath("mouse_chrM.bam")
 
@@ -50,7 +46,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
     val reference = new ReferenceMaterialization(sc, referencePath)
 
-    val lazyMat = AlignmentRecordMaterialization(sc, sd, reference.chunkSize, reference)
+    val lazyMat = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
     val samples = lazyMat.init(List(bamFile))
     val sampleName = getFirstFromBamFile(bamFile).getRecordGroupSample
     assert(samples.head == sampleName)
@@ -60,7 +56,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
     val reference = new ReferenceMaterialization(sc, referencePath)
 
-    val data = AlignmentRecordMaterialization(sc, sd, reference.chunkSize, reference)
+    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
     val samples = data.init(List(bamFile))
 
     val region = new ReferenceRegion("chrM", 0L, 1000L)
@@ -74,7 +70,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
     val reference = new ReferenceMaterialization(sc, referencePath, 100)
 
-    val data = AlignmentRecordMaterialization(sc, sd, 10, reference)
+    val data = AlignmentRecordMaterialization(sc, 10, reference)
     val samples = data.init(List(bamFile))
 
     val region = new ReferenceRegion("chrM", 0L, 10000L)
@@ -87,7 +83,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   sparkTest("Fetch region out of bounds") {
     val reference = new ReferenceMaterialization(sc, referencePath)
     val sample = getFirstFromBamFile(bamFile).getRecordGroupSample
-    val data = AlignmentRecordMaterialization(sc, reference.dict, reference.chunkSize, reference)
+    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
 
     val bigRegion = new ReferenceRegion("chrM", 0L, 9000L)
     data.init(List(bamFile))
@@ -104,7 +100,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val reference = new ReferenceMaterialization(sc, referencePath)
     val sample = "fakeSample"
 
-    val data = AlignmentRecordMaterialization(sc, sd, reference.chunkSize, reference)
+    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
 
     val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
     data.init(List(bamFile))
@@ -120,7 +116,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   sparkTest("Test frequency retrieval") {
     val reference = new ReferenceMaterialization(sc, referencePath)
     val sample = getFirstFromBamFile(bamFile).getRecordGroupSample
-    val data = AlignmentRecordMaterialization(sc, sd, reference.chunkSize, reference)
+    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
 
     val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
     data.init(List(bamFile))

@@ -87,7 +87,7 @@ class ReferenceMaterialization(sc: SparkContext,
     val fragments: RDD[(ReferenceRegion, Array[(String, Int)])] = sequences.map(r => (ReferenceRegion(r.getContig.getContigName, r.getFragmentStartPosition, r.getFragmentStartPosition + r.getFragmentLength),
       r.getFragmentSequence.toUpperCase.split(splitRegex).zipWithIndex))
 
-    // map fragmented sequences to smaller referenceregions the size of chunksize
+    // map fragmented sequences to smaller ReferenceRegions the size of chunksize
     val splitFragments: RDD[(ReferenceRegion, String)] = fragments.flatMap(r => r._2.map(x =>
       (ReferenceRegion(r._1.referenceName, r._1.start + x._2 * c, r._1.start + x._2 * c + x._1.length), x._1)))
 
