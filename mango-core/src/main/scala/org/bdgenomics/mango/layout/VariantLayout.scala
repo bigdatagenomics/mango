@@ -17,13 +17,12 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.{ SparkContext, Logging }
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{ SQLContext, Row, DataFrame }
-import org.apache.spark.storage.StorageLevel
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.{ DataFrame, Row, SQLContext }
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.utils.misc.Logging
 
 class VariantLayout(sc: SparkContext) extends Logging {
 

@@ -17,12 +17,13 @@
  */
 package org.bdgenomics.mango.models
 
-import org.bdgenomics.utils.intervalrdd._
+import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{ Logging, _ }
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.utils.intervalrdd._
+import org.bdgenomics.utils.misc.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.HashMap

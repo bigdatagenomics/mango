@@ -18,10 +18,9 @@
 package org.bdgenomics.mango.layout
 
 import htsjdk.samtools.{ CigarOperator, TextCigarCodec }
-import org.apache.spark.Logging
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
-
+import org.bdgenomics.utils.misc.Logging
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 

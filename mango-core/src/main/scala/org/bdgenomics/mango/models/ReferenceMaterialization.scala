@@ -22,7 +22,7 @@ import java.io.File
 import htsjdk.samtools.SAMSequenceDictionary
 import org.apache.parquet.filter2.dsl.Dsl.{ BinaryColumn, _ }
 import org.apache.parquet.filter2.predicate.FilterPredicate
-import org.apache.spark._
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
@@ -31,6 +31,7 @@ import org.bdgenomics.formats.avro.NucleotideContigFragment
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.tiling.{ ReferenceTile, Tiles }
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
+import org.bdgenomics.utils.misc.Logging
 import picard.sam.CreateSequenceDictionary
 
 class ReferenceMaterialization(sc: SparkContext,

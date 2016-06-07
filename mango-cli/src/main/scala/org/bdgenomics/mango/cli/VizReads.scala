@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.cli
 
-import java.io.FileNotFoundException
+import java.io.{ File, FileNotFoundException }
 
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -30,7 +30,7 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.layout._
-import org.bdgenomics.mango.models.{ AlignmentRecordMaterialization, ReferenceMaterialization }
+import org.bdgenomics.mango.models.{ GenotypeMaterialization, AlignmentRecordMaterialization, ReferenceMaterialization }
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
@@ -79,7 +79,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var globalDict: SequenceDictionary = null
   var refRDD: ReferenceMaterialization = null
   var readsData: AlignmentRecordMaterialization = null
-  var varData: VariantLayout = null
+  var variantData: GenotypeMaterialization = null
   var server: org.eclipse.jetty.server.Server = null
   var screenSize: Int = 1000
   var chunkSize: Long = 5000
@@ -421,20 +421,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded variant files
      */
     def initVariants() = {
-      VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
       val variantsPath = Option(args.variantsPaths)
       variantsPath match {
         case Some(_) => {
           VizReads.variantsPaths = args.variantsPaths.split(",").toList
           VizReads.variantsExist = true
           for (varPath <- VizReads.variantsPaths) {
-            if (varPath.endsWith(".adam")) {
-              VizReads.varData = new VariantLayout(VizReads.sc)
-              VizReads.varData.loadChr(varPath)
-            } else {
-              log.info("WARNING: Invalid input for variants file")
-              println("WARNING: Invalid input for variants file")
-            }
+            VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
           }
         }
         case None => {

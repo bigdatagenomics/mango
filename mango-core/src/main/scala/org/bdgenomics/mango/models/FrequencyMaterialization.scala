@@ -21,10 +21,11 @@ import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.{ Logging, SparkContext }
+import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.utils.misc.Logging
 
 class FrequencyMaterialization(s: SparkContext,
                                d: SequenceDictionary,

@@ -23,9 +23,10 @@ import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.io.api.Binary
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.{ Logging, _ }
+import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -211,7 +212,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))
-      val reference = refRDD.getRaw(trimmedRegion)
+      val reference = refRDD.getReferenceString(trimmedRegion)
       var data: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
 
       // divide regions by chunksize

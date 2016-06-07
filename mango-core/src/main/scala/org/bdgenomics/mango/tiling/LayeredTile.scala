@@ -18,10 +18,10 @@
 package org.bdgenomics.mango.tiling
 
 import net.liftweb.json.Serialization.write
-import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
+import org.bdgenomics.utils.misc.Logging
 
 import scala.reflect.ClassTag
 
