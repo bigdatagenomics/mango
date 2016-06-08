@@ -18,19 +18,20 @@
 
   <properties>
     <adam.version>0.19.1-SNAPSHOT</adam.version>
-    <avro.version>1.7.7</avro.version>
-    <java.version>1.7</java.version>
+    <avro.version>1.8.0</avro.version>
+    <java.version>1.8</java.version>
     <jetty.version>9.2.14.v20151106</jetty.version>
     <scala.version>2.10.4</scala.version>
     <scala.version.prefix>2.10</scala.version.prefix>
     <scalatra.version>2.4.+</scalatra.version>
-    <spark.version>1.5.2</spark.version>
+    <spark.version>1.6.1</spark.version>
     <parquet.version>1.8.1</parquet.version>
-    <utils.version>0.2.7</utils.version>
-    <htsjdk.version>1.139</htsjdk.version>
+    <bdg-utils.version>0.2.7</bdg-utils.version>
+    <htsjdk.version>2.3.0</htsjdk.version>
     <bdg-formats.version>0.8.0</bdg-formats.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
     <hadoop.version>2.6.0</hadoop.version>
+    <hadoop-bam.version>7.5.0</hadoop-bam.version>
   </properties>
 
   <modules>
@@ -263,7 +264,7 @@
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-misc_2.10</artifactId>
-        <version>${utils.version}</version>
+        <version>${bdg-utils.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
         <exclusions>
@@ -286,22 +287,22 @@
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-cli_2.10</artifactId>
-        <version>${utils.version}</version>
+        <version>${bdg-utils.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-io_2.10</artifactId>
-        <version>${utils.version}</version>
+        <version>${bdg-utils.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-metrics_2.10</artifactId>
-        <version>${utils.version}</version>
+        <version>${bdg-utils.version}</version>
       </dependency>
         <dependency>
           <groupId>org.bdgenomics.utils</groupId>
           <artifactId>utils-intervalrdd_2.10</artifactId>
-          <version>${utils.version}</version>
+          <version>${bdg-utils.version}</version>
         </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
