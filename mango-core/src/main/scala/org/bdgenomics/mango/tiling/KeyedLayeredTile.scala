@@ -41,6 +41,7 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
 
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
+   *
    * @param region Region to retrieve data from
    * @param ks keys whose data to retrieve
    * @param layerOpt: Option to force fetching of specific Layer
@@ -71,14 +72,14 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
     val data: RDD[(Int, Map[String, Iterable[Any]])] = intRDD.filterByInterval(region)
       .mapValues(r => r.get(region, ks, layers))
       .toRDD.flatMap(_._2)
-
     // return JSONified data
-    var json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+    val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
     json
   }
 
   /**
    * Gets layer corresponding to the reference region.
+   *
    * @see LayeredTile
    * @param region ReferenceRegion whose size to compare
    * @return Option of layer. If region size exceeds specs in LayeredTile, no layer is returned
@@ -105,6 +106,7 @@ abstract class KLayeredTile extends Serializable with Logging {
   /**
    * Gets data corresponding to the layer tied to the region size specified. This gets data from layermap
    * and is called by KTiles
+   *
    * @param region Region to fetch data
    * @param ks keys whose data to fetch
    * @param layer: Option to force fetching of specific Layer

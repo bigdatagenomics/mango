@@ -69,7 +69,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsPaths: List[String] = null
   var sampNames: Option[List[String]] = None
   var readsExist: Boolean = false
-  var variantsPaths: List[String] = null
+  var variantsPaths: Option[List[String]] = None
   var featurePaths: List[String] = null
   var variantsExist: Boolean = false
   var featuresExist: Boolean = false
@@ -175,6 +175,7 @@ class VizServlet extends ScalatraServlet {
         "readsSamples" -> VizReads.sampNames,
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
+        "variantsPaths" -> VizReads.variantsPaths,
         "featuresExist" -> VizReads.featuresExist))
   }
 
@@ -237,47 +238,32 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/variants") {
-    contentType = "text/html"
-    val globalViewRegion: ReferenceRegion =
-      ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
-    val templateEngine = new TemplateEngine
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
-      Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
-
-  }
-
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
-      contentType = "json"
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-      val variantRDDOption = VizReads.variantData.getTree(viewRegion, VizReads.variantsPaths)
-      variantRDDOption match {
-        case Some(_) => {
-          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
-          write(VariantLayout(variantRDD))
-        } case None => {
-          write("")
-        }
-      }
 
-    }
-  }
-
-  get("/variantfreq/:ref") {
-    VizTimers.VarFreqRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       contentType = "json"
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)))
-      val variantRDDOption = VizReads.variantData.getTree(viewRegion, VizReads.variantsPaths)
-      variantRDDOption match {
-        case Some(_) => {
-          val variantRDD: RDD[(ReferenceRegion, Genotype)] = variantRDDOption.get.toRDD
-          write(VariantFreqLayout(variantRDD))
-        } case None => {
-          write("")
-        }
+
+      // if region is in bounds of reference, return data
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+
+      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
+        val sampleIds: List[String] = params("sample").split(",").toList
+        val data =
+          if (viewRegion.length() < 1000) {
+            val isRaw =
+              try {
+                params("isRaw").toBoolean
+              } catch {
+                case e: Exception => false
+              }
+            val layer: Option[Layer] =
+              if (isRaw) Some(VizReads.variantData.rawLayer)
+              else None
+            //Always fetches the frequency, but also additionally fetches raw data if necessary
+            VizReads.variantData.multiget(viewRegion, sampleIds, layer)
+          } else VizReads.errors.outOfBounds
+        Ok(data)
       }
     }
   }
@@ -367,24 +353,10 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      */
     def initVariants() = {
       VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
-      val variantsPath = Option(args.variantsPaths)
-      variantsPath match {
-        case Some(_) => {
-          VizReads.variantsPaths = args.variantsPaths.split(",").toList
-          VizReads.variantsExist = true
-          for (varPath <- VizReads.variantsPaths) {
-            if (varPath.endsWith(".vcf")) {
-              VizReads.variantData.loadSample(varPath)
-            } else if (varPath.endsWith(".adam")) {
-              VizReads.variantData.loadSample(varPath)
-            } else {
-              log.info("WARNING: Invalid input for variants file")
-            }
-          }
-        }
-        case None => {
-          log.info("WARNING: No variants file provided")
-        }
+      val variantsPaths = Option(args.variantsPaths)
+      if (variantsPaths.isDefined) {
+        VizReads.variantsPaths = VizReads.variantData.init(args.variantsPaths.split(",").toList)
+        VizReads.variantsExist = true
       }
     }
 
@@ -450,8 +422,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
       VizReads.server.start()
       println("View the visualization at: " + args.port)
-      println("Variant visualization at: /variants")
-      println("Overall visualization at: /overall")
       println("Quit at: /quit")
       VizReads.server.join()
     }

@@ -3,6 +3,16 @@ function getAlignmentSelector(sample) {
     return selector;
 }
 
+function getVariantSelector(sample) {
+    var selector = "#" + sample + ">.variantData";
+    return selector;
+}
+
+function getVariantSummarySelector(sample) {
+    var selector = "#" + sample + ">.variantSummary";
+    return selector;
+}
+
 function setGlobalReferenceRegion(refName, start, end) {
     viewRefName = refName;
     viewRegStart = start;
@@ -24,6 +34,14 @@ function toggleAlignments(sample, selector) {
             renderAlignments(viewRefName, viewRegStart, viewRegEnd, sample);
         }
         $(selector).slideToggle( "fast" );
+}
+
+function toggleVariants(sample) {
+    var selector = $(getVariantSelector(sample));
+    if (!selector.is(':visible')) {
+        renderRawVariants(viewRefName, viewRegStart, viewRegEnd, sample)
+    }
+    $(selector).slideToggle( "fast" );
 }
 
 // Filters invalid characters from string to create javascript descriptor

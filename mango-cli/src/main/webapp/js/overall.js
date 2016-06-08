@@ -38,10 +38,14 @@ function render(refName, start, end) {
 
   // Variants
   if (variantsExist) {
-    renderVariants(refName, start, end);
-  } else {
-    $("#varArea").css( ' display', 'none' );
-  }
+    // hide reads and disable checkbox
+    if (end - start > 1000) {
+      $(".viewVariants").attr("checked", false);
+      $(".variantData").hide();
+
+      $(".viewVariants").prop("disabled", true)
+    } else $(".viewVariants").prop("disabled", false);
+    renderVariantSummary(refName, start, end);  }
 
   // Reads and Coverage
   if (readsExist) {
@@ -51,7 +55,7 @@ function render(refName, start, end) {
       $(".alignmentData").hide();
 
       $(".viewAlignments").prop("disabled", true)
-    } else $(".viewAlignments").prop("disabled", false)
+    } else $(".viewAlignments").prop("disabled", false);
     renderMergedReads(refName, start, end);
   }
 }

@@ -18,8 +18,8 @@
 package org.bdgenomics.mango.tiling
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature }
-import org.bdgenomics.mango.layout.{ PositionCount, PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Genotype, Feature }
+import org.bdgenomics.mango.layout.{ VariantFreqLayout, PositionCount, PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
 
 case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
@@ -77,5 +77,15 @@ object AlignmentRecordTile {
       })
     new AlignmentRecordTile(Map(0 -> rawData, 1 -> layer1, 2 -> coverage))
 
+  }
+}
+
+case class VariantTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
+
+object VariantTile {
+  def apply(variants: Iterable[Genotype], key: String): VariantTile = {
+    val rawData = Map((key, variants))
+    val layer1 = Map((key, VariantFreqLayout(variants)))
+    new VariantTile(Map(0 -> rawData, 1 -> layer1))
   }
 }
