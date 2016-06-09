@@ -120,7 +120,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
+        <version>3.5.1</version>
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>
@@ -355,7 +355,7 @@
       <dependency>
         <groupId>org.seqdoop</groupId>
         <artifactId>hadoop-bam</artifactId>
-        <version>7.0.0</version>
+        <version>${hadoop-bam.version}</version>
         <exclusions>
           <exclusion>
             <groupId>org.seqdoop</groupId>
@@ -419,7 +419,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-core_${scala.version.prefix}</artifactId>
+        <artifactId>spark-core_2.10</artifactId>
         <version>${spark.version}</version>
         <scope>provided</scope>
         <exclusions>
@@ -430,6 +430,14 @@
           <exclusion>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
