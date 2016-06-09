@@ -303,7 +303,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
 
       // divide regions by chunksize
       val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
-      val c = chunkSize
 
       // get alignment data for all samples
       ks.map(k => {

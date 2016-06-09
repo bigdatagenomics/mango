@@ -33,9 +33,9 @@ object FeatureLayout extends Logging {
    * @return List of FeatureJsons
    */
   def apply(rdd: RDD[Feature]): List[FeatureJson] = {
-    val data = rdd.keyBy(ReferenceRegion(_))
-    val trackedData = data.mapPartitions(FeatureLayout(_)).collect
-    val featureData = trackedData.zipWithIndex
+    val data = rdd.keyBy(ReferenceRegion(_)).collect()
+      .distinct.toIterator
+    val featureData = FeatureLayout(data).zipWithIndex
     featureData.flatMap(r => FeatureJson(r._1.records, r._2)).toList
   }
 

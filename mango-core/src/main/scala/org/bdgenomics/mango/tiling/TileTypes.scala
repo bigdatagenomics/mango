@@ -18,15 +18,37 @@
 package org.bdgenomics.mango.tiling
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.layout.{ MismatchLayout, CalculatedAlignmentRecord, PointMisMatch }
 import org.bdgenomics.mango.models.PositionCount
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature }
+import org.bdgenomics.mango.layout.{ PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
 
 case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
+
+case class FeatureTile(rawData: Iterable[Feature]) extends LayeredTile[Iterable[Feature]] with Serializable {
+  val layer1 = rawData
+  val layerMap = null
+}
 
 case class ReferenceTile(sequence: String) extends LayeredTile[String] with Serializable {
   val rawData = sequence
   val layerMap = null
+}
+
+object FeatureTile {
+  def apply(data: Iterable[Feature],
+            region: ReferenceRegion): FeatureTile = {
+
+    // Calculate point frequencies
+    val layer1 = data.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
+      .filter(r => (r >= region.start && r <= region.end))
+      .map(r => (r, 1)).groupBy(_._1)
+      .map { case (group, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
+      .map(r => PositionCount(r._1, r._2))
+
+    val layerMap = Map(1 -> layer1)
+    new FeatureTile(data)
+
+  }
 }
 
 object AlignmentRecordTile {
