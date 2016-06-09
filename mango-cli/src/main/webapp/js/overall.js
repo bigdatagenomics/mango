@@ -40,7 +40,9 @@ function render(refName, start, end) {
   // Variants
   if (variantsExist) {
     renderVariants(refName, start, end);
-  } else }
+  } else {
+    $("#varArea").css( ' display', 'none' );
+  }
 
   // Reads and Coverage
   if (readsExist) {
