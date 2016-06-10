@@ -18,32 +18,14 @@ var bisectData = d3.bisector(function(d) {
   return d.position;
 }).left;
 
-function renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds) {
+function renderCoverage(json) {
 
-  // Define json location of reads data
-  var jsonLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end="
-      + viewRegEnd + "&sample=" + sampleIds;
-
-    // Render data for each sample
-  d3.json(jsonLocation, function(error, json) {
-    if (!isValidHttpResponse(json)) {
-      return;
-    }
-
-    var frequencyBySample = d3.nest()
-      .key(function(d) { return d.sample; })
-      .entries(json);
-
-   frequencyBySample.map(function(value) {
-      renderJsonCoverage(value);
+   $.map(json, function(value, key) {
+      renderJsonCoverage(filterName(key),value);
    });
-
-  });
 }
 
-function renderJsonCoverage(data) {
-  var sample = filterName(data.key);
-  data = data.values
+function renderJsonCoverage(sample, data) {
   maxFreq = d3.max(data, function(d) {return d.count});
   maxFreq = typeof maxFreq != "undefined" ? maxFreq : 0;
 
@@ -69,8 +51,7 @@ function renderJsonCoverage(data) {
   var freqArea = d3.svg.area()
     .x(function(d){return xAxisScale(d.position);})
     .y0(height)
-    .y1(function(d){return yAxisScale(d.count);})
-    .interpolate("basis");
+    .y1(function(d){return yAxisScale(d.count);});
 
   var removed = svgContainer[sample].selectAll("path").remove()
 

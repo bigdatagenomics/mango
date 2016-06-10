@@ -37,52 +37,44 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
   /* chunk size of each node in interval tree */
   def chunkSize: Int
 
-  /* Turns raw layer 0 data into JSON string */
-  def stringifyL0(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): String
-
-  /* Turns aggregated layer 1 data into JSON string */
-  def stringifyL1(data: RDD[(String, Iterable[Any])], region: ReferenceRegion): String
+  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String
 
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
    * @param region Region to retrieve data from
    * @param ks keys whose data to retrieve
-   * @param isRaw Boolean specifying whether to fetch raw data or layer corresponding to region size
+   * @param layerOpt: Option to force fetching of specific Layer
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): String = {
+  def getTiles(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
 
-    val layerOpt = getLayer(region)
-    val layer = layerOpt.getOrElse(L2)
+    // Filter IntervalRDD by region and requested layer
+    val data: RDD[(String, Iterable[Any])] = intRDD.filterByInterval(region)
+      .mapValues(r => r.get(region, ks, layerOpt))
+      .toRDD.flatMap(_._2)
 
-    val data: RDD[(String, Iterable[Any])] = get(region, ks, isRaw)
-
-    if (isRaw)
-      stringifyL0(data, region)
-    else
-      layer match {
-        case L0 => stringifyL0(data, region)
-        case L1 => stringifyL1(data, region)
-        case _  => ""
-      }
+    // return JSONified data
+    val layer = layerOpt.getOrElse(getLayer(region))
+    stringify(data, region, layer)
   }
 
   /**
-   * Fetches bytes from layers containing aggregated data
-   *
-   * @param region
-   * @param ks: ks to processes
-   * @param isRaw: Boolean to force data formatting to layer 0
-   *
-   * @return byte data from aggregated layers keyed by String id
+   * Gets the tiles overlapping a given region corresponding to the specified keys
+   * @param region Region to retrieve data from
+   * @param ks keys whose data to retrieve
+   * @param layers: List of layers to fetch from tile
+   * @return jsonified data
    */
-  def get(region: ReferenceRegion, ks: List[String], isRaw: Boolean = false): RDD[(String, Iterable[Any])] = {
+  def getTiles(region: ReferenceRegion, ks: List[String], layers: List[Layer]): Map[Layer, String] = {
 
-    val x = intRDD.filterByInterval(region)
-      .mapValues(r => r.get(region, ks, isRaw))
+    // Filter IntervalRDD by region and requested layer
+    val data: RDD[(Int, Map[String, Iterable[Any]])] = intRDD.filterByInterval(region)
+      .mapValues(r => r.get(region, ks, layers))
+      .toRDD.flatMap(_._2)
 
-    x.toRDD.flatMap(_._2)
-
+    // return JSONified data
+    var json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+    json
   }
 
   /**
@@ -91,12 +83,12 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
    * @param region ReferenceRegion whose size to compare
    * @return Option of layer. If region size exceeds specs in LayeredTile, no layer is returned
    */
-  def getLayer(region: ReferenceRegion): Option[Layer] = {
+  def getLayer(region: ReferenceRegion): Layer = {
     val size = region.length()
 
     size match {
-      case x if (x < L1.range._1) => Some(L1)
-      case _                      => None
+      case x if (x < L1.range._1) => L1
+      case _                      => L4
     }
   }
 }
@@ -115,15 +107,15 @@ abstract class KLayeredTile extends Serializable with Logging {
    * and is called by KTiles
    * @param region Region to fetch data
    * @param ks keys whose data to fetch
-   * @param isRaw Boolean to force data formatting to layer 0
+   * @param layer: Option to force fetching of specific Layer
    * @return Map of (k, Iterable(data))
    */
-  def get(region: ReferenceRegion, ks: List[String], isRaw: Boolean): Map[String, Iterable[Any]] = {
+  def get(region: ReferenceRegion, ks: List[String], layer: Option[Layer] = None): Map[String, Iterable[Any]] = {
 
     val size = region.length()
 
     val data =
-      if (isRaw) layerMap.get(0)
+      if (layer.isDefined) layerMap.get(layer.get.id)
       else
         size match {
           case x if (x < L1.range._1) => layerMap.get(1)
@@ -134,6 +126,19 @@ abstract class KLayeredTile extends Serializable with Logging {
 
     // filter out irrelevent keys
     m.filter(r => ks.contains(r._1))
+  }
+
+  /**
+   * Gets data corresponding to the layer tied to the region size specified. This gets data from layermap
+   * and is called by KTiles
+   * @param region Region to fetch data
+   * @param ks keys whose data to fetch
+   * @param layers: List of layers to fetch
+   * @return Map of (k, Iterable(data))
+   */
+  def get(region: ReferenceRegion, ks: List[String], layers: List[Layer]): Map[Int, Map[String, Iterable[Any]]] = {
+    val filteredLayers = layerMap.filterKeys(k => layers.map(_.id).contains(k))
+    filteredLayers.mapValues(m => m.filterKeys(k => ks.contains(k)))
   }
 }
 

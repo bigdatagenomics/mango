@@ -39,27 +39,29 @@ for (var i = 0; i < samples.length; i++) {
 function renderMergedReads(refName, start, end) {
     startWait("#readsArea");
 
-    renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds);
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
         + viewRegEnd + "&sample=" + sampleIds;
 
     // Render data for each sample
-  d3.json(readsJsonLocation,function(error, ret) {
+  d3.json(readsJsonLocation,function(error, json) {
     if (error != null) {
         if (error.status == 413)  // entity too large
-            ret = "";
+            json.reads = "";
     }
+    renderCoverage(JSON.parse(json.coverage));
+
 
     // iterate through all samples and render merged reads
     for (var i = 0; i < samples.length; i++) {
 
         // Zoomed out too far for resolution. print mismatch path instead.
-        if(ret == "") {
+        if(json.reads == "") {
             indelSvgContainer[samples[i]].selectAll(".indel").remove();
             readCountSvgContainer[samples[i]].selectAll("g").remove();
         } else {
-            var data = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
+            var data = JSON.parse(json.reads);
+            var data = typeof data[rawSamples[i]] != "undefined" ? data[rawSamples[i]] : [];
             var selector = "#" + samples[i];
             renderd3Line(readCountSvgContainer[samples[i]], height);
 

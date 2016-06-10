@@ -144,5 +144,6 @@ class FrequencyMaterialization(s: SparkContext,
 }
 
 case class CoverageFile(filePath: String, containsCoverage: Boolean)
+case class PositionCount(position: Long, count: Int)
 case class SampleCoverage(sample: String, referenceName: String, position: Long, count: Int)
 

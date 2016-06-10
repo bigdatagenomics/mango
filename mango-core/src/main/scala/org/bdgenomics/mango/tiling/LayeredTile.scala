@@ -63,7 +63,9 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
     val data: RDD[S] =
       intRDD.filterByInterval(region)
         .mapValues(r => r.rawData)
-        .toRDD.map(_._2)
+        .toRDD
+        .sortBy(_._1.start)
+        .map(_._2)
 
     stringifyRaw(data, region)
   }

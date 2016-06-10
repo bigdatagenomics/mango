@@ -24,7 +24,7 @@ object VizUtils {
   /*
    * Defualy bin size for screen resolution
    */
-  def binSize: Int = 1000
+  val screenSize: Int = 1000
 
   /**
    * Returns the very last base in a given chromosome that
@@ -47,8 +47,8 @@ object VizUtils {
    * @param region Region to bin over
    * @return Bin size to calculate over
    */
-  def getBinSize(region: ReferenceRegion, screenSize: Int): Int = {
-    val binSize = ((region.end - region.start) / screenSize).toInt
+  def getBinSize(region: ReferenceRegion, size: Int = screenSize): Int = {
+    val binSize = ((region.end - region.start) / size).toInt
     return Math.max(1, binSize)
   }
 

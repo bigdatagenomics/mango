@@ -25,7 +25,7 @@ class ReferenceMaterializationSuite extends MangoFunSuite {
 
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
-  val region = ReferenceRegion("chrM", 0, 1000)
+  val region = ReferenceRegion("chrM", 0, 500)
 
   sparkTest("test ReferenceRDD creation") {
     new ReferenceMaterialization(sc, referencePath)
@@ -56,15 +56,4 @@ class ReferenceMaterializationSuite extends MangoFunSuite {
     assert(response1 == response2)
   }
 
-  sparkTest("test ReferenceRDD data retrieval at layer 1") {
-    val refRDD = new ReferenceMaterialization(sc, referencePath)
-    val response: String = refRDD.getReferenceString(ReferenceRegion("chrM", 0, 6000))
-    println(response.length)
-  }
-
-  sparkTest("test ReferenceRDD data retrieval at layer 2") {
-    val refRDD = new ReferenceMaterialization(sc, referencePath)
-    val response: String = refRDD.getReferenceString(ReferenceRegion("chrM", 0, 12000))
-    println(response.length)
-  }
 }
