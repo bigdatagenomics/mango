@@ -66,15 +66,6 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     assert(track1.length == 1)
   }
 
-  sparkTest("get large region") {
-    val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
-
-    val region = new ReferenceRegion("chrM", 0L, 10000L)
-
-    val json = data.get(region)
-    println(json)
-  }
-
   sparkTest("can handle regions out of bounds") {
     val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
 

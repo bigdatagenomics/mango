@@ -31,7 +31,7 @@ import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.layout.{ AlignmentRecordLayout, CalculatedAlignmentRecord, MutationCount }
+import org.bdgenomics.mango.layout.{ PositionCount, AlignmentRecordLayout, CalculatedAlignmentRecord, MutationCount }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD

@@ -26,12 +26,12 @@
     <scalatra.version>2.4.+</scalatra.version>
     <spark.version>1.6.1</spark.version>
     <parquet.version>1.8.1</parquet.version>
-    <bdg-utils.version>0.2.7</bdg-utils.version>
-    <htsjdk.version>2.3.0</htsjdk.version>
-    <bdg-formats.version>0.8.0</bdg-formats.version>
     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
     <hadoop.version>2.6.0</hadoop.version>
     <hadoop-bam.version>7.5.0</hadoop-bam.version>
+    <bdg-utils.version>0.2.7</bdg-utils.version>
+    <htsjdk.version>2.3.0</htsjdk.version>
+    <bdg-formats.version>0.8.0</bdg-formats.version>
   </properties>
 
   <modules>
@@ -263,7 +263,7 @@
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
-        <artifactId>utils-misc_2.10</artifactId>
+        <artifactId>utils-misc_${scala.version.prefix}</artifactId>
         <version>${bdg-utils.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
@@ -286,29 +286,28 @@
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
-        <artifactId>utils-cli_2.10</artifactId>
+        <artifactId>utils-cli_${scala.version.prefix}</artifactId>
         <version>${bdg-utils.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
-        <artifactId>utils-io_2.10</artifactId>
+        <artifactId>utils-io_${scala.version.prefix}</artifactId>
         <version>${bdg-utils.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
-        <artifactId>utils-metrics_2.10</artifactId>
+        <artifactId>utils-metrics_${scala.version.prefix}</artifactId>
         <version>${bdg-utils.version}</version>
       </dependency>
         <dependency>
           <groupId>org.bdgenomics.utils</groupId>
-          <artifactId>utils-intervalrdd_2.10</artifactId>
+          <artifactId>utils-intervalrdd_${scala.version.prefix}</artifactId>
           <version>${bdg-utils.version}</version>
         </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
         <version>${hadoop.version}</version>
-        <scope>provided</scope>
         <exclusions>
           <exclusion>
             <groupId>asm</groupId>
@@ -344,7 +343,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.parquet</groupId>
-        <artifactId>parquet-scala_2.10</artifactId>
+        <artifactId>parquet-scala_${scala.version.prefix}</artifactId>
         <version>${parquet.version}</version>
         <exclusions>
           <exclusion>
@@ -382,15 +381,14 @@
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
-        <artifactId>adam-core_2.10</artifactId>
+        <artifactId>adam-core_${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
-        <artifactId>adam-core_2.10</artifactId>
+        <artifactId>adam-core_${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
         <type>test-jar</type>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
@@ -401,7 +399,6 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest_${scala.version.prefix}</artifactId>
         <version>2.2.6</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>commons-configuration</groupId>
@@ -415,14 +412,8 @@
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-sql_2.10</artifactId>
+        <artifactId>spark-core_${scala.version.prefix}</artifactId>
         <version>${spark.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.spark</groupId>
-        <artifactId>spark-core_2.10</artifactId>
-        <version>${spark.version}</version>
-        <scope>provided</scope>
         <exclusions>
           <exclusion>
             <groupId>org.eclipse.jetty</groupId>
@@ -444,28 +435,27 @@
       </dependency>
       <dependency>
         <groupId>org.fusesource.scalate</groupId>
-        <artifactId>scalate-core_2.10</artifactId>
+        <artifactId>scalate-core_${scala.version.prefix}</artifactId>
         <version>1.6.1</version>
       </dependency>
       <dependency>
         <groupId>net.liftweb</groupId>
-        <artifactId>lift-json_2.10</artifactId>
+        <artifactId>lift-json_${scala.version.prefix}</artifactId>
         <version>2.6.2</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
-        <artifactId>scalatra_2.10</artifactId>
+        <artifactId>scalatra_${scala.version.prefix}</artifactId>
         <version>2.4.0</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-scalatest_2.10</artifactId>
+        <artifactId>scalatra-scalatest_${scala.version.prefix}</artifactId>
         <version>2.4.0</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-specs2_2.10</artifactId>
+        <artifactId>scalatra-specs2_${scala.version.prefix}</artifactId>
         <version>2.4.0</version>
       </dependency>
     </dependencies>

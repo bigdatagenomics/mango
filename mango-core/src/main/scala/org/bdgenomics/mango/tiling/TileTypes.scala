@@ -18,9 +18,8 @@
 package org.bdgenomics.mango.tiling
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.mango.models.PositionCount
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature }
-import org.bdgenomics.mango.layout.{ PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
+import org.bdgenomics.mango.layout.{ PositionCount, PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
 
 case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
