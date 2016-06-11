@@ -13,32 +13,8 @@
 
 <% render("templates/sidebar.ssp") %>
 
-<div class="main">
-    <div id="home">
-        <% render("templates/home.ssp", Map("dictionary" -> dictionary, "regions" -> regions)) %>
-    </div>
+<div id="main">
 
-    <div id="tracks">
-        <div class="graphArea" id="refArea"></div>
-
-        #if (featuresExist)
-            <div class="graphArea" id="featArea"></div>
-        #end
-
-        #if (variantsExist)
-            <div class="graphArea" id="varArea">
-            <% variantsPaths.get.foreach(s =>
-                render("templates/variants.ssp", Map("sample" -> s, "id" -> s)))%>
-            </div>
-        #end
-
-        #if (readsExist)
-            <div class="graphArea" id="readsArea">
-            <% readsSamples.get.foreach(s =>
-                render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>
-            </div>
-        #end
-    </div>
 </div>
 
 
@@ -62,6 +38,23 @@
 
 </script>
 
+<script>
+var div = document.getElementById('main');
+var p = pileup.create(div, {
+  range: {contig: 'chr17', start: 7512384, stop: 7512544},
+  tracks: [
+    {
+      viz: pileup.viz.genome(),
+      isReference: true,
+      data: pileup.formats.twoBit({
+        url: 'http://www.biodalliance.org/datasets/hg19.2bit'
+      }),
+      name: 'Reference'
+    }
+  ]
+});
+</script>
+
 #if (featuresExist)
     <script src="js/features.js"></script>
 #end
@@ -83,5 +76,6 @@
     <script src="js/freq.js"></script>
     <script src="js/reads.js"></script>
 #end
+
 
 </html>
