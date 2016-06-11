@@ -10,6 +10,10 @@
     <script src="resources/js/d3.v3.min.js" charset="utf-8"></script>
     <script src="resources/js/bigSlide.js"></script>
     <script src="resources/js/jquery.autocomplete.min.js"></script>
+    <!-- pileup requirements -->
+    <script src = "resources/node_modules/pileup/dist/pileup.min.js"></script>
+    <link rel="stylesheet" href="resources/nod_modules/pileup/pileup.css">
+
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
