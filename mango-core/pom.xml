@@ -9,116 +9,100 @@
     <version>0.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
-
   <artifactId>mango-core</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>mango-core: an ADAM-based genomics visualization toolkit</name>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>3.1.5</version>
-        <executions>
-          <execution>
-            <id>scala-compile-first</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>scala-test-compile-first</id>
-            <phase>process-test-resources</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>attach-scaladocs</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>doc-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <scalaVersion>${scala.version}</scalaVersion>
-          <recompileMode>incremental</recompileMode>
-          <useZincServer>true</useZincServer>
-          <args>
-            <arg>-unchecked</arg>
-            <arg>-optimise</arg>
-            <arg>-deprecation</arg>
-          </args>
-          <jvmArgs>
-            <jvmArg>-Xms64m</jvmArg>
-            <jvmArg>-Xms1024m</jvmArg>
-            <jvmArg>-Xmx1024m</jvmArg>
-          </jvmArgs>
-          <javacArgs>
-            <javacArg>-source</javacArg>
-            <javacArg>${java.version}</javacArg>
-            <javacArg>-target</javacArg>
-            <javacArg>${java.version}</javacArg>
-          </javacArgs>
-        </configuration>
-      </plugin>
-
-      <!-- disable surefire -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.7</version>
-        <configuration>
-          <skipTests>true</skipTests>
-        </configuration>
-      </plugin>
-      <!-- enable scalatest -->
-      <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-        <version>1.0-RC2</version>
-        <configuration>
-          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
-          <junitxml>.</junitxml>
-          <filereports>mangoTestSuite.txt</filereports>
-          <argLine>-Xmx1024m</argLine>
-        </configuration>
-        <executions>
-          <execution>
-            <id>test</id>
-            <goals>
-              <goal>test</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-
   <dependencies>
     <dependency>
       <groupId>com.esotericsoftware.kryo</groupId>
       <artifactId>kryo</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
+      <groupId>com.github.broadinstitute</groupId>
+      <artifactId>picard</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-webapp</artifactId>
+      <groupId>com.github.samtools</groupId>
+      <artifactId>htsjdk</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.liftweb</groupId>
+      <artifactId>lift-json_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-avro</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-scala_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${scala.version.prefix}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.adam</groupId>
+      <artifactId>adam-cli_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.adam</groupId>
+      <artifactId>adam-core_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.adam</groupId>
+      <artifactId>adam-core_${scala.version.prefix}</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.bdg-formats</groupId>
       <artifactId>bdg-formats</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.utils</groupId>
+      <artifactId>utils-cli_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.utils</groupId>
+      <artifactId>utils-intervalrdd_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.utils</groupId>
+      <artifactId>utils-io_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bdgenomics.utils</groupId>
+      <artifactId>utils-metrics_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
@@ -127,68 +111,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-metrics_${scala.version.prefix}</artifactId>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-intervalrdd_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-io_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-cli_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.adam</groupId>
-      <artifactId>adam-core_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.adam</groupId>
-      <artifactId>adam-cli_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.adam</groupId>
-      <artifactId>adam-core_${scala.version.prefix}</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.parquet</groupId>
-      <artifactId>parquet-avro</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.parquet</groupId>
-      <artifactId>parquet-scala_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.seqdoop</groupId>
-      <artifactId>hadoop-bam</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.broadinstitute</groupId>
-      <artifactId>picard</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.samtools</groupId>
-      <artifactId>htsjdk</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${scala.version.prefix}</artifactId>
-      <scope>provided</scope>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
@@ -196,16 +126,18 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.scalate</groupId>
+      <groupId>org.scalatra</groupId>
+      <artifactId>scalatra_${scala.version.prefix}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.scalatra.scalate</groupId>
       <artifactId>scalate-core_${scala.version.prefix}</artifactId>
     </dependency>
     <dependency>
-      <groupId>net.liftweb</groupId>
-      <artifactId>lift-json_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scalatra</groupId>
-      <artifactId>scalatra_${scala.version.prefix}</artifactId>
+      <groupId>org.seqdoop</groupId>
+      <artifactId>hadoop-bam</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 </project>
