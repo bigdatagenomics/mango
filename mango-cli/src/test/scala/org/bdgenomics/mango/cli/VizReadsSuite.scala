@@ -55,6 +55,13 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  // test sequence dictionary retreival from Reference Materialization
+  sparkTest("sequenceDictionary/") {
+    get("/sequenceDictionary") {
+      assert(status == Ok("").status.code)
+    }
+  }
+
   sparkTest("/reads/:ref raw data") {
     implicit val VizReads = runVizReads(args)
     get("/reads/chrM?start=0&end=100&sample=C57BL/6J&isRaw=true") {
