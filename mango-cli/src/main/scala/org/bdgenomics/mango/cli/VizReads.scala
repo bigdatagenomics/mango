@@ -202,6 +202,7 @@ class VizServlet extends ScalatraServlet {
         "variantsPaths" -> VizReads.variantKeys,
         "featuresExist" -> VizReads.featuresExist))
   }
+  }<
 
   get("/reference/:ref") {
     val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -216,6 +217,10 @@ class VizServlet extends ScalatraServlet {
       }
     session("referenceRegion") = viewRegion
     jsonResponse
+  }
+
+  get("/sequenceDictionary") {
+    Ok(write(VizReads.refRDD.dict.records))
   }
 
   get("/reads/:ref") {
@@ -315,6 +320,20 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+<<<<<<< HEAD
+=======
+  // Sends byte array to front end
+  get("/reference/:ref") {
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+    if (viewRegion.end - viewRegion.start > 2000)
+      VizReads.errors.largeRegion
+    else {
+      Ok(write(VizReads.refRDD.getReferenceAsBytes(viewRegion)))
+    }
+  }
+
+>>>>>>> b05942a... continued reference with pileup
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
