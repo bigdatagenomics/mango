@@ -12,6 +12,14 @@
   <artifactId>mango-core</artifactId>
   <packaging>jar</packaging>
   <name>mango-core: an ADAM-based genomics visualization toolkit</name>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
   <dependencies>
     <dependency>
       <groupId>com.esotericsoftware.kryo</groupId>
