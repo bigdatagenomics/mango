@@ -311,19 +311,27 @@ class AlignmentRecordMaterialization(s: SparkContext,
         data = data.union(kdata)
       })
 
-      var mappedRecords: RDD[(ReferenceRegion, AlignmentRecord)] = sc.emptyRDD[(ReferenceRegion, AlignmentRecord)]
-
-      // for all regions, filter by that region and create AlignmentRecordTile
-      regions.foreach(r => {
-        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
-        mappedRecords = mappedRecords.union(grouped)
+      // !!assumes data is partitioned by chromosome
+      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = data.mapPartitions(ars => {
+        regions.map(r => {
+          val g: Iterator[AlignmentRecord] = ars.filter(ar => r.overlaps(ReferenceRegion(ar)))
+          (r, AlignmentRecordTile(g.toIterable, reference, r))
+        }).toIterator
       })
 
-      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
-        mappedRecords
-          .groupBy(_._1)
-          .map(r => (r._1, r._2.map(_._2)))
-      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, trimmedRegion)))
+      //      var mappedRecords: RDD[(ReferenceRegion, AlignmentRecord)] = sc.emptyRDD[(ReferenceRegion, AlignmentRecord)]
+      //
+      //      // for all regions, filter by that region and create AlignmentRecordTile
+      //      regions.foreach(r => {
+      //        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
+      //        mappedRecords = mappedRecords.union(grouped)
+      //      })
+      //
+      //      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
+      //        mappedRecords
+      //          .groupBy(_._1)
+      //          .map(r => (r._1, r._2.map(_._2)))
+      //      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, trimmedRegion)))
 
       // insert into IntervalRDD
       if (intRDD == null) {

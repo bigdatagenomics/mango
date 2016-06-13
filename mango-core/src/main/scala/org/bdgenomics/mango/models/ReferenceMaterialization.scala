@@ -126,8 +126,10 @@ class ReferenceMaterialization(sc: SparkContext,
     dictionary
   }
 
-  def stringifyRaw(data: RDD[String], region: ReferenceRegion): String = {
-    val str = data.reduce(_ + _)
+  def stringifyRaw(data: RDD[(ReferenceRegion, String)], region: ReferenceRegion): String = {
+    val str = data.collect
+      .sortBy(_._1.start).map(_._2)
+      .reduce(_ + _)
     trimSequence(str, region)
   }
 

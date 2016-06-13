@@ -133,7 +133,7 @@ class FeatureMaterialization(sc: SparkContext,
     })
   }
 
-  def stringifyRaw(data: RDD[Iterable[Feature]], region: ReferenceRegion): String = stringify(data.flatMap(identity), region)
+  def stringifyRaw(data: RDD[(ReferenceRegion, Iterable[Feature])], region: ReferenceRegion): String = stringify(data.flatMap(_._2), region)
 
   def stringify(data: RDD[Feature], region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
