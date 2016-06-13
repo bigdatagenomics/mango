@@ -17,11 +17,11 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.utils.instrumentation.Metrics
+import org.bdgenomics.utils.misc.Logging
 
 import scala.collection.mutable.ListBuffer
 
@@ -36,25 +36,22 @@ object AlignmentRecordLayout extends Logging {
    * over the region, the region viewed and samples viewed.
    *
    * @param data: Array of (ReferenceRegion, AlignmentRecord) tuples
-   * @param sampleIds: List of sample identifiers to be rendered
    * @return List of Read Tracks containing json for reads, mismatches and mate pairs
    */
-  def apply(data: Array[(ReferenceRegion, CalculatedAlignmentRecord)], sampleIds: List[String]): Map[String, SampleTrack] = {
-    val sampleTracks = new ListBuffer[(String, SampleTrack)]()
+  def apply(data: Array[(ReferenceRegion, CalculatedAlignmentRecord)]): SampleTrack = {
 
-    val tracks: Map[String, List[ReadsTrack]] = new AlignmentRecordLayout(data).collect.groupBy(_.sample)
+    val track: List[ReadsTrack] = new AlignmentRecordLayout(data).collect
 
-    tracks.foreach {
-      case (sample, track) => {
-        val indexedTrack = track.zipWithIndex
-        val matePairs = indexedTrack.flatMap(r => MatePairJson(r._1.matePairs, r._2))
-        val mismatches = indexedTrack.flatMap(r => MisMatchJson(r._1.misMatches, r._2))
-        val reads = indexedTrack.flatMap(r => ReadJson(r._1.records, r._2))
-        val sampleTrack = new SampleTrack(reads.toList, matePairs.toList, mismatches.toList)
-        sampleTracks += Tuple2(sample, sampleTrack)
-      }
-    }
-    sampleTracks.toMap
+    val indexedTrack = track.zipWithIndex
+    val matePairs = indexedTrack.flatMap(r => MatePairJson(r._1.matePairs, r._2))
+    val mismatches = indexedTrack.flatMap(r => MisMatchJson(r._1.misMatches, r._2))
+    val reads = indexedTrack.flatMap(r => ReadJson(r._1.records, r._2))
+    new SampleTrack(reads.toList, matePairs.toList, mismatches.toList)
+  }
+
+  def apply(data: Map[String, Array[CalculatedAlignmentRecord]]): Map[String, SampleTrack] = {
+    val regionData: Map[String, Array[(ReferenceRegion, CalculatedAlignmentRecord)]] = data.mapValues(r => r.map(c => (ReferenceRegion(c.record), c)))
+    regionData.map(r => (r._1, AlignmentRecordLayout(r._2)))
   }
 }
 
@@ -235,5 +232,5 @@ case class SampleTrack(val records: List[ReadJson], val matePairs: List[MatePair
 // untracked json classes
 case class MatePair(start: Long, end: Long)
 
-case class CalculatedAlignmentRecord(record: AlignmentRecord, mismatches: List[MisMatch])
-
+case class CalculatedAlignmentRecord(record: AlignmentRecord, mismatches: List[MisMatch]) extends Serializable
+case class SampleCoverage(sample: String, referenceName: String, position: Long, count: Int)

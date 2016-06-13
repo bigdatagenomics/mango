@@ -17,10 +17,10 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.Feature
+import org.bdgenomics.utils.misc.Logging
 
 import scala.collection.mutable
 
@@ -33,9 +33,9 @@ object FeatureLayout extends Logging {
    * @return List of FeatureJsons
    */
   def apply(rdd: RDD[Feature]): List[FeatureJson] = {
-    val data = rdd.keyBy(ReferenceRegion(_))
-    val trackedData = data.mapPartitions(FeatureLayout(_)).collect
-    val featureData = trackedData.zipWithIndex
+    val data = rdd.keyBy(ReferenceRegion(_)).collect()
+      .distinct.toIterator
+    val featureData = FeatureLayout(data).zipWithIndex
     featureData.flatMap(r => FeatureJson(r._1.records, r._2)).toList
   }
 
@@ -101,3 +101,4 @@ object FeatureJson {
 
 // Tracked Json Features
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
+case class PositionCount(position: Long, count: Int)

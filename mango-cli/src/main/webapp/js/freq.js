@@ -18,35 +18,14 @@ var bisectData = d3.bisector(function(d) {
   return d.position;
 }).left;
 
-function renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds) {
+function renderCoverage(json) {
 
-  // Define json location of reads data
-  var jsonLocation = "/freq/" + viewRefName + "?start=" + viewRegStart + "&end="
-      + viewRegEnd + "&sample=" + sampleIds;
-
-    // Render data for each sample
-  d3.json(jsonLocation, function(error, ret) {
-    if (!isValidHttpResponse(ret)) {
-      return;
-    }
-    var data
-    if (ret === "") data = ret;
-    else data = ret.map(JSON.parse);
-
-    var frequencyBySample = d3.nest()
-      .key(function(d) { return d.sample; })
-      .entries(data);
-
-   frequencyBySample.map(function(value) {
-      renderJsonCoverage(value);
+   $.map(json, function(value, key) {
+      renderJsonCoverage(filterName(key),value);
    });
-
-  });
 }
 
-function renderJsonCoverage(data) {
-  var sample = filterName(data.key);
-  data = data.values
+function renderJsonCoverage(sample, data) {
   maxFreq = d3.max(data, function(d) {return d.count});
   maxFreq = typeof maxFreq != "undefined" ? maxFreq : 0;
 
@@ -72,8 +51,7 @@ function renderJsonCoverage(data) {
   var freqArea = d3.svg.area()
     .x(function(d){return xAxisScale(d.position);})
     .y0(height)
-    .y1(function(d){return yAxisScale(d.count);})
-    .interpolate("basis");
+    .y1(function(d){return yAxisScale(d.count);});
 
   var removed = svgContainer[sample].selectAll("path").remove()
 
@@ -82,80 +60,5 @@ function renderJsonCoverage(data) {
     .append("path")
     .attr("d", freqArea(data))
     .style("fill", "#B8B8B8");
-  svgContainer[sample].append("rect")
-    .attr("width", width)
-    .attr("x", 0)
-    .attr("height", height)
-    .style("fill", "none")
-    .style("pointer-events", "all")
-    .on("mouseover", function() { focus.style("display", null); })
-    .on("mouseout", function() { focus.style("display", "none"); })
-    .on("mousemove", mousemove);
-
-  // What we use to add tooltips
-  var focus = svgContainer[sample].append("g")
-    .style("display", "none");
-
-  // Append the y guide line
-  focus.append("line")
-    .attr("class", "yGuide")
-    .style("stroke", "red")
-    .style("stroke-dasharray", "3,3")
-    .style("opacity", 0.5)
-    .attr("x1", 0)
-    .attr("x2", width);
-
-  // Text above line to display reference position
-  focus.append("text")
-    .attr("class", "above")
-    .style("stroke", "black")
-    .style("font-size", "12")
-    .style("stroke-width", "1px")
-    .style("opacity", 0.8)
-    .attr("dx", 8)
-    .attr("dy", "-.3em");
-
-  // Text below line to display coverage
-  focus.append("text")
-    .attr("class", "below")
-    .style("stroke", "black")
-    .style("font-size", "12")
-    .style("stroke-width", "1px")
-    .style("opacity", 0.8)
-    .attr("dx", 8)
-    .attr("dy", "1em");
-
-  function mousemove() {
-    // Initial calibrates initial mouse offset due to y axis position
-    var x0 = xAxisScale.invert(d3.mouse(this)[0]);
-    var i = bisectData(data, x0, 1);
-    var opt1 = data[i - 1];
-    var opt2 = data[i];
-
-    if (data.length == 0) {
-      return
-    }
-
-    // Finds the position that is closest to the mouse cursor
-    var d = (x0 - opt1.position) > (opt2.position - x0) ? opt2 : opt1;
-
-    focus.select("text.above")
-      .attr("transform",
-        "translate(" + xAxisScale(d.position) + "," +
-        yAxisScale(d.count) + ")")
-      .text("Position: " + d.position);
-
-    focus.select("text.below")
-      .attr("transform",
-        "translate(" + xAxisScale(d.position) + "," +
-        yAxisScale(d.count) + ")")
-      .text("Freq: " + d.count);
-
-    focus.select(".yGuide")
-      .attr("transform",
-        "translate(" + (width - 50) * -1 + "," +
-          yAxisScale(d.count) + ")")
-      .attr("x2", width + width);
-  }
 
 }

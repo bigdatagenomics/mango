@@ -17,7 +17,6 @@
  */
 package org.bdgenomics.mango.models
 
-import edu.berkeley.cs.amplab.spark.intervalrdd.IntervalRDD
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
@@ -28,6 +27,7 @@ import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.utils.intervalrdd.IntervalRDD
 
 import scala.reflect.ClassTag
 

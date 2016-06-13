@@ -23,7 +23,6 @@ import htsjdk.samtools.reference.{ FastaSequenceIndex, IndexedFastaSequenceFile 
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.ADAMFunSuite
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.util.MangoFunSuite
 
@@ -46,8 +45,8 @@ class MismatchLayoutSuite extends MangoFunSuite {
   test("find 1 mismatch in read when read and reference are aligned") {
     val read = AlignmentRecord.newBuilder
       .setCigar("5M")
-      .setStart(3)
-      .setEnd(7)
+      .setStart(3L)
+      .setEnd(7L)
       .setSequence("AAAAT")
       .build
 
@@ -64,8 +63,8 @@ class MismatchLayoutSuite extends MangoFunSuite {
   test("find 1 insertion in read") {
     val read = AlignmentRecord.newBuilder
       .setCigar("3M1I2M")
-      .setStart(1)
-      .setEnd(7)
+      .setStart(1L)
+      .setEnd(7L)
       .setSequence("TAGGAT")
       .build
 
@@ -82,8 +81,8 @@ class MismatchLayoutSuite extends MangoFunSuite {
   test("find 1 deletion in read") {
     val read = AlignmentRecord.newBuilder
       .setCigar("4M1D1M")
-      .setStart(3)
-      .setEnd(8)
+      .setStart(3L)
+      .setEnd(8L)
       .setSequence("TAGGT")
       .build
 
@@ -93,15 +92,14 @@ class MismatchLayoutSuite extends MangoFunSuite {
     val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
     assert(results.size == 1)
     assert(results.head.op == "D")
-    assert(results.head.refBase == "A")
     assert(results.head.refCurr == 7)
   }
 
   test("find 1 mismatch and 1 insertion in read") {
     val read = AlignmentRecord.newBuilder
       .setCigar("6M1I")
-      .setStart(11)
-      .setEnd(17)
+      .setStart(11L)
+      .setEnd(17L)
       .setSequence("AAGGATT")
       .build
 
@@ -124,8 +122,8 @@ class MismatchLayoutSuite extends MangoFunSuite {
   test("find 1 insertion and 1 deletion") {
     val read = AlignmentRecord.newBuilder
       .setCigar("1M2I1M1D1M")
-      .setStart(3)
-      .setEnd(7)
+      .setStart(3L)
+      .setEnd(7L)
       .setSequence("ATTAG")
       .build
 
@@ -139,7 +137,6 @@ class MismatchLayoutSuite extends MangoFunSuite {
     assert(results.head.refCurr == 4)
 
     assert(results(1).op == "D")
-    assert(results(1).refBase == "T")
     assert(results(1).refCurr == 5)
 
     assert(results(2).op == "M")
@@ -152,8 +149,8 @@ class MismatchLayoutSuite extends MangoFunSuite {
   test("find 1 insertion and 1 deletion with large reference") {
     val read = AlignmentRecord.newBuilder
       .setCigar("1M1I1M1D1M")
-      .setStart(3)
-      .setEnd(7)
+      .setStart(3L)
+      .setEnd(7L)
       .setSequence("ATAG")
       .build
 
@@ -168,13 +165,31 @@ class MismatchLayoutSuite extends MangoFunSuite {
     assert(results.head.refCurr == 4)
 
     assert(results(1).op == "D")
-    assert(results(1).refBase == "T")
     assert(results(1).refCurr == 5)
 
     assert(results(2).op == "M")
     assert(results(2).refBase == "A")
     assert(results(2).sequence == "G")
     assert(results(2).refCurr == 6)
+  }
+
+  test("test mismatches before reference begins") {
+
+    val read = AlignmentRecord.newBuilder
+      .setCigar("5M1D5M")
+      .setStart(3L)
+      .setEnd(13L)
+      .setSequence("AAAAAGGGGG")
+      .build
+
+    val reference = "CGGGGG"
+    val region = new ReferenceRegion("chr", 8L, 13L)
+
+    val results = MismatchLayout.alignMismatchesToRead(read, reference, region)
+
+    assert(results.size == 1)
+    assert(results.head.op == "D")
+    assert(results.head.refCurr == 8)
 
   }
 

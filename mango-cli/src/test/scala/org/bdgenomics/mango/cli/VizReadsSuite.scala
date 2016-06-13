@@ -20,8 +20,8 @@ package org.bdgenomics.mango.cli
 import net.liftweb.json._
 import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
+import org.scalatra.{ RequestEntityTooLarge, Ok, NotFound }
 import org.scalatra.test.scalatest.ScalatraSuite
-import org.scalatra.{ NotFound, Ok, RequestEntityTooLarge }
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
@@ -36,7 +36,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   args.readsPaths = bamFile
   args.referencePath = referenceFile
   args.variantsPaths = vcfFile
-  args.featuresPath = featureFile
+  args.featurePaths = featureFile
   args.testMode = true
   addServlet(classOf[VizServlet], "/*")
 
@@ -55,31 +55,23 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("/reads/:ref") {
+  sparkTest("/reads/:ref raw data") {
+    implicit val VizReads = runVizReads(args)
+    get("/reads/chrM?start=0&end=100&sample=C57BL/6J&isRaw=true") {
+      assert(status == Ok("").status.code)
+    }
+  }
+
+  sparkTest("/reads/:ref mismatch data") {
     implicit val VizReads = runVizReads(args)
     get("/reads/chrM?start=0&end=100&sample=C57BL/6J") {
       assert(status == Ok("").status.code)
     }
   }
 
-  sparkTest("/freq/:ref") {
-    implicit val VizReads = runVizReads(args)
-    get("/freq/chrM?start=0&end=100&sample=C57BL/6J") {
-      assert(status == Ok("").status.code)
-    }
-
-  }
-
-  sparkTest("/mergedReads/:ref") {
-    implicit val VizReads = runVizReads(args)
-    get("/mergedReads/chrM?start=0&end=100&sample=C57BL/6J") {
-      assert(status == Ok("").status.code)
-    }
-  }
-
   sparkTest("/features/chrM?start=0&end=2000") {
     implicit val vizReads = runVizReads(args)
-    get("/features/chrM?start=0&end=2000") {
+    get("/features/chrM?start=0&end=1200") {
       assert(status == 200)
       val features = parse(response.getContent()).extract[List[FeatureJson]]
       assert(features.length == 2)
@@ -89,7 +81,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   sparkTest("Should not crash with incorrect feature file") {
     val args = new VizReadsArgs()
     args.referencePath = referenceFile
-    args.featuresPath = vcfFile
+    args.featurePaths = vcfFile
     args.testMode = true
 
     implicit val vizReadNoFeatures = runVizReads(args)

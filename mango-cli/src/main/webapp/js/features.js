@@ -8,7 +8,6 @@ if (featuresExist === true) {
 }
 
 function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
-
   var featureJsonLocation = "/features/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
 
   // define x axis
@@ -27,6 +26,15 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
   }
     var rects = featureSvgContainer.selectAll("rect").data(data);
     var modify = rects.transition();
+
+    // reset height based on number of tracks
+    var tracks = d3.max(data, function(d) {return d.track}) + 1;
+    if (isNaN(tracks)) tracks = 0;
+
+    d3.select("#featArea")
+        .select("svg")
+          .attr("height", tracks*featHeight);
+
     modify
       .attr("x", (function(d) { return xAxisScale(d.start); }))
       .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }));
@@ -36,7 +44,7 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
       .append("g")
       .append("rect")
         .attr("x", (function(d) { return xAxisScale(d.start); }))
-        .attr("y", 0)
+        .attr("y", (function(d) { return d.track * featHeight; }))
         .attr("width", (function(d) { return Math.max(1,(d.end-d.start)*(width/(viewRegEnd-viewRegStart))); }))
         .attr("height", featHeight)
         .attr("fill", "#6600CC")
@@ -48,6 +56,7 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
             "Feature Id: " + d.featureId + "<br>" +
             "Feature Type: " + d.featureType + "<br>" +
             "Start: " + d.start + "<br>" +
+            "Track: " + d.track + "<br>" +
             "End: " + d.end)
             .style("left", (d3.event.pageX - 200) + "px")
             .style("top", (d3.event.pageY - 200) + "px");

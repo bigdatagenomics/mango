@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.util
 
-import com.github.erictu.intervaltree.IntervalTree
+import org.bdgenomics.utils.intervaltree.IntervalTree
 import org.bdgenomics.adam.models.ReferenceRegion
 
 import scala.collection.mutable.{ HashMap, ListBuffer }
@@ -72,7 +72,7 @@ class Bookkeep(chunkSize: Int) {
       end += chunkSize
     }
 
-    if (regions.size < 1) {
+    if (regions.isEmpty) {
       None
     } else {
       Bookkeep.mergeRegions(Option(regions.toList))
@@ -95,6 +95,21 @@ class Bookkeep(chunkSize: Int) {
 
 }
 object Bookkeep {
+
+  def unmergeRegions(region: ReferenceRegion, chunkSize: Int): List[ReferenceRegion] = {
+    var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
+    var start = region.start / chunkSize * chunkSize
+    var end = start + (chunkSize - 1)
+
+    while (start <= region.end) {
+      val r = new ReferenceRegion(region.referenceName, start, end)
+      regions += r
+      start += chunkSize
+      end += chunkSize
+    }
+
+    regions.toList
+  }
 
   /**
    * generates a list of closely overlapping regions, counting for gaps in the list

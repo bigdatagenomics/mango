@@ -24,7 +24,7 @@ for (var i = 0; i < samples.length; i++) {
   var selector = "#" + samples[i] + ">.sampleIndels";
   indelSvgContainer[samples[i]] = d3.select(selector)
     .select("svg")
-      .attr("height", 14)
+      .attr("height", trackHeight)
       .attr("width", width);
 
 
@@ -39,31 +39,40 @@ for (var i = 0; i < samples.length; i++) {
 function renderMergedReads(refName, start, end) {
     startWait("#readsArea");
 
-    renderCoverage(viewRefName, viewRegStart, viewRegEnd, sampleIds);
     // Define json location of reads data
-    var readsJsonLocation = "/mergedReads/" + viewRefName + "?start=" + viewRegStart + "&end="
+    var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
         + viewRegEnd + "&sample=" + sampleIds;
 
     // Render data for each sample
-  d3.json(readsJsonLocation,function(error, ret) {
-    if (!isValidHttpResponse(ret)) {
-      stopWait("#readsArea");
-      return;
+  d3.json(readsJsonLocation,function(error, json) {
+    if (error != null) {
+        if (error.status == 413)  // entity too large
+            json.reads = "";
     }
+    renderCoverage(JSON.parse(json.coverage));
+
 
     // iterate through all samples and render merged reads
     for (var i = 0; i < samples.length; i++) {
-        var data = typeof ret[rawSamples[i]] != "undefined" ? ret[rawSamples[i]] : [];
-        var selector = "#" + samples[i];
-        renderd3Line(readCountSvgContainer[samples[i]], height);
 
-        sampleData[i] = [];
-        sampleData[i].mismatches = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
-        sampleData[i].indels = typeof data['indels'] != "undefined" ? data['indels'] : [];
-        binSize = typeof data['binSize'] != "undefined" ? data['binSize'] : 1;
+        // Zoomed out too far for resolution. print mismatch path instead.
+        if(json.reads == "") {
+            indelSvgContainer[samples[i]].selectAll(".indel").remove();
+            readCountSvgContainer[samples[i]].selectAll("g").remove();
+        } else {
+            var data = JSON.parse(json.reads);
+            var data = typeof data[rawSamples[i]] != "undefined" ? data[rawSamples[i]] : [];
+            var selector = "#" + samples[i];
+            renderd3Line(readCountSvgContainer[samples[i]], height);
 
-        renderMismatchCounts(sampleData[i].mismatches, samples[i]);
-        renderIndelCounts(sampleData[i].indels, samples[i]);
+            sampleData[i] = [];
+            sampleData[i].mismatches = data.filter(function(d) { return d.op === "M"})
+            sampleData[i].indels = data.filter(function(d) { return d.op !== "M"})
+
+            var removed = readCountSvgContainer[samples[i]].selectAll("path").remove();
+            renderMismatchCounts(sampleData[i].mismatches, samples[i]);
+            renderIndelCounts(sampleData[i].indels, samples[i]);
+        }
     }
     stopWait("#readsArea");
   });
@@ -94,7 +103,7 @@ function renderAlignments(refName, start, end, sample) {
 
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
-    + viewRegEnd + "&sample=" + sample;
+    + viewRegEnd + "&sample=" + sample + "&isRaw=true";
 
    d3.json(readsJsonLocation,function(error, ret) {
         if (error) return error;
@@ -134,12 +143,12 @@ function renderReadsByResolution(data, rawSample) {
         var xAxisScale = xRange(viewRegStart, viewRegEnd, width);
 
         // Reformat data to account for emtpy Json
-        data['tracks'] = typeof data['tracks'] != "undefined" ? data['tracks'] : [];
+        data['records'] = typeof data['records'] != "undefined" ? data['records'] : [];
         data['mismatches'] = typeof data['mismatches'] != "undefined" ? data['mismatches'] : [];
         data['indels'] = typeof data['indels'] != "undefined" ? data['indels'] : [];
         data['matePairs'] = typeof data['matePairs'] != "undefined" ? data['matePairs'] : [];
 
-        var numTracks = d3.max(data["tracks"], function(d) {return d.track});
+        var numTracks = d3.max(data['records'], function(d) {return d.track});
         numTracks = typeof numTracks != "undefined" ? numTracks : [];
 
         readsHeight = (numTracks+1)*trackHeight;
@@ -148,7 +157,7 @@ function renderReadsByResolution(data, rawSample) {
         container.attr("height", (readsHeight));
 
         //Add the rectangles
-        var rects = container.selectAll(".readrect").data(data["tracks"]);
+        var rects = container.selectAll(".readrect").data(data['records']);
         var modify = rects.transition();
 
       modify
@@ -203,7 +212,7 @@ function renderReadsByResolution(data, rawSample) {
           });
 
         // white background for arrows
-        var arrowBkgds = container.selectAll(".bkgd").data(data["tracks"]);
+        var arrowBkgds = container.selectAll(".bkgd").data(data['records']);
         var bkgdsModify = arrowBkgds.transition();
         bkgdsModify
         .attr('points', function(d) {
@@ -253,7 +262,7 @@ function renderReadsByResolution(data, rawSample) {
                 }
               }).style("fill", "white");
 
-        var arrowHeads = container.selectAll(".arrow").data(data["tracks"]);
+        var arrowHeads = container.selectAll(".arrow").data(data['records']);
         var arrowModify = arrowHeads.transition();
         arrowModify
         .attr('points', function(d) {

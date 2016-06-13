@@ -1,6 +1,6 @@
 //Configuration Variables
 var base = 50;
-var trackHeight = 6;
+var trackHeight = 14;
 
 // Section Heights
 var refHeight = 38;
@@ -33,11 +33,15 @@ function render(refName, start, end) {
   // Features
   if (featuresExist) {
     renderFeatures(refName, start, end);
+  } else {
+    $("#featArea").css( ' display', 'none' );
   }
 
   // Variants
   if (variantsExist) {
     renderVariants(refName, start, end);
+  } else {
+    $("#varArea").css( ' display', 'none' );
   }
 
   // Reads and Coverage

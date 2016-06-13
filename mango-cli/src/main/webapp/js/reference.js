@@ -61,12 +61,13 @@ function renderReference(viewRefName, viewRegStart, viewRegEnd, callback) {
             callback(false);      // if data not found, redirect to home page
             return;
         } else if (error.status == 413) { // entity too large
+            data = "";
         }
     }
 
     var positions = Array.apply(null, {length: data.length}).map(Number.call, Number);
 
-    data = typeof data != "undefined" ? d3.zip(positions, data.split("")) : [];
+    data = d3.zip(positions, data.split(""));
     data = data.map(function(v) {
         return {
             "position": v[0] + viewRegStart,
@@ -107,7 +108,7 @@ function renderLowResRef(data, refContainer, refDiv) {
     })
     .attr("fill", function(d) {
       if (d.reference === "N") return nColor;
-      else if (d.position == -1) return brown;
+      else if (d.reference == -1) return brown;
       else return baseColors[d.reference];
     });
 
@@ -136,16 +137,16 @@ function renderLowResRef(data, refContainer, refDiv) {
         refDiv.html(
           "Base: " + d.reference + "<br>" +
           "Position: " + d.position)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 100) + "px");
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY + "px");
       })
       .on("mouseover", function(d) {
         refDiv.transition()
           .duration(200)
           .style("opacity", .9);
         refDiv.html(d.reference)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 100) + "px");
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY + "px");
       })
       .on("mouseout", function(d) {
           refDiv.transition()

@@ -69,7 +69,7 @@ object Track {
    * @return List of ReadsTracks
    */
   def apply(trackBuffer: ReadsTrackBuffer): ReadsTrack = {
-    new ReadsTrack(trackBuffer.records.toList, trackBuffer.sample)
+    new ReadsTrack(trackBuffer.records.toList)
   }
 }
 
@@ -84,11 +84,9 @@ case class GenericTrack[T: ClassTag](records: List[(ReferenceRegion, T)]) extend
  * Extension of Track to support AlignmentRecord Data
  *
  * @param recs: List of (ReferenceRegion, AlignmentRecord) tuples in a ReadsTrack
- * @param sampOpt: Option of sample id
  */
-class ReadsTrack(recs: List[(ReferenceRegion, CalculatedAlignmentRecord)], sampOpt: Option[String]) extends Track[AlignmentRecord] {
+class ReadsTrack(recs: List[(ReferenceRegion, CalculatedAlignmentRecord)]) extends Track[AlignmentRecord] {
 
-  val sample = sampOpt.get
   val records = recs.map(r => (r._1, r._2.record))
   val matePairs: List[MatePair] = getMatePairs
   val misMatches: List[MisMatch] = recs.flatMap(_._2.mismatches)
@@ -124,10 +122,8 @@ case class GenericTrackBuffer[T: ClassTag](recs: List[(ReferenceRegion, T)]) ext
  */
 case class ReadsTrackBuffer(recs: Iterable[(ReferenceRegion, CalculatedAlignmentRecord)]) extends TrackBuffer[CalculatedAlignmentRecord] {
   records ++= recs
-  val sample: Option[String] = Option(records.head._2.record.getRecordGroupSample)
 
   def conflicts(recs: Seq[(ReferenceRegion, CalculatedAlignmentRecord)]): Boolean = {
-    assert(sample != None)
     val start = recs.map(rec => rec._1.start).min
     val end = recs.map(rec => rec._1.end).max
     val groupedSample = recs.head._2.record.getRecordGroupSample
@@ -135,6 +131,6 @@ case class ReadsTrackBuffer(recs: Iterable[(ReferenceRegion, CalculatedAlignment
 
     val pairs = records.toList.groupBy(_._2.record.getReadName).map(_._2)
     val aggregatedPairs = pairs.map(p => ReferenceRegion(p.head._1.referenceName, p.map(rec => rec._1.start).min, p.map(rec => rec._1.end).max))
-    sample.get != groupedSample || aggregatedPairs.exists(r => r.overlaps(tempRegion))
+    aggregatedPairs.exists(r => r.overlaps(tempRegion))
   }
 }

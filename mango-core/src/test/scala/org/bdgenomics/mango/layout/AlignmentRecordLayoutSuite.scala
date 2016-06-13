@@ -22,6 +22,7 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Contig }
 import org.bdgenomics.mango.util.MangoFunSuite
 
 class AlignmentRecordLayoutSuite extends MangoFunSuite {
+  val emptyMismatches = List()
 
   sparkTest("test correct matePairs") {
 
@@ -56,8 +57,8 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
       Array(CalculatedAlignmentRecord(read1, mismatch1),
         CalculatedAlignmentRecord(read2, mismatch2)).map(r => (ReferenceRegion(r.record), r))
 
-    val alignmentData = AlignmentRecordLayout(data, sampleIds)
-    assert(alignmentData.head._2.matePairs.length == 1)
+    val alignmentData = AlignmentRecordLayout(data)
+    assert(alignmentData.matePairs.length == 1)
   }
 
   sparkTest("test mate pairs do not overlap for multiple pairs") {
@@ -109,16 +110,15 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 1, 40)
     val sampleIds: List[String] = List("Sample")
     val d: Array[CalculatedAlignmentRecord] = Array(
-      CalculatedAlignmentRecord(read1, List()),
-      CalculatedAlignmentRecord(read2, List()),
-      CalculatedAlignmentRecord(read3, List()),
-      CalculatedAlignmentRecord(read4, List()))
+      CalculatedAlignmentRecord(read1, emptyMismatches),
+      CalculatedAlignmentRecord(read2, emptyMismatches),
+      CalculatedAlignmentRecord(read3, emptyMismatches),
+      CalculatedAlignmentRecord(read4, emptyMismatches))
 
     val data: Array[(ReferenceRegion, CalculatedAlignmentRecord)] = d.map(r => (ReferenceRegion(r.record), r))
-    val alignmentData = AlignmentRecordLayout(data, sampleIds)
-    val result = alignmentData.head
-    assert(result._2.matePairs.length == 2)
-    assert(result._2.matePairs.filter(_.track == 0).length == 1)
+    val alignmentData = AlignmentRecordLayout(data)
+    assert(alignmentData.matePairs.length == 2)
+    assert(alignmentData.matePairs.filter(_.track == 0).length == 1)
   }
 
   sparkTest("test mate pairs do not overlap in interspersed pattern") {
@@ -167,21 +167,17 @@ class AlignmentRecordLayoutSuite extends MangoFunSuite {
       .setSequence("AAAAAA")
       .build
 
-    val region = new ReferenceRegion("chrM", 1, 48)
-    val sampleIds: List[String] = List("Sample")
-
     val d: Array[CalculatedAlignmentRecord] = Array(
-      CalculatedAlignmentRecord(read1, List()),
-      CalculatedAlignmentRecord(read2, List()),
-      CalculatedAlignmentRecord(read3, List()),
-      CalculatedAlignmentRecord(read4, List()))
+      CalculatedAlignmentRecord(read1, emptyMismatches),
+      CalculatedAlignmentRecord(read2, emptyMismatches),
+      CalculatedAlignmentRecord(read3, emptyMismatches),
+      CalculatedAlignmentRecord(read4, emptyMismatches))
 
     val data = d.map(r => (ReferenceRegion(r.record), r))
 
-    val alignmentData = AlignmentRecordLayout(data, sampleIds)
-    val result = alignmentData.head
-    assert(result._2.matePairs.length == 2)
-    assert(result._2.matePairs.filter(_.track == 0).length == 1)
+    val alignmentData = AlignmentRecordLayout(data)
+    assert(alignmentData.matePairs.length == 2)
+    assert(alignmentData.matePairs.filter(_.track == 0).length == 1)
   }
 
   sparkTest("test diffing reads works correctly") {

@@ -18,10 +18,9 @@
 package org.bdgenomics.mango.layout
 
 import htsjdk.samtools.{ CigarOperator, TextCigarCodec }
-import org.apache.spark.Logging
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.AlignmentRecord
-
+import org.bdgenomics.utils.misc.Logging
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
@@ -65,7 +64,7 @@ object MismatchLayout extends Logging {
    */
   def alignMismatchesToRead(rec: AlignmentRecord, ref: String, region: ReferenceRegion): List[MisMatch] = {
 
-    val regionSize = region.end - region.start
+    val startValue = rec.getStart - region.start
 
     var misMatches: ListBuffer[MisMatch] = new ListBuffer[MisMatch]()
     val refLength = ref.length - 1
@@ -77,7 +76,7 @@ object MismatchLayout extends Logging {
     val cigar = TextCigarCodec.decode(rec.getCigar).getCigarElements()
 
     // string position
-    var refIdx: Int = (rec.getStart - region.start).toInt
+    var refIdx: Int = (startValue).toInt
     var recIdx: Int = 0
 
     // actual position relative to reference region
@@ -86,60 +85,53 @@ object MismatchLayout extends Logging {
     cigar.foreach {
       e =>
         {
-          // required for reads that extend reference
-          var misLen = 0
-          var op: CigarOperator = null
-          var refBase: Char = 'M'
-          var recBase: Char = 'M'
-          try {
-            misLen = e.getLength
-            op = e.getOperator
-            recBase = rec.getSequence.charAt(recIdx)
-            refBase = ref.charAt(refIdx)
-          } catch {
-            case e: Exception => misMatches.toList
-          }
-          if (op == CigarOperator.X || op == CigarOperator.M) {
+
+          val cigarLen = e.getLength
+          val cigarOp = e.getOperator
+
+          if (cigarOp == CigarOperator.X || cigarOp == CigarOperator.M) {
+            val refStart = Math.max(0, refIdx)
+            val refEnd = Math.min(ref.length, refIdx + cigarLen)
+            val recStart = Math.max(recIdx, (region.start - rec.getStart).toInt)
+            val recEnd = Math.min(rec.getSequence.length, recIdx + cigarLen)
+            if (refEnd > refStart && recEnd > recStart) {
+
+              val refString = ref.substring(refStart, refEnd)
+              val recString = rec.getSequence.substring(recStart, recEnd)
+
+              val x: List[((Char, Char), Int)] = recString.zip(refString).zipWithIndex.filter(r => r._1._1 != r._1._2).toList
+
+              misMatches ++= x.map(r => {
+                new MisMatch(cigarOp.toString, refPos + r._2, 1, r._1._1.toString, r._1._2.toString)
+              })
+
+            }
+            recIdx += cigarLen
+            refIdx += cigarLen
+            refPos += cigarLen
+
+          } else if (cigarOp == CigarOperator.I) {
             try {
-              for (i <- 0 to misLen - 1) {
-                // required for reads that extend reference
-                if (refIdx > refLength)
-                  return misMatches.toList
-
-                val recBase = rec.getSequence.charAt(recIdx)
-
-                val refBase = ref.charAt(refIdx)
-                if (refBase != recBase) {
-                  misMatches += new MisMatch(op.toString, refPos, 1, recBase.toString, refBase.toString)
-                }
-                recIdx += 1
-                refIdx += 1
-                refPos += 1
-              }
+              val indel = rec.getSequence.substring(recIdx, recIdx + cigarLen)
+              misMatches += new MisMatch(cigarOp.toString, refPos, cigarLen, indel, "")
+              recIdx += cigarLen
             } catch {
               case e: Exception => {
                 log.warn(e.toString)
               }
             }
-          } else if (op == CigarOperator.I) {
+          } else if (cigarOp == CigarOperator.D || cigarOp == CigarOperator.N) {
             try {
-              val indel = rec.getSequence.substring(recIdx, recIdx + misLen)
-              misMatches += new MisMatch(op.toString, refPos, misLen, indel, "")
-              recIdx += misLen
+              misMatches += new MisMatch(cigarOp.toString, refPos, cigarLen, "", "")
+              refIdx += cigarLen
+              refPos += cigarLen
             } catch {
               case e: Exception => {
                 log.warn(e.toString)
               }
             }
-          } else if (op == CigarOperator.D || op == CigarOperator.N) {
-            val start = Math.min(refIdx, refLength)
-            val end = Math.min(refIdx + misLen, refLength)
-            val indel = ref.substring(start, end)
-            misMatches += new MisMatch(op.toString, refPos, misLen, "", indel)
-            refIdx += misLen
-            refPos += misLen
-          } else if (op == CigarOperator.S) {
-            recIdx += misLen
+          } else if (cigarOp == CigarOperator.S) {
+            recIdx += cigarLen
           }
 
         }
@@ -212,6 +204,18 @@ object PointMisMatch {
    */
   def apply(mismatches: List[MisMatch], binSize: Int): List[MutationCount] = {
     val grouped = mismatches.map(m => new MisMatch(m.op, (m.refCurr - (m.refCurr % binSize)), binSize, m.sequence, m.refBase)).groupBy(_.refCurr)
+    val g = grouped.map(_._2).flatMap(reducePoints(_)).toList
+    return g
+  }
+
+  /**
+   * aggregated point mismatch at a specific location
+   *
+   * @param mismatches: List of mismatches to be grouped by start value
+   * @return List of aggregated mismatches and their corresponding counts
+   */
+  def apply(mismatches: List[MisMatch]): List[MutationCount] = {
+    val grouped = mismatches.groupBy(_.refCurr)
     val g = grouped.map(_._2).flatMap(reducePoints(_)).toList
     return g
   }

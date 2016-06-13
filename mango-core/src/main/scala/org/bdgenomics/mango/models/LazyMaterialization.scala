@@ -17,12 +17,13 @@
  */
 package org.bdgenomics.mango.models
 
-import edu.berkeley.cs.amplab.spark.intervalrdd._
+import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{ Logging, _ }
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.utils.intervalrdd._
+import org.bdgenomics.utils.misc.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.HashMap
@@ -32,16 +33,15 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def sc: SparkContext
   def dict: SequenceDictionary
-  def partitions: Int
   def chunkSize: Int
   def partitioner: Partitioner
   def bookkeep: Bookkeep
 
   def setPartitioner: Partitioner = {
     if (sc.isLocal)
-      new HashPartitioner(partitions)
+      new HashPartitioner(sc.defaultParallelism)
     else
-      GenomicRegionPartitioner(partitions, dict)
+      GenomicRegionPartitioner(sc.defaultParallelism, dict)
   }
 
   def getDictionary: SequenceDictionary = {
@@ -76,17 +76,13 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def put(region: ReferenceRegion, ks: List[String])
 
-  def get(region: ReferenceRegion, k: String): Option[IntervalRDD[ReferenceRegion, S]] = {
-    multiget(region, List(k))
-  }
-
   /* If the RDD has not been initialized, initialize it to the first get request
-	* Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-	* If it exists, call get on the IntervalRDD
-	* Otherwise call put on the sections of data that don't exist
-	* Here, ks, is an option of list of personids (String)
-	*/
-  def multiget(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
+  * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
+  * If it exists, call get on the IntervalRDD
+  * Otherwise call put on the sections of data that don't exist
+  * Here, ks, is an option of list of personids (String)
+  */
+  def getTree(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
     val seqRecord = dict(region.referenceName)
     val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
     seqRecord match {
