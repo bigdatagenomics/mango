@@ -34,6 +34,10 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
 

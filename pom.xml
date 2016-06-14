@@ -285,6 +285,21 @@
           <groupId>org.scalatest</groupId>
           <artifactId>scalatest-maven-plugin</artifactId>
           <version>1.0</version>
+          <configuration>
+          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+          <junitxml>.</junitxml>
+          <filereports>mangoTestSuite.txt</filereports>
+          <argLine>-Xmx1024m -Dsun.io.serialization.extendedDebugInfo=true</argLine>
+          <stdout>F</stdout>
+          </configuration>
+            <executions>
+              <execution>
+                <id>test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+              </execution>
+            </executions>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -305,10 +320,6 @@
       <plugin>
         <groupId>org.scalariform</groupId>
         <artifactId>scalariform-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
@@ -420,6 +431,10 @@
           <exclusion>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.eclipse.jetty.orbit</groupId>
+            <artifactId>javax.servlet</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.apache.hadoop</groupId>
