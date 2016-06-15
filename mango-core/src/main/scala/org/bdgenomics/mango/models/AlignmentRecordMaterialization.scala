@@ -55,9 +55,10 @@ class AlignmentRecordMaterialization(s: SparkContext,
   protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
   val sc = s
   val dict = refRDD.dict
+  val prefetchSize = if (sc.isLocal) 3000 else 10000
   val chunkSize = chunkS
   val partitioner = setPartitioner
-  val bookkeep = new Bookkeep(chunkSize)
+  val bookkeep = new Bookkeep(prefetchSize)
 
   /**
    * Define layers and underlying data types
@@ -239,6 +240,8 @@ class AlignmentRecordMaterialization(s: SparkContext,
       .map(r => (r._1, r._2.flatMap(_._2)))
 
     // write map of (key, data)
+    println("returning data")
+    println(flattened.head._2.size)
     write(AlignmentRecordLayout(flattened))
   }
 
@@ -311,27 +314,20 @@ class AlignmentRecordMaterialization(s: SparkContext,
         data = data.union(kdata)
       })
 
-      // !!assumes data is partitioned by chromosome
-      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = data.mapPartitions(ars => {
-        regions.map(r => {
-          val g: Iterator[AlignmentRecord] = ars.filter(ar => r.overlaps(ReferenceRegion(ar)))
-          (r, AlignmentRecordTile(g.toIterable, reference, r))
-        }).toIterator
+      var mappedRecords: RDD[(ReferenceRegion, AlignmentRecord)] = sc.emptyRDD[(ReferenceRegion, AlignmentRecord)]
+
+      // for all regions, filter by that region and create AlignmentRecordTile
+      regions.foreach(r => {
+        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
+        println(r, grouped.count)
+        mappedRecords = mappedRecords.union(grouped)
       })
 
-      //      var mappedRecords: RDD[(ReferenceRegion, AlignmentRecord)] = sc.emptyRDD[(ReferenceRegion, AlignmentRecord)]
-      //
-      //      // for all regions, filter by that region and create AlignmentRecordTile
-      //      regions.foreach(r => {
-      //        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
-      //        mappedRecords = mappedRecords.union(grouped)
-      //      })
-      //
-      //      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
-      //        mappedRecords
-      //          .groupBy(_._1)
-      //          .map(r => (r._1, r._2.map(_._2)))
-      //      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, trimmedRegion)))
+      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
+        mappedRecords
+          .groupBy(_._1)
+          .map(r => (r._1, r._2.map(_._2)))
+      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, r._1)))
 
       // insert into IntervalRDD
       if (intRDD == null) {

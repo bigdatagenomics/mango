@@ -56,23 +56,25 @@ object AlignmentRecordTile {
             region: ReferenceRegion): AlignmentRecordTile = {
 
     /* Calculate Coverage at each position */
-    val grouped: Map[String, Iterable[AlignmentRecord]] = data.groupBy(_.getRecordGroupSample)
+    val grouped: Map[String, Iterable[AlignmentRecord]] = data.toList.groupBy(_.getRecordGroupSample)
     val coverage: Map[String, Iterable[PositionCount]] = grouped.mapValues(v => {
       v.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
-        .filter(r => (r >= region.start && r <= region.end))
         .map(r => (r, 1)).groupBy(_._1)
         .map { case (group, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
+        .filter(r => (r._1 >= region.start && r._1 <= region.end))
         .map(r => PositionCount(r._1, r._2))
 
     })
-
     // raw data is alignments and mismatches
     lazy val rawData = grouped.mapValues(iter => iter.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region)))
       .filter(r => !r.mismatches.isEmpty))
 
     // layer 1 is point mismatches
-    lazy val layer1 = rawData.mapValues(rs => PointMisMatch(rs.flatMap(_.mismatches).toList))
-
+    lazy val layer1 = rawData.mapValues(
+      rs => {
+        PointMisMatch(rs.flatMap(_.mismatches).toList)
+          .filter(m => m.refCurr >= region.start && m.refCurr <= region.end)
+      })
     new AlignmentRecordTile(Map(0 -> rawData, 1 -> layer1, 2 -> coverage))
 
   }

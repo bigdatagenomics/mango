@@ -95,11 +95,12 @@ class ReferenceMaterialization(sc: SparkContext,
     val refRDD: IntervalRDD[ReferenceRegion, ReferenceTile] =
       IntervalRDD(splitFragments)
         .mapValues(r => ReferenceTile(r))
-
     // insert whole chromosome in structure
-    if (intRDD == null)
+    if (intRDD == null) {
       intRDD = refRDD
-    else intRDD = intRDD.multiput(refRDD)
+    } else {
+      intRDD = intRDD.multiput(refRDD)
+    }
     intRDD.persist(StorageLevel.MEMORY_AND_DISK)
 
   }
@@ -108,6 +109,7 @@ class ReferenceMaterialization(sc: SparkContext,
     if (!bookkeep.contains(region.referenceName)) {
       put(region)
     }
+
     getTiles(region, true)
   }
 

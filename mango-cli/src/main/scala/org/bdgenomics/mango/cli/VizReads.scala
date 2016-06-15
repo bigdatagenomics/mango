@@ -81,6 +81,8 @@ object VizReads extends BDGCommandCompanion with Logging {
   var server: org.eclipse.jetty.server.Server = null
   var screenSize: Int = 1000
   var chunkSize: Long = 5000
+  var readsLimit: Int = 5000
+  var referenceLimit: Int = 2000
 
   // HTTP ERROR RESPONSES
   object errors {
@@ -166,6 +168,8 @@ class VizServlet extends ScalatraServlet {
   get("/overall") {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
+    // set initial referenceRegion so it is defined
+    session("referenceRegion") = ReferenceRegion("chr", 1, 100)
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
         "readsSamples" -> VizReads.sampNames,
@@ -174,18 +178,46 @@ class VizServlet extends ScalatraServlet {
         "featuresExist" -> VizReads.featuresExist))
   }
 
+  get("/reference/:ref") {
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+    val jsonResponse =
+      if (viewRegion.end - viewRegion.start < VizReads.referenceLimit) {
+        val reference = VizReads.refRDD.getReferenceString(viewRegion)
+        // set session reference for asynchronous responses that depend on reference
+        Ok(write(reference))
+      } else {
+        VizReads.errors.largeRegion
+      }
+    session("referenceRegion") = viewRegion
+    jsonResponse
+  }
+
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
       val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
       contentType = "json"
-
-      // if region is in bounds of reference, return data
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
 
+      // determines whether to wait for reference to complete calculation
+      val wait =
+        try {
+          params("wait").toBoolean
+        } catch {
+          case e: Exception => false
+        }
+      // wait for reference to finish to avoid race condition to reference string
+      if (wait) {
+        var stopWait = false
+        while (!stopWait) {
+          stopWait = viewRegion.equals(session.get("referenceRegion").get)
+          Thread sleep 20
+        }
+      }
       if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
         val sampleIds: List[String] = params("sample").split(",").toList
         val data =
-          if (viewRegion.length() < 5000) {
+          if (viewRegion.length() < VizReads.readsLimit) {
             val isRaw =
               try {
                 params("isRaw").toBoolean
@@ -205,37 +237,14 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/overall") {
-    contentType = "text/html"
-    val templateEngine = new TemplateEngine
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
-      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
-        "readsSamples" -> VizReads.sampNames,
-        "readsExist" -> VizReads.readsExist,
-        "variantsExist" -> VizReads.variantsExist,
-        "featuresExist" -> VizReads.featuresExist))
-  }
-
   get("/variants") {
     contentType = "text/html"
-    if (!session.contains("ref")) {
-      session("ref") = "chr"
-      session("start") = "1"
-      session("end") = "100"
-    }
     val globalViewRegion: ReferenceRegion =
       ReferenceRegion(session("ref").toString, session("start").toString.toLong, session("end").toString.toLong)
     val templateEngine = new TemplateEngine
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/variants.ssp",
       Map("viewRegion" -> (globalViewRegion.referenceName, globalViewRegion.start.toString, globalViewRegion.end.toString)))
 
-  }
-
-  get("/viewregion/:ref") {
-    contentType = "json"
-    session("ref") = params("ref")
-    session("start") = params("start")
-    session("end") = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)).toString
   }
 
   get("/variants/:ref") {
@@ -296,16 +305,6 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/reference/:ref") {
-    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-    if (viewRegion.end - viewRegion.start > 2000)
-      VizReads.errors.largeRegion
-    else {
-      Ok(write(VizReads.refRDD.getReferenceString(viewRegion)))
-    }
-  }
-
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
@@ -344,9 +343,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           case None    => throw new FileNotFoundException("reference file not provided")
         }
       }
-      val chunkSize =
-        if (sc.isLocal) 1000
-        else 5000
+      val chunkSize = 1000 // TODO: configurable?
       VizReads.refRDD = new ReferenceMaterialization(sc, VizReads.referencePath, chunkSize)
       VizReads.chunkSize = VizReads.refRDD.chunkSize
       VizReads.globalDict = VizReads.refRDD.getSequenceDictionary

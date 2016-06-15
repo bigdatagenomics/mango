@@ -41,7 +41,7 @@ function renderMergedReads(refName, start, end) {
 
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
-        + viewRegEnd + "&sample=" + sampleIds;
+        + viewRegEnd + "&sample=" + sampleIds + "&wait=true";
 
     // Render data for each sample
   d3.json(readsJsonLocation,function(error, json) {
@@ -103,15 +103,16 @@ function renderAlignments(refName, start, end, sample) {
 
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
-    + viewRegEnd + "&sample=" + sample + "&isRaw=true";
+    + viewRegEnd + "&sample=" + sample + "&isRaw=true&wait=true";
 
    d3.json(readsJsonLocation,function(error, ret) {
-        if (error) return error;
-   if (!isValidHttpResponse(ret)) {
-    return;
-   }
-   var readsData = typeof ret[sample] != "undefined" ? ret[sample] : [];
-      renderReadsByResolution(readsData, sample);
+     if (error) return error;
+     if (!isValidHttpResponse(ret)) {
+      return;
+     }
+
+    var readsData = typeof JSON.parse(ret.reads) != "undefined" ? JSON.parse(ret.reads) : [];
+    renderReadsByResolution(readsData[sample], sample);
    });
 
 }

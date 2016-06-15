@@ -21,7 +21,6 @@ package org.bdgenomics.mango.models
 import net.liftweb.json._
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.util.MangoFunSuite
 
 class AlignmentRecordMaterializationSuite extends MangoFunSuite {
@@ -58,7 +57,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
     val samples = data.init(List(bamFile))
 
-    val region = new ReferenceRegion("chrM", 0L, 1000L)
+    val region = new ReferenceRegion("chrM", 0L, 900L)
 
     val results = data.multiget(region, samples)
 
@@ -93,6 +92,20 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     // extract number of positions in string ('position' => 'p')
     val count = coverageJson.count(p => p == 'p')
     assert(count == 21)
-
   }
+
+  sparkTest("Test frequency retrieval across interval nodes") {
+    val reference = new ReferenceMaterialization(sc, referencePath, 100)
+    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
+    val sample = getSampleName
+    val region = new ReferenceRegion("chrM", 90L, 110L)
+    data.init(List(bamFile))
+    val freq = data.getFrequency(region, List(sample))
+    val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
+    println(coverageJson)
+    // extract number of positions in string ('position' => 'p')
+    val count = coverageJson.count(p => p == 'p')
+    assert(count == 21)
+  }
+
 }
