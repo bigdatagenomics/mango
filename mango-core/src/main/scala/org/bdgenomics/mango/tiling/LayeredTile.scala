@@ -32,7 +32,7 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
   def intRDD: IntervalRDD[ReferenceRegion, T]
   def chunkSize: Int
 
-  def stringifyRaw(data: RDD[S], region: ReferenceRegion): String
+  def stringifyRaw(data: RDD[(ReferenceRegion, S)], region: ReferenceRegion): String
 
   /*
    * Trims level one strings to reference region
@@ -54,18 +54,18 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
 
     // if not raw layer, fetch from other layers
     val data = getAggregated(region)
-    write(data.flatMap(layer.fromDoubleBytes(_)).collect)
+      .mapValues(r => layer.fromDoubleBytes(r)).collect
+      .sortBy(_._1.start)
+    write(data)
   }
 
   def getRaw(region: ReferenceRegion): String = {
     val regionSize = region.length()
 
-    val data: RDD[S] =
+    val data: RDD[(ReferenceRegion, S)] =
       intRDD.filterByInterval(region)
         .mapValues(r => r.rawData)
         .toRDD
-        .sortBy(_._1.start)
-        .map(_._2)
 
     stringifyRaw(data, region)
   }
@@ -78,20 +78,14 @@ trait Tiles[S, T <: LayeredTile[S]] extends Serializable {
    *
    * @return byte data from aggregated layers
    */
-  def getAggregated(region: ReferenceRegion): RDD[Array[Byte]] = {
+  def getAggregated(region: ReferenceRegion): RDD[(ReferenceRegion, Array[Byte])] = {
 
     val regionSize = region.length()
     // type cast data on whether or not it was raw data from L0
 
-    if (chunkSize >= regionSize) {
-      intRDD.filterByInterval(region)
-        .mapValues(r => r.getAggregated(region))
-        .toRDD.map(_._2)
-    } else {
-      intRDD.filterByInterval(region)
-        .mapValues(r => r.getAggregated(region))
-        .toRDD.sortBy(_._1.start).map(_._2)
-    }
+    intRDD.filterByInterval(region)
+      .mapValues(r => r.getAggregated(region))
+      .toRDD
 
   }
 

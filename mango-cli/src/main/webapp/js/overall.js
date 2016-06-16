@@ -23,7 +23,6 @@ function render(refName, start, end) {
   //Add Region Info
   var placeholder = viewRefName + ":"+ viewRegStart + "-" + viewRegEnd;
   $('#regInput').attr('placeholder', placeholder);
-  saveRegion(refName, start, end);
 
   // Reference
   renderReference(refName, start, end, function(valid){
@@ -55,11 +54,6 @@ function render(refName, start, end) {
     } else $(".viewAlignments").prop("disabled", false)
     renderMergedReads(refName, start, end);
   }
-}
-
-function saveRegion(viewRefName, viewRegStart, viewRegEnd) {
-  var saveJsonLocation = "/viewregion/" + viewRefName + "?start=" + viewRegStart + "&end=" + viewRegEnd;
-  d3.json(saveJsonLocation, function(error, data) {});
 }
 
 function toggleContent(validContent) {
