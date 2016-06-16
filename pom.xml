@@ -327,6 +327,11 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>net.fnothaft</groupId>
+        <artifactId>ga4gh-format</artifactId>
+        <version>0.5.1</version>
+      </dependency>
+      <dependency>
         <groupId>args4j</groupId>
         <artifactId>args4j</artifactId>
         <version>2.0.31</version>

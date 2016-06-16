@@ -18,12 +18,13 @@
 package org.bdgenomics.mango.cli
 
 import java.io.{ File, FileNotFoundException }
-
 import net.liftweb.json.Serialization.write
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
+
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
 import org.bdgenomics.mango.tiling.{ L0, Layer }
@@ -32,6 +33,7 @@ import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
+import org.ga4gh.{ GASearchReadsResponse, GAReadAlignment }
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
@@ -276,8 +278,17 @@ class VizServlet extends ScalatraServlet {
       if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
         val sampleIds: List[String] = params("sample").split(",").toList
         val alignments: RDD[AlignmentRecord] = VizReads.readsData.getRaw(viewRegion, sampleIds)
-        val array: Array[AlignmentRecord] = alignments.collect
-        Ok(write(array))
+
+        // convert to GA4GH avro and build a response
+        val gaReads: List[GAReadAlignment] = alignments.map(GA4GHConverter.toGAReadAlignment)
+          .collect
+          .toList
+        val readResponse = GASearchReadsResponse.newBuilder()
+          .setAlignments(gaReads)
+          .build()
+
+        // write response
+        Ok(readResponse)
       } else VizReads.errors.outOfBounds
     }
   }
