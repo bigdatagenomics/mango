@@ -214,6 +214,30 @@ class AlignmentRecordMaterialization(s: SparkContext,
     }
   }
 
+  def getRaw(region: ReferenceRegion, ks: List[String]): RDD[AlignmentRecord] = {
+    implicit val formats = net.liftweb.json.DefaultFormats
+    val seqRecord = dict(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+        if (regionsOpt.isDefined) {
+          for (r <- regionsOpt.get) {
+            put(r, ks)
+          }
+        }
+        // Filter IntervalRDD by region and requested layer
+        val data: RDD[(String, Iterable[Any])] = intRDD.filterByInterval(region)
+          .mapValues(r => r.get(region, ks, Some(L0)))
+          .toRDD.flatMap(_._2)
+
+        extractRawAlignments(data, region)
+        // return JSONified data
+      } case None => {
+        throw new Exception("Not found in dictionary")
+      }
+    }
+  }
+
   def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
     layer match {
       case `rawLayer`      => stringifyRawAlignments(data, region)
@@ -221,6 +245,14 @@ class AlignmentRecordMaterialization(s: SparkContext,
       case `coverageLayer` => stringifyCoverage(data, region)
       case _               => ""
     }
+  }
+
+  def extractRawAlignments(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): RDD[AlignmentRecord] = {
+    val data: RDD[(String, Iterable[CalculatedAlignmentRecord])] = rdd
+      .mapValues(_.asInstanceOf[Iterable[CalculatedAlignmentRecord]])
+      .mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start))
+
+    data.flatMapValues(_.map(_.record)).map(_._2)
   }
 
   /**
