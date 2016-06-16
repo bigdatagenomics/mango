@@ -53,10 +53,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
                                      refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[AlignmentRecordTile] with Serializable with Logging {
 
   protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
-  val sc = s
   val dict = refRDD.dict
-  val prefetchSize = if (sc.isLocal) 3000 else 10000
+  val sc = s
+
   val chunkSize = chunkS
+  val prefetchSize = if (sc.isLocal) 3000 else 10000
   val partitioner = setPartitioner
   val bookkeep = new Bookkeep(prefetchSize)
 
@@ -162,7 +163,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
   override def loadFromFile(region: ReferenceRegion, k: String): RDD[AlignmentRecord] = {
     try {
       val fp = fileMap(k)
-      AlignmentRecordMaterialization.loadAlignmentData(sc: SparkContext, region, fp)
+      AlignmentRecordMaterialization.load(sc: SparkContext, region, fp)
     } catch {
       case e: NoSuchElementException => {
         throw e
@@ -240,8 +241,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
       .map(r => (r._1, r._2.flatMap(_._2)))
 
     // write map of (key, data)
-    println("returning data")
-    println(flattened.head._2.size)
     write(AlignmentRecordLayout(flattened))
   }
 
@@ -319,7 +318,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
       // for all regions, filter by that region and create AlignmentRecordTile
       regions.foreach(r => {
         val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
-        println(r, grouped.count)
         mappedRecords = mappedRecords.union(grouped)
       })
 
@@ -362,7 +360,7 @@ object AlignmentRecordMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAlignmentData(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
+  def load(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
     else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
       AlignmentRecordMaterialization.loadFromBam(sc, region, fp)

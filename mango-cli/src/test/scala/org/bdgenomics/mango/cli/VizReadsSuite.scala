@@ -20,7 +20,7 @@ package org.bdgenomics.mango.cli
 import net.liftweb.json._
 import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.{ RequestEntityTooLarge, Ok, NotFound }
+import org.scalatra.{ NotFound, RequestEntityTooLarge, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
@@ -86,8 +86,21 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
     implicit val vizReadNoFeatures = runVizReads(args)
     get("/features/chrM?start=0&end=2000") {
-      println(status)
       assert(status == NotFound("").status.code)
+    }
+  }
+
+  sparkTest("Should pass for discovery mode") {
+    val args = new VizReadsArgs()
+    args.discoveryMode = true
+    args.referencePath = referenceFile
+    args.featurePaths = featureFile
+    args.variantsPaths = vcfFile
+    args.testMode = true
+
+    implicit val vizReadDiscovery = runVizReads(args)
+    get("/features/chrM?start=0&end=2000") {
+      assert(status == Ok("").status.code)
     }
   }
 

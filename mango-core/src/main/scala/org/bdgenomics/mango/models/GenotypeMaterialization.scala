@@ -82,14 +82,6 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     namedPaths
   }
 
-  def loadAdam(region: ReferenceRegion, fp: String): RDD[Genotype] = {
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === (region.referenceName)))
-    val proj = Projection(GenotypeField.start, GenotypeField.end, GenotypeField.alleles, GenotypeField.sampleId)
-    sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
-    val genes = sc.loadParquetGenotypes(fp, predicate = Some(pred))
-    genes
-  }
-
   def get(region: ReferenceRegion, k: String, layerOpt: Option[Layer] = None): String = {
     multiget(region, List(k), layerOpt)
   }
@@ -182,22 +174,14 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
 
   def loadFromFile(region: ReferenceRegion, k: String): RDD[Genotype] = {
     if (!fileMap.containsKey(k)) {
-      log.error("Key not in FileMap")
-      null
+      throw new Exception("Key not in FileMap")
     }
     val fp = fileMap(k)
-    if (fp.endsWith(".adam")) {
-      loadAdam(region, fp)
-    } else if (fp.endsWith(".vcf")) {
-      sc.loadGenotypes(fp).filterByOverlappingRegion(region)
-    } else {
-      throw UnsupportedFileException("File type not supported")
-      null
-    }
+    GenotypeMaterialization.load(sc, Some(region), fp)
   }
 
   /**
-   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
+   * Transparent to the user, should only be called by get if IntervalRDD.get does not return data
    * Fetches the data from disk, using predicates and range filtering
    * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
    *
@@ -267,4 +251,28 @@ object GenotypeMaterialization {
   def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
     new GenotypeMaterialization(sc, dict, partitions, chunkSize)
   }
+
+  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
+    if (fp.endsWith(".adam")) {
+      loadAdam(sc, region, fp)
+    } else if (fp.endsWith(".vcf")) {
+      region match {
+        case Some(_) => sc.loadGenotypes(fp).filterByOverlappingRegion(region.get)
+        case None    => sc.loadGenotypes(fp)
+      }
+    } else {
+      throw UnsupportedFileException("File type not supported")
+    }
+  }
+
+  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
+    val pred: Option[FilterPredicate] =
+      region match {
+        case Some(_) => Some(((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName)))
+        case None    => None
+      }
+    val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
+    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj))
+  }
+
 }

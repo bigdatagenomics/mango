@@ -43,7 +43,7 @@ class LazyMaterializationSuite extends MangoFunSuite {
     val r2 = new ReferenceRegion("chr1", 1000, 1999)
     val lazyMat = GenotypeMaterialization(sc, sd, 10)
 
-    val merged = Bookkeep.mergeRegions(Option(List(r1, r2))).get
+    val merged = Bookkeep.mergeRegions(List(r1, r2))
     assert(merged.size == 1)
     assert(merged.head.start == 0 && merged.head.end == 1999)
   }
@@ -54,7 +54,7 @@ class LazyMaterializationSuite extends MangoFunSuite {
     val r3 = new ReferenceRegion("chr1", 3000, 3999)
     val lazyMat = GenotypeMaterialization(sc, sd, 10)
 
-    val merged = Bookkeep.mergeRegions(Option(List(r1, r2, r3))).get
+    val merged = Bookkeep.mergeRegions(List(r1, r2, r3))
     assert(merged.size == 2)
     assert(merged.head.end == 1999 && merged.last.end == 3999)
   }
