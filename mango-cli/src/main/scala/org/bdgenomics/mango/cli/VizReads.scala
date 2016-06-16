@@ -22,8 +22,8 @@ import java.io.{ File, FileNotFoundException }
 import net.liftweb.json.Serialization.write
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.formats.avro.{ Feature, Genotype }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
 import org.bdgenomics.mango.tiling.{ L0, Layer }
@@ -202,7 +202,6 @@ class VizServlet extends ScalatraServlet {
         "variantsPaths" -> VizReads.variantKeys,
         "featuresExist" -> VizReads.featuresExist))
   }
-  }<
 
   get("/reference/:ref") {
     val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -267,6 +266,29 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/GA4GHreads/:ref") {
+    VizTimers.ReadsRequest.time {
+      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+      contentType = "json"
+
+      // if region is in bounds of reference, return data
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
+        val sampleIds: List[String] = params("sample").split(",").toList
+        val alignments: RDD[AlignmentRecord] = VizReads.readsData.getRaw(viewRegion, sampleIds)
+        val array: Array[AlignmentRecord] = alignments.collect
+        Ok(write(array))
+      } else VizReads.errors.outOfBounds
+    }
+  }
+
+  get("/viewregion/:ref") {
+    contentType = "json"
+    session("ref") = params("ref")
+    session("start") = params("start")
+    session("end") = VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref").toString)).toString
+  }
+
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
 
@@ -319,21 +341,6 @@ class VizServlet extends ScalatraServlet {
       }
     }
   }
-
-<<<<<<< HEAD
-=======
-  // Sends byte array to front end
-  get("/reference/:ref") {
-    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-    if (viewRegion.end - viewRegion.start > 2000)
-      VizReads.errors.largeRegion
-    else {
-      Ok(write(VizReads.refRDD.getReferenceAsBytes(viewRegion)))
-    }
-  }
-
->>>>>>> b05942a... continued reference with pileup
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
