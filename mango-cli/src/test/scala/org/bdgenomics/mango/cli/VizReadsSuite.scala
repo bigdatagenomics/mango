@@ -21,6 +21,7 @@ import net.liftweb.json._
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
+import org.ga4gh.GASearchReadsResponse
 import org.scalatra.{ NotFound, RequestEntityTooLarge, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
@@ -77,7 +78,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     implicit val VizReads = runVizReads(args)
     get("/GA4GHreads/chrM?start=0&end=100&sample=C57BL/6J") {
       assert(status == Ok("").status.code)
-      val alignments = parse(response.getContent()).extract[Array[AlignmentRecord]]
+      parse(response.getContent()).extract[GASearchReadsResponse]
     }
   }
 
