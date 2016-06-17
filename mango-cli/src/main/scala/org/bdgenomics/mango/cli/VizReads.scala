@@ -253,9 +253,9 @@ class VizServlet extends ScalatraServlet {
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
         val sampleIds: List[String] = params("sample").split(",").toList
-        val alignments: RDD[AlignmentRecord] = VizReads.readsData.getRaw(viewRegion, sampleIds)
-
-        // convert to GA4GH avro and build a response
+        val alignments: RDD[AlignmentRecord] = VizReads.readsData.getRaw(viewRegion, sampleIds).map(r => r.asInstanceOf[AlignmentRecord])
+        println(alignments.first)
+        // convert to GA4 GH avro and build a response
         val gaReads: List[GAReadAlignment] = alignments.map(GA4GHConverter.toGAReadAlignment)
           .collect
           .toList
@@ -264,7 +264,7 @@ class VizServlet extends ScalatraServlet {
           .build()
 
         // write response
-        Ok(readResponse)
+        Ok(write(readResponse))
       } else VizReads.errors.outOfBounds
     }
   }

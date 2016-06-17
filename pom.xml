@@ -330,6 +330,12 @@
         <groupId>net.fnothaft</groupId>
         <artifactId>ga4gh-format</artifactId>
         <version>0.5.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro-ipc</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>args4j</groupId>
