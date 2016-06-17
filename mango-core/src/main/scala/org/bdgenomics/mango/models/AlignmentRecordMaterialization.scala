@@ -55,7 +55,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
   protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
   val dict = refRDD.dict
   val sc = s
-
   val chunkSize = chunkS
   val prefetchSize = if (sc.isLocal) 3000 else 10000
   val partitioner = setPartitioner
@@ -215,30 +214,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
     }
   }
 
-  def getRaw(region: ReferenceRegion, ks: List[String]): RDD[AlignmentRecord] = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-    val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
-        if (regionsOpt.isDefined) {
-          for (r <- regionsOpt.get) {
-            put(r, ks)
-          }
-        }
-        // Filter IntervalRDD by region and requested layer
-        val data: RDD[(String, Iterable[Any])] = intRDD.filterByInterval(region)
-          .mapValues(r => r.get(region, ks, Some(L0)))
-          .toRDD.flatMap(_._2)
-
-        extractRawAlignments(data, region)
-        // return JSONified data
-      } case None => {
-        throw new Exception("Not found in dictionary")
-      }
-    }
-  }
-
   def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
     layer match {
       case `rawLayer`      => stringifyRawAlignments(data, region)
@@ -246,14 +221,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
       case `coverageLayer` => stringifyCoverage(data, region)
       case _               => ""
     }
-  }
-
-  def extractRawAlignments(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): RDD[AlignmentRecord] = {
-    val data: RDD[(String, Iterable[CalculatedAlignmentRecord])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[CalculatedAlignmentRecord]])
-      .mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start))
-
-    data.flatMapValues(_.map(_.record)).map(_._2)
   }
 
   /**
@@ -429,7 +396,7 @@ object AlignmentRecordMaterialization {
     val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name))
     val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
+    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None)
   }
 
 }
