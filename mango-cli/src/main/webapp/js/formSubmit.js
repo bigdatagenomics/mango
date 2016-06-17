@@ -14,15 +14,6 @@ function autoComplete(dictionary) {
     });
 }
 
-
-// on enter submits search form for chromosomal position
-$('.variant-search').keypress(function (e) {
-  if (e.which == 13) {
-    checkVariantForm(this.form);
-    return false;
-  }
-});
-
 // Get and validate form info, reference regions
 function validateFormElements(form) {
   var info = form.info.value;
@@ -61,15 +52,6 @@ function checkForm(form) {
   var elements = validateFormElements(form);
   if (elements != undefined) {
     render(elements.refName, elements.newStart, elements.newEnd);
-  }
-}
-
-function checkVariantForm(form) {
-  var elements = validateFormElements(form);
-  if (elements != undefined) {
-    renderVariantFrequency();
-    renderVariants(elements.refName, elements.newStart, elements.newEnd);
-    renderReference(elements.refName, elements.newStart, elements.newEnd);
   }
 }
 

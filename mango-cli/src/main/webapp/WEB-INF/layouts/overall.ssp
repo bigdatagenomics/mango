@@ -1,6 +1,7 @@
 <%@ val dictionary:     String  %>
 <%@ val readsExist:     Boolean %>
 <%@ val readsSamples:   Option[List[String]] %>
+<%@ val variantsPaths:  Option[List[String]] %>
 <%@ val variantsExist:  Boolean %>
 <%@ val featuresExist:  Boolean %>
 
@@ -22,11 +23,18 @@
         #if (featuresExist)
             <div class="graphArea" id="featArea"></div>
         #end
-        
+
+        #if (variantsExist)
+            <div class="graphArea" id="varArea">
+            <% variantsPaths.get.foreach(s =>
+                render("templates/variants.ssp", Map("sample" -> s, "id" -> s)))%>
+            </div>
+        #end
+
         #if (readsExist)
             <div class="graphArea" id="readsArea">
-                <% readsSamples.get.foreach(s =>
-                    render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>
+            <% readsSamples.get.foreach(s =>
+                render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>
             </div>
         #end
     </div>
@@ -45,7 +53,7 @@
     var variantsExist = ${variantsExist};
     var featuresExist = ${featuresExist};
 
-    var sequenceDict = "${dictionary}"
+    var sequenceDict = "${dictionary}";
     sequenceDict = sequenceDict.split(",");
     autoComplete(sequenceDict);
     refVis(sequenceDict);
@@ -57,12 +65,17 @@
     <script src="js/features.js"></script>
 #end
 #if (variantsExist)
+    <% var varJsonSamples = variantsPaths.get.reduce((a1, a2) => (a1 + "," + a2)) %>
+    <script>
+        var varSampleIds = "${varJsonSamples}";
+        var varFiles = varSampleIds.split(",").unique();
+    </script>
     <script src="js/variants.js"></script>
 #end
 #if (readsExist)
     <% var jsonSamples = readsSamples.get.reduce((a1, a2) => (a1 + "," + a2)) %>
     <script>
-        var sampleIds = "${jsonSamples}"
+        var sampleIds = "${jsonSamples}";
         var rawSamples = sampleIds.split(",").unique();
         var samples = filterNames(rawSamples);
     </script>
