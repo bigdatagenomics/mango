@@ -15,19 +15,6 @@
                 <li>
                     <a href="overall">Overall</a>
                 </li>
-                #if (isOverall)
-                    <li style="border-left:1px solid #333" class="dropdown">
-                        <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
-                        <ul class="dropdown-menu" id="menu1">
-                            <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
-                                <li><label for="indelCheck">Indels</label></li>
-                            <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
-                                <li><label for="mismatchCheck">Mismatching Bases</label></li>
-                            <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
-                                <li><label for="coverageCheck">Coverage</label></li>
-                        </ul>
-                    </li>
-                #end
 
             </ul>
         </div>

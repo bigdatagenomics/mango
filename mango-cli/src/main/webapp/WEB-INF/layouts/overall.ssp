@@ -1,4 +1,4 @@
-<%@ val dictionary:     String  %>
+<%@ val dictionary: String%>
 <%@ val readsExist:     Boolean %>
 <%@ val readsSamples:   Option[List[String]] %>
 <%@ val variantsPaths:  Option[List[String]] %>
@@ -8,8 +8,6 @@
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
 <% render("navigation/navigation.ssp", Map("isOverall" -> true)) %>
-<% render("navigation/panAndZoom.ssp", Map("isOverall" -> true)) %>
-
 <% render("templates/sidebar.ssp") %>
 
 <div id="main">
@@ -34,7 +32,6 @@
                 <%--render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>--%>
             <%--</div>--%>
         <%--#end--%>
-    <%--</div>--%>
 
 </div>
 
@@ -50,11 +47,7 @@
     var readsExist = ${readsExist};
     var variantsExist = ${variantsExist};
     var featuresExist = ${featuresExist};
-
-    var sequenceDict = "${dictionary}";
-    sequenceDict = sequenceDict.split(",");
-    autoComplete(sequenceDict);
-    refVis(sequenceDict);
+    refVis("${dictionary}");
     toggleContent(false);
 
 </script>
@@ -69,23 +62,22 @@ xhr.send();
 
 xhr.onreadystatechange = function() {
     if (xhr.readyState == 4 && xhr.status == 200) {
-        var contigList = JSON.parse(xhr.responseText);
+        var contigList = JSON.parse(xhr.response);
         var p = pileup.create(div, {
-            range: {contig: 'chrM', start: 7512384, stop: 7512544},
+            // go to one of the chromosomes in sequence dictionary
+            range: {contig: 'chrM', start: 0, stop: 100},
             tracks: [
                 {
                     viz: pileup.viz.genome(),
                     isReference: true,
                     data: pileup.formats.reference({
-                        prefix: '/resources',
+                        url: '/reference',
                         contigList: contigList
                     }),
                     name: 'Reference'
                 }
             ]
         });
-    } else {
-        console.log("cannot get dictionary");
     }
 };
 
