@@ -214,6 +214,24 @@ class AlignmentRecordMaterialization(s: SparkContext,
     }
   }
 
+  def getAlignments(region: ReferenceRegion, ks: List[String]): RDD[AlignmentRecord] = {
+    val seqRecord = dict(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+        if (regionsOpt.isDefined) {
+          for (r <- regionsOpt.get) {
+            put(r, ks)
+          }
+        }
+        getRaw(region, ks).map(r => r.asInstanceOf[CalculatedAlignmentRecord])
+          .map(_.record)
+      } case None => {
+        throw new Exception("Not found in dictionary")
+      }
+    }
+  }
+
   def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
     layer match {
       case `rawLayer`      => stringifyRawAlignments(data, region)

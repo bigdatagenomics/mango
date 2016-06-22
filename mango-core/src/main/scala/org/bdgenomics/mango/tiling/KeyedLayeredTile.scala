@@ -67,12 +67,10 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
    * @return jsonified data
    */
   def getRaw(region: ReferenceRegion, ks: List[String]): RDD[Any] = {
-
     // Filter IntervalRDD by region and requested layer
     val data: RDD[Any] = intRDD.filterByInterval(region)
       .mapValues(r => r.get(region, ks, Some(L0)))
-      .toRDD.flatMap(_._2)
-      .flatMap(_._2)
+      .toRDD.flatMap(_._2.flatMap(_._2))
 
     data
   }

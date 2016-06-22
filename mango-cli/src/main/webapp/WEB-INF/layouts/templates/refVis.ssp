@@ -6,8 +6,12 @@ function refVis(dictionary){
   // var namelist=[];
   // var lengthlist=[];
   var totalLength=0;
+<<<<<<< HEAD
 
   // create dataset for chromosomes
+=======
+  var dictionary = dictionary.split(",");
+>>>>>>> 41bd947... reference now works with pileup.js
   for (i = 0; i < dictionary.length; i++) { 
    var range = dictionary[i].split(":")[1].split("-");
    var length = parseInt(range[1]-range[0]);
