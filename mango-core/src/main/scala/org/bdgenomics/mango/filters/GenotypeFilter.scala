@@ -18,35 +18,28 @@
 package org.bdgenomics.mango.filters
 
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ GenotypeAllele, Genotype }
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion }
+import org.bdgenomics.formats.avro.Genotype
+import org.bdgenomics.mango.filters.GenotypeFilterType.GenotypeFilterType
+
+object GenotypeFilterType extends Enumeration {
+  type GenotypeFilterType = Value
+  val highDensity = Value(0)
+  val lowDensity = Value(1)
+}
 
 /**
  * Stores enumeration for available whole file scan predicates for genotype data
  * This is used for discovery mode in VizReads on startup
  */
-object GenotypeFilterEnumeration {
-  def test(x: Genotype) = !x.getAlleles.contains(GenotypeAllele.Ref)
+object GenotypeFilter {
 
-  def get(x: Int): Genotype => Boolean = {
+  def filter(rdd: RDD[Genotype], x: GenotypeFilterType, window: Long, threshold: Long): RDD[(ReferenceRegion, Long)] = {
     x match {
-      case _ => test
+      case GenotypeFilterType.lowDensity  => GenericFilter.filterByDensity(window, threshold, rdd.map(r => (ReferenceRegion(ReferencePosition(r)), r)), false)
+      case GenotypeFilterType.highDensity => GenericFilter.filterByDensity(window, threshold, rdd.map(r => (ReferenceRegion(ReferencePosition(r)), r)), true)
+      case _                              => throw new Exception("Invalid filter for Genotypes")
     }
   }
 }
 
-object GenotypeFilter {
-
-  /**
-   * Filters variant RDD by a specified predicate
-   * @param variants variants to filter
-   * @param predicate predicate to filter variants with
-   * @return list of regions satisfying the predicate
-   */
-  def getFilteredRegions(variants: RDD[Genotype], predicate: Genotype => Boolean): RDD[ReferenceRegion] = {
-    val filtered = variants.filter(r => predicate(r))
-    println(filtered.count)
-    filtered.map(r => ReferenceRegion(r.getContigName, r.getStart, r.getEnd))
-  }
-
-}

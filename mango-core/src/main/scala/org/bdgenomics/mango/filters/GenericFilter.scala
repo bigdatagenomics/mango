@@ -19,23 +19,22 @@ package org.bdgenomics.mango.filters
 
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.filters.FeatureFilterType.FeatureFilterType
 
-object FeatureFilterType extends Enumeration {
-  type FeatureFilterType = Value
-  val highDensity = Value(0)
-  val lowDensity = Value(1)
-}
+/**
+ * Generic filters for anything that can be filtered and binned by ReferenceRegion
+ */
+object GenericFilter {
 
-object FeatureFilter {
+  def filterByDensity(window: Long, threshold: Long, rdd: RDD[(ReferenceRegion, Any)], highDensity: Boolean = true): RDD[(ReferenceRegion, Long)] = {
+    // reformat regions to fit window size
+    val densities = rdd.map(r => (ReferenceRegion(r._1.referenceName, r._1.start / window * window, r._1.start / window * window + window - 1), 1L))
+      .reduceByKey(_ + _) // reduce by region to count
 
-  def filter(rdd: RDD[Feature], x: FeatureFilterType, window: Long, threshold: Long): RDD[(ReferenceRegion, Long)] = {
-    x match {
-      case FeatureFilterType.lowDensity  => GenericFilter.filterByDensity(window, threshold, rdd.map(r => (ReferenceRegion((r)), r)), false)
-      case FeatureFilterType.highDensity => GenericFilter.filterByDensity(window, threshold, rdd.map(r => (ReferenceRegion((r)), r)), true)
-      case _                             => throw new Exception("Invalid filter for Features")
+    // filter by threshold based on whether we are filtering by high or low densities
+    highDensity match {
+      case true => densities.filter(_._2 >= threshold)
+      case _    => densities.filter(_._2 <= threshold)
     }
   }
-}
 
+}

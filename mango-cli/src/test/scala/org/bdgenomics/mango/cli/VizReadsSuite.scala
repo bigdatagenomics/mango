@@ -20,7 +20,7 @@ package org.bdgenomics.mango.cli
 import net.liftweb.json._
 import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.{ NotFound, RequestEntityTooLarge, Ok }
+import org.scalatra.{ RequestEntityTooLarge, NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
@@ -30,6 +30,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   val bamFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.bam").getFile
   val referenceFile = ClassLoader.getSystemClassLoader.getResource("mm10_chrM.fa").getFile
   val vcfFile = ClassLoader.getSystemClassLoader.getResource("truetest.vcf").getFile
+  println(vcfFile)
   val featureFile = ClassLoader.getSystemClassLoader.getResource("smalltest.bed").getFile
 
   var args = new VizReadsArgs()

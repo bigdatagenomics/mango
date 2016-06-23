@@ -38,8 +38,6 @@ class FeatureMaterialization(sc: SparkContext,
                              dict: SequenceDictionary,
                              chunkS: Int) extends Tiles[Iterable[Feature], FeatureTile] with Serializable with Logging {
 
-  //Regex for splitting fragments to the chunk size specified above
-
   protected def tag = reflect.classTag[Iterable[Feature]]
 
   init
@@ -67,7 +65,7 @@ class FeatureMaterialization(sc: SparkContext,
             put(r)
           }
         }
-        getTiles(region)
+        getRaw(region)
       } case None => {
         throw new Exception("Not found in dictionary")
       }

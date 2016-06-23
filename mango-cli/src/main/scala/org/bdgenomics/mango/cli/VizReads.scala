@@ -25,8 +25,7 @@ import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
-import org.bdgenomics.mango.filters.{ FeatureFilterEnumeration, GenotypeFilterEnumeration, FeatureFilter, GenotypeFilter }
-import org.bdgenomics.mango.layout.{ VariantLayout, VariantFreqLayout }
+import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
 import org.bdgenomics.mango.tiling.{ L0, Layer }
 import org.bdgenomics.mango.models.{ FeatureMaterialization, GenotypeMaterialization, AlignmentRecordMaterialization, ReferenceMaterialization }
 import org.bdgenomics.mango.util.Bookkeep
@@ -68,7 +67,9 @@ object VizReads extends BDGCommandCompanion with Logging {
   var sc: SparkContext = null
   var partitionCount: Int = 0
   var referencePath: String = ""
-  var sampNames: Option[List[String]] = None
+  // keys associated with files
+  var alignmentKeys: Option[List[String]] = None
+  var variantKeys: Option[List[String]] = None
   var readsExist: Boolean = false
   var readsPaths: Option[List[String]] = None
   var variantsPaths: Option[List[String]] = None
@@ -107,6 +108,16 @@ object VizReads extends BDGCommandCompanion with Logging {
    */
   def formatDictionaryOpts(dict: SequenceDictionary): String = {
     dict.records.map(r => r.name + ":0-" + r.length).mkString(",")
+  }
+
+  /**
+   * Returns stringified version of sequence dictionary
+   *
+   * @param regions: regions to format to string
+   * @return list of strinified reference regions
+   */
+  def formatReferenceRegions(regions: List[ReferenceRegion]): String = {
+    regions.map(r => r.referenceName + ":" + r.start + "-" + r.end).mkString(",")
   }
 
   //Correctly shuts down the server
@@ -161,6 +172,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-featureMode", usage = "This determines feature predicate for discovery mode.")
   var featureDiscoveryMode: Int = 0
+
+  @Args4jOption(required = false, name = "-threshold", usage = "This threshold for density discovery mode.")
+  var threshold: Int = 10
 }
 
 class VizServlet extends ScalatraServlet {
@@ -181,11 +195,11 @@ class VizServlet extends ScalatraServlet {
     session("referenceRegion") = ReferenceRegion("chr", 1, 100)
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
-        "regions" -> VizReads.prefetchedRegions,
-        "readsSamples" -> VizReads.sampNames,
+        "regions" -> VizReads.formatReferenceRegions(VizReads.prefetchedRegions),
+        "readsSamples" -> VizReads.alignmentKeys,
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
-        "variantsPaths" -> VizReads.variantsPaths,
+        "variantsPaths" -> VizReads.variantKeys,
         "featuresExist" -> VizReads.featuresExist))
   }
 
@@ -321,18 +335,10 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     initVariants
     initFeatures
 
-    // run preprocessing if preprocessing file was provided
+    // run discovery mode if it is specified in the startup script
     if (args.discoveryMode) {
-      val variantsFilter: Option[(Genotype => Boolean)] =
-        if (VizReads.variantsExist) {
-          Some(GenotypeFilterEnumeration.get(args.variantDiscoveryMode))
-        } else None
-      val featureFilter: Option[(Feature => Boolean)] =
-        if (VizReads.featuresExist) {
-          Some(FeatureFilterEnumeration.get(args.featureDiscoveryMode))
-        } else None
-
-      VizReads.prefetchedRegions = discover(variantsFilter, featureFilter)
+      VizReads.prefetchedRegions = discover(Option(args.variantDiscoveryMode), Option(args.variantDiscoveryMode))
+      println(VizReads.prefetchedRegions)
       preprocess(VizReads.prefetchedRegions)
     }
 
@@ -366,7 +372,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (readsPaths.isDefined) {
         VizReads.readsPaths = Some(args.readsPaths.split(",").toList)
         VizReads.readsExist = true
-        VizReads.sampNames = Some(VizReads.readsData.init(VizReads.readsPaths.get))
+        VizReads.alignmentKeys = Some(VizReads.readsData.init(VizReads.readsPaths.get))
       }
     }
 
@@ -374,11 +380,22 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded variant files
      */
     def initVariants() = {
-      VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
       val variantsPaths = Option(args.variantsPaths)
       if (variantsPaths.isDefined) {
-        VizReads.variantsPaths = VizReads.variantData.init(args.variantsPaths.split(",").toList)
-        VizReads.variantsExist = true
+        // filter out incorrect file formats
+        VizReads.variantsPaths = Some(args.variantsPaths.split(",").toList
+          .filter(path => path.endsWith(".vcf") || path.endsWith(".adam")))
+
+        // warn for incorrect file formats
+        args.variantsPaths.split(",").toList
+          .filter(path => !path.endsWith(".vcf") && !path.endsWith(".adam"))
+          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
+
+        if (!VizReads.variantsPaths.get.isEmpty) {
+          VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
+          VizReads.variantKeys = VizReads.variantData.init(args.variantsPaths.split(",").toList)
+          VizReads.variantsExist = true
+        }
       }
     }
 
@@ -386,27 +403,21 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded feature files
      */
     def initFeatures() = {
-      val featuresPath = Option(args.featurePaths)
-      featuresPath match {
-        case Some(_) => {
-          // filter out incorrect file formats
-          VizReads.featurePaths = Some(args.featurePaths.split(",").toList
-            .filter(path => path.endsWith(".bed") || path.endsWith(".adam")))
+      val featurePaths = Option(args.featurePaths)
+      if (featurePaths.isDefined) {
+        // filter out incorrect file formats
+        VizReads.featurePaths = Some(args.featurePaths.split(",").toList
+          .filter(path => path.endsWith(".bed") || path.endsWith(".adam")))
 
-          // warn for incorrect file formats
-          args.featurePaths.split(",").toList
-            .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
-            .foreach(file => log.warn(s"{file} does is not a valid feature file. Removing... "))
+        // warn for incorrect file formats
+        args.featurePaths.split(",").toList
+          .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
+          .foreach(file => log.warn(s"${file} does is not a valid feature file. Removing... "))
 
-          if (VizReads.featurePaths.isDefined) {
-            VizReads.featuresExist = true
-            VizReads.featureData = new FeatureMaterialization(sc, VizReads.featurePaths.get, VizReads.globalDict, (VizReads.chunkSize).toInt)
-          } else VizReads.featuresExist = false
-        }
-        case None => {
-          VizReads.featuresExist = false
-          log.info("No features file provided")
-        }
+        if (!VizReads.featurePaths.get.isEmpty) {
+          VizReads.featuresExist = true
+          VizReads.featureData = new FeatureMaterialization(sc, VizReads.featurePaths.get, VizReads.globalDict, (VizReads.chunkSize).toInt)
+        } else VizReads.featuresExist = false
       }
     }
 
@@ -416,36 +427,38 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * @param featureFilter predicate to be satisfied during feature scan
      * @return Returns list of regions in the genome satisfying predicates
      */
-    def discover(variantFilter: Option[Genotype => Boolean], featureFilter: Option[Feature => Boolean]): List[ReferenceRegion] = {
+    def discover(variantFilter: Option[Int], featureFilter: Option[Int]): List[ReferenceRegion] = {
 
       // filtering for variants
-      val variantRegions: RDD[ReferenceRegion] =
+      val variantRegions: RDD[(ReferenceRegion, Long)] =
         if (variantFilter.isDefined) {
-          if (!Option(VizReads.variantData).isDefined) {
+          if (!VizReads.variantsExist) {
             log.warn("specified discovery predicate for variants but no variant files were provided")
-            sc.emptyRDD[ReferenceRegion]
+            sc.emptyRDD[(ReferenceRegion, Long)]
           } else {
-            var variants: RDD[Genotype] = sc.emptyRDD[Genotype]
+            var variants: RDD[Genotype] = VizReads.sc.emptyRDD[Genotype]
             VizReads.variantsPaths.get.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp)))
-            GenotypeFilter.getFilteredRegions(variants, variantFilter.get)
+            val threshold = args.threshold
+            GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold)
           }
-        } else sc.emptyRDD[ReferenceRegion]
+        } else sc.emptyRDD[(ReferenceRegion, Long)]
 
       // filtering for features
-      val featureRegions: RDD[ReferenceRegion] =
+      val featureRegions: RDD[(ReferenceRegion, Long)] =
         if (featureFilter.isDefined) {
-          if (!Option(VizReads.featureData).isDefined) {
+          if (!VizReads.featuresExist) {
             log.warn("specified discovery predicate for features but no variant files were provided")
-            sc.emptyRDD[ReferenceRegion]
+            sc.emptyRDD[(ReferenceRegion, Long)]
           } else {
             var features: RDD[Feature] = sc.emptyRDD[Feature]
             VizReads.featurePaths.get.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp)))
-            FeatureFilter.getFilteredRegions(features, featureFilter.get)
+            val threshold = args.threshold
+            FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold)
           }
-        } else sc.emptyRDD[ReferenceRegion]
+        } else sc.emptyRDD[(ReferenceRegion, Long)]
 
       // collect and merge all regions together
-      val regions = featureRegions.union(variantRegions)
+      val regions = featureRegions.union(variantRegions).map(_._1)
       Bookkeep.mergeRegions(regions.collect.toList.distinct)
     }
 
@@ -457,12 +470,12 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       for (region <- regions) {
         if (Option(VizReads.featureData).isDefined)
           VizReads.featureData.get(region)
-        if (Option(VizReads.readsData).isDefined && VizReads.sampNames.isDefined)
+        if (Option(VizReads.readsData).isDefined && VizReads.alignmentKeys.isDefined)
           VizReads.readsData.multiget(region,
-            VizReads.sampNames.get)
+            VizReads.alignmentKeys.get)
         if (Option(VizReads.variantData).isDefined)
           VizReads.variantData.multiget(region,
-            VizReads.variantsPaths.get)
+            VizReads.variantKeys.get)
       }
     }
 

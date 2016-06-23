@@ -23,11 +23,11 @@ import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
-import org.bdgenomics.mango.layout.{ VariantFreqLayout, VariantFreq, VariantLayout }
+import org.bdgenomics.mango.layout.{ VariantFreq, VariantLayout }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
@@ -71,13 +71,7 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     for (i <- filePaths.indices) {
       val varPath = filePaths(i)
       val varName = namedPaths.get(i)
-      if (varPath.endsWith(".vcf")) {
-        loadSample(varPath, Option(varName))
-      } else if (varPath.endsWith(".adam")) {
-        loadSample(varPath, Option(varName))
-      } else {
-        log.info("WARNING: Invalid input for variants file")
-      }
+      loadSample(varPath, Option(varName))
     }
     namedPaths
   }

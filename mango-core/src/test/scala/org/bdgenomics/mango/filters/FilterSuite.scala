@@ -17,25 +17,25 @@
  */
 package org.bdgenomics.mango.filters
 
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.filters.FeatureFilterType.FeatureFilterType
+import org.bdgenomics.mango.models.FeatureMaterialization
+import org.bdgenomics.mango.util.MangoFunSuite
 
-object FeatureFilterType extends Enumeration {
-  type FeatureFilterType = Value
-  val highDensity = Value(0)
-  val lowDensity = Value(1)
-}
+class FilterSuite extends MangoFunSuite {
 
-object FeatureFilter {
+  // load resource files
+  val bedFile = resourcePath("smalltest.bed")
+  val threshold = 2 // mark as high density if any bins have > 2 artifacts
 
-  def filter(rdd: RDD[Feature], x: FeatureFilterType, window: Long, threshold: Long): RDD[(ReferenceRegion, Long)] = {
-    x match {
-      case FeatureFilterType.lowDensity  => GenericFilter.filterByDensity(window, threshold, rdd.map(r => (ReferenceRegion((r)), r)), false)
-      case FeatureFilterType.highDensity => GenericFilter.filterByDensity(window, threshold, rdd.map(r => (ReferenceRegion((r)), r)), true)
-      case _                             => throw new Exception("Invalid filter for Features")
-    }
+  sparkTest("correctly filters features with high density regions") {
+    val features = FeatureMaterialization.loadFromBed(sc, None, bedFile)
+    val filtered = FeatureFilter.filter(features, FeatureFilterType.highDensity, 100, threshold)
+
+    val regions: List[(ReferenceRegion, Long)] = filtered.collect.toList
+    assert(regions.length == 1)
+    assert(regions.head._1 == ReferenceRegion("chrM", 1100, 1199))
+    assert(regions.head._2 == 2)
+
   }
-}
 
+}
