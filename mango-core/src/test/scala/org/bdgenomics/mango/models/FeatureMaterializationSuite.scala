@@ -31,13 +31,14 @@ class FeatureMaterializationSuite extends MangoFunSuite {
 
   val dict = new SequenceDictionary(Vector(SequenceRecord("chrM", 16699L)))
 
-  sparkTest("assert raw data returns from one block") {
+    sparkTest("assert raw data returns from one block") {
 
     val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
 
     val region = new ReferenceRegion("chrM", 1000L, 1200L)
 
     val json = data.get(region)
+      println(json)
     val results = parse(json).extract[List[FeatureJson]]
     assert(results.size == 2)
   }
@@ -74,6 +75,10 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val json = data.get(region)
     val results = parse(json).extract[List[FeatureJson]]
     assert(results.size == 0)
+  }
+
+  test("can fetch multiple files") {
+
   }
 
 }

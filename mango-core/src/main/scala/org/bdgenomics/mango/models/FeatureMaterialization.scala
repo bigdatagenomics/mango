@@ -27,7 +27,7 @@ import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
 import org.bdgenomics.adam.projections.{FeatureField, Projection}
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.layout.FeatureLayout
+import org.bdgenomics.mango.layout.Coverage
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
@@ -55,7 +55,7 @@ class FeatureMaterialization(s: SparkContext,
    * @param region: ReferenceRegion to fetch
    * @return JSONified data
    */
-  def multiget(region: ReferenceRegion, ks: List[String]): String = {
+  def get(region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
     val seqRecord = dict(region.referenceName)
     seqRecord match {
@@ -63,11 +63,11 @@ class FeatureMaterialization(s: SparkContext,
         val regionsOpt = bookkeep.getMaterializedRegions(region, filePaths)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
-            put(r, ks)
+            put(r)
           }
         }
-        //        getRaw(region)
-        val layers = getTiles(region, ks, List(L0))
+
+        val layers = getTiles(region, List(L0))
         val rawFeatures = layers.get(L0).get
         write(rawFeatures)
       } case None => {
@@ -83,14 +83,14 @@ class FeatureMaterialization(s: SparkContext,
    *
    * @param region ReferenceRegion in which data is retreived
    */
-  def put(region: ReferenceRegion, ks: List[String]) = {
+  def put(region: ReferenceRegion) = {
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       var data: RDD[Feature] = sc.emptyRDD[Feature]
 
       // get alignment data for all samples
-      ks.map(k => {
-        val features = loadFromFile(region, k)
+      files.map(fp => {
+        val features = FeatureMaterialization.load(sc, Some(region), fp)
         data = data.union(features)
       })
 
@@ -105,11 +105,12 @@ class FeatureMaterialization(s: SparkContext,
         mappedRecords = mappedRecords.union(grouped)
       })
 
+      // group by chunked region
       val groupedRecords: RDD[(ReferenceRegion, Iterable[Feature])] =
         mappedRecords
           .groupBy(_._1)
           .map(r => (r._1, r._2.map(_._2)))
-      val tiles: RDD[(ReferenceRegion, FeatureTile)] = groupedRecords.map(r => (r._1, FeatureTile(r._2)))
+      val tiles: RDD[(ReferenceRegion, FeatureTile)] = groupedRecords.map(r => (r._1, FeatureTile(r._2, r._1)))
 
       // insert into IntervalRDD
       if (intRDD == null) {
@@ -125,14 +126,14 @@ class FeatureMaterialization(s: SparkContext,
       bookkeep.rememberValues(region, filePaths)
     }
   }
-
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[Feature] = {
-    if (!fileMap.containsKey(k)) {
-      throw new Exception("Key not in FileMap")
-    }
-    val fp = fileMap(k)
-    FeatureMaterialization.load(sc, Some(region), fp)
-  }
+//
+//  def loadFromFile(region: ReferenceRegion, k: String): RDD[Feature] = {
+//    if (!fileMap.containsKey(k)) {
+//      throw new Exception(s"Key ${k} not in FileMap")
+//    }
+//    val fp = fileMap(k)
+//    FeatureMaterialization.load(sc, Some(region), fp)
+//  }
 
   /*
    * Initialize materialization structure with filepaths
@@ -147,10 +148,10 @@ class FeatureMaterialization(s: SparkContext,
     namedPaths
   }
 
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
+  def stringify(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
     layer match {
-      case L0 => stringifyRaw(data, region)
-      case _  => ""
+      case L0 => stringifyRaw(rdd, region)
+      case L1 => Coverage.stringifyCoverage(rdd, region, chunkSize)
     }
   }
 
@@ -160,10 +161,12 @@ class FeatureMaterialization(s: SparkContext,
     val data: Array[(String, Iterable[Feature])] = rdd
       .mapValues(_.asInstanceOf[Iterable[Feature]])
       .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
+    println(data)
 
     val flattened: Map[String, Array[Feature]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
-    write(flattened.mapValues(r => FeatureLayout(r)))
+    println(flattened)
+    write(flattened)
   }
 }
 

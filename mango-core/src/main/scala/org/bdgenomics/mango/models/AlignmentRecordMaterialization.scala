@@ -31,7 +31,7 @@ import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.layout.{ PositionCount, AlignmentRecordLayout, CalculatedAlignmentRecord, MutationCount }
+import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
@@ -218,7 +218,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
     layer match {
       case `rawLayer`      => stringifyRawAlignments(data, region)
       case `mismatchLayer` => stringifyPointMismatches(data, region)
-      case `coverageLayer` => stringifyCoverage(data, region)
+      case `coverageLayer` => Coverage.stringifyCoverage(data, region, chunkSize)
       case _               => ""
     }
   }
@@ -261,27 +261,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
       .collect
 
     val flattened: Map[String, Array[MutationCount]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
-
-    write(flattened)
-  }
-
-  /**
-   * Formats coverage data from Iterable[Int for each string
-   * @param rdd
-   * @param region
-   * @return
-   */
-  def stringifyCoverage(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    // get bin size to mod by
-    val binSize = VizUtils.getBinSize(region)
-    val regions = Bookkeep.unmergeRegions(region, chunkSize)
-    val data = rdd
-      .mapValues(_.asInstanceOf[Iterable[PositionCount]])
-      .mapValues(r => r.filter(r => r.position <= region.end && r.position >= region.start && r.position % binSize == 0))
-      .collect
-
-    val flattened: Map[String, Array[PositionCount]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
 
     write(flattened)

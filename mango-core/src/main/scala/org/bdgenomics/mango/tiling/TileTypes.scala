@@ -31,18 +31,22 @@ case class ReferenceTile(sequence: String) extends LayeredTile[String] with Seri
 }
 
 object FeatureTile {
-  def apply(data: Iterable[(String,Feature)],
+  def apply(data: Iterable[Feature],
             region: ReferenceRegion): FeatureTile = {
 
-      // TODO: divide by sample
-    // Calculate point frequencies
-    val layer1 = data.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
-      .filter(r => (r >= region.start && r <= region.end))
-      .map(r => (r, 1)).groupBy(_._1)
-      .map { case (group, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
-      .map(r => PositionCount(r._1, r._2))
+    // formats raw feature data
+    val rawData: Map[String, Iterable[Feature]] = data.toList.groupBy(_.getSource)
 
-    val layerMap = Map(0 -> rawData)
+    // Calculate coverage of features
+    val layer1 = rawData.mapValues(v => {
+      v.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
+        .map(r => (r, 1)).groupBy(_._1)
+        .map { case (group, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
+        .filter(r => (r._1 >= region.start && r._1 <= region.end))
+        .map(r => PositionCount(r._1, r._2))
+    })
+
+    val layerMap = Map(0 -> rawData, 1 -> layer1)
     new FeatureTile(layerMap)
 
   }
@@ -61,7 +65,6 @@ object AlignmentRecordTile {
         .map { case (group, traversable) => traversable.reduce { (a, b) => (a._1, a._2 + b._2) } }
         .filter(r => (r._1 >= region.start && r._1 <= region.end))
         .map(r => PositionCount(r._1, r._2))
-
     })
     // raw data is alignments and mismatches
     lazy val rawData = grouped.mapValues(iter => iter.map(r => CalculatedAlignmentRecord(r, MismatchLayout(r, reference, region)))

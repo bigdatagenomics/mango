@@ -32,7 +32,7 @@ class LazyMaterializationSuite extends MangoFunSuite {
     SequenceRecord("chrM", 20000L),
     SequenceRecord("20", 90000L)))
 
-  // test vcf data
+  // test vcf data'
   val vcfFile = resourcePath("truetest.vcf")
 
   // test reference data

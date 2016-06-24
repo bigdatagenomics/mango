@@ -108,4 +108,3 @@ object FeatureJson {
 
 // Tracked Json Features
 case class FeatureJson(featureId: String, featureType: String, start: Long, end: Long, track: Long)
-case class PositionCount(position: Long, count: Int)
