@@ -21,7 +21,7 @@ import java.io.{ File, FileNotFoundException }
 import net.liftweb.json.Serialization.write
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.converters.GA4GHConverter
+import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.adam.models.{ SequenceRecord, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
@@ -459,7 +459,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
             .foreach(file => log.warn(s"{file} does is not a valid feature file. Removing... "))
 
-          if (VizReads.featurePaths.isDefined) {
+          if (!VizReads.featurePaths.get.isEmpty) {
             VizReads.featuresExist = true
             VizReads.featureData = new FeatureMaterialization(sc, VizReads.featurePaths.get, VizReads.globalDict, (VizReads.chunkSize).toInt)
           } else VizReads.featuresExist = false
