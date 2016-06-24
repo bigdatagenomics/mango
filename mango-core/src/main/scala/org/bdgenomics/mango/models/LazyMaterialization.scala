@@ -18,7 +18,6 @@
 package org.bdgenomics.mango.models
 
 import org.apache.spark._
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.mango.util.Bookkeep
@@ -34,7 +33,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   def sc: SparkContext
   def dict: SequenceDictionary
   def chunkSize: Int
-  def partitioner: Partitioner
   def bookkeep: Bookkeep
 
   // Keeps track of sample ids and corresponding files
@@ -42,6 +40,15 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   def keys: List[String] = fileMap.keys.toList
   def files: List[String] = fileMap.values.toList
+
+  /*
+ * Filter filepaths to just the name of the file, without an extension
+ */
+  def filterKeyFromFile(file: String): String = {
+    val slash = file.split("/")
+    val fileName = slash.last
+    fileName.replace(".", "_")
+  }
 
   /**
    * Sets partitioner
@@ -60,54 +67,13 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   }
 
   // Stores location of sample at a given filepath
-  def loadSample(filePath: String, sampleId: Option[String] = None) {
-    sampleId match {
-      case Some(_) => fileMap += ((sampleId.get, filePath))
-      case None    => fileMap += ((filePath, filePath))
-
-    }
-  }
-
-  def loadADAMSample(filePath: String): String = {
-    val sample = getFileReference(filePath)
-    fileMap += ((sample, filePath))
-    sample
+  def loadSample(key: String, value: String) {
+    fileMap += ((key, value))
   }
 
   def getFileMap: mutable.HashMap[String, String] = fileMap
 
   var intRDD: IntervalRDD[ReferenceRegion, S] = null
-
-  def getFileReference(fp: String): String
-
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[T]
-
-  def put(region: ReferenceRegion, ks: List[String])
-
-  /* If the RDD has not been initialized, initialize it to the first get request
-  * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-  * If it exists, call get on the IntervalRDD
-  * Otherwise call put on the sections of data that don't exist
-  * Here, ks, is an option of list of personids (String)
-  */
-  def getTree(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
-    val seqRecord = dict(region.referenceName)
-    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
-    seqRecord match {
-      case Some(_) =>
-        regionsOpt match {
-          case Some(_) =>
-            for (r <- regionsOpt.get) {
-              put(r, ks)
-            }
-          case None =>
-          // DO NOTHING
-        }
-        Option(intRDD.filterByInterval(region))
-      case None =>
-        None
-    }
-  }
 
 }
 

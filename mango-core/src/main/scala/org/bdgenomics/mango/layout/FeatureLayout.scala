@@ -39,6 +39,13 @@ object FeatureLayout extends Logging {
     featureData.flatMap(r => FeatureJson(r._1.records, r._2)).toList
   }
 
+  def apply(array: Array[Feature]): List[FeatureJson] = {
+    val data = array.map(r => (ReferenceRegion(r), r))
+      .distinct.toIterator
+    val featureData = FeatureLayout(data).zipWithIndex
+    featureData.flatMap(r => FeatureJson(r._1.records, r._2)).toList
+  }
+
   /**
    * An implementation of FeatureLayout
    *

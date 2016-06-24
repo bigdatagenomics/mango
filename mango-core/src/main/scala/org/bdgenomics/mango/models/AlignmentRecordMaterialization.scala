@@ -57,7 +57,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
   val sc = s
   val chunkSize = chunkS
   val prefetchSize = if (sc.isLocal) 3000 else 10000
-  val partitioner = setPartitioner
   val bookkeep = new Bookkeep(prefetchSize)
 
   /**
@@ -97,7 +96,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
           val rec: SAMRecord = samReader.iterator().next()
           val sample = rec.getReadGroup.getSample
           sampNamesBuffer += sample
-          loadSample(readsPath, Option(sample))
+          loadSample(sample, readsPath)
         } else if (readsPath.endsWith(".adam")) {
           sampNamesBuffer += loadADAMSample(readsPath)
         } else {
@@ -117,28 +116,11 @@ class AlignmentRecordMaterialization(s: SparkContext,
   }
 
   /**
-   * Overrides sample loading from LazyMaterailziation. Adds (id, filepath)
-   * tuple to fileMap
-   * @param filePath Filepath to load
-   * @param sampleId id to associate with file
-   */
-  override def loadSample(filePath: String, sampleId: Option[String] = None) {
-    val sample =
-      sampleId match {
-        case Some(_) => sampleId.get
-        case None    => filePath
-      }
-
-    fileMap += ((sample, filePath))
-    println(s"loading sample ${sample}")
-  }
-
-  /**
    * Loads ADAM Sample and saves the (id, filepath) tuple to filemap
    * @param filePath Filepath to load
    * @return id associated with file
    */
-  override def loadADAMSample(filePath: String): String = {
+  def loadADAMSample(filePath: String): String = {
     val sample = getFileReference(filePath)
     fileMap += ((sample, filePath))
     sample
@@ -149,7 +131,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param fp path of AlignmentRecord file
    * @return id associated with file
    */
-  override def getFileReference(fp: String): String = {
+  def getFileReference(fp: String): String = {
     sc.loadParquetAlignments(fp).recordGroups.recordGroups.head.sample
   }
 
@@ -159,7 +141,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param k k associated with the file to load from
    * @return RDD of loaded AlignmentRecords
    */
-  override def loadFromFile(region: ReferenceRegion, k: String): RDD[AlignmentRecord] = {
+  def loadFromFile(region: ReferenceRegion, k: String): RDD[AlignmentRecord] = {
     try {
       val fp = fileMap(k)
       AlignmentRecordMaterialization.load(sc: SparkContext, region, fp)
@@ -313,7 +295,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param region ReferenceRegion in which data is retreived
    * @param ks to be retreived
    */
-  override def put(region: ReferenceRegion, ks: List[String]) = {
+  def put(region: ReferenceRegion, ks: List[String]) = {
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))

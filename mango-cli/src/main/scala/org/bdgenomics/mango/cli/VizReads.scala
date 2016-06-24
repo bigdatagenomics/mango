@@ -442,7 +442,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!readsPaths.isEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, (VizReads.chunkSize).toInt, VizReads.refRDD))
+          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, VizReads.chunkSize, VizReads.refRDD))
           VizReads.readsData.get.init(readsPaths)
         }
       }
@@ -482,7 +482,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         // warn for incorrect file formats
         args.featurePaths.split(",").toList
           .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
-          .foreach(file => log.warn(s"${file} does is not a valid feature file. Removing... "))
+          .foreach(file => log.warn(s"${file} is not a valid feature file. Removing... "))
 
         if (!featurePaths.isEmpty) {
           VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, (VizReads.chunkSize).toInt))

@@ -23,28 +23,27 @@ import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.adam.projections.{ FeatureField, Projection }
+import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
+import org.bdgenomics.adam.projections.{FeatureField, Projection}
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.layout.FeatureLayout
-import org.bdgenomics.mango.tiling.{ FeatureTile, Tiles }
+import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
 import org.bdgenomics.utils.misc.Logging
 
-class FeatureMaterialization(sc: SparkContext,
+class FeatureMaterialization(s: SparkContext,
                              filePaths: List[String],
-                             dict: SequenceDictionary,
-                             chunkS: Int) extends Tiles[Iterable[Feature], FeatureTile] with Serializable with Logging {
+                             d: SequenceDictionary,
+                             chunkS: Int) extends LazyMaterialization[Feature, FeatureTile]
+    with KTiles[FeatureTile] with Serializable with Logging {
 
-  protected def tag = reflect.classTag[Iterable[Feature]]
-
-  init
+  init(filePaths)
+  val sc = s
   val chunkSize = chunkS
-  val files = filePaths
+  val dict = d
   val bookkeep = new Bookkeep(chunkSize)
-  var intRDD: IntervalRDD[ReferenceRegion, FeatureTile] = null
 
   /**
    * Gets data for multiple keys.
@@ -56,17 +55,21 @@ class FeatureMaterialization(sc: SparkContext,
    * @param region: ReferenceRegion to fetch
    * @return JSONified data
    */
-  def get(region: ReferenceRegion): String = {
+  def multiget(region: ReferenceRegion, ks: List[String]): String = {
+    implicit val formats = net.liftweb.json.DefaultFormats
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
         val regionsOpt = bookkeep.getMaterializedRegions(region, filePaths)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
-            put(r)
+            put(r, ks)
           }
         }
-        getRaw(region)
+        //        getRaw(region)
+        val layers = getTiles(region, ks, List(L0))
+        val rawFeatures = layers.get(L0).get
+        write(rawFeatures)
       } case None => {
         throw new Exception("Not found in dictionary")
       }
@@ -80,15 +83,15 @@ class FeatureMaterialization(sc: SparkContext,
    *
    * @param region ReferenceRegion in which data is retreived
    */
-  def put(region: ReferenceRegion) = {
+  def put(region: ReferenceRegion, ks: List[String]) = {
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       var data: RDD[Feature] = sc.emptyRDD[Feature]
 
       // get alignment data for all samples
-      filePaths.map(path => {
-        val fileData = FeatureMaterialization.load(sc, Some(region), path)
-        data = data.union(fileData)
+      ks.map(k => {
+        val features = loadFromFile(region, k)
+        data = data.union(features)
       })
 
       var mappedRecords: RDD[(ReferenceRegion, Feature)] = sc.emptyRDD[(ReferenceRegion, Feature)]
@@ -106,7 +109,7 @@ class FeatureMaterialization(sc: SparkContext,
         mappedRecords
           .groupBy(_._1)
           .map(r => (r._1, r._2.map(_._2)))
-      val tiles: RDD[(ReferenceRegion, FeatureTile)] = groupedRecords.map(r => (r._1, new FeatureTile(r._2)))
+      val tiles: RDD[(ReferenceRegion, FeatureTile)] = groupedRecords.map(r => (r._1, FeatureTile(r._2)))
 
       // insert into IntervalRDD
       if (intRDD == null) {
@@ -123,23 +126,45 @@ class FeatureMaterialization(sc: SparkContext,
     }
   }
 
-  def init = {
-    // verify file types
-    filePaths.foreach(path => {
-      if (!(path.endsWith(".bed") || path.endsWith(".adam"))) {
-        throw new UnsupportedFileException(s"WARNING: ${path} is not a valid feature file")
-      }
-    })
+  def loadFromFile(region: ReferenceRegion, k: String): RDD[Feature] = {
+    if (!fileMap.containsKey(k)) {
+      throw new Exception("Key not in FileMap")
+    }
+    val fp = fileMap(k)
+    FeatureMaterialization.load(sc, Some(region), fp)
   }
 
-  def stringifyRaw(data: RDD[(ReferenceRegion, Iterable[Feature])], region: ReferenceRegion): String = stringify(data.flatMap(_._2), region)
+  /*
+   * Initialize materialization structure with filepaths
+   */
+  def init(filePaths: List[String]): Option[List[String]] = {
+    val namedPaths = Option(filePaths.map(p => filterKeyFromFile(p)))
+    for (i <- filePaths.indices) {
+      val varPath = filePaths(i)
+      val varName = namedPaths.get(i)
+      loadSample(varName, varPath)
+    }
+    namedPaths
+  }
 
-  def stringify(data: RDD[Feature], region: ReferenceRegion): String = {
+  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
+    layer match {
+      case L0 => stringifyRaw(data, region)
+      case _  => ""
+    }
+  }
+
+  def stringifyRaw(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
-    val filteredFeatures = data.filter(f => f.getStart <= region.end && f.getEnd >= region.start)
-    write(FeatureLayout(filteredFeatures)) // TODO: distinct
-  }
 
+    val data: Array[(String, Iterable[Feature])] = rdd
+      .mapValues(_.asInstanceOf[Iterable[Feature]])
+      .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
+
+    val flattened: Map[String, Array[Feature]] = data.groupBy(_._1)
+      .map(r => (r._1, r._2.flatMap(_._2)))
+    write(flattened.mapValues(r => FeatureLayout(r)))
+  }
 }
 
 object FeatureMaterialization {

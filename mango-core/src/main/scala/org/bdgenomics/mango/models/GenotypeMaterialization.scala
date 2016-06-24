@@ -45,7 +45,6 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
   val dict = d
   val partitions = parts
   val chunkSize = chunkS
-  val partitioner = setPartitioner
   val bookkeep = new Bookkeep(chunkSize)
 
   /**
@@ -55,23 +54,14 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
   val freqLayer: Layer = L1
 
   /*
-   * Filter filepaths to just the name of the file, without an extension
-   */
-  def filterVariantName(name: String): String = {
-    val slash = name.split("/")
-    val fileName = slash.last
-    fileName.replace(".", "_")
-  }
-
-  /*
    * Initialize materialization structure with filepaths
    */
   def init(filePaths: List[String]): Option[List[String]] = {
-    val namedPaths = Option(filePaths.map(p => filterVariantName(p)))
+    val namedPaths = Option(filePaths.map(p => filterKeyFromFile(p)))
     for (i <- filePaths.indices) {
       val varPath = filePaths(i)
       val varName = namedPaths.get(i)
-      loadSample(varPath, Option(varName))
+      loadSample(varName, varPath)
     }
     namedPaths
   }
@@ -163,10 +153,6 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     write(data.toMap)
   }
 
-  override def getFileReference(fp: String): String = {
-    fp
-  }
-
   def loadFromFile(region: ReferenceRegion, k: String): RDD[Genotype] = {
     if (!fileMap.containsKey(k)) {
       throw new Exception("Key not in FileMap")
@@ -183,7 +169,7 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
    * @param region ReferenceRegion in which data is retreived
    * @param ks to be retreived
    */
-  override def put(region: ReferenceRegion, ks: List[String]) = {
+  def put(region: ReferenceRegion, ks: List[String]) = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) =>
