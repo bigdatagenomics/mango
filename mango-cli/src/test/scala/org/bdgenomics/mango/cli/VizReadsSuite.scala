@@ -20,7 +20,7 @@ package org.bdgenomics.mango.cli
 import net.liftweb.json._
 import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.{ NotFound, RequestEntityTooLarge, Ok }
+import org.scalatra.{ NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
@@ -32,7 +32,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   val vcfFile = ClassLoader.getSystemClassLoader.getResource("truetest.vcf").getFile
   val featureFile = ClassLoader.getSystemClassLoader.getResource("smalltest.bed").getFile
 
-  var args = new VizReadsArgs()
+  val args = new VizReadsArgs()
   args.readsPaths = bamFile
   args.referencePath = referenceFile
   args.variantsPaths = vcfFile
@@ -47,11 +47,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == Ok("").status.code)
       val ref = parse(response.getContent()).extract[String]
       assert(ref.length == 99)
-    }
-
-    // should return no data
-    get("/reference/chrM?start=0&end=5000") {
-      assert(status == RequestEntityTooLarge("").status.code)
     }
   }
 

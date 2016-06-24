@@ -258,8 +258,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
       .map(r => (r._1, r._2.flatMap(_._2)))
 
     // write map of (key, data)
-    println("returning data")
-    println(flattened.head._2.size)
     write(AlignmentRecordLayout(flattened))
   }
 
@@ -337,7 +335,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
       // for all regions, filter by that region and create AlignmentRecordTile
       regions.foreach(r => {
         val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
-        println(r, grouped.count)
         mappedRecords = mappedRecords.union(grouped)
       })
 

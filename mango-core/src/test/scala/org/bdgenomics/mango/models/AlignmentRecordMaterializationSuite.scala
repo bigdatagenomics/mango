@@ -102,7 +102,6 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     data.init(List(bamFile))
     val freq = data.getFrequency(region, List(sample))
     val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
-    println(coverageJson)
     // extract number of positions in string ('position' => 'p')
     val count = coverageJson.count(p => p == 'p')
     assert(count == 21)
