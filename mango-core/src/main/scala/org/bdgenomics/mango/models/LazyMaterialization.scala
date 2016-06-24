@@ -37,10 +37,24 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   def partitioner: Partitioner
   def bookkeep: Bookkeep
 
+  // Keeps track of sample ids and corresponding files
+  var fileMap: HashMap[String, String] = new HashMap()
+
+  def keys: List[String] = fileMap.keys.toList
+  def files: List[String] = fileMap.values.toList
+
+  /**
+   * Sets partitioner
+   * @return partitioner
+   */
   def setPartitioner: Partitioner = {
     GenomicRegionPartitioner(sc.defaultParallelism, dict)
   }
 
+  /**
+   * gets dictionary
+   * @return
+   */
   def getDictionary: SequenceDictionary = {
     dict
   }
@@ -59,9 +73,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
     fileMap += ((sample, filePath))
     sample
   }
-
-  // Keeps track of sample ids and corresponding files
-  var fileMap: HashMap[String, String] = new HashMap()
 
   def getFileMap: mutable.HashMap[String, String] = fileMap
 

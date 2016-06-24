@@ -42,6 +42,7 @@ class FeatureMaterialization(sc: SparkContext,
 
   init
   val chunkSize = chunkS
+  val files = filePaths
   val bookkeep = new Bookkeep(chunkSize)
   var intRDD: IntervalRDD[ReferenceRegion, FeatureTile] = null
 

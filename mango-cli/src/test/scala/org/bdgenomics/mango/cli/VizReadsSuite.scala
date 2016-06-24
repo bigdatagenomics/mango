@@ -30,10 +30,45 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   val bamFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.bam").getFile
   val referenceFile = ClassLoader.getSystemClassLoader.getResource("mm10_chrM.fa").getFile
   val vcfFile = ClassLoader.getSystemClassLoader.getResource("truetest.vcf").getFile
-  println(vcfFile)
   val featureFile = ClassLoader.getSystemClassLoader.getResource("smalltest.bed").getFile
 
-  val args = new VizReadsArgs()
+  sparkTest("Should not crash with incorrect feature file") {
+    val args = new VizReadsArgs()
+    args.referencePath = referenceFile
+    args.featurePaths = vcfFile
+    args.testMode = true
+
+    implicit val vizReadNoFeatures = runVizReads(args)
+    get("/features/chrM?start=0&end=2000") {
+      assert(status == NotFound("").status.code)
+    }
+  }
+
+  sparkTest("Should not crash with incorrect variant file") {
+    val args = new VizReadsArgs()
+    args.referencePath = referenceFile
+    args.variantsPaths = featureFile
+    args.testMode = true
+
+    implicit val vizReadNoFeatures = runVizReads(args)
+    get("/variants/chrM?start=0&end=2000") {
+      assert(status == NotFound("").status.code)
+    }
+  }
+
+  sparkTest("Should not crash with incorrect alignment file") {
+    val args = new VizReadsArgs()
+    args.referencePath = referenceFile
+    args.readsPaths = featureFile
+    args.testMode = true
+
+    implicit val vizReadNoFeatures = runVizReads(args)
+    get("/reads/chrM?start=0&end=2000") {
+      assert(status == NotFound("").status.code)
+    }
+  }
+
+  var args = new VizReadsArgs()
   args.readsPaths = bamFile
   args.referencePath = referenceFile
   args.variantsPaths = vcfFile
@@ -71,18 +106,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == 200)
       val features = parse(response.getContent()).extract[List[FeatureJson]]
       assert(features.length == 2)
-    }
-  }
-
-  sparkTest("Should not crash with incorrect feature file") {
-    val args = new VizReadsArgs()
-    args.referencePath = referenceFile
-    args.featurePaths = vcfFile
-    args.testMode = true
-
-    implicit val vizReadNoFeatures = runVizReads(args)
-    get("/features/chrM?start=0&end=2000") {
-      assert(status == NotFound("").status.code)
     }
   }
 

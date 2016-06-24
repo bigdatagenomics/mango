@@ -68,28 +68,41 @@ object VizReads extends BDGCommandCompanion with Logging {
   implicit val formats = net.liftweb.json.DefaultFormats
 
   var sc: SparkContext = null
+
   var partitionCount: Int = 0
   var referencePath: String = ""
   // keys associated with files
   var alignmentKeys: Option[List[String]] = None
   var variantKeys: Option[List[String]] = None
-  var readsExist: Boolean = false
   var readsPaths: Option[List[String]] = None
   var variantsPaths: Option[List[String]] = None
   var featurePaths: Option[List[String]] = None
 
-  var variantsExist: Boolean = false
-  var featuresExist: Boolean = false
-  var globalDict: SequenceDictionary = null
-  var refRDD: ReferenceMaterialization = null
-  var readsData: AlignmentRecordMaterialization = null
-  var variantData: GenotypeMaterialization = null
-  var featureData: FeatureMaterialization = null
-  var prefetchedRegions: List[ReferenceRegion] = null
   var server: org.eclipse.jetty.server.Server = null
+  var globalDict: SequenceDictionary = null
+
+  // Structures storing data types. All but reference is optional
+  var refRDD: ReferenceMaterialization = null
+  var readsData: Option[AlignmentRecordMaterialization] = None
+  var variantData: Option[GenotypeMaterialization] = None
+  var featureData: Option[FeatureMaterialization] = None
+
+  // variables tracking whether optional datatypes were loaded
+  def readsExist: Boolean = readsData.isDefined
+  def variantsExist: Boolean = variantData.isDefined
+  def featuresExist: Boolean = featureData.isDefined
+
+  // regions to prefetch during variant discovery. sent to front
+  // end for visual processing
+  var prefetchedRegions: List[ReferenceRegion] = null
+
+  // used to determine size of data tiles
+  var chunkSize: Int = 1000
+
+  // thresholds used for visualization binning and limits
   var screenSize: Int = 1000
   var chunkSize: Long = 5000
-  var readsLimit: Int = 10000
+
 
   // HTTP ERROR RESPONSES
   object errors {
@@ -196,13 +209,26 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
     // set initial referenceRegion so it is defined
     session("referenceRegion") = ReferenceRegion("chr", 1, 100)
+
+    // generate file keys for front end
+    val readsSamples = try {
+      VizReads.readsData.get.keys
+    } catch {
+      case _ => List()
+    }
+
+    val variantsPaths = try {
+      VizReads.variantData.get.keys
+    } catch {
+      case _ => List()
+    }
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
         "regions" -> VizReads.formatReferenceRegions(VizReads.prefetchedRegions),
-        "readsSamples" -> VizReads.alignmentKeys,
+        "readsSamples" -> readsSamples,
         "readsExist" -> VizReads.readsExist,
         "variantsExist" -> VizReads.variantsExist,
-        "variantsPaths" -> VizReads.variantKeys,
+        "variantsPaths" -> variantsPaths,
         "featuresExist" -> VizReads.featuresExist))
   }
 
@@ -220,45 +246,49 @@ class VizServlet extends ScalatraServlet {
 
   get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      contentType = "json"
-      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+      if (!VizReads.readsExist) {
+        VizReads.errors.notFound
+      } else {
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+        contentType = "json"
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
 
-      // determines whether to wait for reference to complete calculation
-      val wait =
-        try {
-          params("wait").toBoolean
-        } catch {
-          case e: Exception => false
-        }
-      // wait for reference to finish to avoid race condition to reference string
-      if (wait) {
-        var stopWait = false
-        while (!stopWait) {
-          stopWait = viewRegion.equals(session.get("referenceRegion").get)
-          Thread sleep 20
-        }
-      }
-      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-        val sampleIds: List[String] = params("sample").split(",").toList
-        val data =
-          if (viewRegion.length() < VizReads.readsLimit) {
-            val isRaw =
-              try {
-                params("isRaw").toBoolean
-              } catch {
-                case e: Exception => false
-              }
-            val layer: Option[Layer] =
-              if (isRaw) Some(VizReads.readsData.rawLayer)
-              else None
-            VizReads.readsData.multiget(viewRegion, sampleIds, layer)
-          } else {
-            // Large Region. just return read frequencies
-            VizReads.readsData.getFrequency(viewRegion, sampleIds)
+        // determines whether to wait for reference to complete calculation
+        val wait =
+          try {
+            params("wait").toBoolean
+          } catch {
+            case e: Exception => false
           }
-        Ok(data)
-      } else VizReads.errors.outOfBounds
+        // wait for reference to finish to avoid race condition to reference string
+        if (wait) {
+          var stopWait = false
+          while (!stopWait) {
+            stopWait = viewRegion.equals(session.get("referenceRegion").get)
+            Thread sleep 20
+          }
+        }
+        if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val data =
+            if (viewRegion.length() < VizReads.readsLimit) {
+              val isRaw =
+                try {
+                  params("isRaw").toBoolean
+                } catch {
+                  case e: Exception => false
+                }
+              val layer: Option[Layer] =
+                if (isRaw) Some(VizReads.readsData.get.rawLayer)
+                else None
+              VizReads.readsData.get.multiget(viewRegion, sampleIds, layer)
+            } else {
+              // Large Region. just return read frequencies
+              VizReads.readsData.get.getFrequency(viewRegion, sampleIds)
+            }
+          Ok(data)
+        } else VizReads.errors.outOfBounds
+      }
     }
   }
 
@@ -288,25 +318,33 @@ class VizServlet extends ScalatraServlet {
 
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
+      if (!VizReads.variantsExist)
+        VizReads.errors.notFound
+      else {
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+        contentType = "json"
 
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      contentType = "json"
+        // if region is in bounds of reference, return data
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
 
-      // if region is in bounds of reference, return data
-      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-
-      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-        val data =
-          if (viewRegion.length() < 10000) {
-            val isRaw = true
-            val layer: Option[Layer] =
-              if (isRaw) Some(VizReads.variantData.rawLayer)
-              else None
-            //Always fetches the frequency, but also additionally fetches raw data if necessary
-            val samples = VizReads.variantData.fileMap.keys.toList
-            VizReads.variantData.multiget(viewRegion, samples, layer)
-          } else VizReads.errors.outOfBounds
-        Ok(data)
+        if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
+          val sampleIds: List[String] = params("sample").split(",").toList
+          val data =
+            if (viewRegion.length() < 1000) {
+              val isRaw =
+                try {
+                  params("isRaw").toBoolean
+                } catch {
+                  case e: Exception => false
+                }
+              val layer: Option[Layer] =
+                if (isRaw) Some(VizReads.variantData.get.rawLayer)
+                else None
+              //Always fetches the frequency, but also additionally fetches raw data if necessary
+              VizReads.variantData.get.multiget(viewRegion, sampleIds, layer)
+            } else VizReads.errors.outOfBounds
+          Ok(data)
+        }
       }
     }
   }
@@ -341,7 +379,7 @@ class VizServlet extends ScalatraServlet {
           val dictOpt = VizReads.globalDict(viewRegion.referenceName)
           // if region is in bounds of reference, return data
           if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-            val data = VizReads.featureData.get(viewRegion)
+            val data = VizReads.featureData.get.get(viewRegion)
             Ok(data)
           } else VizReads.errors.outOfBounds
         }
@@ -356,7 +394,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
 
-    VizReads.partitionCount =
+    val partitionCount =
       if (args.partitionCount <= 0)
         VizReads.sc.defaultParallelism
       else
@@ -382,17 +420,11 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize required reference file
      */
     def initReference() = {
-      val referencePath = Option(args.referencePath)
+      val referencePath = Option(args.referencePath).getOrElse({
+        throw new FileNotFoundException("reference file not provided")
+      })
 
-      VizReads.referencePath = {
-        referencePath match {
-          case Some(_) => referencePath.get
-          case None    => throw new FileNotFoundException("reference file not provided")
-        }
-      }
-      val chunkSize = 1000 // TODO: configurable?
-      VizReads.refRDD = new ReferenceMaterialization(sc, VizReads.referencePath, chunkSize)
-      VizReads.chunkSize = VizReads.refRDD.chunkSize
+      VizReads.refRDD = new ReferenceMaterialization(sc, referencePath, VizReads.chunkSize)
       VizReads.globalDict = VizReads.refRDD.getSequenceDictionary
     }
 
@@ -400,16 +432,19 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded alignment files
      */
     def initAlignments = {
-      VizReads.readsData = new AlignmentRecordMaterialization(sc, (VizReads.chunkSize).toInt, VizReads.refRDD)
-      val readsPaths = Option(args.readsPaths)
-      if (readsPaths.isDefined) {
-        VizReads.readsPaths = Some(args.readsPaths.split(",").toList)
-        VizReads.readsExist = true
-<<<<<<< HEAD
-        VizReads.alignmentKeys = Some(VizReads.readsData.init(VizReads.readsPaths.get))
-=======
-        VizReads.sampNames = Some(VizReads.readsData.init(VizReads.readsPaths.get))
->>>>>>> 41bd947... reference now works with pileup.js
+      if (Option(args.readsPaths).isDefined) {
+        val readsPaths = args.readsPaths.split(",").toList
+          .filter(path => path.endsWith(".bam") || path.endsWith(".adam"))
+
+        // warn for incorrect file formats
+        args.readsPaths.split(",").toList
+          .filter(path => !path.endsWith(".bam") && !path.endsWith(".adam"))
+          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
+
+        if (!readsPaths.isEmpty) {
+          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, (VizReads.chunkSize).toInt, VizReads.refRDD))
+          VizReads.readsData.get.init(readsPaths)
+        }
       }
     }
 
@@ -417,21 +452,19 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded variant files
      */
     def initVariants() = {
-      val variantsPaths = Option(args.variantsPaths)
-      if (variantsPaths.isDefined) {
+      if (Option(args.variantsPaths).isDefined) {
         // filter out incorrect file formats
-        VizReads.variantsPaths = Some(args.variantsPaths.split(",").toList
-          .filter(path => path.endsWith(".vcf") || path.endsWith(".adam")))
+        val variantsPaths = args.variantsPaths.split(",").toList
+          .filter(path => path.endsWith(".vcf") || path.endsWith(".adam"))
 
         // warn for incorrect file formats
         args.variantsPaths.split(",").toList
           .filter(path => !path.endsWith(".vcf") && !path.endsWith(".adam"))
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
-        if (!VizReads.variantsPaths.get.isEmpty) {
-          VizReads.variantData = GenotypeMaterialization(sc, VizReads.globalDict, VizReads.partitionCount)
-          VizReads.variantKeys = VizReads.variantData.init(args.variantsPaths.split(",").toList)
-          VizReads.variantsExist = true
+        if (!variantsPaths.isEmpty) {
+          VizReads.variantData = Some(GenotypeMaterialization(sc, VizReads.globalDict, partitionCount))
+          VizReads.variantData.get.init(variantsPaths)
         }
       }
     }
@@ -440,45 +473,20 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      * Initialize loaded feature files
      */
     def initFeatures() = {
-<<<<<<< HEAD
       val featurePaths = Option(args.featurePaths)
       if (featurePaths.isDefined) {
         // filter out incorrect file formats
-        VizReads.featurePaths = Some(args.featurePaths.split(",").toList
-          .filter(path => path.endsWith(".bed") || path.endsWith(".adam")))
+        val featurePaths = args.featurePaths.split(",").toList
+          .filter(path => path.endsWith(".bed") || path.endsWith(".adam"))
 
         // warn for incorrect file formats
         args.featurePaths.split(",").toList
           .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
           .foreach(file => log.warn(s"${file} does is not a valid feature file. Removing... "))
 
-        if (!VizReads.featurePaths.get.isEmpty) {
-          VizReads.featuresExist = true
-          VizReads.featureData = new FeatureMaterialization(sc, VizReads.featurePaths.get, VizReads.globalDict, (VizReads.chunkSize).toInt)
-        } else VizReads.featuresExist = false
-=======
-      val featuresPath = Option(args.featurePaths)
-      featuresPath match {
-        case Some(_) => {
-          // filter out incorrect file formats
-          VizReads.featurePaths = Some(args.featurePaths.split(",").toList
-            .filter(path => path.endsWith(".bed") || path.endsWith(".adam")))
-
-          // warn for incorrect file formats
-          args.featurePaths.split(",").toList
-            .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
-            .foreach(file => log.warn(s"{file} does is not a valid feature file. Removing... "))
-
-          if (!VizReads.featurePaths.get.isEmpty) {
-            VizReads.featuresExist = true
-            VizReads.featureData = new FeatureMaterialization(sc, VizReads.featurePaths.get, VizReads.globalDict, (VizReads.chunkSize).toInt)
-          } else VizReads.featuresExist = false
+        if (!featurePaths.isEmpty) {
+          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, (VizReads.chunkSize).toInt))
         }
-        case None => {
-          VizReads.featuresExist = false
-          log.info("No features file provided")
-        }
->>>>>>> 41bd947... reference now works with pileup.js
       }
     }
 
@@ -498,7 +506,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             sc.emptyRDD[(ReferenceRegion, Long)]
           } else {
             var variants: RDD[Genotype] = VizReads.sc.emptyRDD[Genotype]
-            VizReads.variantsPaths.get.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp)))
+            VizReads.variantData.get.files.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp)))
             val threshold = args.threshold
             GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold)
           }
@@ -512,7 +520,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             sc.emptyRDD[(ReferenceRegion, Long)]
           } else {
             var features: RDD[Feature] = sc.emptyRDD[Feature]
-            VizReads.featurePaths.get.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp)))
+            VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp)))
             val threshold = args.threshold
             FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold)
           }
@@ -529,14 +537,14 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      */
     def preprocess(regions: List[ReferenceRegion]) = {
       for (region <- regions) {
-        if (Option(VizReads.featureData).isDefined)
-          VizReads.featureData.get(region)
-        if (Option(VizReads.readsData).isDefined && VizReads.alignmentKeys.isDefined)
-          VizReads.readsData.multiget(region,
-            VizReads.alignmentKeys.get)
-        if (Option(VizReads.variantData).isDefined)
-          VizReads.variantData.multiget(region,
-            VizReads.variantKeys.get)
+        if (VizReads.featureData.isDefined)
+          VizReads.featureData.get.get(region)
+        if (VizReads.readsData.isDefined)
+          VizReads.readsData.get.multiget(region,
+            VizReads.readsData.get.keys)
+        if (VizReads.variantData.isDefined)
+          VizReads.variantData.get.multiget(region,
+            VizReads.variantData.get.keys)
       }
     }
 
