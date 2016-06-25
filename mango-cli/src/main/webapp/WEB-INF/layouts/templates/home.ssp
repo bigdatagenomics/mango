@@ -10,7 +10,7 @@ var regions = "${regions}";
 home(sequenceDict.split(","), regions.split(","));
 
 function home(dictionary, regions){
-  // Define the div for the tooltip
+    // Define the div for the tooltip
   var div = d3.select(".chrChart").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
@@ -23,12 +23,11 @@ function home(dictionary, regions){
   var clickableRegions = [];
 
   // this verifies that regions is not just an empty string
-  if (regions.length > 1) {
+  if (regions != "") {
     for(i = 0; i < regions.length; i++) {
-      var region = regions[i];
-      var range = region.split(":")[1].split("-");
-      var name = region.split(":")[0];
-      clickableRegions.push({name: name, range});
+      var range = regions[i].split(":")[1].split("-");
+      var name = dictionary[i].split(":")[0];
+      clickableRegions.push({name: name, range: range});
     }
   }
 
