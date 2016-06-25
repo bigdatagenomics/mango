@@ -20,10 +20,13 @@ function renderFeatures(viewRefName, viewRegStart, viewRegEnd) {
     .style("opacity", 0);
 
   d3.json(featureJsonLocation, function(error, data) {
-  if (error) return error;
-  if (!isValidHttpResponse(data)) {
-    return;
-  }
+    if (error) return error;
+    if (!isValidHttpResponse(data)) {
+      return;
+    }
+    var data = JSON.parse(data);
+
+    // tracked layout
     var rects = featureSvgContainer.selectAll("rect").data(data);
     var modify = rects.transition();
 

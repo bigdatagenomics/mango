@@ -38,7 +38,11 @@ import scala.reflect.ClassTag
  * Handles loading and tracking of data from persistent storage into memory for Genotype data.
  * @see LazyMaterialization.scala
  */
-class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Int) extends LazyMaterialization[Genotype, VariantTile]
+class GenotypeMaterialization(s: SparkContext,
+                              filePaths: List[String],
+                              d: SequenceDictionary,
+                              parts: Int,
+                              chunkS: Int) extends LazyMaterialization[Genotype, VariantTile]
     with KTiles[VariantTile] with Serializable {
 
   val sc = s
@@ -46,6 +50,7 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
   val partitions = parts
   val chunkSize = chunkS
   val bookkeep = new Bookkeep(chunkSize)
+  val files = filePaths
 
   /**
    * Define layers and underlying data types
@@ -53,49 +58,34 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
   val rawLayer: Layer = L0
   val freqLayer: Layer = L1
 
-  /*
-   * Initialize materialization structure with filepaths
-   */
-  def init(filePaths: List[String]): Option[List[String]] = {
-    val namedPaths = Option(filePaths.map(p => filterKeyFromFile(p)))
-    for (i <- filePaths.indices) {
-      val varPath = filePaths(i)
-      val varName = namedPaths.get(i)
-      loadSample(varName, varPath)
-    }
-    namedPaths
-  }
-
-  def get(region: ReferenceRegion, k: String, layerOpt: Option[Layer] = None): String = {
-    multiget(region, List(k), layerOpt)
-  }
-
   /* If the RDD has not been initialized, initialize it to the first get request
     * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
     * If it exists, call get on the IntervalRDD
     * Otherwise call put on the sections of data that don't exist
     * Here, ks, is an option of list of personids (String)
     */
-  def multiget(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
+  def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): String = {
     implicit val formats = net.liftweb.json.DefaultFormats
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
-            put(r, ks)
+            put(r)
           }
         }
 
         layerOpt match {
           case Some(_) => {
             val dataLayer: Layer = layerOpt.get
-            val layers = getTiles(region, ks, List(freqLayer, dataLayer))
-            layers.get(dataLayer).get
+            val layers = getTiles(region, List(freqLayer, dataLayer))
+            val freq = layers.get(freqLayer).get
+            val variants = layers.get(dataLayer).get
+            write(Map("freq" -> freq, "variants" -> variants))
           }
           case None => {
-            val layers = getTiles(region, ks, List(freqLayer))
+            val layers = getTiles(region, List(freqLayer))
             val freq = layers.get(freqLayer).get
             write(Map("freq" -> freq))
           }
@@ -153,97 +143,123 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     write(data.toMap)
   }
 
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[Genotype] = {
-    if (!fileMap.containsKey(k)) {
-      throw new Exception("Key not in FileMap")
-    }
-    val fp = fileMap(k)
-    GenotypeMaterialization.load(sc, Some(region), fp)
-  }
-
   /**
    * Transparent to the user, should only be called by get if IntervalRDD.get does not return data
    * Fetches the data from disk, using predicates and range filtering
    * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
    *
    * @param region ReferenceRegion in which data is retreived
-   * @param ks to be retreived
    */
-  def put(region: ReferenceRegion, ks: List[String]) = {
+  def put(region: ReferenceRegion) = {
     val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) =>
-        val end =
-          Math.min(region.end, seqRecord.get.length)
-        val start = Math.min(region.start, end)
-        val trimmedRegion = new ReferenceRegion(region.referenceName, start, end)
+    if (seqRecord.isDefined) {
+      var data: RDD[Genotype] = sc.emptyRDD[Genotype]
+      val end =
+        Math.min(region.end, seqRecord.get.length)
+      val start = Math.min(region.start, end)
+      val trimmedRegion = new ReferenceRegion(region.referenceName, start, end)
 
-        //divide regions by chunksize
-        val c = chunkSize
-        val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
-        ks.map(k => {
-          val data = loadFromFile(trimmedRegion, k)
-          //where k is the filename itself
-          putPerSample(data, k, regions)
-        })
-        bookkeep.rememberValues(region, ks)
-      case None =>
+      //divide regions by chunksize
+      val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
+      files.map(fp => {
+        val genotypes = GenotypeMaterialization.load(sc, Option(trimmedRegion), fp)
+        data = data.union(genotypes)
+      })
+
+      var mappedRecords: RDD[(ReferenceRegion, Genotype)] = sc.emptyRDD[(ReferenceRegion, Genotype)]
+
+      regions.foreach(r => {
+        val grouped = data.filter(vr => r.overlaps(ReferenceRegion(vr.getContigName, vr.getStart, vr.getEnd)))
+          .map(vr => (r, vr))
+        mappedRecords = mappedRecords.union(grouped)
+      })
+
+      val groupedRecords: RDD[(ReferenceRegion, Iterable[Genotype])] =
+        mappedRecords
+          .groupBy(_._1)
+          .map(r => (r._1, r._2.map(_._2)))
+
+      val tiles: RDD[(ReferenceRegion, VariantTile)] = groupedRecords.map(r => (r._1, VariantTile(r._2)))
+
+      // insert into IntervalRDD
+      if (intRDD == null) {
+        intRDD = IntervalRDD(tiles)
+        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      } else {
+        val t = intRDD
+        intRDD = intRDD.multiput(tiles)
+        // TODO: can we do this incrementally instead?
+        t.unpersist(true)
+        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      }
+      bookkeep.rememberValues(region, files)
+
     }
   }
-
-  /**
-   * Puts in the data from a file/sample into the IntervalRDD
-   */
-  def putPerSample(data: RDD[Genotype], fileName: String, regions: List[ReferenceRegion]) = {
-    var mappedRecords: RDD[(ReferenceRegion, Genotype)] = sc.emptyRDD[(ReferenceRegion, Genotype)]
-
-    regions.foreach(r => {
-      val grouped = data.filter(vr => r.overlaps(ReferenceRegion(vr.getContigName, vr.getStart, vr.getEnd)))
-        .map(vr => (r, vr))
-      mappedRecords = mappedRecords.union(grouped)
-    })
-
-    val groupedRecords: RDD[(ReferenceRegion, Iterable[Genotype])] =
-      mappedRecords
-        .groupBy(_._1)
-        .map(r => (r._1, r._2.map(_._2)))
-
-    val tiles: RDD[(ReferenceRegion, VariantTile)] = groupedRecords.map(r => (r._1, VariantTile(r._2, fileName)))
-    // insert into IntervalRDD
-    if (intRDD == null) {
-      intRDD = IntervalRDD(tiles)
-      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    } else {
-      val t = intRDD
-      intRDD = intRDD.multiput(tiles)
-      // TODO: can we do this incrementally instead?
-      t.unpersist(true)
-      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    }
-  }
+  //
+  //  /**
+  //   * Puts in the data from a file/sample into the IntervalRDD
+  //   */
+  //  def putPerSample(data: RDD[Genotype], fileName: String, regions: List[ReferenceRegion]) = {
+  //    var mappedRecords: RDD[(ReferenceRegion, Genotype)] = sc.emptyRDD[(ReferenceRegion, Genotype)]
+  //
+  //    regions.foreach(r => {
+  //      val grouped = data.filter(vr => r.overlaps(ReferenceRegion(vr.getContigName, vr.getStart, vr.getEnd)))
+  //        .map(vr => (r, vr))
+  //      mappedRecords = mappedRecords.union(grouped)
+  //    })
+  //
+  //    val groupedRecords: RDD[(ReferenceRegion, Iterable[Genotype])] =
+  //      mappedRecords
+  //        .groupBy(_._1)
+  //        .map(r => (r._1, r._2.map(_._2)))
+  //
+  //    val tiles: RDD[(ReferenceRegion, VariantTile)] = groupedRecords.map(r => (r._1, VariantTile(r._2, fileName)))
+  //    // insert into IntervalRDD
+  //    if (intRDD == null) {
+  //      intRDD = IntervalRDD(tiles)
+  //      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+  //    } else {
+  //      val t = intRDD
+  //      intRDD = intRDD.multiput(tiles)
+  //      // TODO: can we do this incrementally instead?
+  //      t.unpersist(true)
+  //      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+  //    }
+  //  }
 }
 
 object GenotypeMaterialization {
 
-  def apply(sc: SparkContext, dict: SequenceDictionary, partitions: Int): GenotypeMaterialization = {
-    new GenotypeMaterialization(sc, dict, partitions, 100)
+  def apply(sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int): GenotypeMaterialization = {
+    new GenotypeMaterialization(sc, files, dict, partitions, 100)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
-    new GenotypeMaterialization(sc, dict, partitions, chunkSize)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
+    new GenotypeMaterialization(sc, files, dict, partitions, chunkSize)
   }
 
   def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
-    if (fp.endsWith(".adam")) {
-      loadAdam(sc, region, fp)
-    } else if (fp.endsWith(".vcf")) {
-      region match {
-        case Some(_) => sc.loadGenotypes(fp).filterByOverlappingRegion(region.get)
-        case None    => sc.loadGenotypes(fp)
+    val genotypes: RDD[Genotype] =
+      if (fp.endsWith(".adam")) {
+        loadAdam(sc, region, fp)
+      } else if (fp.endsWith(".vcf")) {
+        region match {
+          case Some(_) => sc.loadGenotypes(fp).filterByOverlappingRegion(region.get)
+          case None    => sc.loadGenotypes(fp)
+        }
+      } else {
+        throw UnsupportedFileException("File type not supported")
       }
-    } else {
-      throw UnsupportedFileException("File type not supported")
-    }
+
+    val key = LazyMaterialization.filterKeyFromFile(fp)
+    // map unique ids to features to be used in tiles
+    genotypes.map(r => {
+      if (r.getSampleId == null) new Genotype(r.getVariant, r.getContigName, r.getStart, r.getEnd, r.getVariantCallingAnnotations,
+        key, r.getSampleDescription, r.getProcessingDescription, r.getAlleles, r.getExpectedAlleleDosage, r.getReferenceReadDepth,
+        r.getAlternateReadDepth, r.getReadDepth, r.getMinReadDepth, r.getGenotypeQuality, r.getGenotypeLikelihoods, r.getNonReferenceLikelihoods, r.getStrandBiasComponents, r.getSplitFromMultiAllelic, r.getIsPhased, r.getPhaseSetId, r.getPhaseQuality)
+      else r
+    })
   }
 
   def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {

@@ -45,17 +45,17 @@ function toggleVariants(sample) {
 }
 
 // Filters invalid characters from string to create javascript descriptor
-function filterNames(arr) {
-  var filteredArr = [];
-  for (var i = 0; i < arr.length; i++) {
-    filteredArr[i] = arr[i].replace("/","");
-  }
-  return filteredArr;
-}
-
-function filterName(name) {
-  return name.replace("/","");
-}
+//function filterNames(arr) {
+//  var filteredArr = [];
+//  for (var i = 0; i < arr.length; i++) {
+//    filteredArr[i] = arr[i].replace("/","");
+//  }
+//  return filteredArr;
+//}
+//
+//function filterName(name) {
+//  return name.replace("/","");
+//}
 
 Array.prototype.contains = function(v) {
   for(var i = 0; i < this.length; i++) {

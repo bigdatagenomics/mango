@@ -28,7 +28,7 @@ function renderVariantSummary(refName, start, end) {
   startWait("varArea");
 
   var varJsonLocation = "/variants/" + viewRefName + "?start=" + viewRegStart + "&end="
-    + viewRegEnd  + "&sample=" + varFiles;
+    + viewRegEnd;
 
   // Render data for each sample
   d3.json(varJsonLocation,function(error, json) {
@@ -42,13 +42,18 @@ function renderVariantSummary(refName, start, end) {
         summarySvgContainer[varFiles[i]].selectAll("g").remove();
       } else {
         var data = JSON.parse(json["freq"]);
-        data = typeof data[varFiles[i]] != "undefined" ? data[varFiles[i]] : [];
-        renderd3Line(summarySvgContainer[varFiles[i]], height);
-        varSummaryData[i] = [];
-        //data from backend now split between freq and variants
-        varSummaryData[i]= data;
-
-        renderVariantFreq(varSummaryData[i], varFiles[i])
+        var i = 0;
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            var value = data[key];
+            renderd3Line(summarySvgContainer[varFiles[i]], varHeight);
+            varSummaryData[i] = [];
+            //data from backend now split between freq and variants
+            varSummaryData[i]= data;
+            renderVariantFreq(varSummaryData[i], varFiles[i]);
+          }
+          i++;
+        }
       }
     }
   });

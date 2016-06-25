@@ -19,9 +19,10 @@ var bisectData = d3.bisector(function(d) {
 }).left;
 
 function renderCoverage(json) {
-
+   var i = 0;
    $.map(json, function(value, key) {
-      renderJsonCoverage(filterName(key),value);
+      renderJsonCoverage("reads_" + i,value);
+      i++;
    });
 }
 

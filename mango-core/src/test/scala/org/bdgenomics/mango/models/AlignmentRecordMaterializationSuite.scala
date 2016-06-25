@@ -31,35 +31,25 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     sc.loadIndexedBam(file, viewRegion).count
   }
 
-  def getSampleName: String = {
-    "C57BL/6J"
-  }
-
   // test alignment data
   val bamFile = resourcePath("mouse_chrM.bam")
 
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
+  val files = List(bamFile)
 
-  sparkTest("assert sample name is correct") {
-    val sample = getSampleName
+  sparkTest("assert creation") {
     val reference = new ReferenceMaterialization(sc, referencePath, 100)
-
-    val lazyMat = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
-    val samples = lazyMat.init(List(bamFile))
-    assert(samples.head == sample)
+    val lazyMat = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
   }
 
-  sparkTest("assert raw data returns from 1 sample") {
+  sparkTest("assert raw data returns") {
 
     val reference = new ReferenceMaterialization(sc, referencePath, 100)
-
-    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
-    val samples = data.init(List(bamFile))
+    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
 
     val region = new ReferenceRegion("chrM", 0L, 900L)
-
-    val results = data.multiget(region, samples)
+    val results = data.get(region)
 
   }
 
@@ -67,12 +57,11 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val reference = new ReferenceMaterialization(sc, referencePath, 100)
     val sample = "fakeSample"
 
-    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
+    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
 
-    val bigRegion = new ReferenceRegion("chrM", 0L, 20000L)
-    data.init(List(bamFile))
+    val bigRegion = new ReferenceRegion("chrM", 0L, 200L)
     try {
-      val results = data.get(bigRegion, sample)
+      val results = data.get(bigRegion)
     } catch {
       case e: Exception =>
         assert(e.getMessage.contains(s"key not found: ${sample}"))
@@ -82,11 +71,9 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Test frequency retrieval") {
     val reference = new ReferenceMaterialization(sc, referencePath, 100)
-    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
-    val sample = getSampleName
+    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
     val region = new ReferenceRegion("chrM", 0L, 20L)
-    data.init(List(bamFile))
-    val freq = data.getFrequency(region, List(sample))
+    val freq = data.getFrequency(region)
     val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
 
     // extract number of positions in string ('position' => 'p')
@@ -96,11 +83,9 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Test frequency retrieval across interval nodes") {
     val reference = new ReferenceMaterialization(sc, referencePath, 100)
-    val data = AlignmentRecordMaterialization(sc, reference.chunkSize, reference)
-    val sample = getSampleName
+    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
     val region = new ReferenceRegion("chrM", 90L, 110L)
-    data.init(List(bamFile))
-    val freq = data.getFrequency(region, List(sample))
+    val freq = data.getFrequency(region)
     val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
     // extract number of positions in string ('position' => 'p')
     val count = coverageJson.count(p => p == 'p')

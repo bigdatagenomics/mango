@@ -73,7 +73,7 @@ function home(dictionary, regions){
     .attr("x", 0)
     .attr("y",0)
     .attr("height", height)
-    .attr("width", function(d) { console.log(d.length);return (chartWidth * d.length)/d3.max(lengthlist); })
+    .attr("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist); })
     .text(function(d) { return d.name; })
     .on("mouseover", function(d) {
       d3.select(this).attr("fill", "grey");

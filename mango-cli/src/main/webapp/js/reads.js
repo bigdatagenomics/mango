@@ -41,7 +41,7 @@ function renderMergedReads(refName, start, end) {
 
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
-        + viewRegEnd + "&sample=" + sampleIds + "&wait=true";
+        + viewRegEnd + "&wait=true";
 
     // Render data for each sample
   d3.json(readsJsonLocation,function(error, json) {
@@ -51,27 +51,28 @@ function renderMergedReads(refName, start, end) {
     }
     renderCoverage(JSON.parse(json.coverage));
 
-
-    // iterate through all samples and render merged reads
-    for (var i = 0; i < samples.length; i++) {
-
-        // Zoomed out too far for resolution. print mismatch path instead.
-        if(json.reads == "") {
-            indelSvgContainer[samples[i]].selectAll(".indel").remove();
-            readCountSvgContainer[samples[i]].selectAll("g").remove();
-        } else {
-            var data = JSON.parse(json.reads);
-            var data = typeof data[rawSamples[i]] != "undefined" ? data[rawSamples[i]] : [];
+    // Zoomed out too far for resolution. print mismatch path instead.
+    if (json.reads == "") {
+        indelSvgContainer[samples[i]].selectAll(".indel").remove();
+        readCountSvgContainer[samples[i]].selectAll("g").remove();
+    } else {
+        var data = JSON.parse(json.reads);
+        var i = 0;
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            var value = data[key];
             var selector = "#" + samples[i];
             renderd3Line(readCountSvgContainer[samples[i]], height);
 
             sampleData[i] = [];
-            sampleData[i].mismatches = data.filter(function(d) { return d.op === "M"})
-            sampleData[i].indels = data.filter(function(d) { return d.op !== "M"})
+            sampleData[i].mismatches = value.filter(function(d) { return d.op === "M"})
+            sampleData[i].indels = value.filter(function(d) { return d.op !== "M"})
 
             var removed = readCountSvgContainer[samples[i]].selectAll("path").remove();
             renderMismatchCounts(sampleData[i].mismatches, samples[i]);
             renderIndelCounts(sampleData[i].indels, samples[i]);
+          }
+          i++;
         }
     }
     stopWait("#readsArea");

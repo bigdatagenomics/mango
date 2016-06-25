@@ -18,38 +18,42 @@
 
 package org.bdgenomics.mango.models
 
-import net.liftweb.json._
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.mango.util.MangoFunSuite
 
-class FeatureMaterializationSuite extends MangoFunSuite {
+class GenotypeMaterializationSuite extends MangoFunSuite {
 
-  implicit val formats = DefaultFormats
+  val sd = new SequenceDictionary(Vector(SequenceRecord("chr1", 2000L),
+    SequenceRecord("chrM", 20000L),
+    SequenceRecord("20", 90000L)))
 
-  val bedFileName = "smalltest.bed"
-  val bedFile2Name = "smalltest2.bed"
-  val bedFile = resourcePath(bedFileName)
-  val bedFile2 = resourcePath(bedFile2Name)
-  val key = LazyMaterialization.filterKeyFromFile(bedFileName)
-  val key2 = LazyMaterialization.filterKeyFromFile(bedFile2Name)
+  // test vcf data'
+  val vcfFile1 = resourcePath("truetest.vcf")
+  val vcfFile2 = resourcePath("truetest2.vcf")
 
-  val dict = new SequenceDictionary(Vector(SequenceRecord("chrM", 16699L)))
+  val vcfFiles = List(vcfFile1, vcfFile2)
+  val key = LazyMaterialization.filterKeyFromFile("truetest.vcf")
+  val key2 = LazyMaterialization.filterKeyFromFile("truetest2.vcf")
 
-  sparkTest("assert raw data returns from one block") {
+  // test reference data
+  var referencePath = resourcePath("mm10_chrM.fa")
 
-    val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
-
-    val region = new ReferenceRegion("chrM", 1000L, 1200L)
-
-    val json = data.get(region)
-    assert(json.contains(key))
-  }
-
-  sparkTest("can fetch multiple files") {
-    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict, 1000)
-    val region = new ReferenceRegion("chrM", 1000L, 1200L)
+  sparkTest("Fetch from 1 vcf file") {
+    val region = new ReferenceRegion("chrM", 0, 999)
+    val data = GenotypeMaterialization(sc, List(vcfFile1), sd, 10)
     val json = data.get(region)
 
-    assert(json.contains(key) && json.contains(key2))
+    assert(json.contains("NA12878"))
+
   }
+
+  sparkTest("more than 1 vcf file") {
+    val region = new ReferenceRegion("chrM", 0, 999)
+    val data = GenotypeMaterialization(sc, vcfFiles, sd, 10)
+    val json = data.get(region)
+
+    assert(json.contains("NA12878"))
+
+  }
+
 }

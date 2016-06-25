@@ -21,14 +21,12 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Genotype, Feature }
 import org.bdgenomics.mango.layout.{ VariantFreqLayout, PositionCount, PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
 
-case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
-
-case class FeatureTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
-
 case class ReferenceTile(sequence: String) extends LayeredTile[String] with Serializable {
   val rawData = sequence
   val layerMap = null
 }
+
+case class FeatureTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
 object FeatureTile {
   def apply(data: Iterable[Feature],
@@ -51,6 +49,8 @@ object FeatureTile {
 
   }
 }
+
+case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
 object AlignmentRecordTile {
   def apply(data: Iterable[AlignmentRecord],
@@ -84,9 +84,9 @@ object AlignmentRecordTile {
 case class VariantTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
 object VariantTile {
-  def apply(variants: Iterable[Genotype], key: String): VariantTile = {
-    val rawData = Map((key, variants))
-    val layer1 = Map((key, VariantFreqLayout(variants)))
+  def apply(data: Iterable[Genotype]): VariantTile = {
+    val rawData = data.groupBy(_.getSampleId) // TODO: verify that this is unique
+    val layer1 = rawData.mapValues(r => VariantFreqLayout(r))
     new VariantTile(Map(0 -> rawData, 1 -> layer1))
   }
 }

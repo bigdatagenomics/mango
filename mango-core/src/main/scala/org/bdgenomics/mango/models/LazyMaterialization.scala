@@ -24,8 +24,6 @@ import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd._
 import org.bdgenomics.utils.misc.Logging
 
-import scala.collection.mutable
-import scala.collection.mutable.HashMap
 import scala.reflect.ClassTag
 
 abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializable with Logging {
@@ -34,21 +32,8 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   def dict: SequenceDictionary
   def chunkSize: Int
   def bookkeep: Bookkeep
-
-  // Keeps track of sample ids and corresponding files
-  var fileMap: HashMap[String, String] = new HashMap()
-
-  def keys: List[String] = fileMap.keys.toList
-  def files: List[String] = fileMap.values.toList
-
-  /*
- * Filter filepaths to just the name of the file, without an extension
- */
-  def filterKeyFromFile(file: String): String = {
-    val slash = file.split("/")
-    val fileName = slash.last
-    fileName.replace(".", "_")
-  }
+  def files: List[String]
+  def getFiles: List[String] = files
 
   /**
    * Sets partitioner
@@ -66,15 +51,22 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
     dict
   }
 
-  // Stores location of sample at a given filepath
-  def loadSample(key: String, value: String) {
-    fileMap += ((key, value))
-  }
-
-  def getFileMap: mutable.HashMap[String, String] = fileMap
-
   var intRDD: IntervalRDD[ReferenceRegion, S] = null
 
+}
+
+object LazyMaterialization {
+
+  /**
+   * Extracts location agnostic key form file
+   * @param file file to extract key from
+   * @return memoryless key representing file
+   */
+  def filterKeyFromFile(file: String): String = {
+    val slash = file.split("/")
+    val fileName = slash.last
+    fileName.replace(".", "_")
+  }
 }
 
 case class UnsupportedFileException(message: String) extends Exception(message)

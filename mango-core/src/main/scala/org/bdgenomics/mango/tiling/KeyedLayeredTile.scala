@@ -43,15 +43,14 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
    * Gets the tiles overlapping a given region corresponding to the specified keys
    *
    * @param region Region to retrieve data from
-   * @param ks keys whose data to retrieve
    * @param layerOpt: Option to force fetching of specific Layer
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
+  def getTiles(region: ReferenceRegion, layerOpt: Option[Layer] = None): String = {
 
     // Filter IntervalRDD by region and requested layer
     val data: RDD[(String, Iterable[Any])] = intRDD.filterByInterval(region)
-      .mapValues(r => r.get(region, ks, layerOpt))
+      .mapValues(r => r.get(region, layerOpt))
       .toRDD.flatMap(_._2)
 
     // return JSONified data
@@ -78,15 +77,14 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
    * @param region Region to retrieve data from
-   * @param ks keys whose data to retrieve
    * @param layers: List of layers to fetch from tile
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, ks: List[String], layers: List[Layer]): Map[Layer, String] = {
+  def getTiles(region: ReferenceRegion, layers: List[Layer]): Map[Layer, String] = {
 
     // Filter IntervalRDD by region and requested layer
     val data: RDD[(Int, Map[String, Iterable[Any]])] = intRDD.filterByInterval(region)
-      .mapValues(r => r.get(region, ks, layers))
+      .mapValues(r => r.get(region, layers))
       .toRDD.flatMap(_._2)
     // return JSONified data
     val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
@@ -124,11 +122,10 @@ abstract class KLayeredTile extends Serializable with Logging {
    * and is called by KTiles
    *
    * @param region Region to fetch data
-   * @param ks keys whose data to fetch
    * @param layer: Option to force fetching of specific Layer
    * @return Map of (k, Iterable(data))
    */
-  def get(region: ReferenceRegion, ks: List[String], layer: Option[Layer] = None): Map[String, Iterable[Any]] = {
+  def get(region: ReferenceRegion, layer: Option[Layer] = None): Map[String, Iterable[Any]] = {
 
     val size = region.length()
 
@@ -140,23 +137,18 @@ abstract class KLayeredTile extends Serializable with Logging {
           case _                      => None
         }
     // if no data exists return empty map
-    val m = data.getOrElse(Map.empty[String, Iterable[Any]])
-
-    // filter out irrelevent keys
-    m.filter(r => ks.contains(r._1))
+    data.getOrElse(Map.empty[String, Iterable[Any]])
   }
 
   /**
    * Gets data corresponding to the layer tied to the region size specified. This gets data from layermap
    * and is called by KTiles
    * @param region Region to fetch data
-   * @param ks keys whose data to fetch
    * @param layers: List of layers to fetch
    * @return Map of (k, Iterable(data))
    */
-  def get(region: ReferenceRegion, ks: List[String], layers: List[Layer]): Map[Int, Map[String, Iterable[Any]]] = {
-    val filteredLayers = layerMap.filterKeys(k => layers.map(_.id).contains(k))
-    filteredLayers.mapValues(m => m.filterKeys(k => ks.contains(k)))
+  def get(region: ReferenceRegion, layers: List[Layer]): Map[Int, Map[String, Iterable[Any]]] = {
+    layerMap.filterKeys(k => layers.map(_.id).contains(k))
   }
 }
 

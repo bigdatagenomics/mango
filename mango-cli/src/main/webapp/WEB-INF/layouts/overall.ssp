@@ -1,16 +1,21 @@
 <%@ val dictionary:     String  %>
 <%@ val regions: String %>
 <%@ val readsExist:     Boolean %>
-<%@ val readsSamples:   Option[List[String]] %>
-<%@ val variantsPaths:  Option[List[String]] %>
 <%@ val variantsExist:  Boolean %>
 <%@ val featuresExist:  Boolean %>
+<%@ val readsSamples:   Option[List[String]] %>
+<% val readsIds = if (readsExist) Some(readsSamples.get.zipWithIndex.map(_._2)) else None %>
+<%@ val variantsPaths:  Option[List[String]] %>
+<% val variantIds = if (variantsExist) Some(variantsPaths.get.zipWithIndex.map(_._2)) else None %>
+
+
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
 <% render("navigation/navigation.ssp", Map("isOverall" -> true)) %>
 <% render("templates/sidebar.ssp") %>
 
+<<<<<<< HEAD
 <div id="main">
     <div id="pileup"></div>
 </div>
@@ -106,6 +111,7 @@ xhr.onreadystatechange = function() {
 #end
 #if (variantsExist)
     <% var varJsonSamples = variantsPaths.get.reduce((a1, a2) => (a1 + "," + a2)) %>
+    <% var ids = variantIds.get.map(r => ("variants_" + r.toString)).reduce((a1, a2) => (a1 + "," + a2)) %>
     <script>
         var varSampleIds = "${varJsonSamples}";
         var varFiles = varSampleIds.split(",").unique();
@@ -114,10 +120,12 @@ xhr.onreadystatechange = function() {
 #end
 #if (readsExist)
     <% var jsonSamples = readsSamples.get.reduce((a1, a2) => (a1 + "," + a2)) %>
+    <% var ids = readsIds.get.map(r => ("reads_" + r.toString)).reduce((a1, a2) => (a1 + "," + a2)) %>
     <script>
-        var sampleIds = "${jsonSamples}";
-        var rawSamples = sampleIds.split(",").unique();
-        var samples = filterNames(rawSamples);
+        var rawSamples = "${jsonSamples}";
+        rawSamples = rawSamples.split(",").unique();
+        var samples = "${ids}".split(",");
+
     </script>
     <script src="js/freq.js"></script>
     <script src="js/reads.js"></script>

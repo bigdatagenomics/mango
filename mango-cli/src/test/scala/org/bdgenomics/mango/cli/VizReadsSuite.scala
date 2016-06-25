@@ -18,10 +18,9 @@
 package org.bdgenomics.mango.cli
 
 import net.liftweb.json._
-import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.{ NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
+import org.scalatra.{ NotFound, Ok, RequestEntityTooLarge }
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
@@ -103,9 +102,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   sparkTest("/features/chrM?start=0&end=2000") {
     implicit val vizReads = runVizReads(args)
     get("/features/chrM?start=0&end=1200") {
-      assert(status == 200)
-      val features = parse(response.getContent()).extract[List[FeatureJson]]
-      assert(features.length == 2)
+      assert(status == Ok("").status.code)
     }
   }
 

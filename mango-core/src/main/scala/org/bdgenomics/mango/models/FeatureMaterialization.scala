@@ -23,11 +23,11 @@ import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
-import org.bdgenomics.adam.projections.{FeatureField, Projection}
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.layout.Coverage
+import org.bdgenomics.mango.layout.{ FeatureLayout, Coverage }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
@@ -39,11 +39,11 @@ class FeatureMaterialization(s: SparkContext,
                              chunkS: Int) extends LazyMaterialization[Feature, FeatureTile]
     with KTiles[FeatureTile] with Serializable with Logging {
 
-  init(filePaths)
   val sc = s
   val chunkSize = chunkS
   val dict = d
   val bookkeep = new Bookkeep(chunkSize)
+  val files = filePaths
 
   /**
    * Gets data for multiple keys.
@@ -60,7 +60,7 @@ class FeatureMaterialization(s: SparkContext,
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, filePaths)
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
             put(r)
@@ -123,29 +123,8 @@ class FeatureMaterialization(s: SparkContext,
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
-      bookkeep.rememberValues(region, filePaths)
+      bookkeep.rememberValues(region, files)
     }
-  }
-//
-//  def loadFromFile(region: ReferenceRegion, k: String): RDD[Feature] = {
-//    if (!fileMap.containsKey(k)) {
-//      throw new Exception(s"Key ${k} not in FileMap")
-//    }
-//    val fp = fileMap(k)
-//    FeatureMaterialization.load(sc, Some(region), fp)
-//  }
-
-  /*
-   * Initialize materialization structure with filepaths
-   */
-  def init(filePaths: List[String]): Option[List[String]] = {
-    val namedPaths = Option(filePaths.map(p => filterKeyFromFile(p)))
-    for (i <- filePaths.indices) {
-      val varPath = filePaths(i)
-      val varName = namedPaths.get(i)
-      loadSample(varName, varPath)
-    }
-    namedPaths
   }
 
   def stringify(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
@@ -161,12 +140,11 @@ class FeatureMaterialization(s: SparkContext,
     val data: Array[(String, Iterable[Feature])] = rdd
       .mapValues(_.asInstanceOf[Iterable[Feature]])
       .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
-    println(data)
 
     val flattened: Map[String, Array[Feature]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
-    println(flattened)
-    write(flattened)
+
+    write(flattened.flatMap(r => FeatureLayout(r._2)))
   }
 }
 
@@ -180,12 +158,19 @@ object FeatureMaterialization {
    * @return RDD of data from the file over specified ReferenceRegion
    */
   def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
-    if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
-    else if (fp.endsWith(".bed")) {
-      FeatureMaterialization.loadFromBed(sc, region, fp)
-    } else {
-      throw UnsupportedFileException("File type not supported")
-    }
+    val features =
+      if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
+      else if (fp.endsWith(".bed")) {
+        FeatureMaterialization.loadFromBed(sc, region, fp)
+      } else {
+        throw UnsupportedFileException("File type not supported")
+      }
+    val key = LazyMaterialization.filterKeyFromFile(fp)
+    // map unique ids to features to be used in tiles
+    features.map(r => {
+      if (r.getSource == null) new Feature(r.getFeatureId, r.getFeatureType, key, r.getContig, r.getStart, r.getEnd, r.getStrand, r.getValue, r.getDbxrefs, r.getParentIds, r.getAttributes)
+      else r
+    })
   }
 
   /**

@@ -29,7 +29,7 @@ import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
 import org.bdgenomics.mango.tiling.{ L0, Layer }
-import org.bdgenomics.mango.models.{ FeatureMaterialization, GenotypeMaterialization, AlignmentRecordMaterialization, ReferenceMaterialization }
+import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
@@ -94,7 +94,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   // regions to prefetch during variant discovery. sent to front
   // end for visual processing
-  var prefetchedRegions: List[ReferenceRegion] = null
+  var prefetchedRegions: List[ReferenceRegion] = List()
 
   // used to determine size of data tiles
   var chunkSize: Int = 1000
@@ -212,15 +212,15 @@ class VizServlet extends ScalatraServlet {
 
     // generate file keys for front end
     val readsSamples = try {
-      VizReads.readsData.get.keys
+      Some(VizReads.readsData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
-      case _ => List()
+      case _ => None
     }
 
     val variantsPaths = try {
-      VizReads.variantData.get.keys
+      Some(VizReads.variantData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
-      case _ => List()
+      case _ => None
     }
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
@@ -269,7 +269,6 @@ class VizServlet extends ScalatraServlet {
           }
         }
         if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-          val sampleIds: List[String] = params("sample").split(",").toList
           val data =
             if (viewRegion.length() < VizReads.readsLimit) {
               val isRaw =
@@ -281,10 +280,10 @@ class VizServlet extends ScalatraServlet {
               val layer: Option[Layer] =
                 if (isRaw) Some(VizReads.readsData.get.rawLayer)
                 else None
-              VizReads.readsData.get.multiget(viewRegion, sampleIds, layer)
+              VizReads.readsData.get.get(viewRegion, layer)
             } else {
               // Large Region. just return read frequencies
-              VizReads.readsData.get.getFrequency(viewRegion, sampleIds)
+              VizReads.readsData.get.getFrequency(viewRegion)
             }
           Ok(data)
         } else VizReads.errors.outOfBounds
@@ -328,9 +327,8 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
 
         if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-          val sampleIds: List[String] = params("sample").split(",").toList
           val data =
-            if (viewRegion.length() < 1000) {
+            if (viewRegion.length() < 10000) {
               val isRaw =
                 try {
                   params("isRaw").toBoolean
@@ -341,7 +339,7 @@ class VizServlet extends ScalatraServlet {
                 if (isRaw) Some(VizReads.variantData.get.rawLayer)
                 else None
               //Always fetches the frequency, but also additionally fetches raw data if necessary
-              VizReads.variantData.get.multiget(viewRegion, sampleIds, layer)
+              VizReads.variantData.get.get(viewRegion, layer)
             } else VizReads.errors.outOfBounds
           Ok(data)
         }
@@ -409,7 +407,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     // run discovery mode if it is specified in the startup script
     if (args.discoveryMode) {
       VizReads.prefetchedRegions = discover(Option(args.variantDiscoveryMode), Option(args.variantDiscoveryMode))
-      println(VizReads.prefetchedRegions)
       preprocess(VizReads.prefetchedRegions)
     }
 
@@ -442,8 +439,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!readsPaths.isEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, VizReads.chunkSize, VizReads.refRDD))
-          VizReads.readsData.get.init(readsPaths)
+          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.chunkSize, VizReads.refRDD))
         }
       }
     }
@@ -463,8 +459,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!variantsPaths.isEmpty) {
-          VizReads.variantData = Some(GenotypeMaterialization(sc, VizReads.globalDict, partitionCount))
-          VizReads.variantData.get.init(variantsPaths)
+          VizReads.variantData = Some(GenotypeMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
         }
       }
     }
@@ -540,11 +535,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         if (VizReads.featureData.isDefined)
           VizReads.featureData.get.get(region)
         if (VizReads.readsData.isDefined)
-          VizReads.readsData.get.multiget(region,
-            VizReads.readsData.get.keys)
+          VizReads.readsData.get.get(region)
         if (VizReads.variantData.isDefined)
-          VizReads.variantData.get.multiget(region,
-            VizReads.variantData.get.keys)
+          VizReads.variantData.get.get(region)
       }
     }
 
