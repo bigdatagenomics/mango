@@ -12,7 +12,6 @@
 <% render("templates/sidebar.ssp") %>
 
 <div id="main">
-    
     <div id="pileup"></div>
 </div>
 
@@ -43,7 +42,11 @@ xhr.send();
 xhr.onreadystatechange = function() {
     if (xhr.readyState == 4 && xhr.status == 200) {
         var contigList = JSON.parse(xhr.response);
+<<<<<<< HEAD
         var p = pileup.create(document.getElementById('pileup'), {
+=======
+        var p = pileup.create(document.getElementById('reference'), {
+>>>>>>> 2928136... ga4gh data source loaded in, compatible with mango, no error
             // go to one of the chromosomes in sequence dictionary
             range: {contig: 'chrM', start: 0, stop: 100},
             tracks: [
@@ -55,7 +58,11 @@ xhr.onreadystatechange = function() {
                         contigList: contigList
                     }),
                     name: 'Reference'
+<<<<<<< HEAD
                 },
+=======
+                }, 
+>>>>>>> 2928136... ga4gh data source loaded in, compatible with mango, no error
                 {
                     viz: pileup.viz.pileup(),
                     isReference: false,
@@ -66,6 +73,7 @@ xhr.onreadystatechange = function() {
                         killChr: false
                     }),
                     name: 'Alignment'
+<<<<<<< HEAD
                 },
                 {
                    viz: pileup.viz.pileup(),
@@ -76,6 +84,8 @@ xhr.onreadystatechange = function() {
                     }),
                    cssClass: 'normal',
                    name: 'Alignments'
+=======
+>>>>>>> 2928136... ga4gh data source loaded in, compatible with mango, no error
                 }
             ]
         });
