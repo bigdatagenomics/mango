@@ -296,20 +296,15 @@ class VizServlet extends ScalatraServlet {
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
 
       if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-        val sampleIds: List[String] = params("sample").split(",").toList
         val data =
-          if (viewRegion.length() < 1000) {
-            val isRaw =
-              try {
-                params("isRaw").toBoolean
-              } catch {
-                case e: Exception => false
-              }
+          if (viewRegion.length() < 10000) {
+            val isRaw = true
             val layer: Option[Layer] =
               if (isRaw) Some(VizReads.variantData.rawLayer)
               else None
             //Always fetches the frequency, but also additionally fetches raw data if necessary
-            VizReads.variantData.multiget(viewRegion, sampleIds, layer)
+            val samples = VizReads.variantData.fileMap.keys.toList
+            VizReads.variantData.multiget(viewRegion, samples, layer)
           } else VizReads.errors.outOfBounds
         Ok(data)
       }

@@ -55,7 +55,20 @@ xhr.onreadystatechange = function() {
                         contigList: contigList
                     }),
                     name: 'Reference'
-                }
+                },
+                #if (variantsExist)
+                    #for (s <- variantsPaths.get)
+                    {
+                        viz: pileup.viz.variants(),
+                        data: pileup.formats.variants({
+                            url: '/variants',
+                            contigList: contigList,
+                            sample: '${s}'
+                        }),
+                        name: 'Variants'
+                    }
+                    #end
+                #end
             ]
         });
     }

@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.mango.layout
 
-import java.lang
-
 import org.apache.spark.Logging
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.Genotype
@@ -92,6 +90,13 @@ class VariantLayout(values: Iterator[(ReferenceRegion, Genotype)]) extends Track
   def collect: Iterator[GenericTrack[Genotype]] = trackBuilder.map(t => Track[Genotype](t)).toIterator
 }
 
+object VariantJson {
+  def apply(g: Genotype): VariantJson = {
+    VariantJson(g.getContigName, g.getStart, g.getVariant.getReferenceAllele, g.getVariant.getAlternateAllele)
+  }
+}
+
 // tracked json objects for genotype visual data
 case class Mutation(alleles: String, start: Long, end: Long, sampleId: String, track: Long)
 case class VariantFreq(start: Long, alleleCounts: Map[String, Int], total: Int)
+case class VariantJson(contig: String, position: Long, ref: String, alt: String)
