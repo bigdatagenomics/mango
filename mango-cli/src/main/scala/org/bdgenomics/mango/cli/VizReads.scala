@@ -311,6 +311,21 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/testReads/:ref") {
+    val bamFile = VizReads.readsPaths.get.head
+    val region = ReferenceRegion("chrM", 0, 5)
+    val alignments = AlignmentRecordMaterialization.load(VizReads.sc, region, bamFile).filter(_.getStart > 3)
+    val gaReads: List[GAReadAlignment] = alignments.map(GA4GHConverter.toGAReadAlignment)
+      .collect
+      .toList
+    val readResponse = GASearchReadsResponse.newBuilder()
+      .setAlignments(gaReads)
+      .build()
+
+    // write response
+    Ok(readResponse.toString)
+  }
+
   get("/features/:ref") {
     if (!VizReads.featuresExist)
       VizReads.errors.notFound
