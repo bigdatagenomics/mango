@@ -1,0 +1,289 @@
+/**
+ * Grab-bag of utility functions.
+ * 
+ */
+'use strict';function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { 'default': obj };}var _pakoLibInflate = require(
+
+
+
+
+'pako/lib/inflate');var _pakoLibInflate2 = _interopRequireDefault(_pakoLibInflate);var _underscore = require(
+'underscore');var _underscore2 = _interopRequireDefault(_underscore);var _Interval = require(
+
+'./Interval');var _Interval2 = _interopRequireDefault(_Interval);
+
+// Compare two tuples of equal length. Is t1 <= t2?
+// TODO: make this tupleLessOrEqual<T> -- it works with strings or booleans, too.
+function tupleLessOrEqual(t1, t2) {
+  if (t1.length != t2.length) throw new Error('Comparing non-equal length tuples');
+  for (var i = 0; i < t1.length; i++) {
+    if (t1[i] > t2[i]) {
+      return false;} else 
+    if (t1[i] < t2[i]) {
+      return true;}}
+
+
+  return true;}
+
+
+// Do two ranges of tuples overlap?
+// TODO: make this tupleRangeOverlaps<T> -- it works with strings or booleans, too.
+function tupleRangeOverlaps(tupleRange1, 
+tupleRange2) {
+  return (
+    // Are the ranges overlapping?
+    tupleLessOrEqual(tupleRange1[0], tupleRange2[1]) && 
+    tupleLessOrEqual(tupleRange2[0], tupleRange1[1]) && 
+    // ... and non-empty?
+    tupleLessOrEqual(tupleRange1[0], tupleRange1[1]) && 
+    tupleLessOrEqual(tupleRange2[0], tupleRange2[1]));}
+
+
+// Return a new ArrayBuffer by concatenating an array of ArrayBuffers.
+function concatArrayBuffers(buffers) {
+  var totalBytes = buffers.map(function (b) {return b.byteLength;}).reduce(function (a, b) {return a + b;}, 0);
+  var output = new Uint8Array(totalBytes);
+  var position = 0;
+  buffers.forEach(function (buf) {
+    output.set(new Uint8Array(buf), position);
+    position += buf.byteLength;});
+
+  return output.buffer;}
+
+
+
+
+
+
+
+
+
+
+
+
+
+var inflationCache = {};
+
+// extracted for caching
+function _inflateOne(buffer, position) {
+  var inflator = new _pakoLibInflate2['default'].Inflate();
+  inflator.push(buffer.slice(position));
+  return { 
+    err: inflator.err, 
+    msg: inflator.msg, 
+    buffer: inflator.result ? inflator.result.buffer : null, 
+    total_in: inflator.strm.total_in };}
+
+
+
+function cachedInflateOne(buffer, position, cache) {
+  if (!cache) {
+    return _inflateOne(buffer, position);}
+
+  var cacheKey = cache.filename + ':' + (cache.initialOffset + position);
+  var v = inflationCache[cacheKey];
+  if (v && position + v.total_in > buffer.byteLength) {
+    // It should fail.
+    return _inflateOne(buffer, position);}
+
+
+  if (!v) {
+    v = _inflateOne(buffer, position);}
+
+  if (!v.err && v.buffer) {
+    inflationCache[cacheKey] = v;}
+
+  return v;}
+
+
+/**
+ * BAM files are written in "BGZF" format, which consists of many concatenated
+ * gzip blocks. gunzip concatenates all the inflated blocks, but pako only
+ * inflates one block at a time. This wrapper makes pako behave like gunzip.
+ * If specified, lastBlockStart will stop inflation before all the blocks
+ * have been processed.
+ */
+function inflateConcatenatedGzip(buffer, 
+lastBlockStart, 
+cache) {
+  var position = 0, 
+  blocks = [];
+  if (lastBlockStart === undefined) {
+    lastBlockStart = buffer.byteLength;}
+
+  do {
+    var result = cachedInflateOne(buffer, position, cache);
+
+    if (result.err) {
+      throw 'Gzip error: ' + result.msg;}
+
+    if (result.buffer) {
+      blocks.push({ 
+        offset: position, 
+        compressedLength: result.total_in, 
+        buffer: result.buffer });}
+
+
+    position += result.total_in;} while (
+  position <= lastBlockStart && position < buffer.byteLength);
+  return blocks;}
+
+
+/**
+ * Inflate one or more gzip blocks in the buffer.
+ * Returns the concatenation of all inflated blocks.
+ * This mirrors the behavior of gzip(1).
+ */
+function inflateGzip(buffer) {
+  return concatArrayBuffers(inflateConcatenatedGzip(buffer).map(function (x) {return x.buffer;}));}
+
+
+// Given 'chr9', return '9'. Given '9', return 'chr9'.
+function altContigName(contig) {
+  if (contig.slice(0, 3) == 'chr') {
+    return contig.slice(3);} else 
+  {
+    return 'chr' + contig;}}
+
+
+
+// Are two strings equal module a 'chr' prefix?
+// e.g. isChrMatch('17', 'chr17') == true
+function isChrMatch(a, b) {
+  return a == b || 'chr' + a == b || a == 'chr' + b;}
+
+
+/**
+ * Pipe all promise events through a deferred object.
+ * This is similar to deferred.resolve(promise), except that it allows progress
+ * notifications from the promise to bubble through.
+ */
+function pipePromise(deferred, promise) {
+  promise.then(deferred.resolve, deferred.reject, deferred.notify);}
+
+
+/**
+ * Scale the range by `factor` about its center.
+ * factor 2.0 will produce a range with twice the span, 0.5 with half.
+ * An invariant is that the center value will be identical before and after.
+ */
+function scaleRange(range, factor) {
+  var span = range.stop - range.start, 
+  center = Math.floor((range.start + range.stop) / 2), 
+  newSpan = Math.round(factor * span / 2) * 2, 
+  start = center - newSpan / 2, 
+  stop = center + newSpan / 2; // TODO: clamp
+
+  if (start < 0) {
+    // Shift to the right so that the range starts at zero.
+    stop -= start;
+    start = 0;}
+
+  return new _Interval2['default'](start, stop);}
+
+
+/**
+ * Parse a user-specified range into a range.
+ * Only the specified portions of the range will be filled out in the returned object.
+ * For example:
+ * 'chr17' --> {contig:'chr17'}
+ * '10-20' --> {start: 10, stop: 20}
+ * '17:10-20' --> {contig: '17', start: 10, stop: 20}
+ * Returns null if the range can't be parsed.
+ */
+function parseRange(range) {
+  // First try 'contig:start-stop'
+  var m = /^([^ :]+):([0-9,]+)-([0-9,]+)$/.exec(range);
+  if (m) {
+    return { 
+      contig: m[1], 
+      start: parseNumberWithCommas(m[2]), 
+      stop: parseNumberWithCommas(m[3]) };}
+
+
+
+  // Then contig:number
+  m = /^([^ :]+):([0-9,]+)$/.exec(range);
+  if (m) {
+    return { 
+      contig: m[1], 
+      start: parseNumberWithCommas(m[2]) };}
+
+
+
+  // Then 'start:stop'
+  m = /^([0-9,]+)-([0-9,]+)$/.exec(range);
+  if (m) {
+    return { 
+      start: parseNumberWithCommas(m[1]), 
+      stop: parseNumberWithCommas(m[2]) };}
+
+
+
+  // Then 'contig:' or non-numeric 'contig'
+  m = /^([^ :]+):$/.exec(range) || /^([^0-9][^ :]+)$/.exec(range);
+  if (m) {
+    return { contig: m[1] };}
+
+
+  // Then plain-old numbers.
+  m = /^([0-9,]+)$/.exec(range);
+  if (m) {
+    return { start: parseNumberWithCommas(m[1]) };}
+
+
+
+  return null;}
+
+
+function formatInterval(iv) {
+  return numberWithCommas(iv.start) + '-' + numberWithCommas(iv.stop);}
+
+
+// See http://stackoverflow.com/a/2901298/388951
+function numberWithCommas(x) {
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");}
+
+
+function parseNumberWithCommas(x) {
+  return parseInt(x.replace(/,/g, ''), 10);}
+
+
+function flatMap(array, fn) {
+  return _underscore2['default'].flatten(array.map(fn), true /* shallow */);}
+
+
+/**
+ * Determine the percentile-th element of xs.
+ * percentile should be an integer from 1 to 99.
+ * This will sort the xs.
+ */
+function computePercentile(xs, percentile) {
+  if (xs.length === 0) return 0; // placeholder value
+
+  xs.sort(function (a, b) {return a - b;});
+  var idx = (xs.length - 1) * percentile / 100, 
+  lo = Math.floor(idx), 
+  hi = Math.ceil(idx);
+
+  if (lo == hi) {
+    return xs[lo];} else 
+  {
+    return xs[lo] * (idx - lo) + xs[hi] * (hi - idx);}}
+
+
+
+module.exports = { 
+  tupleLessOrEqual: tupleLessOrEqual, 
+  tupleRangeOverlaps: tupleRangeOverlaps, 
+  concatArrayBuffers: concatArrayBuffers, 
+  inflateConcatenatedGzip: inflateConcatenatedGzip, 
+  inflateGzip: inflateGzip, 
+  altContigName: altContigName, 
+  pipePromise: pipePromise, 
+  scaleRange: scaleRange, 
+  parseRange: parseRange, 
+  formatInterval: formatInterval, 
+  isChrMatch: isChrMatch, 
+  flatMap: flatMap, 
+  computePercentile: computePercentile };

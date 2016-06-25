@@ -61,6 +61,22 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
 
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
+   *
+   * @param region Region to retrieve data from
+   * @param ks keys whose data to retrieve
+   * @return jsonified data
+   */
+  def getRaw(region: ReferenceRegion, ks: List[String]): RDD[Any] = {
+    // Filter IntervalRDD by region and requested layer
+    val data: RDD[Any] = intRDD.filterByInterval(region)
+      .mapValues(r => r.get(region, ks, Some(L0)))
+      .toRDD.flatMap(_._2.flatMap(_._2))
+
+    data
+  }
+
+  /**
+   * Gets the tiles overlapping a given region corresponding to the specified keys
    * @param region Region to retrieve data from
    * @param ks keys whose data to retrieve
    * @param layers: List of layers to fetch from tile

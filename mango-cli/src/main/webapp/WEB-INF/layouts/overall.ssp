@@ -1,4 +1,4 @@
-<%@ val dictionary:     String  %>
+<%@ val dictionary: String%>
 <%@ val readsExist:     Boolean %>
 <%@ val readsSamples:   Option[List[String]] %>
 <%@ val variantsPaths:  Option[List[String]] %>
@@ -8,36 +8,31 @@
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
 <% render("navigation/navigation.ssp", Map("isOverall" -> true)) %>
-<% render("navigation/panAndZoom.ssp", Map("isOverall" -> true)) %>
-
 <% render("templates/sidebar.ssp") %>
 
-<div class="main">
-    <div id="home">
-        <% render("templates/home.ssp", Map("dictionary" -> dictionary)) %>
-    </div>
+<div id="main">
+    <%--<div id="home">--%>
+        <%--<% render("templates/home.ssp", Map("dictionary" -> dictionary)) %>--%>
+    <%--</div>--%>
 
-    <div id="tracks">
-        <div class="graphArea" id="refArea"></div>
+        <%--#if (featuresExist)--%>
+            <%--<div class="graphArea" id="featArea"></div>--%>
+        <%--#end--%>
 
-        #if (featuresExist)
-            <div class="graphArea" id="featArea"></div>
-        #end
+        <%--#if (variantsExist)--%>
+            <%--<div class="graphArea" id="varArea">--%>
+            <%--<% variantsPaths.get.foreach(s =>--%>
+                <%--render("templates/variants.ssp", Map("sample" -> s, "id" -> s)))%>--%>
+            <%--</div>--%>
+        <%--#end--%>
 
-        #if (variantsExist)
-            <div class="graphArea" id="varArea">
-            <% variantsPaths.get.foreach(s =>
-                render("templates/variants.ssp", Map("sample" -> s, "id" -> s)))%>
-            </div>
-        #end
+        <%--#if (readsExist)--%>
+            <%--<div class="graphArea" id="readsArea">--%>
+            <%--<% readsSamples.get.foreach(s =>--%>
+                <%--render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>--%>
+            <%--</div>--%>
+        <%--#end--%>
 
-        #if (readsExist)
-            <div class="graphArea" id="readsArea">
-            <% readsSamples.get.foreach(s =>
-                render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>
-            </div>
-        #end
-    </div>
 </div>
 
 
@@ -52,12 +47,40 @@
     var readsExist = ${readsExist};
     var variantsExist = ${variantsExist};
     var featuresExist = ${featuresExist};
-
-    var sequenceDict = "${dictionary}";
-    sequenceDict = sequenceDict.split(",");
-    autoComplete(sequenceDict);
-    refVis(sequenceDict);
+    refVis("${dictionary}");
     toggleContent(false);
+
+</script>
+
+<script>
+var div = document.getElementById('main');
+// TODO: make function in pileup to fetch SequenceDictionary
+var request = "/sequenceDictionary"
+var xhr = new XMLHttpRequest();
+xhr.open('GET', request, true);
+xhr.send();
+
+xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+        var contigList = JSON.parse(xhr.response);
+        var p = pileup.create(div, {
+            // go to one of the chromosomes in sequence dictionary
+            range: {contig: 'chrM', start: 0, stop: 100},
+            tracks: [
+                {
+                    viz: pileup.viz.genome(),
+                    isReference: true,
+                    data: pileup.formats.reference({
+                        url: '/reference',
+                        contigList: contigList
+                    }),
+                    name: 'Reference'
+                }
+            ]
+        });
+    }
+};
+
 
 </script>
 
@@ -82,5 +105,6 @@
     <script src="js/freq.js"></script>
     <script src="js/reads.js"></script>
 #end
+
 
 </html>

@@ -286,20 +286,20 @@
           <artifactId>scalatest-maven-plugin</artifactId>
           <version>1.0</version>
           <configuration>
-          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
-          <junitxml>.</junitxml>
-          <filereports>mangoTestSuite.txt</filereports>
-          <argLine>-Xmx1024m -Dsun.io.serialization.extendedDebugInfo=true</argLine>
-          <stdout>F</stdout>
+            <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+            <junitxml>.</junitxml>
+            <filereports>mangoTestSuite.txt</filereports>
+            <argLine>-Xmx1024m -Dsun.io.serialization.extendedDebugInfo=true</argLine>
+            <stdout>F</stdout>
           </configuration>
-            <executions>
-              <execution>
-                <id>test</id>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-              </execution>
-            </executions>
+          <executions>
+            <execution>
+              <id>test</id>
+              <goals>
+                <goal>test</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -326,6 +326,17 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>net.fnothaft</groupId>
+        <artifactId>ga4gh-format</artifactId>
+        <version>0.5.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro-ipc</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
       <dependency>
         <groupId>args4j</groupId>
         <artifactId>args4j</artifactId>

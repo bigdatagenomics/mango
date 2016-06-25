@@ -56,4 +56,12 @@ class ReferenceMaterializationSuite extends MangoFunSuite {
     assert(response1 == response2)
   }
 
+  sparkTest("assert byte array and string is the sampe") {
+    val chunkSize = 100
+
+    val refRDD = new ReferenceMaterialization(sc, referencePath, chunkSize)
+    val response1: String = new String(refRDD.getReferenceAsBytes(region).map(_.toChar))
+    val response2: String = refRDD.getReferenceString(region)
+    assert(response1 == response2)
+  }
 }
