@@ -53,14 +53,18 @@ class AlignmentRecordMaterialization(s: SparkContext,
                                      chunkS: Int,
                                      refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[AlignmentRecordTile] with Serializable with Logging {
 
-  protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
   val dict = refRDD.dict
-  val sc = s
+  @transient val sc = s
+  @transient implicit val formats = net.liftweb.json.DefaultFormats
   val chunkSize = chunkS
   val prefetchSize = if (sc.isLocal) 3000 else 10000
   val bookkeep = new Bookkeep(prefetchSize)
   val files = filePaths
-
+  def getStart = (ar: AlignmentRecord) => ar.getStart
+  def toTile = (data: Iterable[(String, AlignmentRecord)], region: ReferenceRegion, reference: Option[String]) => {
+    AlignmentRecordTile(data, region, reference.get)
+  }
+  def load = (region: ReferenceRegion, file: String) => AlignmentRecordMaterialization.load(sc, region, file)
   /**
    * Define layers and underlying data types
    */
@@ -95,11 +99,10 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return JSONified data
    */
   def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files) //, true)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
             put(r)
@@ -150,8 +153,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return JSONified data
    */
   def stringifyRawAlignments(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-
     val data: Array[(String, Iterable[CalculatedAlignmentRecord])] = rdd
       .mapValues(_.asInstanceOf[Iterable[CalculatedAlignmentRecord]])
       .mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start)).collect
@@ -170,7 +171,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return JSONified data
    */
   def stringifyPointMismatches(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
     val binSize = VizUtils.getBinSize(region)
 
     val data = rdd
@@ -198,7 +198,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
     if (seqRecord.isDefined) {
       val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))
       val reference = refRDD.getReferenceString(trimmedRegion)
-      var data: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
+      var data: RDD[(String, AlignmentRecord)] = sc.emptyRDD[(String, AlignmentRecord)]
 
       // divide regions by chunksize
       val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
@@ -206,23 +206,25 @@ class AlignmentRecordMaterialization(s: SparkContext,
       // get alignment data for all samples
       files.map(fp => {
         // per sample data
-        val kdata = AlignmentRecordMaterialization.load(sc, trimmedRegion, fp)
+        val k = LazyMaterialization.filterKeyFromFile(fp)
+        val kdata = AlignmentRecordMaterialization.load(sc, trimmedRegion, fp).map(r => (k, r))
         data = data.union(kdata)
       })
 
-      var mappedRecords: RDD[(ReferenceRegion, AlignmentRecord)] = sc.emptyRDD[(ReferenceRegion, AlignmentRecord)]
+      var mappedRecords: RDD[(ReferenceRegion, (String, AlignmentRecord))] = sc.emptyRDD[(ReferenceRegion, (String, AlignmentRecord))]
 
       // for all regions, filter by that region and create AlignmentRecordTile
       regions.foreach(r => {
-        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
+        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar._2))).map(ar => (r, ar))
         mappedRecords = mappedRecords.union(grouped)
       })
 
-      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
+      val groupedRecords: RDD[(ReferenceRegion, Iterable[(String, AlignmentRecord)])] =
         mappedRecords
           .groupBy(_._1)
           .map(r => (r._1, r._2.map(_._2)))
-      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, r._1)))
+      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] =
+        groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, r._1, reference)))
 
       // insert into IntervalRDD
       if (intRDD == null) {

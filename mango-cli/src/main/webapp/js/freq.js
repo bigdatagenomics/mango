@@ -5,9 +5,9 @@ var height = 100;
 var maxFreqs = {}
 
 var svgContainer = {};
-for (var i = 0; i < samples.length; i++) {
-  var selector = "#" + samples[i] + ">.sampleSummary";
-  svgContainer[samples[i]] = d3.select(selector)
+for (var i = 0; i < readFiles.length; i++) {
+  var selector = "#" + readFiles[i] + ">.sampleSummary";
+  svgContainer[readFiles[i]] = d3.select(selector)
     .select(".coverage-svg")
       .attr("height", height)
       .attr("width", width);
@@ -21,7 +21,7 @@ var bisectData = d3.bisector(function(d) {
 function renderCoverage(json) {
    var i = 0;
    $.map(json, function(value, key) {
-      renderJsonCoverage("reads_" + i,value);
+      renderJsonCoverage(key,value);
       i++;
    });
 }

@@ -29,7 +29,6 @@ import org.bdgenomics.adam.models.ReferenceRegion
  * @tparam T: Tile Type (Alignment, Variant, Feature, etc.)
  */
 trait KTiles[T <: KLayeredTile] extends Serializable {
-  implicit val formats = net.liftweb.json.DefaultFormats
 
   /* Interval RDD holding data tiles. Each node in the tree is a tile spanning a region of size chunkSize */
   def intRDD: IntervalRDD[ReferenceRegion, T]
@@ -150,5 +149,63 @@ abstract class KLayeredTile extends Serializable with Logging {
   def get(region: ReferenceRegion, layers: List[Layer]): Map[Int, Map[String, Iterable[Any]]] = {
     layerMap.filterKeys(k => layers.map(_.id).contains(k))
   }
+}
+
+trait Layer extends Serializable {
+  def id: Int
+  def maxSize: Long
+  def range: Tuple2[Long, Long]
+  val finalSize = 1000
+
+  def patchSize: Int
+  def stride: Int
+
+}
+
+/* For raw data */
+object L0 extends Layer {
+  val id = 0
+  val maxSize = 5000L
+  val range = (0L, maxSize)
+  val patchSize = 0
+  val stride = 0
+
+  def fromCharBytes(arr: Array[Byte]): String = arr.map(_.toChar).mkString
+}
+
+/* For objects 5000 to 10000 */
+object L1 extends Layer {
+  val id = 1
+  val maxSize = 10000L
+  val range = (5000L, maxSize)
+  val patchSize = 10
+  val stride = 10
+}
+
+/* For objects 10,000 to 100,000 */
+object L2 extends Layer {
+  val id = 2
+  val maxSize = 100000L
+  val range = (L1.maxSize, maxSize)
+  val patchSize = 100
+  val stride = patchSize
+}
+
+/* For objects 100,000 to 1,000,000 */
+object L3 extends Layer {
+  val id = 3
+  val maxSize = 1000000L
+  val range = (L2.maxSize, maxSize)
+  val patchSize = 1000
+  val stride = patchSize
+}
+
+/* For objects 1000000 + */
+object L4 extends Layer {
+  val id = 4
+  val maxSize = 10000000L
+  val range = (L3.maxSize, maxSize)
+  val patchSize = 10000
+  val stride = patchSize
 }
 

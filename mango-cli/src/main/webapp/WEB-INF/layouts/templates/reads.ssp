@@ -1,9 +1,8 @@
 <!-- Sample Reads -->
 <%@ val sample: String %>
-<%@ val id: String %>
-<% val alignment = id.concat(">.alignmentData") %>
+<% val alignment = sample.concat(">.alignmentData") %>
 
-<div id="${id}" class="samples">
+<div id="${sample}" class="samples">
 
     <div class="sampleLegend">
         <div class="col-md-9 title">${sample}</div>
@@ -12,7 +11,7 @@
                     name="viewAlignments"
                     type="checkbox"
                     onClick="toggleAlignments('${sample}')"
-                    id='viewAlignments${id}'
+                    id='viewAlignments${sample}'
                     class="viewAlignments">
             <label for="viewAlignments">Alignments</label>
         </div>
@@ -34,7 +33,7 @@
 </div>
 
 <script>
-    var alignmentSelector = $(getAlignmentSelector('${id}'));
+    var alignmentSelector = $(getAlignmentSelector('${sample}'));
     $(alignmentSelector).hide();
 
     //Configuration Variables

@@ -22,7 +22,6 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -30,7 +29,6 @@ import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ VariantFreq, VariantJson }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
-import org.bdgenomics.utils.intervalrdd.IntervalRDD
 
 import scala.reflect.ClassTag
 
@@ -45,12 +43,16 @@ class GenotypeMaterialization(s: SparkContext,
                               chunkS: Int) extends LazyMaterialization[Genotype, VariantTile]
     with KTiles[VariantTile] with Serializable {
 
-  val sc = s
+  @transient val sc = s
+  @transient implicit val formats = net.liftweb.json.DefaultFormats
   val dict = d
   val partitions = parts
   val chunkSize = chunkS
   val bookkeep = new Bookkeep(chunkSize)
   val files = filePaths
+  def getStart = (g: Genotype) => g.getStart
+  def toTile = (data: Iterable[(String, Genotype)], region: ReferenceRegion, reference: Option[String]) => VariantTile(data)
+  def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
 
   /**
    * Define layers and underlying data types
@@ -65,11 +67,10 @@ class GenotypeMaterialization(s: SparkContext,
     * Here, ks, is an option of list of personids (String)
     */
   def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files, true)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
             put(r)
@@ -114,8 +115,6 @@ class GenotypeMaterialization(s: SparkContext,
    * @return
    */
   def stringifyRawGenotypes(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-
     val data: Array[(String, Iterable[Genotype])] = rdd
       .mapValues(_.asInstanceOf[Iterable[Genotype]])
       .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
@@ -136,97 +135,12 @@ class GenotypeMaterialization(s: SparkContext,
    * @return
    */
   def stringifyFreq(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
     val data: Array[(String, Iterable[VariantFreq])] = rdd
       .mapValues(_.asInstanceOf[Iterable[VariantFreq]])
       .mapValues(r => r.filter(r => r.start <= region.end && r.start >= region.start)).collect
     write(data.toMap)
   }
 
-  /**
-   * Transparent to the user, should only be called by get if IntervalRDD.get does not return data
-   * Fetches the data from disk, using predicates and range filtering
-   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
-   *
-   * @param region ReferenceRegion in which data is retreived
-   */
-  def put(region: ReferenceRegion) = {
-    val seqRecord = dict(region.referenceName)
-    if (seqRecord.isDefined) {
-      var data: RDD[Genotype] = sc.emptyRDD[Genotype]
-      val end =
-        Math.min(region.end, seqRecord.get.length)
-      val start = Math.min(region.start, end)
-      val trimmedRegion = new ReferenceRegion(region.referenceName, start, end)
-
-      //divide regions by chunksize
-      val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
-      files.map(fp => {
-        val genotypes = GenotypeMaterialization.load(sc, Option(trimmedRegion), fp)
-        data = data.union(genotypes)
-      })
-
-      var mappedRecords: RDD[(ReferenceRegion, Genotype)] = sc.emptyRDD[(ReferenceRegion, Genotype)]
-
-      regions.foreach(r => {
-        val grouped = data.filter(vr => r.overlaps(ReferenceRegion(vr.getContigName, vr.getStart, vr.getEnd)))
-          .map(vr => (r, vr))
-        mappedRecords = mappedRecords.union(grouped)
-      })
-
-      val groupedRecords: RDD[(ReferenceRegion, Iterable[Genotype])] =
-        mappedRecords
-          .groupBy(_._1)
-          .map(r => (r._1, r._2.map(_._2)))
-
-      val tiles: RDD[(ReferenceRegion, VariantTile)] = groupedRecords.map(r => (r._1, VariantTile(r._2)))
-
-      // insert into IntervalRDD
-      if (intRDD == null) {
-        intRDD = IntervalRDD(tiles)
-        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-      } else {
-        val t = intRDD
-        intRDD = intRDD.multiput(tiles)
-        // TODO: can we do this incrementally instead?
-        t.unpersist(true)
-        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-      }
-      bookkeep.rememberValues(region, files)
-
-    }
-  }
-  //
-  //  /**
-  //   * Puts in the data from a file/sample into the IntervalRDD
-  //   */
-  //  def putPerSample(data: RDD[Genotype], fileName: String, regions: List[ReferenceRegion]) = {
-  //    var mappedRecords: RDD[(ReferenceRegion, Genotype)] = sc.emptyRDD[(ReferenceRegion, Genotype)]
-  //
-  //    regions.foreach(r => {
-  //      val grouped = data.filter(vr => r.overlaps(ReferenceRegion(vr.getContigName, vr.getStart, vr.getEnd)))
-  //        .map(vr => (r, vr))
-  //      mappedRecords = mappedRecords.union(grouped)
-  //    })
-  //
-  //    val groupedRecords: RDD[(ReferenceRegion, Iterable[Genotype])] =
-  //      mappedRecords
-  //        .groupBy(_._1)
-  //        .map(r => (r._1, r._2.map(_._2)))
-  //
-  //    val tiles: RDD[(ReferenceRegion, VariantTile)] = groupedRecords.map(r => (r._1, VariantTile(r._2, fileName)))
-  //    // insert into IntervalRDD
-  //    if (intRDD == null) {
-  //      intRDD = IntervalRDD(tiles)
-  //      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-  //    } else {
-  //      val t = intRDD
-  //      intRDD = intRDD.multiput(tiles)
-  //      // TODO: can we do this incrementally instead?
-  //      t.unpersist(true)
-  //      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-  //    }
-  //  }
 }
 
 object GenotypeMaterialization {

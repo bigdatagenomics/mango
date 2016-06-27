@@ -47,17 +47,16 @@ function renderVariantSummary(refName, start, end) {
           if (data.hasOwnProperty(key)) {
             var value = data[key];
             renderd3Line(summarySvgContainer[varFiles[i]], varHeight);
-            varSummaryData[i] = [];
             //data from backend now split between freq and variants
-            varSummaryData[i]= data;
+            varSummaryData[i]= value;
             renderVariantFreq(varSummaryData[i], varFiles[i]);
           }
           i++;
         }
       }
     }
+    stopWait("varArea");
   });
-  stopWait("varArea");
   var keys = Object.keys(varSvgContainer);
   keys.forEach(function(varFile) {
     var checkSelector = "#viewVariants" + varFile;

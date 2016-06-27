@@ -29,7 +29,7 @@ function isValidHttpResponse(data) {
 
 // Toggles alignment record contained in the selector for a given sample
 function toggleAlignments(sample, selector) {
-    var selector = $(getAlignmentSelector(filterName(sample)));
+    var selector = $(getAlignmentSelector(sample));
     if (!selector.is(':visible')) {
             renderAlignments(viewRefName, viewRegStart, viewRegEnd, sample);
         }

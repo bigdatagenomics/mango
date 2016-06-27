@@ -41,7 +41,7 @@ class ReferenceMaterializationSuite extends MangoFunSuite {
     val chunkSize = 100
     val refRDD = new ReferenceMaterialization(sc, referencePath, chunkSize)
     val response: String = refRDD.getReferenceString(region)
-    val first = refRDD.intRDD.toRDD.first._2.rawData
+    val first = refRDD.intRDD.toRDD.first._2
     assert(first.length == chunkSize)
   }
 

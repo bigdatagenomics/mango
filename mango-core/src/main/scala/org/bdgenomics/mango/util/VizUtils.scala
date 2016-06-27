@@ -52,6 +52,19 @@ object VizUtils {
     return Math.max(1, binSize)
   }
 
+  /*
+ * Trims level one strings to reference region
+ * @param str: String to trim
+ * @param region: ReferenceRegion to trim to
+ *
+ * @return trimmed string
+ */
+  def trimSequence(str: String, region: ReferenceRegion, size: Int): String = {
+    val length = region.length.toInt
+    val start = (region.start % size).toInt
+    str.substring(start, start + length)
+  }
+
 }
 
 /*

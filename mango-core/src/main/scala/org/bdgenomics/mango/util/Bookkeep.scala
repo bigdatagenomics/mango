@@ -28,7 +28,7 @@ import scala.collection.mutable.{ HashMap, ListBuffer }
  * which stores the regions that have been loaded for each id (which is a string)
  * @param chunkSize Chunk size is the size at which data is loaded into memory
  */
-class Bookkeep(chunkSize: Int) {
+class Bookkeep(chunkSize: Int) extends Serializable {
 
   /*
    * Holds hash of id: String and IntervalTree of what regions exist
@@ -96,10 +96,16 @@ class Bookkeep(chunkSize: Int) {
    * @param ks in which region is searched over. these are sample IDs
    * @return List of materialied and merged reference regions not found in bookkeeping structure
    */
-  def getMaterializedRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
+  def getMaterializedRegions(region: ReferenceRegion, ks: List[String], flanking: Boolean = false): Option[List[ReferenceRegion]] = {
     val start = region.start / chunkSize * chunkSize
-    val end = region.end / chunkSize * chunkSize + (chunkSize - 1)
-    getMissingRegions(new ReferenceRegion(region.referenceName, start, end), ks)
+    val end = start + (chunkSize - 1)
+    val chunkedRegion =
+      if (flanking) {
+        val flankedStart = Math.max(0, (start - chunkSize))
+        val flankedEnd = end + chunkSize
+        ReferenceRegion(region.referenceName, flankedStart, flankedEnd)
+      } else ReferenceRegion(region.referenceName, start, end)
+    getMissingRegions(chunkedRegion, ks)
   }
 
 }

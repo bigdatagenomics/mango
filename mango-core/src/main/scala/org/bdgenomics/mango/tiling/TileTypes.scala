@@ -18,22 +18,17 @@
 package org.bdgenomics.mango.tiling
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Genotype, Feature }
-import org.bdgenomics.mango.layout.{ VariantFreqLayout, PositionCount, PointMisMatch, MismatchLayout, CalculatedAlignmentRecord }
-
-case class ReferenceTile(sequence: String) extends LayeredTile[String] with Serializable {
-  val rawData = sequence
-  val layerMap = null
-}
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
+import org.bdgenomics.mango.layout.{ CalculatedAlignmentRecord, MismatchLayout, PointMisMatch, PositionCount, VariantFreqLayout }
 
 case class FeatureTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
 object FeatureTile {
-  def apply(data: Iterable[Feature],
+  def apply(data: Iterable[(String, Feature)],
             region: ReferenceRegion): FeatureTile = {
 
     // formats raw feature data
-    val rawData: Map[String, Iterable[Feature]] = data.toList.groupBy(_.getSource)
+    val rawData = data.groupBy(_._1).mapValues(r => r.map(_._2))
 
     // Calculate coverage of features
     val layer1 = rawData.mapValues(v => {
@@ -53,12 +48,12 @@ object FeatureTile {
 case class AlignmentRecordTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
 object AlignmentRecordTile {
-  def apply(data: Iterable[AlignmentRecord],
-            reference: String,
-            region: ReferenceRegion): AlignmentRecordTile = {
+  def apply(data: Iterable[(String, AlignmentRecord)],
+            region: ReferenceRegion,
+            reference: String): AlignmentRecordTile = {
 
     /* Calculate Coverage at each position */
-    val grouped: Map[String, Iterable[AlignmentRecord]] = data.toList.groupBy(_.getRecordGroupSample)
+    val grouped: Map[String, Iterable[AlignmentRecord]] = data.groupBy(_._1).mapValues(r => r.map(_._2))
     val coverage: Map[String, Iterable[PositionCount]] = grouped.mapValues(v => {
       v.flatMap(r => (r.getStart.toLong to r.getEnd.toLong))
         .map(r => (r, 1)).groupBy(_._1)
@@ -84,8 +79,8 @@ object AlignmentRecordTile {
 case class VariantTile(layerMap: Map[Int, Map[String, Iterable[Any]]]) extends KLayeredTile with Serializable
 
 object VariantTile {
-  def apply(data: Iterable[Genotype]): VariantTile = {
-    val rawData = data.groupBy(_.getSampleId) // TODO: verify that this is unique
+  def apply(data: Iterable[(String, Genotype)]): VariantTile = {
+    val rawData = data.groupBy(_._1).mapValues(r => r.map(_._2))
     val layer1 = rawData.mapValues(r => VariantFreqLayout(r))
     new VariantTile(Map(0 -> rawData, 1 -> layer1))
   }

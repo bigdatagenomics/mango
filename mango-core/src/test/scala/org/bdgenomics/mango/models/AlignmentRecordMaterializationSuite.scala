@@ -18,14 +18,13 @@
 
 package org.bdgenomics.mango.models
 
-import net.liftweb.json._
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.mango.util.MangoFunSuite
 
 class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
-  implicit val formats = DefaultFormats
+  //  implicit val formats = DefaultFormats
 
   def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): Long = {
     sc.loadIndexedBam(file, viewRegion).count
@@ -68,28 +67,28 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     }
 
   }
-
-  sparkTest("Test frequency retrieval") {
-    val reference = new ReferenceMaterialization(sc, referencePath, 100)
-    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
-    val region = new ReferenceRegion("chrM", 0L, 20L)
-    val freq = data.getFrequency(region)
-    val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
-
-    // extract number of positions in string ('position' => 'p')
-    val count = coverageJson.count(p => p == 'p')
-    assert(count == 21)
-  }
-
-  sparkTest("Test frequency retrieval across interval nodes") {
-    val reference = new ReferenceMaterialization(sc, referencePath, 100)
-    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
-    val region = new ReferenceRegion("chrM", 90L, 110L)
-    val freq = data.getFrequency(region)
-    val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
-    // extract number of positions in string ('position' => 'p')
-    val count = coverageJson.count(p => p == 'p')
-    assert(count == 21)
-  }
+  //
+  //  sparkTest("Test frequency retrieval") {
+  //    val reference = new ReferenceMaterialization(sc, referencePath, 100)
+  //    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
+  //    val region = new ReferenceRegion("chrM", 0L, 20L)
+  //    val freq = data.getFrequency(region)
+  //    val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
+  //
+  //    // extract number of positions in string ('position' => 'p')
+  //    val count = coverageJson.count(p => p == 'p')
+  //    assert(count == 21)
+  //  }
+  //
+  //  sparkTest("Test frequency retrieval across interval nodes") {
+  //    val reference = new ReferenceMaterialization(sc, referencePath, 100)
+  //    val data = AlignmentRecordMaterialization(sc, files, reference.chunkSize, reference)
+  //    val region = new ReferenceRegion("chrM", 90L, 110L)
+  //    val freq = data.getFrequency(region)
+  //    val coverageJson = parse(freq).extract[Map[String, String]].get("coverage").get
+  //    // extract number of positions in string ('position' => 'p')
+  //    val count = coverageJson.count(p => p == 'p')
+  //    assert(count == 21)
+  //  }
 
 }

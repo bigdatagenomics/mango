@@ -43,7 +43,7 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
     val data = GenotypeMaterialization(sc, List(vcfFile1), sd, 10)
     val json = data.get(region)
 
-    assert(json.contains("NA12878"))
+    assert(json.contains("truetest"))
 
   }
 
@@ -52,7 +52,7 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
     val data = GenotypeMaterialization(sc, vcfFiles, sd, 10)
     val json = data.get(region)
 
-    assert(json.contains("NA12878"))
+    assert(json.contains("truetest"))
 
   }
 
