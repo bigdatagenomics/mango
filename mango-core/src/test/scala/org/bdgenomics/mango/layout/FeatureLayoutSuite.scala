@@ -26,13 +26,11 @@ class FeatureLayoutSuite extends MangoFunSuite {
 
   sparkTest("test correct json format of 2 overlapping features") {
     val feature1 = Feature.newBuilder()
-      .setContig(Contig.newBuilder().setContigName("contigName").build())
       .setStart(1)
       .setEnd(10)
       .build()
 
     val feature2 = Feature.newBuilder()
-      .setContig(Contig.newBuilder().setContigName("contigName").build())
       .setStart(5)
       .setEnd(15)
       .build()
@@ -49,13 +47,11 @@ class FeatureLayoutSuite extends MangoFunSuite {
 
   sparkTest("test correct json format of 2 nonoverlapping features") {
     val feature1 = Feature.newBuilder()
-      .setContig(Contig.newBuilder().setContigName("contigName").build())
       .setStart(1)
       .setEnd(10)
       .build()
 
     val feature2 = Feature.newBuilder()
-      .setContig(Contig.newBuilder().setContigName("contigName").build())
       .setStart(15)
       .setEnd(21)
       .build()

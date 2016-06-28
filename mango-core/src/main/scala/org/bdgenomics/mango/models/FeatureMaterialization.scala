@@ -187,7 +187,7 @@ object FeatureMaterialization {
         case None    => None
       }
 
-    val proj = Projection(FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end, FeatureField.contig)
+    val proj = Projection(FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end, FeatureField.contigName)
     sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
   }
 
