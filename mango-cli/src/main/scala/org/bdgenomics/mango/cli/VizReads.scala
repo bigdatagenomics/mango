@@ -252,40 +252,16 @@ class VizServlet extends ScalatraServlet {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
         contentType = "json"
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-
-        // determines whether to wait for reference to complete calculation
-        val wait =
-          try {
-            params("wait").toBoolean
-          } catch {
-            case e: Exception => false
+        if (dictOpt.isDefined) {
+          while (VizReads.readsWait) Thread sleep (20)
+          // region was already collected, grab from cache
+          if (viewRegion != VizReads.readsRegion) {
+            VizReads.readsWait = true
+            VizReads.readsCache = VizReads.readsData.get.get(viewRegion)
+            VizReads.readsRegion = viewRegion
+            VizReads.readsWait = false
           }
-        // wait for reference to finish to avoid race condition to reference string
-        if (wait) {
-          var stopWait = false
-          while (!stopWait) {
-            stopWait = viewRegion.equals(session.get("referenceRegion").get)
-            Thread sleep 20
-          }
-        }
-        if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-          val data =
-            if (viewRegion.length() < VizReads.readsLimit) {
-              val isRaw =
-                try {
-                  params("isRaw").toBoolean
-                } catch {
-                  case e: Exception => false
-                }
-              val layer: Option[Layer] =
-                if (isRaw) Some(VizReads.readsData.get.rawLayer)
-                else None
-              VizReads.readsData.get.get(viewRegion, layer)
-            } else {
-              // Large Region. just return read frequencies
-              VizReads.readsData.get.getFrequency(viewRegion)
-            }
-          Ok(data)
+          val results = VizReads.readsCache.get(key)
         } else VizReads.errors.outOfBounds
       }
     }
