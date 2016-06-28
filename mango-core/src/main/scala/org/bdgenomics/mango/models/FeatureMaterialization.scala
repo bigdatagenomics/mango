@@ -38,8 +38,6 @@ class FeatureMaterialization(sc: SparkContext,
                              dict: SequenceDictionary,
                              chunkS: Int) extends Tiles[Iterable[Feature], FeatureTile] with Serializable with Logging {
 
-  //Regex for splitting fragments to the chunk size specified above
-
   protected def tag = reflect.classTag[Iterable[Feature]]
 
   init
@@ -67,7 +65,7 @@ class FeatureMaterialization(sc: SparkContext,
             put(r)
           }
         }
-        getTiles(region)
+        getRaw(region)
       } case None => {
         throw new Exception("Not found in dictionary")
       }
@@ -88,7 +86,7 @@ class FeatureMaterialization(sc: SparkContext,
 
       // get alignment data for all samples
       filePaths.map(path => {
-        val fileData = FeatureMaterialization.load(sc, region, path)
+        val fileData = FeatureMaterialization.load(sc, Some(region), path)
         data = data.union(fileData)
       })
 
@@ -146,13 +144,13 @@ class FeatureMaterialization(sc: SparkContext,
 object FeatureMaterialization {
 
   /**
-   * Loads alignment data from bam, sam and ADAM file formats
+   * Loads feature data from bam, sam and ADAM file formats
    * @param sc SparkContext
    * @param region Region to load
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[Feature] = {
+  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
     else if (fp.endsWith(".bed")) {
       FeatureMaterialization.loadFromBed(sc, region, fp)
@@ -168,8 +166,11 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadFromBed(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[Feature] = {
-    sc.loadFeatures(fp).filterByOverlappingRegion(region)
+  def loadFromBed(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
+    region match {
+      case Some(_) => sc.loadFeatures(fp).filterByOverlappingRegion(region.get)
+      case None    => sc.loadFeatures(fp)
+    }
   }
 
   /**
@@ -179,10 +180,15 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[Feature] = {
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contig.contigName") === region.referenceName))
+  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
+    val pred: Option[FilterPredicate] =
+      region match {
+        case Some(_) => Some(((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) && (BinaryColumn("contig.contigName") === region.get.referenceName)))
+        case None    => None
+      }
+
     val proj = Projection(FeatureField.featureId, FeatureField.featureType, FeatureField.start, FeatureField.end, FeatureField.contig)
-    sc.loadParquetFeatures(fp, predicate = Some(pred), projection = Some(proj))
+    sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
   }
 
 }

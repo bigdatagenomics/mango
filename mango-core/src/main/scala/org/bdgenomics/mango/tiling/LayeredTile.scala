@@ -97,7 +97,6 @@ abstract class LayeredTile[S: ClassTag] extends Serializable with Logging {
 
   def getAggregated(region: ReferenceRegion): Array[Byte] = {
     val size = region.length()
-
     size match {
       case x if (x < L1.range._1) => throw new Exception(s"Should fetch raw data for regions < ${L1.range._1}")
       case x if (x >= L1.range._1 && x < L1.range._2) => layerMap(1)

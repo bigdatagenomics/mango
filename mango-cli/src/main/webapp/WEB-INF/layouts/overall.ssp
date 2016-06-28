@@ -1,4 +1,5 @@
 <%@ val dictionary:     String  %>
+<%@ val regions: String %>
 <%@ val readsExist:     Boolean %>
 <%@ val readsSamples:   Option[List[String]] %>
 <%@ val variantsPaths:  Option[List[String]] %>
@@ -14,7 +15,7 @@
 
 <div class="main">
     <div id="home">
-        <% render("templates/home.ssp", Map("dictionary" -> dictionary)) %>
+        <% render("templates/home.ssp", Map("dictionary" -> dictionary, "regions" -> regions)) %>
     </div>
 
     <div id="tracks">

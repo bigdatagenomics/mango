@@ -1,21 +1,45 @@
 <%@ val dictionary: String %>
+<%@ val regions: String %>
 
 <div class="chrChart"></div>
 <script>
-var sequenceDict = "${dictionary}"
+var sequenceDict = "${dictionary}";
+var regions = "${regions}";
 
-home(sequenceDict.split(","));
-function home(dictionary){
+
+home(sequenceDict.split(","), regions.split(","));
+
+function home(dictionary, regions){
+  // Define the div for the tooltip
+  var div = d3.select(".chrChart").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
   //Render read summary visualization on the home screen at startup 
   var namelist=[];
   var lengthlist=[];
   var totalLength=0;
   var dataset = [];
-  for (i = 0; i < dictionary.length; i++) { 
+  var clickableRegions = [];
+
+  // this verifies that regions is not just an empty string
+  if (regions.length > 1) {
+    for(i = 0; i < regions.length; i++) {
+      var region = regions[i];
+      var range = region.split(":")[1].split("-");
+      var name = region.split(":")[0];
+      clickableRegions.push({name: name, range});
+    }
+  }
+
+  for (i = 0; i < dictionary.length; i++) {
    var range = dictionary[i].split(":")[1].split("-");
    var length = parseInt(range[1]-range[0]);
    var name = dictionary[i].split(":")[0];
-   dataset.push({name: name, length: length });
+   // filter and store regions that overlap the current dictionary value. These
+   //  will be printed on the home screen
+   var relevantRegions = clickableRegions.filter(function(d) {return d.name == name});
+   dataset.push({name: name, length: length, regions: relevantRegions });
    namelist.push(name);
    lengthlist.push(length);
    totalLength+=length;
@@ -30,32 +54,82 @@ function home(dictionary){
     .range([0, 150000]);
 
   var chartWidth = $(".chrChart").width();
-  
-  var chart  = d3.select(".chrChart")
-    .selectAll("div")
-    .data(dataset)
-    .enter().append("div")
-    .style("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist) + "px"; })
-    .style("border-radius","8px")
-    .text(function(d) { return d.name; });
+  var height = 22;
 
-  var path  = d3.select(".chrChart")
-                .selectAll("div")
-                .data(dataset);
-  
-  path.on('click', function(d) {
-    var start = Math.round(d.length/2.);
-    var end =  Math.round(d.length/2. +1000);
+  var svg = d3.select(".chrChart")
+    .append('svg')
+    .attr('width', chartWidth);
+
+  var chart = svg.selectAll("g")
+    .data(dataset).enter().append("g");
+
+  var regions = chart.selectAll(".region").data(function(d) {return d.regions});
+
+  chart
+    .append("rect")
+    .attr("class", "chr")
+    .attr("fill", "white")
+    .style("stroke", "black")
+    .attr("x", 0)
+    .attr("y",0)
+    .attr("height", height)
+    .attr("width", function(d) { console.log(d.length);return (chartWidth * d.length)/d3.max(lengthlist); })
+    .text(function(d) { return d.name; })
+    .on("mouseover", function(d) {
+      d3.select(this).attr("fill", "grey");
+      div.transition()
+        .duration(200)
+        .style("opacity", .9);
+      div	.html(d.name)
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 48) + "px");
+    })
+    .on("mouseout", function(d) {
+      d3.select(this).attr("fill", "white");
+      div.transition()
+        .duration(500)
+        .style("opacity", 0);
+    });
+
+  regions
+    .enter().append("rect")
+    .attr("class", "region")
+    .attr("x", (function(d) { return (chartWidth * d.range[0])/d3.max(lengthlist); }))
+    .attr("width", (function(d) { return (chartWidth * (d.range[1] - d.range[0]))/d3.max(lengthlist); }))
+    .attr("height", height)
+    .attr("fill", "black")
+    .on("mouseover", function(d) {
+      d3.select(this).attr("fill", "grey");
+      div.transition()
+        .duration(200)
+        .style("opacity", .9);
+        div	.html(d.name + ": <br/>"  + d.range[0] + " - " + d.range[1])
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 48) + "px");
+      })
+    .on("mouseout", function(d) {
+      d3.select(this).attr("fill", "black");
+      div.transition()
+        .duration(500)
+        .style("opacity", 0);
+    });
+
+  chart.on('click', function(d) {
+    var start = Math.round(d.length/2.0);
+    var end =  Math.round(d.length/2.0 +1000);
     document.getElementById("autocomplete").value = d.name+":"+start.toString()+"-"+end;
-    render(d.name, start,end, 50); 
-  });  
+    render(d.name, start, end);
+  });
 
-  path.on('mouseover', function(d,i) {                              
-    path[0][i].style.backgroundColor = "red";
-  });     
+  regions.on('click', function(d) {
+    var start = Number(d.range[0]);
+    var end =  Number(d.range[1]);
+    document.getElementById("autocomplete").value = d.name+":"+start.toString()+"-"+end;
+    render(d.name, start, end);
+    d3.event.stopPropagation(); // disables trigger for whole chromosome parent click
+});
 
-  path.on('mouseout', function(d,i) {                              
-    path[0][i].style.backgroundColor = "steelblue";
-  });     
+
 }
+
 </script>
