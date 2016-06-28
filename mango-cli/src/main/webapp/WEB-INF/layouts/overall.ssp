@@ -42,11 +42,7 @@ xhr.send();
 xhr.onreadystatechange = function() {
     if (xhr.readyState == 4 && xhr.status == 200) {
         var contigList = JSON.parse(xhr.response);
-<<<<<<< HEAD
         var p = pileup.create(document.getElementById('pileup'), {
-=======
-        var p = pileup.create(document.getElementById('reference'), {
->>>>>>> 2928136... ga4gh data source loaded in, compatible with mango, no error
             // go to one of the chromosomes in sequence dictionary
             range: {contig: 'chrM', start: 0, stop: 100},
             tracks: [
@@ -58,35 +54,44 @@ xhr.onreadystatechange = function() {
                         contigList: contigList
                     }),
                     name: 'Reference'
-<<<<<<< HEAD
                 },
-=======
-                }, 
->>>>>>> 2928136... ga4gh data source loaded in, compatible with mango, no error
-                {
-                    viz: pileup.viz.pileup(),
-                    isReference: false,
-                    data: pileup.formats.ga4gh({
-                        // endpoint: '/GA4GHreads',
-                        endpoint: '/testReads',
-                        readGroupId: 'C57BL/6J',
-                        killChr: false
-                    }),
-                    name: 'Alignment'
-<<<<<<< HEAD
-                },
-                {
-                   viz: pileup.viz.pileup(),
-                   data: pileup.formats.ga4gh({ 
-                        endpoint: '/testReads',
-                        readGroupId: 'C57BL/6J',
-                        killChr: false
-                    }),
-                   cssClass: 'normal',
-                   name: 'Alignments'
-=======
->>>>>>> 2928136... ga4gh data source loaded in, compatible with mango, no error
-                }
+                #if (variantsExist)
+                    #for (s <- variantsPaths.get)
+                        {
+                        viz: pileup.viz.variants(),
+                        data: pileup.formats.variants({
+                            url: '/variants',
+                            contigList: contigList,
+                            sample: '${s}'
+                        }),
+                        name: 'Variants'
+                        },
+                    #end
+                #end
+                #if (readsExist)
+                    #for (s <- readsSamples.get)
+                        {
+                        viz: pileup.viz.coverage(),
+                        isReference: false,
+                            data: pileup.formats.ga4gh({
+                            endpoint: '/GA4GHreads',
+                            readGroupId: '${s}',
+                            killChr: false
+                        }),
+                        name: 'Coverage'
+                        },
+                        {
+                        viz: pileup.viz.pileup(),
+                        isReference: false,
+                        data: pileup.formats.ga4gh({
+                            endpoint: '/GA4GHreads',
+                            readGroupId: '${s}',
+                            killChr: false
+                        }),
+                        name: 'Alignment'
+                        },
+                    #end
+                #end
             ]
         });
 
