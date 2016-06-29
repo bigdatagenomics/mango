@@ -29,7 +29,9 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
 
   // test vcf data'
   val vcfFile1 = resourcePath("truetest.vcf")
+  val vcfKey1 = LazyMaterialization.filterKeyFromFile("truetest.vcf")
   val vcfFile2 = resourcePath("truetest2.vcf")
+  val vcfKey2 = LazyMaterialization.filterKeyFromFile("truetest2.vcf")
 
   val vcfFiles = List(vcfFile1, vcfFile2)
   val key = LazyMaterialization.filterKeyFromFile("truetest.vcf")
@@ -41,9 +43,9 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
   sparkTest("Fetch from 1 vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data = GenotypeMaterialization(sc, List(vcfFile1), sd, 10)
-    val json = data.get(region)
+    val json = data.get(region).get(vcfKey1)
 
-    assert(json.contains("truetest"))
+    assert(json.isDefined)
 
   }
 
@@ -52,7 +54,8 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
     val data = GenotypeMaterialization(sc, vcfFiles, sd, 10)
     val json = data.get(region)
 
-    assert(json.contains("truetest"))
+    assert(json.get(vcfKey1).isDefined)
+    assert(json.get(vcfKey2).isDefined)
 
   }
 

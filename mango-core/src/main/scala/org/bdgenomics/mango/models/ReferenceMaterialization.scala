@@ -114,13 +114,6 @@ class ReferenceMaterialization(@transient sc: SparkContext,
     stringifyRaw(data, region)
   }
 
-  def getReferenceAsBytes(region: ReferenceRegion): Array[Byte] = {
-    if (!bookkeep.contains(region.referenceName)) {
-      put(region)
-    }
-    getTiles(region, true).toCharArray.map(_.toByte)
-  }
-
   def init: SequenceDictionary = {
     if (!(referencePath.endsWith(".fa") || referencePath.endsWith(".fasta") || referencePath.endsWith(".adam"))) {
       throw new UnsupportedFileException("WARNING: Invalid reference file")

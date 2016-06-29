@@ -84,7 +84,8 @@ object GA4GHConverter extends Serializable {
     builder.setFailedVendorQualityChecks(record.getFailedVendorQualityChecks)
     builder.setSecondaryAlignment(record.getSecondaryAlignment)
     builder.setSupplementaryAlignment(record.getSupplementaryAlignment)
-    builder.setNextMatePosition(new GAPosition(record.getMateContigName, record.getMateAlignmentStart, record.getMateNegativeStrand))
+    if (record.getMateContigName != null)
+      builder.setNextMatePosition(new GAPosition(record.getMateContigName, record.getMateAlignmentStart, record.getMateNegativeStrand))
     // we don't store the number of reads in a fragment; assume 2 if paired, 1 if not
     val paired = Option(record.getReadPaired)
       .map(b => b: Boolean)

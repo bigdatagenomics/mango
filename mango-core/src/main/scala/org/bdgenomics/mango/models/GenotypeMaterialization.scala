@@ -26,9 +26,9 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
-import org.bdgenomics.mango.layout.{ VariantFreq, VariantJson }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.mango.layout.{ VariantJson, Coverage }
 
 import scala.reflect.ClassTag
 
@@ -51,7 +51,7 @@ class GenotypeMaterialization(s: SparkContext,
   val bookkeep = new Bookkeep(chunkSize)
   val files = filePaths
   def getStart = (g: Genotype) => g.getStart
-  def toTile = (data: Iterable[(String, Genotype)], region: ReferenceRegion, reference: Option[String]) => VariantTile(data)
+  def toTile = (data: Iterable[(String, Genotype)], region: ReferenceRegion) => VariantTile(data, region)
   def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
 
   /**
@@ -66,7 +66,7 @@ class GenotypeMaterialization(s: SparkContext,
     * Otherwise call put on the sections of data that don't exist
     * Here, ks, is an option of list of personids (String)
     */
-  def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): String = {
+  def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): Map[String, String] = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
@@ -80,15 +80,16 @@ class GenotypeMaterialization(s: SparkContext,
         layerOpt match {
           case Some(_) => {
             val dataLayer: Layer = layerOpt.get
-            val layers = getTiles(region, List(freqLayer, dataLayer))
-            val freq = layers.get(freqLayer).get
-            val variants = layers.get(dataLayer).get
-            write(Map("freq" -> freq, "variants" -> variants))
+
+            // TODO: send back frequency for variants
+            val layers = List(freqLayer, dataLayer)
+            val data = getTiles(region, layers)
+            val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+            json.get(dataLayer).get
           }
           case None => {
-            val layers = getTiles(region, List(freqLayer))
-            val freq = layers.get(freqLayer).get
-            write(Map("freq" -> freq))
+            val data = getTiles(region, Some(freqLayer))
+            stringify(data, region, freqLayer)
           }
         }
 
@@ -99,11 +100,11 @@ class GenotypeMaterialization(s: SparkContext,
     }
   }
 
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
+  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): Map[String, String] = {
     layer match {
       case `rawLayer`  => stringifyRawGenotypes(data, region)
-      case `freqLayer` => stringifyFreq(data, region)
-      case _           => ""
+      case `freqLayer` => Coverage.stringifyCoverage(data, region)
+      case _           => Map.empty[String, String]
     }
   }
 
@@ -114,31 +115,16 @@ class GenotypeMaterialization(s: SparkContext,
    * @param region
    * @return
    */
-  def stringifyRawGenotypes(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
+  def stringifyRawGenotypes(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
     val data: Array[(String, Iterable[Genotype])] = rdd
       .mapValues(_.asInstanceOf[Iterable[Genotype]])
       .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
 
-    val flattened: Map[String, Array[Genotype]] = data.groupBy(_._1)
+    val flattened: Map[String, Array[VariantJson]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
+      .mapValues(v => v.map(r => VariantJson(r.getContigName, r.getStart, r.getVariant.getReferenceAllele, r.getVariant.getAlternateAllele)))
 
-    // TODO
-    val x: List[VariantJson] = flattened.head._2.map(r => VariantJson(r)).toList
-    write(x)
-  }
-
-  /**
-   * Stringifies raw genotypes to a string
-   *
-   * @param rdd
-   * @param region
-   * @return
-   */
-  def stringifyFreq(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    val data: Array[(String, Iterable[VariantFreq])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[VariantFreq]])
-      .mapValues(r => r.filter(r => r.start <= region.end && r.start >= region.start)).collect
-    write(data.toMap)
+    flattened.mapValues(v => write(v))
   }
 
 }

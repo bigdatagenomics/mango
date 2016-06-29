@@ -63,8 +63,7 @@ xhr.onreadystatechange = function() {
                         viz: pileup.viz.variants(),
                         data: pileup.formats.variants({
                             url: '/variants',
-                            contigList: contigList,
-                            sample: '${s}'
+                            key: '${s}'
                         }),
                         name: 'Variants'
                         },
@@ -102,28 +101,5 @@ xhr.onreadystatechange = function() {
 
 
 </script>
-
-#if (featuresExist)
-    <script src="js/features.js"></script>
-#end
-#if (variantsExist)
-    <% var varJsonSamples = variantsPaths.get.reduce((a1, a2) => (a1 + "," + a2)) %>
-    <script>
-        var varSampleIds = "${varJsonSamples}";
-        var varFiles = varSampleIds.split(",").unique();
-    </script>
-    <script src="js/variants.js"></script>
-#end
-#if (readsExist)
-    <% var jsonSamples = readsSamples.get.reduce((a1, a2) => (a1 + "," + a2)) %>
-    <script>
-        var readFiles = "${jsonSamples}";
-        readFiles = readFiles.split(",").unique();
-
-    </script>
-    <script src="js/freq.js"></script>
-    <script src="js/reads.js"></script>
-#end
-
 
 </html>

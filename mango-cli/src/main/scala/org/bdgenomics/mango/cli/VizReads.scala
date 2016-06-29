@@ -17,15 +17,14 @@
  */
 package org.bdgenomics.mango.cli
 
-import java.io.{ File, FileNotFoundException }
+import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.bdgenomics.mango.converters.GA4GHConverter
-import org.bdgenomics.adam.models.{ SequenceRecord, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
-
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
 import org.bdgenomics.mango.tiling.{ L0, Layer }
@@ -68,16 +67,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   implicit val formats = net.liftweb.json.DefaultFormats
 
   var sc: SparkContext = null
-
-  var partitionCount: Int = 0
-  var referencePath: String = ""
-  // keys associated with files
-  var alignmentKeys: Option[List[String]] = None
-  var variantKeys: Option[List[String]] = None
-  var readsPaths: Option[List[String]] = None
-  var variantsPaths: Option[List[String]] = None
-  var featurePaths: Option[List[String]] = None
-
   var server: org.eclipse.jetty.server.Server = null
   var globalDict: SequenceDictionary = null
 
@@ -92,6 +81,18 @@ object VizReads extends BDGCommandCompanion with Logging {
   def variantsExist: Boolean = variantData.isDefined
   def featuresExist: Boolean = featureData.isDefined
 
+  var readsWait = false
+  var readsCache: Map[String, String] = Map.empty[String, String]
+  var readsRegion: ReferenceRegion = null
+
+  var variantsWait = false
+  var variantsCache: Map[String, String] = Map.empty[String, String]
+  var variantsRegion: ReferenceRegion = null
+
+  var featuresWait = false
+  var featuresCache: Map[String, String] = Map.empty[String, String]
+  var featuresRegion: ReferenceRegion = null
+
   // regions to prefetch during variant discovery. sent to front
   // end for visual processing
   var prefetchedRegions: List[ReferenceRegion] = List()
@@ -101,8 +102,6 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   // thresholds used for visualization binning and limits
   var screenSize: Int = 1000
-  var chunkSize: Long = 5000
-
 
   // HTTP ERROR RESPONSES
   object errors {
@@ -208,7 +207,11 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     // set initial referenceRegion so it is defined
-    session("referenceRegion") = ReferenceRegion("chr", 1, 100)
+    val region = ReferenceRegion("chr", 1, 100)
+    session("referenceRegion") = region
+    VizReads.readsRegion = region
+    VizReads.variantsRegion = region
+    VizReads.featuresRegion = region
 
     // generate file keys for front end
     val readsSamples = try {
@@ -237,20 +240,27 @@ class VizServlet extends ScalatraServlet {
     val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
       VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
     session("referenceRegion") = viewRegion
-    Ok(write(VizReads.refRDD.getReferenceString(viewRegion)))
+    val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+    if (dictOpt.isDefined) {
+      Ok(write(VizReads.refRDD.getReferenceString(viewRegion)))
+    } else VizReads.errors.outOfBounds
   }
 
   get("/sequenceDictionary") {
     Ok(write(VizReads.refRDD.dict.records))
   }
 
-  get("/reads/:ref") {
+  get("/GA4GHreads/:ref") {
     VizTimers.ReadsRequest.time {
+
       if (!VizReads.readsExist) {
         VizReads.errors.notFound
       } else {
-        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+        val key: String = params("key")
         contentType = "json"
+
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           while (VizReads.readsWait) Thread sleep (20)
@@ -262,32 +272,12 @@ class VizServlet extends ScalatraServlet {
             VizReads.readsWait = false
           }
           val results = VizReads.readsCache.get(key)
+
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.notFound
         } else VizReads.errors.outOfBounds
       }
-    }
-  }
-
-  get("/GA4GHreads/:ref") {
-    VizTimers.ReadsRequest.time {
-      val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-      contentType = "json"
-
-      // if region is in bounds of reference, return data
-      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-      if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-        val sampleIds: List[String] = params("sample").split(",").toList
-        val alignments: RDD[AlignmentRecord] = VizReads.readsData.getAlignments(viewRegion, sampleIds)
-        // convert to GA4 GH avro and build a response
-        val gaReads: List[GAReadAlignment] = alignments.map(GA4GHConverter.toGAReadAlignment)
-          .collect
-          .toList
-        val readResponse = GASearchReadsResponse.newBuilder()
-          .setAlignments(gaReads)
-          .build()
-
-        // write response
-        Ok(readResponse.toString)
-      } else VizReads.errors.outOfBounds
     }
   }
 
@@ -296,67 +286,59 @@ class VizServlet extends ScalatraServlet {
       if (!VizReads.variantsExist)
         VizReads.errors.notFound
       else {
-        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+        val key: String = params("key")
         contentType = "json"
 
         // if region is in bounds of reference, return data
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          while (VizReads.variantsWait) Thread sleep (20)
+          // region was already collected, grab from cache
+          if (viewRegion != VizReads.variantsRegion) {
+            VizReads.variantsWait = true
+            VizReads.variantsCache = VizReads.variantData.get.get(viewRegion, Some(L0))
+            VizReads.variantsRegion = viewRegion
+            VizReads.variantsWait = false
+          }
+          val results = VizReads.readsCache.get(key)
 
-        if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-          val data =
-            if (viewRegion.length() < 10000) {
-              val isRaw =
-                try {
-                  params("isRaw").toBoolean
-                } catch {
-                  case e: Exception => false
-                }
-              val layer: Option[Layer] =
-                if (isRaw) Some(VizReads.variantData.get.rawLayer)
-                else None
-              //Always fetches the frequency, but also additionally fetches raw data if necessary
-              VizReads.variantData.get.get(viewRegion, layer)
-            } else VizReads.errors.outOfBounds
-          Ok(data)
-        }
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.notFound
+        } else VizReads.errors.outOfBounds
       }
     }
   }
 
-  get("/testReads/:ref") {
-    val bamFile = VizReads.readsPaths.get.head
-    val region = ReferenceRegion("chrM", 0, 5)
-    val alignments = AlignmentRecordMaterialization.load(VizReads.sc, region, bamFile).filter(_.getStart > 3)
-    val gaReads: List[GAReadAlignment] = alignments.map(GA4GHConverter.toGAReadAlignment)
-      .collect
-      .toList
-    val readResponse = GASearchReadsResponse.newBuilder()
-      .setAlignments(gaReads)
-      .build()
-
-    // write response
-    Ok(readResponse.toString)
-  }
-
   get("/features/:ref") {
-    if (!VizReads.featuresExist)
-      VizReads.errors.notFound
-    else {
-      val viewRegion =
-        ReferenceRegion(params("ref"), params("start").toLong,
+    VizTimers.FeatRequest.time {
+      if (!VizReads.featuresExist)
+        VizReads.errors.notFound
+      else {
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-      val regionSize = viewRegion.width
-      if (regionSize > L0.maxSize) {
-        VizReads.errors.largeRegion
-      } else {
-        VizTimers.FeatRequest.time {
-          val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-          // if region is in bounds of reference, return data
-          if (dictOpt.isDefined && viewRegion.end <= dictOpt.get.length) {
-            val data = VizReads.featureData.get.get(viewRegion)
-            Ok(data)
-          } else VizReads.errors.outOfBounds
-        }
+        val key: String = params("key")
+        contentType = "json"
+
+        // if region is in bounds of reference, return data
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          while (VizReads.featuresWait) Thread sleep (20)
+          // region was already collected, grab from cache
+          if (viewRegion != VizReads.featuresRegion) {
+            VizReads.featuresWait = true
+            VizReads.featuresCache = VizReads.featureData.get.get(viewRegion)
+            VizReads.featuresRegion = viewRegion
+            VizReads.featuresWait = false
+          }
+          val results = VizReads.featuresCache.get(key)
+
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.notFound
+        } else VizReads.errors.outOfBounds
       }
     }
   }
@@ -415,7 +397,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!readsPaths.isEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.chunkSize, VizReads.refRDD))
+          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, VizReads.chunkSize))
         }
       }
     }
@@ -533,6 +515,3 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
   }
 }
-
-case class Record(name: String, length: Long)
-

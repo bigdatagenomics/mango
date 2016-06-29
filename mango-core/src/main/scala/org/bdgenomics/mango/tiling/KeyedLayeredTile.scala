@@ -36,8 +36,6 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
   /* chunk size of each node in interval tree */
   def chunkSize: Int
 
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String
-
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
    *
@@ -45,30 +43,12 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
    * @param layerOpt: Option to force fetching of specific Layer
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, layerOpt: Option[Layer] = None): String = {
+  def getTiles(region: ReferenceRegion, layerOpt: Option[Layer] = None): RDD[(String, Iterable[Any])] = {
 
     // Filter IntervalRDD by region and requested layer
     val data: RDD[(String, Iterable[Any])] = intRDD.filterByInterval(region)
       .mapValues(r => r.get(region, layerOpt))
       .toRDD.flatMap(_._2)
-
-    // return JSONified data
-    val layer = layerOpt.getOrElse(getLayer(region))
-    stringify(data, region, layer)
-  }
-
-  /**
-   * Gets the tiles overlapping a given region corresponding to the specified keys
-   *
-   * @param region Region to retrieve data from
-   * @param ks keys whose data to retrieve
-   * @return jsonified data
-   */
-  def getRaw(region: ReferenceRegion, ks: List[String]): RDD[Any] = {
-    // Filter IntervalRDD by region and requested layer
-    val data: RDD[Any] = intRDD.filterByInterval(region)
-      .mapValues(r => r.get(region, ks, Some(L0)))
-      .toRDD.flatMap(_._2.flatMap(_._2))
 
     data
   }
@@ -79,32 +59,32 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
    * @param layers: List of layers to fetch from tile
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, layers: List[Layer]): Map[Layer, String] = {
+  def getTiles(region: ReferenceRegion, layers: List[Layer]): RDD[(Int, Map[String, Iterable[Any]])] = {
 
     // Filter IntervalRDD by region and requested layer
     val data: RDD[(Int, Map[String, Iterable[Any]])] = intRDD.filterByInterval(region)
       .mapValues(r => r.get(region, layers))
       .toRDD.flatMap(_._2)
     // return JSONified data
-    val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
-    json
+    //    val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+    data
   }
-
-  /**
-   * Gets layer corresponding to the reference region.
-   *
-   * @see LayeredTile
-   * @param region ReferenceRegion whose size to compare
-   * @return Option of layer. If region size exceeds specs in LayeredTile, no layer is returned
-   */
-  def getLayer(region: ReferenceRegion): Layer = {
-    val size = region.length()
-
-    size match {
-      case x if (x < L1.range._1) => L1
-      case _                      => L4
-    }
-  }
+  //
+  //  /**
+  //   * Gets layer corresponding to the reference region.
+  //   *
+  //   * @see LayeredTile
+  //   * @param region ReferenceRegion whose size to compare
+  //   * @return Option of layer. If region size exceeds specs in LayeredTile, no layer is returned
+  //   */
+  //  def getLayer(region: ReferenceRegion): Layer = {
+  //    val size = region.length()
+  //
+  //    size match {
+  //      case x if (x < L1.range._1) => L1
+  //      case _                      => L4
+  //    }
+  //  }
 }
 
 /**
@@ -130,11 +110,8 @@ abstract class KLayeredTile extends Serializable with Logging {
 
     val data =
       if (layer.isDefined) layerMap.get(layer.get.id)
-      else
-        size match {
-          case x if (x < L1.range._1) => layerMap.get(1)
-          case _                      => None
-        }
+      else layerMap.get(0)
+
     // if no data exists return empty map
     data.getOrElse(Map.empty[String, Iterable[Any]])
   }
@@ -169,8 +146,6 @@ object L0 extends Layer {
   val range = (0L, maxSize)
   val patchSize = 0
   val stride = 0
-
-  def fromCharBytes(arr: Array[Byte]): String = arr.map(_.toChar).mkString
 }
 
 /* For objects 5000 to 10000 */
@@ -190,22 +165,3 @@ object L2 extends Layer {
   val patchSize = 100
   val stride = patchSize
 }
-
-/* For objects 100,000 to 1,000,000 */
-object L3 extends Layer {
-  val id = 3
-  val maxSize = 1000000L
-  val range = (L2.maxSize, maxSize)
-  val patchSize = 1000
-  val stride = patchSize
-}
-
-/* For objects 1000000 + */
-object L4 extends Layer {
-  val id = 4
-  val maxSize = 10000000L
-  val range = (L3.maxSize, maxSize)
-  val patchSize = 10000
-  val stride = patchSize
-}
-

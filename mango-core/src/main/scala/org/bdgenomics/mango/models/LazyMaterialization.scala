@@ -39,8 +39,6 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   /**
    * Used to generically load data from all file types
-   * @param region Region specifying predicate to load from file
-   * @param file location of file
    * @return Generic RDD of data types from file
    */
   def load: (ReferenceRegion, String) => RDD[T]
@@ -49,12 +47,10 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
   /**
    * Tiles data
-   * @param data data to format into tile
-   * @param region region to tile over
    * @return new Data Tile
    * @see TileTypes.scala
    */
-  def toTile: (Iterable[(String, T)], ReferenceRegion, Option[String]) => S
+  def toTile: (Iterable[(String, T)], ReferenceRegion) => S
 
   /**
    * Sets partitioner
@@ -81,7 +77,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
    *
    * @param region ReferenceRegion in which data is retreived
    */
-  def put(region: ReferenceRegion, reference: Option[String] = None) = {
+  def put(region: ReferenceRegion) = {
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       var data: RDD[(String, T)] = sc.emptyRDD[(String, T)]
@@ -100,7 +96,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
 
       val tiles: RDD[(ReferenceRegion, S)] = groupedRecords.map(f => {
         val r = ReferenceRegion(region.referenceName, f._1, f._1 + c - 1) // map to chunk size Reference Regions
-        (r, toTile(f._2, r, reference))
+        (r, toTile(f._2, r))
       })
 
       // insert into IntervalRDD
