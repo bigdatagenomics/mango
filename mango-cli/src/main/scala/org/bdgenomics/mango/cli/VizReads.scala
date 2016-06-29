@@ -302,8 +302,7 @@ class VizServlet extends ScalatraServlet {
             VizReads.variantsRegion = viewRegion
             VizReads.variantsWait = false
           }
-          val results = VizReads.readsCache.get(key)
-
+          val results = VizReads.variantsCache.get(key)
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.notFound
