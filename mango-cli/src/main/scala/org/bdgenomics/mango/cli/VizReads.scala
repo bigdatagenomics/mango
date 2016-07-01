@@ -27,7 +27,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
-import org.bdgenomics.mango.tiling.{ L0, Layer }
+import org.bdgenomics.mango.tiling.{ L1, L0, Layer }
 import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
@@ -86,7 +86,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsRegion: ReferenceRegion = null
 
   var variantsWait = false
-  var variantsCache: Map[String, String] = Map.empty[String, String]
+  var variantsCache: Map[Layer, Map[String, String]] = Map.empty[Layer, Map[String, String]]
   var variantsRegion: ReferenceRegion = null
 
   var featuresWait = false
@@ -281,6 +281,36 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/genotypes/:ref") {
+    VizTimers.VarRequest.time {
+      if (!VizReads.variantsExist)
+        VizReads.errors.notFound
+      else {
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+        val key: String = params("key")
+        contentType = "json"
+
+        // if region is in bounds of reference, return data
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          while (VizReads.variantsWait) Thread sleep (20)
+          // region was already collected, grab from cache
+          if (viewRegion != VizReads.variantsRegion) {
+            VizReads.variantsWait = true
+            VizReads.variantsCache = VizReads.variantData.get.get(viewRegion)
+            VizReads.variantsRegion = viewRegion
+            VizReads.variantsWait = false
+          }
+          val results = VizReads.variantsCache.get(VizReads.variantData.get.genotypeLayer).get.get(key)
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.notFound
+        } else VizReads.errors.outOfBounds
+      }
+    }
+  }
+
   get("/variants/:ref") {
     VizTimers.VarRequest.time {
       if (!VizReads.variantsExist)
@@ -298,11 +328,11 @@ class VizServlet extends ScalatraServlet {
           // region was already collected, grab from cache
           if (viewRegion != VizReads.variantsRegion) {
             VizReads.variantsWait = true
-            VizReads.variantsCache = VizReads.variantData.get.get(viewRegion, Some(L0))
+            VizReads.variantsCache = VizReads.variantData.get.get(viewRegion)
             VizReads.variantsRegion = viewRegion
             VizReads.variantsWait = false
           }
-          val results = VizReads.variantsCache.get(key)
+          val results = VizReads.variantsCache.get(VizReads.variantData.get.variantLayer).get.get(key)
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.notFound

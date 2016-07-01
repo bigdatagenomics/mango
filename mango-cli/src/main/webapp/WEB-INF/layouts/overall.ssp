@@ -46,7 +46,7 @@ xhr.onreadystatechange = function() {
         var contigList = JSON.parse(xhr.response);
         var p = pileup.create(document.getElementById('pileup'), {
             // go to one of the chromosomes in sequence dictionary
-            range: {contig: 'chrM', start: 0, stop: 100},
+            range: {contig: 'chrM', start: 1, stop: 100},
             tracks: [
                 {
                     viz: pileup.viz.genome(),
@@ -65,7 +65,15 @@ xhr.onreadystatechange = function() {
                             url: '/variants',
                             key: '${s}'
                         }),
-                        name: 'Variants'
+                        name: '${s}'
+                        },
+                        {
+                        viz: pileup.viz.genotypes(),
+                        data: pileup.formats.genotypes({
+                        url: '/genotypes',
+                        key: '${s}'
+                        }),
+                        name: 'Genotypes'
                         },
                     #end
                 #end

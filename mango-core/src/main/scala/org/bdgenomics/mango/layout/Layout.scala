@@ -22,3 +22,4 @@ package org.bdgenomics.mango.layout
  * This file contains case classes for json conversions
  */
 case class VariantJson(contig: String, position: Long, ref: String, alt: String)
+case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
