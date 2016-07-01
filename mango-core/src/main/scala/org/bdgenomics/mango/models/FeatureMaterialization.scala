@@ -26,7 +26,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.layout.{ Coverage }
+import org.bdgenomics.mango.layout.{ BedRowJson, Coverage }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.misc.Logging
@@ -88,8 +88,9 @@ class FeatureMaterialization(s: SparkContext,
       .mapValues(_.asInstanceOf[Iterable[Feature]])
       .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
 
-    val flattened: Map[String, Array[Feature]] = data.groupBy(_._1)
+    val flattened: Map[String, Array[BedRowJson]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
+      .mapValues(r => r.map(f => BedRowJson(f.getAttributes.mkString("/t"), f.getContigName, f.getStart, f.getEnd)))
 
     flattened.mapValues(r => write(r))
   }
