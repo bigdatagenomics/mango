@@ -17,16 +17,25 @@
  */
 package org.bdgenomics.mango.filters
 
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.mango.layout.CalculatedAlignmentRecord
+import org.bdgenomics.mango.models.FeatureMaterialization
+import org.bdgenomics.mango.util.MangoFunSuite
 
-object AlignmentRecordFilter {
+class FilterSuite extends MangoFunSuite {
 
-  //Applies quality filter to (reference region, alignment records), returns the RDD
-  def filterByRecordQuality(data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], quality: String): RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = {
-    val minimumQuality: Double = try { quality.toDouble } catch { case _ => 0 }
-    data.filter(r => r._2.record.getMapq() >= minimumQuality && r._2.record.getMapq() > 0)
+  // load resource files
+  val bedFile = resourcePath("smalltest.bed")
+  val threshold = 2 // mark as high density if any bins have > 2 artifacts
+
+  sparkTest("correctly filters features with high density regions") {
+    val features = FeatureMaterialization.loadFromBed(sc, None, bedFile)
+    val filtered = FeatureFilter.filter(features, FeatureFilterType.highDensity, 100, threshold)
+
+    val regions: List[(ReferenceRegion, Long)] = filtered.collect.toList
+    assert(regions.length == 1)
+    assert(regions.head._1 == ReferenceRegion("chrM", 1100, 1199))
+    assert(regions.head._2 == 2)
+
   }
 
 }

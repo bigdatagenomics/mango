@@ -84,9 +84,7 @@ li {
 .axis path, .axis line {
   fill: none;
   stroke: black;
-  z-index: 9999;
-  shape-rendering: crispEdges;
-  }
+  shape-rendering: crispEdges; }
 .axis text {
   font-family: sans-serif;
   font-size: 11px; }
@@ -176,6 +174,13 @@ h2.panel {
 
 #readsArea {
   padding: 0px; }
+
+#pileup {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 100px;
+  bottom: 10px; }
 
 .graphArea {
   padding: 3px; }

@@ -19,17 +19,17 @@ var binSize = 1;
 //Manages changes when clicking checkboxes
 d3.selectAll("input").on("change", checkboxChange);
 
-for (var i = 0; i < samples.length; i++) {
+for (var i = 0; i < readFiles.length; i++) {
 
-  var selector = "#" + samples[i] + ">.sampleIndels";
-  indelSvgContainer[samples[i]] = d3.select(selector)
+  var selector = "#" + readFiles[i] + ">.sampleIndels";
+  indelSvgContainer[readFiles[i]] = d3.select(selector)
     .select("svg")
       .attr("height", trackHeight)
       .attr("width", width);
 
 
-    selector = "#" + samples[i] + ">.sampleSummary";
-    readCountSvgContainer[samples[i]] = d3.select(selector)
+    selector = "#" + readFiles[i] + ">.sampleSummary";
+    readCountSvgContainer[readFiles[i]] = d3.select(selector)
       .select(".mismatch-svg")
         .attr("height", 100)
         .attr("width", width);
@@ -41,7 +41,7 @@ function renderMergedReads(refName, start, end) {
 
     // Define json location of reads data
     var readsJsonLocation = "/reads/" + viewRefName + "?start=" + viewRegStart + "&end="
-        + viewRegEnd + "&sample=" + sampleIds + "&wait=true";
+        + viewRegEnd + "&wait=true";
 
     // Render data for each sample
   d3.json(readsJsonLocation,function(error, json) {
@@ -51,27 +51,28 @@ function renderMergedReads(refName, start, end) {
     }
     renderCoverage(JSON.parse(json.coverage));
 
-
-    // iterate through all samples and render merged reads
-    for (var i = 0; i < samples.length; i++) {
-
-        // Zoomed out too far for resolution. print mismatch path instead.
-        if(json.reads == "") {
-            indelSvgContainer[samples[i]].selectAll(".indel").remove();
-            readCountSvgContainer[samples[i]].selectAll("g").remove();
-        } else {
-            var data = JSON.parse(json.reads);
-            var data = typeof data[rawSamples[i]] != "undefined" ? data[rawSamples[i]] : [];
-            var selector = "#" + samples[i];
-            renderd3Line(readCountSvgContainer[samples[i]], height);
+    // Zoomed out too far for resolution. print mismatch path instead.
+    if (json.reads == "") {
+        indelSvgContainer[readFiles[i]].selectAll(".indel").remove();
+        readCountSvgContainer[readFiles[i]].selectAll("g").remove();
+    } else {
+        var data = JSON.parse(json.reads);
+        var i = 0;
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            var value = data[key];
+            var selector = "#" + readFiles[i];
+            renderd3Line(readCountSvgContainer[readFiles[i]], height);
 
             sampleData[i] = [];
-            sampleData[i].mismatches = data.filter(function(d) { return d.op === "M"})
-            sampleData[i].indels = data.filter(function(d) { return d.op !== "M"})
+            sampleData[i].mismatches = value.filter(function(d) { return d.op === "M"})
+            sampleData[i].indels = value.filter(function(d) { return d.op !== "M"})
 
-            var removed = readCountSvgContainer[samples[i]].selectAll("path").remove();
-            renderMismatchCounts(sampleData[i].mismatches, samples[i]);
-            renderIndelCounts(sampleData[i].indels, samples[i]);
+            var removed = readCountSvgContainer[readFiles[i]].selectAll("path").remove();
+            renderMismatchCounts(sampleData[i].mismatches, readFiles[i]);
+            renderIndelCounts(sampleData[i].indels, readFiles[i]);
+          }
+          i++;
         }
     }
     stopWait("#readsArea");
@@ -79,7 +80,7 @@ function renderMergedReads(refName, start, end) {
 
     var keys = Object.keys(readAlignmentSvgContainer);
     keys.forEach(function(sample) {
-        var checkSelector = "#viewAlignments" + filterName(sample);
+        var checkSelector = "#viewAlignments" + sample;
         if ($(checkSelector).is(':checked')) {
             renderAlignments(refName, start, end, sample);
         }
@@ -118,11 +119,10 @@ function renderAlignments(refName, start, end, sample) {
 }
 
 // Renders reads by resolution
-function renderReadsByResolution(data, rawSample) {
+function renderReadsByResolution(data, sample) {
         var readDiv = [];
         var container = [];
 
-        var sample = filterName(rawSample);
         var selector = getAlignmentSelector(sample);
 
         container = d3.select(selector)

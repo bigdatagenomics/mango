@@ -6,8 +6,10 @@ function refVis(dictionary){
   // var namelist=[];
   // var lengthlist=[];
   var totalLength=0;
+
+  // create dataset for chromosomes
   var dictionary = dictionary.split(",");
-  for (i = 0; i < dictionary.length; i++) { 
+  for (i = 0; i < dictionary.length; i++) {
    var range = dictionary[i].split(":")[1].split("-");
    var length = parseInt(range[1]-range[0]);
    var name = dictionary[i].split(":")[0];

@@ -22,15 +22,13 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
-import org.bdgenomics.mango.layout.{ VariantFreqLayout, VariantFreq, VariantLayout }
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
-import org.bdgenomics.utils.intervalrdd.IntervalRDD
+import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson, Coverage }
 
 import scala.reflect.ClassTag
 
@@ -38,61 +36,30 @@ import scala.reflect.ClassTag
  * Handles loading and tracking of data from persistent storage into memory for Genotype data.
  * @see LazyMaterialization.scala
  */
-class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int, chunkS: Int) extends LazyMaterialization[Genotype, VariantTile]
+class GenotypeMaterialization(s: SparkContext,
+                              filePaths: List[String],
+                              d: SequenceDictionary,
+                              parts: Int,
+                              chunkS: Int) extends LazyMaterialization[Genotype, VariantTile]
     with KTiles[VariantTile] with Serializable {
 
-  val sc = s
+  @transient val sc = s
+  @transient implicit val formats = net.liftweb.json.DefaultFormats
   val dict = d
   val partitions = parts
   val chunkSize = chunkS
-  val partitioner = setPartitioner
   val bookkeep = new Bookkeep(chunkSize)
+  val files = filePaths
+  def getStart = (g: Genotype) => g.getStart
+  def toTile = (data: Iterable[(String, Genotype)], region: ReferenceRegion) => VariantTile(data, region)
+  def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
 
   /**
    * Define layers and underlying data types
    */
-  val rawLayer: Layer = L0
+  val genotypeLayer: Layer = L0
   val freqLayer: Layer = L1
-
-  /*
-   * Filter filepaths to just the name of the file, without an extension
-   */
-  def filterVariantName(name: String): String = {
-    val slash = name.split("/")
-    val fileName = slash.last
-    fileName.replace(".", "_")
-  }
-
-  /*
-   * Initialize materialization structure with filepaths
-   */
-  def init(filePaths: List[String]): Option[List[String]] = {
-    val namedPaths = Option(filePaths.map(p => filterVariantName(p)))
-    for (i <- filePaths.indices) {
-      val varPath = filePaths(i)
-      val varName = namedPaths.get(i)
-      if (varPath.endsWith(".vcf")) {
-        loadSample(varPath, Option(varName))
-      } else if (varPath.endsWith(".adam")) {
-        loadSample(varPath, Option(varName))
-      } else {
-        log.info("WARNING: Invalid input for variants file")
-      }
-    }
-    namedPaths
-  }
-
-  def loadAdam(region: ReferenceRegion, fp: String): RDD[Genotype] = {
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === (region.referenceName)))
-    val proj = Projection(GenotypeField.start, GenotypeField.end, GenotypeField.alleles, GenotypeField.sampleId)
-    sc.loadParquetGenotypes(fp, predicate = Some(pred), projection = Some(proj))
-    val genes = sc.loadParquetGenotypes(fp, predicate = Some(pred))
-    genes
-  }
-
-  def get(region: ReferenceRegion, k: String, layerOpt: Option[Layer] = None): String = {
-    multiget(region, List(k), layerOpt)
-  }
+  val variantLayer: Layer = L2
 
   /* If the RDD has not been initialized, initialize it to the first get request
     * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
@@ -100,30 +67,29 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     * Otherwise call put on the sections of data that don't exist
     * Here, ks, is an option of list of personids (String)
     */
-  def multiget(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
+  def get(region: ReferenceRegion, layerOpt: Option[List[Layer]] = None): Map[Layer, Map[String, String]] = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files, true)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
-            put(r, ks)
+            put(r)
           }
         }
 
         layerOpt match {
           case Some(_) => {
-            val dataLayer: Layer = layerOpt.get
-            val layers = getTiles(region, ks, List(freqLayer, dataLayer))
-            val freq = layers.get(freqLayer).get
-            val variants = layers.get(dataLayer).get
-            write(Map("freq" -> freq, "variants" -> variants))
+            val layers = layerOpt.get
+            val data = getTiles(region, layers)
+            val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+            json
           }
-          case None => {
-            val layers = getTiles(region, ks, List(freqLayer))
-            val freq = layers.get(freqLayer).get
-            write(Map("freq" -> freq))
+          case None => { // get raw variants and corresponding genotypes
+            val data = getTiles(region, List(genotypeLayer)).flatMap(_._2)
+            val variants = stringifyVariants(data, region)
+            val genotypes = stringifyGenotypes(data, region)
+            Map(variantLayer -> variants, genotypeLayer -> genotypes)
           }
         }
 
@@ -134,11 +100,11 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
     }
   }
 
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
+  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer, variants: Boolean = false): Map[String, String] = {
     layer match {
-      case `rawLayer`  => stringifyRawGenotypes(data, region)
-      case `freqLayer` => stringifyFreq(data, region)
-      case _           => ""
+      case `genotypeLayer` => stringifyGenotypes(data, region)
+      case `freqLayer`     => Coverage.stringifyCoverage(data, region)
+      case _               => Map.empty[String, String]
     }
   }
 
@@ -149,16 +115,25 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
    * @param region
    * @return
    */
-  def stringifyRawGenotypes(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-
+  def stringifyGenotypes(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
     val data: Array[(String, Iterable[Genotype])] = rdd
       .mapValues(_.asInstanceOf[Iterable[Genotype]])
       .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
 
-    val flattened: Map[String, Array[Genotype]] = data.groupBy(_._1)
+    val flattened: Map[String, Array[(String, VariantJson)]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
-    write(flattened.mapValues(r => VariantLayout(r)))
+      .mapValues(v => {
+        v.map(r => {
+          (r.getSampleId, VariantJson(r.getContigName, r.getStart, r.getVariant.getReferenceAllele, r.getVariant.getAlternateAllele))
+        })
+      })
+
+    val genotypes: Map[String, Iterable[GenotypeJson]] =
+      flattened.mapValues(v => {
+        v.groupBy(_._2).mapValues(r => r.map(_._1))
+          .map(r => GenotypeJson(r._2, r._1))
+      })
+    genotypes.mapValues(v => write(v))
   }
 
   /**
@@ -168,103 +143,61 @@ class GenotypeMaterialization(s: SparkContext, d: SequenceDictionary, parts: Int
    * @param region
    * @return
    */
-  def stringifyFreq(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-    val data: Array[(String, Iterable[VariantFreq])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[VariantFreq]])
-      .mapValues(r => r.filter(r => r.start <= region.end && r.start >= region.start)).collect
-    write(data.toMap)
+  def stringifyVariants(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
+    val data: Array[(String, Iterable[Genotype])] = rdd
+      .mapValues(_.asInstanceOf[Iterable[Genotype]])
+      .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
+
+    val flattened: Map[String, Array[VariantJson]] = data.groupBy(_._1)
+      .map(r => (r._1, r._2.flatMap(_._2)))
+      .mapValues(v => v.map(r => VariantJson(r.getContigName, r.getStart, r.getVariant.getReferenceAllele, r.getVariant.getAlternateAllele)))
+
+    flattened.mapValues(v => write(v))
   }
 
-  override def getFileReference(fp: String): String = {
-    fp
-  }
-
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[Genotype] = {
-    if (!fileMap.containsKey(k)) {
-      log.error("Key not in FileMap")
-      null
-    }
-    val fp = fileMap(k)
-    if (fp.endsWith(".adam")) {
-      loadAdam(region, fp)
-    } else if (fp.endsWith(".vcf")) {
-      sc.loadGenotypes(fp).filterByOverlappingRegion(region)
-    } else {
-      throw UnsupportedFileException("File type not supported")
-      null
-    }
-  }
-
-  /**
-   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
-   * Fetches the data from disk, using predicates and range filtering
-   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
-   *
-   * @param region ReferenceRegion in which data is retreived
-   * @param ks to be retreived
-   */
-  override def put(region: ReferenceRegion, ks: List[String]) = {
-    val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) =>
-        val end =
-          Math.min(region.end, seqRecord.get.length)
-        val start = Math.min(region.start, end)
-        val trimmedRegion = new ReferenceRegion(region.referenceName, start, end)
-
-        //divide regions by chunksize
-        val c = chunkSize
-        val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
-        ks.map(k => {
-          val data = loadFromFile(trimmedRegion, k)
-          //where k is the filename itself
-          putPerSample(data, k, regions)
-        })
-        bookkeep.rememberValues(region, ks)
-      case None =>
-    }
-  }
-
-  /**
-   * Puts in the data from a file/sample into the IntervalRDD
-   */
-  def putPerSample(data: RDD[Genotype], fileName: String, regions: List[ReferenceRegion]) = {
-    var mappedRecords: RDD[(ReferenceRegion, Genotype)] = sc.emptyRDD[(ReferenceRegion, Genotype)]
-
-    regions.foreach(r => {
-      val grouped = data.filter(vr => r.overlaps(ReferenceRegion(vr.getContigName, vr.getStart, vr.getEnd)))
-        .map(vr => (r, vr))
-      mappedRecords = mappedRecords.union(grouped)
-    })
-
-    val groupedRecords: RDD[(ReferenceRegion, Iterable[Genotype])] =
-      mappedRecords
-        .groupBy(_._1)
-        .map(r => (r._1, r._2.map(_._2)))
-
-    val tiles: RDD[(ReferenceRegion, VariantTile)] = groupedRecords.map(r => (r._1, VariantTile(r._2, fileName)))
-    // insert into IntervalRDD
-    if (intRDD == null) {
-      intRDD = IntervalRDD(tiles)
-      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    } else {
-      val t = intRDD
-      intRDD = intRDD.multiput(tiles)
-      // TODO: can we do this incrementally instead?
-      t.unpersist(true)
-      intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    }
-  }
 }
 
 object GenotypeMaterialization {
 
-  def apply(sc: SparkContext, dict: SequenceDictionary, partitions: Int): GenotypeMaterialization = {
-    new GenotypeMaterialization(sc, dict, partitions, 100)
+  def apply(sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int): GenotypeMaterialization = {
+    new GenotypeMaterialization(sc, files, dict, partitions, 100)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
-    new GenotypeMaterialization(sc, dict, partitions, chunkSize)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
+    new GenotypeMaterialization(sc, files, dict, partitions, chunkSize)
   }
+
+  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
+    val genotypes: RDD[Genotype] =
+      if (fp.endsWith(".adam")) {
+        loadAdam(sc, region, fp)
+      } else if (fp.endsWith(".vcf")) {
+        region match {
+          case Some(_) => sc.loadGenotypes(fp).filterByOverlappingRegion(region.get)
+          case None    => sc.loadGenotypes(fp)
+        }
+      } else {
+        throw UnsupportedFileException("File type not supported")
+      }
+
+    val key = LazyMaterialization.filterKeyFromFile(fp)
+    // map unique ids to features to be used in tiles
+    genotypes.map(r => {
+      if (r.getSampleId == null) new Genotype(r.getVariant, r.getContigName, r.getStart, r.getEnd, r.getVariantCallingAnnotations,
+        key, r.getSampleDescription, r.getProcessingDescription, r.getAlleles, r.getExpectedAlleleDosage, r.getReferenceReadDepth,
+        r.getAlternateReadDepth, r.getReadDepth, r.getMinReadDepth, r.getGenotypeQuality, r.getGenotypeLikelihoods, r.getNonReferenceLikelihoods, r.getStrandBiasComponents, r.getSplitFromMultiAllelic, r.getIsPhased, r.getPhaseSetId, r.getPhaseQuality)
+      else r
+    })
+  }
+
+  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
+    val pred: Option[FilterPredicate] =
+      region match {
+        case Some(_) => Some(((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName)))
+        case None    => None
+      }
+    val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
+    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj))
+  }
+
 }

@@ -1,9 +1,7 @@
 <!-- Sample Variants -->
 <%@ val sample: String %>
-<%@ val id: String %>
-<% val variant = id.concat(">.variantData") %>
 
-<div id="${id}" class="samples">
+<div id="${sample}" class="samples">
 
     <div class="sampleLegend">
         <div class="col-md-9 title">${sample}</div>
@@ -12,7 +10,7 @@
                 name="viewVariants"
                 type="checkbox"
                 onClick="toggleVariants('${sample}')"
-                id='viewVariants${id}'
+                id='viewVariants${sample}'
                 class="viewVariants">
             <label for="viewVariants">Variants</label>
         </div>
@@ -29,7 +27,7 @@
 </div>
 
 <script>
-    var variantSelector = $(getVariantSelector('${id}'));
+    var variantSelector = $(getVariantSelector('${sample}'));
     $(variantSelector).hide();
 
     //Configuration Variables

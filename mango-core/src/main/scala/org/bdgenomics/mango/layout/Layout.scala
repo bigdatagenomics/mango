@@ -1,3 +1,4 @@
+
 /**
  * Licensed to Big Data Genomics (BDG) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,30 +18,8 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.bdgenomics.adam.util.ADAMFunSuite
-
-class ConvolutionalSequenceSuite extends ADAMFunSuite {
-
-  // test alignment data
-  val bamFile = resourcePath("mouse_chrM.bam")
-
-  // test reference data
-  var referencePath = resourcePath("mm10_chrM.fa")
-
-  test("Calculates patch size correctly") {
-    val p1 = ConvolutionalSequence.getPatchSize(100000, 1000, Some(100))._1
-    assert(p1 == 100)
-  }
-
-  test("Test convolution") {
-
-    val sequence = "AAAAAATGAAAAATTTAAGG"
-    val finalSize = 10
-    val stride = 1
-
-    val params = ConvolutionalSequence.getPatchSize(sequence.length, finalSize, Some(stride))
-    val result = ConvolutionalSequence.convolveSequence(sequence, params._1, stride)
-
-  }
-
-}
+/**
+ * This file contains case classes for json conversions
+ */
+case class VariantJson(contig: String, position: Long, ref: String, alt: String)
+case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)

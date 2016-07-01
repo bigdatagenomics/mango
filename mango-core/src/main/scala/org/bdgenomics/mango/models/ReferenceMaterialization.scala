@@ -28,23 +28,20 @@ import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.NucleotideContigFragment
-import org.bdgenomics.mango.core.util.ResourceUtils
-import org.bdgenomics.mango.tiling.{ ReferenceTile, Tiles }
+import org.bdgenomics.mango.core.util.{ VizUtils, ResourceUtils }
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
 import org.bdgenomics.utils.misc.Logging
 import picard.sam.CreateSequenceDictionary
 
-class ReferenceMaterialization(sc: SparkContext,
+class ReferenceMaterialization(@transient sc: SparkContext,
                                referencePath: String,
-                               chunkS: Int = 10000) extends Tiles[String, ReferenceTile] with Serializable with Logging {
+                               chunkS: Int = 10000) extends Serializable with Logging {
 
   //Regex for splitting fragments to the chunk size specified above
 
-  protected def tag = reflect.classTag[String]
-
   var bookkeep = Array[String]()
   val chunkSize = chunkS
-  var intRDD: IntervalRDD[ReferenceRegion, ReferenceTile] = null
+  var intRDD: IntervalRDD[ReferenceRegion, String] = null
   val dict = init
 
   def getSequenceDictionary: SequenceDictionary = dict
@@ -92,9 +89,9 @@ class ReferenceMaterialization(sc: SparkContext,
       (ReferenceRegion(r._1.referenceName, r._1.start + x._2 * c, r._1.start + x._2 * c + x._1.length), x._1)))
 
     // convert to interval RDD
-    val refRDD: IntervalRDD[ReferenceRegion, ReferenceTile] =
+    val refRDD: IntervalRDD[ReferenceRegion, String] =
       IntervalRDD(splitFragments)
-        .mapValues(r => ReferenceTile(r)) // Front end parses byte array
+
     // insert whole chromosome in structure
     if (intRDD == null) {
       intRDD = refRDD
@@ -110,14 +107,11 @@ class ReferenceMaterialization(sc: SparkContext,
       put(region)
     }
 
-    getTiles(region, true)
-  }
+    val data: RDD[(ReferenceRegion, String)] =
+      intRDD.filterByInterval(region)
+        .toRDD
 
-  def getReferenceAsBytes(region: ReferenceRegion): Array[Byte] = {
-    if (!bookkeep.contains(region.referenceName)) {
-      put(region)
-    }
-    getTiles(region, true).toCharArray.map(_.toByte)
+    stringifyRaw(data, region)
   }
 
   def init: SequenceDictionary = {
@@ -139,7 +133,7 @@ class ReferenceMaterialization(sc: SparkContext,
     val str = data.collect
       .sortBy(_._1.start).map(_._2)
       .reduce(_ + _)
-    trimSequence(str, region)
+    VizUtils.trimSequence(str, region, chunkSize)
   }
 
   def setSequenceDictionary(filePath: String): SequenceDictionary = {

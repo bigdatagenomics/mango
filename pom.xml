@@ -479,11 +479,6 @@
         <version>${bdg-formats.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.bdgenomics.mango</groupId>
-        <artifactId>mango-core</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-cli_${scala.version.prefix}</artifactId>
         <version>${bdg-utils.version}</version>

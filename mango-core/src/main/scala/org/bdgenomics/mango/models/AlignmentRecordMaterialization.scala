@@ -18,24 +18,25 @@
 package org.bdgenomics.mango.models
 
 import java.io.File
-import htsjdk.samtools.{ SAMRecord, SamReader, SamReaderFactory }
-import net.liftweb.json.Serialization.write
+
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.layout.{ PositionCount, AlignmentRecordLayout, CalculatedAlignmentRecord, MutationCount }
+import org.bdgenomics.mango.converters.GA4GHConverter
+import org.bdgenomics.mango.core.util.VizUtils
+import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.tiling._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd.IntervalRDD
 import org.bdgenomics.utils.misc.Logging
+import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 
 import scala.reflect.ClassTag
 
@@ -43,29 +44,34 @@ import scala.reflect.ClassTag
  *
  * @param s SparkContext
  * @param chunkS chunkSize to size nodes in interval trees in IntervalRDD
- * @param refRDD reference RDD to get reference string from for mismatch computations
+ * @param d Sequence Dictionay calculated from reference
  * extends LazyMaterialization and KTiles
  * @see LazyMaterialization
  * @see KTiles
  */
 class AlignmentRecordMaterialization(s: SparkContext,
-                                     chunkS: Int,
-                                     refRDD: ReferenceMaterialization) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[AlignmentRecordTile] with Serializable with Logging {
+                                     filePaths: List[String],
+                                     d: SequenceDictionary,
+                                     chunkS: Int) extends LazyMaterialization[AlignmentRecord, AlignmentRecordTile] with KTiles[AlignmentRecordTile] with Serializable with Logging {
 
-  protected def tag = reflect.classTag[Iterable[AlignmentRecord]]
-  val dict = refRDD.dict
-  val sc = s
+  val dict = d
+  @transient val sc = s
+  @transient implicit val formats = net.liftweb.json.DefaultFormats
+
   val chunkSize = chunkS
   val prefetchSize = if (sc.isLocal) 3000 else 10000
-  val partitioner = setPartitioner
   val bookkeep = new Bookkeep(prefetchSize)
-
+  val files = filePaths
+  def getStart = (ar: AlignmentRecord) => ar.getStart
+  def toTile = (data: Iterable[(String, AlignmentRecord)], region: ReferenceRegion) => {
+    AlignmentRecordTile(data, region)
+  }
+  def load = (region: ReferenceRegion, file: String) => AlignmentRecordMaterialization.load(sc, region, file)
   /**
    * Define layers and underlying data types
    */
   val rawLayer: Layer = L0
-  val mismatchLayer: Layer = L1
-  val coverageLayer: Layer = L2
+  val coverageLayer: Layer = L1
 
   /*
    * Gets Frequency over a given region for each specified sample
@@ -77,107 +83,8 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
    * cooresponding frequency.
    */
-  def getFrequency(region: ReferenceRegion, ks: List[String]): String = {
-    // TODO: check if in RDD
-    multiget(region, ks, Some(coverageLayer))
-  }
-
-  /**
-   * Initializes AlignmentRecords by loading readpaths and their corresponding sample names.
-   * @param readsPaths absolute paths of AlignmentRecord files to load. Takes formats sam, bam and adam.
-   * @return Returns list of keys associated with each file. This is set to the sampleGroupName
-   */
-  def init(readsPaths: List[String]): List[String] = {
-    var sampNamesBuffer = new scala.collection.mutable.ListBuffer[String]
-    for (readsPath <- readsPaths) {
-      if (ResourceUtils.isLocal(readsPath, sc)) {
-        if (readsPath.endsWith(".bam") || readsPath.endsWith(".sam")) {
-          val srf: SamReaderFactory = SamReaderFactory.make()
-          val samReader: SamReader = srf.open(new File(readsPath))
-          val rec: SAMRecord = samReader.iterator().next()
-          val sample = rec.getReadGroup.getSample
-          sampNamesBuffer += sample
-          loadSample(readsPath, Option(sample))
-        } else if (readsPath.endsWith(".adam")) {
-          sampNamesBuffer += loadADAMSample(readsPath)
-        } else {
-          log.info("WARNING: Invalid input for reads file on local fs")
-          println("WARNING: Invalid input for reads file on local fs")
-        }
-      } else {
-        if (readsPath.endsWith(".adam")) {
-          sampNamesBuffer += loadADAMSample(readsPath)
-        } else {
-          log.info("WARNING: Invalid input for reads file on remote fs")
-          println("WARNING: Invalid input for reads file on remote fs")
-        }
-      }
-    }
-    sampNamesBuffer.toList
-  }
-
-  /**
-   * Overrides sample loading from LazyMaterailziation. Adds (id, filepath)
-   * tuple to fileMap
-   * @param filePath Filepath to load
-   * @param sampleId id to associate with file
-   */
-  override def loadSample(filePath: String, sampleId: Option[String] = None) {
-    val sample =
-      sampleId match {
-        case Some(_) => sampleId.get
-        case None    => filePath
-      }
-
-    fileMap += ((sample, filePath))
-    println(s"loading sample ${sample}")
-  }
-
-  /**
-   * Loads ADAM Sample and saves the (id, filepath) tuple to filemap
-   * @param filePath Filepath to load
-   * @return id associated with file
-   */
-  override def loadADAMSample(filePath: String): String = {
-    val sample = getFileReference(filePath)
-    fileMap += ((sample, filePath))
-    sample
-  }
-
-  /**
-   * Gets file identifier associated with file
-   * @param fp path of AlignmentRecord file
-   * @return id associated with file
-   */
-  override def getFileReference(fp: String): String = {
-    sc.loadParquetAlignments(fp).recordGroups.recordGroups.head.sample
-  }
-
-  /**
-   * Loads data from file
-   * @param region Region to load
-   * @param k k associated with the file to load from
-   * @return RDD of loaded AlignmentRecords
-   */
-  override def loadFromFile(region: ReferenceRegion, k: String): RDD[AlignmentRecord] = {
-    try {
-      val fp = fileMap(k)
-      AlignmentRecordMaterialization.load(sc: SparkContext, region, fp)
-    } catch {
-      case e: NoSuchElementException => {
-        throw e
-      }
-    }
-  }
-
-  /**
-   * Gets data over specified region and keys
-   * @param region Region to fetch
-   * @param k key corresponding to file to fetch from
-   * @return Jsonified data
-   */
-  def get(region: ReferenceRegion, k: String, layerOpt: Option[Layer] = None): String = {
-    multiget(region, List(k), layerOpt)
+  def getFrequency(region: ReferenceRegion): Map[String, String] = {
+    get(region, Some(coverageLayer))
   }
 
   /**
@@ -188,56 +95,39 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * Otherwise call put on the sections of data that don't exist
    * Here, ks, is a list of personids (String)
    * @param region: ReferenceRegion to fetch
-   * @param ks: keys to fetch data for
    * @param layerOpt: Option to force data retrieval from specific layer
    * @return JSONified data
    */
-  def multiget(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
+  def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): Map[String, String] = {
     val seqRecord = dict(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
-            put(r, ks)
+            put(r)
           }
         }
-        val dataLayer: Layer = layerOpt.getOrElse(getLayer(region))
-        val layers = getTiles(region, ks, List(coverageLayer, dataLayer))
-        val coverage = layers.get(coverageLayer).get
-        val reads = layers.get(dataLayer).get
-        write(Map("coverage" -> coverage, "reads" -> reads))
+        val dataLayer: Layer = layerOpt.getOrElse(L0)
+        val layers = List(dataLayer, coverageLayer)
+        val data = getTiles(region, layers)
+        val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+
+        val coverage = json.get(coverageLayer).get // TODO: coverage
+        val reads = json.get(dataLayer).get
+        reads
+        //        write(Map("coverage" -> coverage, "reads" -> reads))
       } case None => {
         throw new Exception("Not found in dictionary")
       }
     }
   }
 
-  def getAlignments(region: ReferenceRegion, ks: List[String]): RDD[AlignmentRecord] = {
-    val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
-        if (regionsOpt.isDefined) {
-          for (r <- regionsOpt.get) {
-            put(r, ks)
-          }
-        }
-        getRaw(region, ks).map(r => r.asInstanceOf[CalculatedAlignmentRecord])
-          .map(_.record)
-      } case None => {
-        throw new Exception("Not found in dictionary")
-      }
-    }
-  }
-
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String = {
+  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): Map[String, String] = {
     layer match {
-      case `rawLayer`      => stringifyRawAlignments(data, region)
-      case `mismatchLayer` => stringifyPointMismatches(data, region)
-      case `coverageLayer` => stringifyCoverage(data, region)
-      case _               => ""
+      case `rawLayer`      => stringifyGA4GHAlignments(data, region)
+      case `coverageLayer` => Coverage.stringifyCoverage(data, region)
+      case _               => Map.empty[String, String]
     }
   }
 
@@ -247,62 +137,22 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param region region to futher filter by
    * @return JSONified data
    */
-  def stringifyRawAlignments(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-
-    val data: Array[(String, Iterable[CalculatedAlignmentRecord])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[CalculatedAlignmentRecord]])
+  def stringifyGA4GHAlignments(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
+    val data: Array[(String, Iterable[AlignmentRecord])] = rdd
+      .mapValues(_.asInstanceOf[Iterable[AlignmentRecord]])
       .mapValues(r => r.filter(r => r.record.getStart <= region.end && r.record.getEnd >= region.start)).collect
 
-    val flattened: Map[String, Array[CalculatedAlignmentRecord]] = data.groupBy(_._1)
+    val flattened: Map[String, Array[AlignmentRecord]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
 
-    // write map of (key, data)
-    write(AlignmentRecordLayout(flattened))
-  }
+    val gaReads: Map[String, List[GAReadAlignment]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGAReadAlignment(r)).toList)
 
-  /**
-   * Formats layer 1 data from KLayeredTile to JSON. This is requied by KTiles
-   * @param rdd RDD of (id, data) tuples
-   * @param region region to futher filter by
-   * @return JSONified data
-   */
-  def stringifyPointMismatches(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    implicit val formats = net.liftweb.json.DefaultFormats
-    val binSize = VizUtils.getBinSize(region)
+    gaReads.mapValues(v => {
+      GASearchReadsResponse.newBuilder()
+        .setAlignments(v)
+        .build().toString
+    })
 
-    val data = rdd
-      .mapValues(_.asInstanceOf[Iterable[MutationCount]])
-      .mapValues(r => r.filter(r => r.refCurr <= region.end && r.refCurr >= region.start))
-      .mapValues(r => r.toList.distinct)
-      .map(r => (r._1, r._2.filter(r => r.refCurr % binSize == 0)))
-      .collect
-
-    val flattened: Map[String, Array[MutationCount]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
-
-    write(flattened)
-  }
-
-  /**
-   * Formats coverage data from Iterable[Int for each string
-   * @param rdd
-   * @param region
-   * @return
-   */
-  def stringifyCoverage(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): String = {
-    // get bin size to mod by
-    val binSize = VizUtils.getBinSize(region)
-    val regions = Bookkeep.unmergeRegions(region, chunkSize)
-    val data = rdd
-      .mapValues(_.asInstanceOf[Iterable[PositionCount]])
-      .mapValues(r => r.filter(r => r.position <= region.end && r.position >= region.start && r.position % binSize == 0))
-      .collect
-
-    val flattened: Map[String, Array[PositionCount]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
-
-    write(flattened)
   }
 
   /**
@@ -311,38 +161,38 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
    *
    * @param region ReferenceRegion in which data is retreived
-   * @param ks to be retreived
    */
-  override def put(region: ReferenceRegion, ks: List[String]) = {
+  override def put(region: ReferenceRegion) = {
     val seqRecord = dict(region.referenceName)
     if (seqRecord.isDefined) {
       val trimmedRegion = ReferenceRegion(region.referenceName, region.start, VizUtils.getEnd(region.end, seqRecord))
-      val reference = refRDD.getReferenceString(trimmedRegion)
-      var data: RDD[AlignmentRecord] = sc.emptyRDD[AlignmentRecord]
+      var data: RDD[(String, AlignmentRecord)] = sc.emptyRDD[(String, AlignmentRecord)]
 
       // divide regions by chunksize
       val regions: List[ReferenceRegion] = Bookkeep.unmergeRegions(region, chunkSize)
 
       // get alignment data for all samples
-      ks.map(k => {
+      files.map(fp => {
         // per sample data
-        val kdata = loadFromFile(trimmedRegion, k)
+        val k = LazyMaterialization.filterKeyFromFile(fp)
+        val kdata = AlignmentRecordMaterialization.load(sc, trimmedRegion, fp).map(r => (k, r))
         data = data.union(kdata)
       })
 
-      var mappedRecords: RDD[(ReferenceRegion, AlignmentRecord)] = sc.emptyRDD[(ReferenceRegion, AlignmentRecord)]
+      var mappedRecords: RDD[(ReferenceRegion, (String, AlignmentRecord))] = sc.emptyRDD[(ReferenceRegion, (String, AlignmentRecord))]
 
       // for all regions, filter by that region and create AlignmentRecordTile
       regions.foreach(r => {
-        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar))).map(ar => (r, ar))
+        val grouped = data.filter(ar => r.overlaps(ReferenceRegion(ar._2))).map(ar => (r, ar))
         mappedRecords = mappedRecords.union(grouped)
       })
 
-      val groupedRecords: RDD[(ReferenceRegion, Iterable[AlignmentRecord])] =
+      val groupedRecords: RDD[(ReferenceRegion, Iterable[(String, AlignmentRecord)])] =
         mappedRecords
           .groupBy(_._1)
           .map(r => (r._1, r._2.map(_._2)))
-      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] = groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, reference, r._1)))
+      val tiles: RDD[(ReferenceRegion, AlignmentRecordTile)] =
+        groupedRecords.map(r => (r._1, AlignmentRecordTile(r._2, r._1)))
 
       // insert into IntervalRDD
       if (intRDD == null) {
@@ -355,19 +205,19 @@ class AlignmentRecordMaterialization(s: SparkContext,
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
-      bookkeep.rememberValues(region, ks)
+      bookkeep.rememberValues(region, files)
     }
   }
 }
 
 object AlignmentRecordMaterialization {
 
-  def apply(sc: SparkContext, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, 1000, refRDD)
+  def apply(sc: SparkContext, files: List[String], dict: SequenceDictionary): AlignmentRecordMaterialization = {
+    new AlignmentRecordMaterialization(sc, files, dict, 1000)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, chunkSize: Int, refRDD: ReferenceMaterialization): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, chunkSize, refRDD)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary, chunkSize: Int): AlignmentRecordMaterialization = {
+    new AlignmentRecordMaterialization(sc, files, dict, chunkSize)
   }
 
   /**
@@ -412,10 +262,8 @@ object AlignmentRecordMaterialization {
   def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     val name = Binary.fromString(region.referenceName)
     val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name))
-    // TODO: modify projection to contain group
     val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
     sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None)
   }
-
 }

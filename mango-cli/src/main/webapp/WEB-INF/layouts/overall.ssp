@@ -1,9 +1,12 @@
-<%@ val dictionary: String%>
+<%@ val dictionary:     String  %>
+<%@ val regions: String %>
 <%@ val readsExist:     Boolean %>
-<%@ val readsSamples:   Option[List[String]] %>
-<%@ val variantsPaths:  Option[List[String]] %>
 <%@ val variantsExist:  Boolean %>
 <%@ val featuresExist:  Boolean %>
+<%@ val readsSamples:   Option[List[String]] %>
+<%@ val variantsPaths:  Option[List[String]] %>
+
+
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
@@ -11,28 +14,7 @@
 <% render("templates/sidebar.ssp") %>
 
 <div id="main">
-    <%--<div id="home">--%>
-        <%--<% render("templates/home.ssp", Map("dictionary" -> dictionary)) %>--%>
-    <%--</div>--%>
-
-        <%--#if (featuresExist)--%>
-            <%--<div class="graphArea" id="featArea"></div>--%>
-        <%--#end--%>
-
-        <%--#if (variantsExist)--%>
-            <%--<div class="graphArea" id="varArea">--%>
-            <%--<% variantsPaths.get.foreach(s =>--%>
-                <%--render("templates/variants.ssp", Map("sample" -> s, "id" -> s)))%>--%>
-            <%--</div>--%>
-        <%--#end--%>
-
-        <%--#if (readsExist)--%>
-            <%--<div class="graphArea" id="readsArea">--%>
-            <%--<% readsSamples.get.foreach(s =>--%>
-                <%--render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>--%>
-            <%--</div>--%>
-        <%--#end--%>
-
+    <div id="pileup"></div>
 </div>
 
 
@@ -53,7 +35,6 @@
 </script>
 
 <script>
-var div = document.getElementById('main');
 // TODO: make function in pileup to fetch SequenceDictionary
 var request = "/sequenceDictionary"
 var xhr = new XMLHttpRequest();
@@ -63,9 +44,9 @@ xhr.send();
 xhr.onreadystatechange = function() {
     if (xhr.readyState == 4 && xhr.status == 200) {
         var contigList = JSON.parse(xhr.response);
-        var p = pileup.create(div, {
+        var p = pileup.create(document.getElementById('pileup'), {
             // go to one of the chromosomes in sequence dictionary
-            range: {contig: 'chrM', start: 0, stop: 100},
+            range: {contig: 'chrM', start: 1, stop: 100},
             tracks: [
                 {
                     viz: pileup.viz.genome(),
@@ -75,36 +56,58 @@ xhr.onreadystatechange = function() {
                         contigList: contigList
                     }),
                     name: 'Reference'
-                }
+                },
+                #if (variantsExist)
+                    #for (s <- variantsPaths.get)
+                        {
+                        viz: pileup.viz.variants(),
+                        data: pileup.formats.variants({
+                            url: '/variants',
+                            key: '${s}'
+                        }),
+                        name: '${s}'
+                        },
+                        {
+                        viz: pileup.viz.genotypes(),
+                        data: pileup.formats.genotypes({
+                        url: '/genotypes',
+                        key: '${s}'
+                        }),
+                        name: 'Genotypes'
+                        },
+                    #end
+                #end
+                #if (readsExist)
+                    #for (s <- readsSamples.get)
+                        {
+                        viz: pileup.viz.coverage(),
+                        isReference: false,
+                            data: pileup.formats.ga4gh({
+                            endpoint: '/GA4GHreads',
+                            readGroupId: '${s}',
+                            killChr: false
+                        }),
+                        name: 'Coverage'
+                        },
+                        {
+                        viz: pileup.viz.pileup(),
+                        isReference: false,
+                        data: pileup.formats.ga4gh({
+                            endpoint: '/GA4GHreads',
+                            readGroupId: '${s}',
+                            killChr: false
+                        }),
+                        name: 'Alignment'
+                        },
+                    #end
+                #end
             ]
         });
+
     }
 };
 
 
 </script>
-
-#if (featuresExist)
-    <script src="js/features.js"></script>
-#end
-#if (variantsExist)
-    <% var varJsonSamples = variantsPaths.get.reduce((a1, a2) => (a1 + "," + a2)) %>
-    <script>
-        var varSampleIds = "${varJsonSamples}";
-        var varFiles = varSampleIds.split(",").unique();
-    </script>
-    <script src="js/variants.js"></script>
-#end
-#if (readsExist)
-    <% var jsonSamples = readsSamples.get.reduce((a1, a2) => (a1 + "," + a2)) %>
-    <script>
-        var sampleIds = "${jsonSamples}";
-        var rawSamples = sampleIds.split(",").unique();
-        var samples = filterNames(rawSamples);
-    </script>
-    <script src="js/freq.js"></script>
-    <script src="js/reads.js"></script>
-#end
-
 
 </html>
