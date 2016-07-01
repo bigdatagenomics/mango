@@ -90,7 +90,7 @@ class FeatureMaterialization(s: SparkContext,
 
     val flattened: Map[String, Array[BedRowJson]] = data.groupBy(_._1)
       .map(r => (r._1, r._2.flatMap(_._2)))
-      .mapValues(r => r.map(f => BedRowJson(f.getAttributes.mkString("/t"), f.getContigName, f.getStart, f.getEnd)))
+      .mapValues(r => r.map(f => BedRowJson(Option(f.getFeatureId).getOrElse("N/A"), Option(f.getFeatureType).getOrElse("N/A"), f.getContigName, f.getStart, f.getEnd)))
 
     flattened.mapValues(r => write(r))
   }
