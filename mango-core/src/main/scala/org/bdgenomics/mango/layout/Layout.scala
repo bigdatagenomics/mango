@@ -23,3 +23,4 @@ package org.bdgenomics.mango.layout
  */
 case class VariantJson(contig: String, position: Long, ref: String, alt: String)
 case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
+case class BedRowJson(rest: String, contig: String, start: Long, end: Long)
