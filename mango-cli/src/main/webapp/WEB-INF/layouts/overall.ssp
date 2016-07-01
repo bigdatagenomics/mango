@@ -3,8 +3,9 @@
 <%@ val readsExist:     Boolean %>
 <%@ val variantsExist:  Boolean %>
 <%@ val featuresExist:  Boolean %>
-<%@ val readsSamples:   Option[List[String]] %>
+<%@ val readsPaths:   Option[List[String]] %>
 <%@ val variantsPaths:  Option[List[String]] %>
+<%@ val featuresPaths:  Option[List[String]] %>
 
 
 
@@ -46,7 +47,7 @@ xhr.onreadystatechange = function() {
         var contigList = JSON.parse(xhr.response);
         var p = pileup.create(document.getElementById('pileup'), {
             // go to one of the chromosomes in sequence dictionary
-            range: {contig: 'chrM', start: 1, stop: 100},
+            range: {contig: 'chrM', start: 1000, stop: 1500},
             tracks: [
                 {
                     viz: pileup.viz.genome(),
@@ -56,6 +57,14 @@ xhr.onreadystatechange = function() {
                         contigList: contigList
                     }),
                     name: 'Reference'
+                },
+                {
+                    viz: pileup.viz.scale(),
+                    name: 'Scale'
+                },
+                {
+                    viz: pileup.viz.location(),
+                    name: 'Location'
                 },
                 #if (variantsExist)
                     #for (s <- variantsPaths.get)
@@ -77,8 +86,20 @@ xhr.onreadystatechange = function() {
                         },
                     #end
                 #end
+                #if (featuresExist)
+                    #for (s <- featuresPaths.get)
+                        {
+                        viz: pileup.viz.features(),
+                        data: pileup.formats.features({
+                        url: '/features',
+                        key: '${s}',
+                        }),
+                        name: '${s}'
+                        },
+                    #end
+                #end
                 #if (readsExist)
-                    #for (s <- readsSamples.get)
+                    #for (s <- readsPaths.get)
                         {
                         viz: pileup.viz.coverage(),
                         isReference: false,

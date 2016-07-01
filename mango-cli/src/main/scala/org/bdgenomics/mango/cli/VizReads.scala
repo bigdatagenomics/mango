@@ -225,20 +225,27 @@ class VizServlet extends ScalatraServlet {
     } catch {
       case _ => None
     }
+
+    val featuresPaths = try {
+      Some(VizReads.featureData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+    } catch {
+      case _ => None
+    }
+
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
         "regions" -> VizReads.formatReferenceRegions(VizReads.prefetchedRegions),
-        "readsSamples" -> readsSamples,
+        "readsPaths" -> readsSamples,
         "readsExist" -> VizReads.readsExist,
-        "variantsExist" -> VizReads.variantsExist,
         "variantsPaths" -> variantsPaths,
+        "variantsExist" -> VizReads.variantsExist,
+        "featuresPaths" -> featuresPaths,
         "featuresExist" -> VizReads.featuresExist))
   }
 
   // Sends byte array to front end
   get("/reference/:ref") {
-    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
     session("referenceRegion") = viewRegion
     val dictOpt = VizReads.globalDict(viewRegion.referenceName)
     if (dictOpt.isDefined) {
@@ -305,7 +312,7 @@ class VizServlet extends ScalatraServlet {
           val results = VizReads.variantsCache.get(VizReads.variantData.get.genotypeLayer).get.get(key)
           if (results.isDefined) {
             Ok(results.get)
-          } else VizReads.errors.notFound
+          } else ({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
     }
@@ -335,7 +342,7 @@ class VizServlet extends ScalatraServlet {
           val results = VizReads.variantsCache.get(VizReads.variantData.get.variantLayer).get.get(key)
           if (results.isDefined) {
             Ok(results.get)
-          } else VizReads.errors.notFound
+          } else Ok({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
     }
@@ -366,7 +373,7 @@ class VizServlet extends ScalatraServlet {
 
           if (results.isDefined) {
             Ok(results.get)
-          } else VizReads.errors.notFound
+          } else Ok({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
     }
