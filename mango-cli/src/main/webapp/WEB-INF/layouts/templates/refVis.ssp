@@ -70,9 +70,14 @@ function refVis(dictionary){
   path.on('click', function(d) {
     var start = Math.round(d.data.length/2.);
     var end =  Math.round(d.data.length/2. +1000);
-    render(d.data.name, start,end, 50); 
-    document.getElementById("autocomplete").value = d.data.name+":"+start.toString()+"-"+end;
-  });  
+    // input range in control intput
+    $(".controls>input").val(start + "-" + end);
+    // select correct chromosome
+    $(".controls>select").val(d.data.name);
+    // trigger button click to redirect region
+    $(".controls>button").click();
+
+  });
 
   path.on('mouseout', function() {                              
     tooltip.style('display', 'none');                           

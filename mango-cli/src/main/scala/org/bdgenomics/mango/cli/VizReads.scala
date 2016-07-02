@@ -207,8 +207,29 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     // set initial referenceRegion so it is defined
-    val region = ReferenceRegion("chr", 1, 100)
-    session("referenceRegion") = region
+    session("referenceRegion") = ReferenceRegion("chr", 1, 100)
+    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
+      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
+        "regions" -> VizReads.formatReferenceRegions(VizReads.prefetchedRegions)))
+  }
+
+  get("/setContig/:ref") {
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
+    session("referenceRegion") = viewRegion
+  }
+
+  get("/browser") {
+    contentType = "text/html"
+    // if session variable for reference region is not yet set, randomly set it
+    try {
+      session("referenceRegion")
+    } catch {
+      case e: Exception => session("referenceRegion") = ReferenceRegion(VizReads.globalDict.records.head.name, 0, 100)
+    }
+
+    val templateEngine = new TemplateEngine
+    // set initial referenceRegion so it is defined
+    val region = session("referenceRegion").asInstanceOf[ReferenceRegion]
     VizReads.readsRegion = region
     VizReads.variantsRegion = region
     VizReads.featuresRegion = region
@@ -232,15 +253,17 @@ class VizServlet extends ScalatraServlet {
       case _ => None
     }
 
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
+    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/browser.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
-        "regions" -> VizReads.formatReferenceRegions(VizReads.prefetchedRegions),
         "readsPaths" -> readsSamples,
         "readsExist" -> VizReads.readsExist,
         "variantsPaths" -> variantsPaths,
         "variantsExist" -> VizReads.variantsExist,
         "featuresPaths" -> featuresPaths,
-        "featuresExist" -> VizReads.featuresExist))
+        "featuresExist" -> VizReads.featuresExist,
+        "contig" -> session("referenceRegion").asInstanceOf[ReferenceRegion].referenceName,
+        "start" -> session("referenceRegion").asInstanceOf[ReferenceRegion].start.toString,
+        "end" -> session("referenceRegion").asInstanceOf[ReferenceRegion].end.toString))
   }
 
   // Sends byte array to front end
