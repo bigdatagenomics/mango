@@ -21,26 +21,18 @@
 </div>
 
 
-
-<script src="js/utilities.js"></script>
-<script src="js/formSubmit.js"></script>
-<script src="js/overall.js"></script>
-<script src="js/reference.js"></script>
-
 <script>
-    <!-- Define Global Variables -->
-    var readsExist = ${readsExist};
-    var variantsExist = ${variantsExist};
-    var featuresExist = ${featuresExist};
+    <!-- Define Variables for Pileup.js -->
     var contig = '${contig}';
     var start = ${start};
     var end = ${end};
+
+    <!-- Render sidebar for navigation -->
     refVis("${dictionary}");
 
 </script>
 
 <script>
-// TODO: make function in pileup to fetch SequenceDictionary
 var request = "/sequenceDictionary"
 var xhr = new XMLHttpRequest();
 xhr.open('GET', request, true);
@@ -131,39 +123,6 @@ xhr.onreadystatechange = function() {
 
     }
 };
-
-function homeVisSubmit(start,end){
-    $("#form-field").value = start.toString()+"-"+end.toString();
-    $("#go").click();
-}
-
-$('#go').click(function(){
-    validateFormElements();
-});
-
-function validateFormElements() {
-
-  // Validate input form syntax
-  var form = $("#form-field");
-  var region = form.val().split("-");
-
-  try {
-      var newStart = Math.max(0, region[0]);
-      var newEnd = Math.max(newStart, region[1]);
-  }
-  catch(err) {
-      form[0].style.borderColor = "red";
-  }
-
-  // Check that the each form input is correct
-  if ( region===""|| isNaN(newStart) || isNaN(newEnd) || newStart>=newEnd){
-    form[0].style.borderColor = "red";
-  }
-  else{
-    form[0].style.borderColor = "";
-  }
-}
-
 </script>
 
 </html>

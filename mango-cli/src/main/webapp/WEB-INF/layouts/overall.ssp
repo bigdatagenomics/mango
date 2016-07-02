@@ -11,8 +11,6 @@
     <div class="chrChart"></div>
 </div>
 
-<script src="js/formSubmit.js"></script>
-<script src="js/overall.js"></script>
 
 <script>
     <!-- Define Global Variables -->
@@ -39,7 +37,7 @@ function home(dictionary, regions){
 	var clickableRegions = [];
 
 	// this verifies that regions is not just an empty string
-	if (regions.length > 0) {
+	if (regions != "") {
 		for(i = 0; i < regions.length; i++) {
 			var region = regions[i];
 			var range = region.split(":")[1].split("-");
@@ -89,7 +87,7 @@ function home(dictionary, regions){
 		.attr("x", 0)
 		.attr("y",0)
 		.attr("height", height)
-		.attr("width", function(d) { console.log(d.length);return (chartWidth * d.length)/d3.max(lengthlist); })
+		.attr("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist); })
 		.text(function(d) { return d.name; })
 		.on("mouseover", function(d) {
 			d3.select(this).attr("fill", "grey");
@@ -137,11 +135,9 @@ function home(dictionary, regions){
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', request, true);
 		xhr.send();
-		console.log(request);
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState == 4 && xhr.status == 200) {
 				window.location = '/browser';
-				d3.event.stopPropagation(); // disables trigger for whole chromosome parent click
 			}
 		}
 	});
@@ -157,7 +153,6 @@ function home(dictionary, regions){
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState == 4 && xhr.status == 200) {
 				window.location = '/browser';
-				d3.event.stopPropagation(); // disables trigger for whole chromosome parent click
 			}
 		}
   });

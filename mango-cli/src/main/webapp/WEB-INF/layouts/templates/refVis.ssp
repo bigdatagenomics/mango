@@ -76,8 +76,6 @@ function refVis(dictionary){
     $(".controls>select").val(d.data.name);
     // trigger button click to redirect region
     $(".controls>button").click();
-    // hide navigation to see new results
-    $("#menu").hide();
 
   });
 
