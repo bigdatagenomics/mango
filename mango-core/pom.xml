@@ -22,6 +22,10 @@
   </build>
   <dependencies>
     <dependency>
+      <groupId>net.fnothaft</groupId>
+      <artifactId>ga4gh-format</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.esotericsoftware.kryo</groupId>
       <artifactId>kryo</artifactId>
       <scope>compile</scope>

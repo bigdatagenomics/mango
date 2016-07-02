@@ -19,14 +19,13 @@ package org.bdgenomics.mango.models
 
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd._
 import org.bdgenomics.utils.misc.Logging
 
-import scala.collection.mutable
-import scala.collection.mutable.HashMap
 import scala.reflect.ClassTag
 
 abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializable with Logging {
@@ -34,70 +33,101 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
   def sc: SparkContext
   def dict: SequenceDictionary
   def chunkSize: Int
-  def partitioner: Partitioner
   def bookkeep: Bookkeep
+  def files: List[String]
+  def getFiles: List[String] = files
 
+  /**
+   * Used to generically load data from all file types
+   * @return Generic RDD of data types from file
+   */
+  def load: (ReferenceRegion, String) => RDD[T]
+
+  def getStart: T => Long
+
+  /**
+   * Tiles data
+   * @return new Data Tile
+   * @see TileTypes.scala
+   */
+  def toTile: (Iterable[(String, T)], ReferenceRegion) => S
+
+  /**
+   * Sets partitioner
+   * @return partitioner
+   */
   def setPartitioner: Partitioner = {
     GenomicRegionPartitioner(sc.defaultParallelism, dict)
   }
 
+  /**
+   * gets dictionary
+   * @return
+   */
   def getDictionary: SequenceDictionary = {
     dict
   }
 
-  // Stores location of sample at a given filepath
-  def loadSample(filePath: String, sampleId: Option[String] = None) {
-    sampleId match {
-      case Some(_) => fileMap += ((sampleId.get, filePath))
-      case None    => fileMap += ((filePath, filePath))
-
-    }
-  }
-
-  def loadADAMSample(filePath: String): String = {
-    val sample = getFileReference(filePath)
-    fileMap += ((sample, filePath))
-    sample
-  }
-
-  // Keeps track of sample ids and corresponding files
-  var fileMap: HashMap[String, String] = new HashMap()
-
-  def getFileMap: mutable.HashMap[String, String] = fileMap
-
   var intRDD: IntervalRDD[ReferenceRegion, S] = null
 
-  def getFileReference(fp: String): String
-
-  def loadFromFile(region: ReferenceRegion, k: String): RDD[T]
-
-  def put(region: ReferenceRegion, ks: List[String])
-
-  /* If the RDD has not been initialized, initialize it to the first get request
-  * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-  * If it exists, call get on the IntervalRDD
-  * Otherwise call put on the sections of data that don't exist
-  * Here, ks, is an option of list of personids (String)
-  */
-  def getTree(region: ReferenceRegion, ks: List[String]): Option[IntervalRDD[ReferenceRegion, S]] = {
+  /**
+   *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
+   * Fetches the data from disk, using predicates and range filtering
+   * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
+   *
+   * @param region ReferenceRegion in which data is retreived
+   */
+  def put(region: ReferenceRegion) = {
     val seqRecord = dict(region.referenceName)
-    val regionsOpt = bookkeep.getMaterializedRegions(region, ks)
-    seqRecord match {
-      case Some(_) =>
-        regionsOpt match {
-          case Some(_) =>
-            for (r <- regionsOpt.get) {
-              put(r, ks)
-            }
-          case None =>
-          // DO NOTHING
-        }
-        Option(intRDD.filterByInterval(region))
-      case None =>
-        None
+    if (seqRecord.isDefined) {
+      var data: RDD[(String, T)] = sc.emptyRDD[(String, T)]
+
+      // get alignment data for all samples
+      files.map(fp => {
+        val k = LazyMaterialization.filterKeyFromFile(fp)
+        val d = load(region, fp).map(v => (k, v))
+        data = data.union(d)
+      })
+
+      val c = chunkSize // required for Spark closure
+
+      val groupedRecords: RDD[(Long, Iterable[(String, T)])] =
+        data.groupBy(r => getStart(r._2) / c * c) // divide up into tile sizes by start value
+
+      val tiles: RDD[(ReferenceRegion, S)] = groupedRecords.map(f => {
+        val r = ReferenceRegion(region.referenceName, f._1, f._1 + c - 1) // map to chunk size Reference Regions
+        (r, toTile(f._2, r))
+      })
+
+      // insert into IntervalRDD
+      if (intRDD == null) {
+        intRDD = IntervalRDD(tiles)
+        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      } else {
+        val t = intRDD
+        intRDD = intRDD.multiput(tiles)
+        // TODO: can we do this incrementally instead?
+        t.unpersist(true)
+        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      }
+      bookkeep.rememberValues(region, files)
     }
   }
 
+}
+
+object LazyMaterialization {
+
+  /**
+   * Extracts location agnostic key form file
+   * @param file file to extract key from
+   * @return memoryless key representing file
+   */
+  def filterKeyFromFile(file: String): String = {
+    val slash = file.split("/")
+    val fileName = slash.last
+    fileName.replace(".", "_")
+  }
 }
 
 case class UnsupportedFileException(message: String) extends Exception(message)

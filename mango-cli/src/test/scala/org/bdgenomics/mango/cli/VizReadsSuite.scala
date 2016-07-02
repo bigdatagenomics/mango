@@ -18,28 +18,31 @@
 package org.bdgenomics.mango.cli
 
 import net.liftweb.json._
-import org.bdgenomics.mango.layout.FeatureJson
+import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.{ RequestEntityTooLarge, NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
+import org.scalatra.{ NotFound, Ok }
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   implicit val formats = DefaultFormats
+  addServlet(classOf[VizServlet], "/*")
 
   val bamFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.bam").getFile
   val referenceFile = ClassLoader.getSystemClassLoader.getResource("mm10_chrM.fa").getFile
   val vcfFile = ClassLoader.getSystemClassLoader.getResource("truetest.vcf").getFile
-  println(vcfFile)
   val featureFile = ClassLoader.getSystemClassLoader.getResource("smalltest.bed").getFile
 
-  var args = new VizReadsArgs()
+  val bamKey = LazyMaterialization.filterKeyFromFile(bamFile)
+  val featureKey = LazyMaterialization.filterKeyFromFile(featureFile)
+  val vcfKey = LazyMaterialization.filterKeyFromFile(vcfFile)
+
+  val args = new VizReadsArgs()
   args.readsPaths = bamFile
   args.referencePath = referenceFile
   args.variantsPaths = vcfFile
   args.featurePaths = featureFile
   args.testMode = true
-  addServlet(classOf[VizServlet], "/*")
 
   sparkTest("reference/:ref") {
     implicit val VizReads = runVizReads(args)
@@ -49,45 +52,19 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       val ref = parse(response.getContent()).extract[String]
       assert(ref.length == 99)
     }
-
-    // should return no data
-    get("/reference/chrM?start=0&end=5000") {
-      assert(status == RequestEntityTooLarge("").status.code)
-    }
   }
 
-  sparkTest("/reads/:ref raw data") {
+  sparkTest("/reads/:ref") {
     implicit val VizReads = runVizReads(args)
-    get("/reads/chrM?start=0&end=100&sample=C57BL/6J&isRaw=true") {
-      assert(status == Ok("").status.code)
-    }
-  }
-
-  sparkTest("/reads/:ref mismatch data") {
-    implicit val VizReads = runVizReads(args)
-    get("/reads/chrM?start=0&end=100&sample=C57BL/6J") {
+    get("/GA4GHreads/chrM?start=0&end=100&key=" + bamKey) {
       assert(status == Ok("").status.code)
     }
   }
 
   sparkTest("/features/chrM?start=0&end=2000") {
     implicit val vizReads = runVizReads(args)
-    get("/features/chrM?start=0&end=1200") {
-      assert(status == 200)
-      val features = parse(response.getContent()).extract[List[FeatureJson]]
-      assert(features.length == 2)
-    }
-  }
-
-  sparkTest("Should not crash with incorrect feature file") {
-    val args = new VizReadsArgs()
-    args.referencePath = referenceFile
-    args.featurePaths = vcfFile
-    args.testMode = true
-
-    implicit val vizReadNoFeatures = runVizReads(args)
-    get("/features/chrM?start=0&end=2000") {
-      assert(status == NotFound("").status.code)
+    get("/features/chrM?start=0&end=1200&key=" + featureKey) {
+      assert(status == Ok("").status.code)
     }
   }
 
@@ -100,10 +77,9 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     args.testMode = true
 
     implicit val vizReadDiscovery = runVizReads(args)
-    get("/features/chrM?start=0&end=2000") {
+    get("/features/chrM?start=0&end=2000&key=" + featureKey) {
       assert(status == Ok("").status.code)
     }
   }
 
 }
-

@@ -1,0 +1,128 @@
+<%@ val dictionary:     String  %>
+<%@ val readsExist:     Boolean %>
+<%@ val variantsExist:  Boolean %>
+<%@ val featuresExist:  Boolean %>
+<%@ val readsPaths:   Option[List[String]] %>
+<%@ val variantsPaths:  Option[List[String]] %>
+<%@ val featuresPaths:  Option[List[String]] %>
+<%@ val contig: String %>
+<%@ val start: String %>
+<%@ val end: String %>
+
+
+
+<html xmlns="http://www.w3.org/1999/html">
+<% render("templates/head.ssp") %>
+<% render("navigation/navigation.ssp", Map("isBrowser" -> true)) %>
+<% render("templates/sidebar.ssp") %>
+
+<div id="main">
+    <div id="pileup"></div>
+</div>
+
+
+<script>
+    <!-- Define Variables for Pileup.js -->
+    var contig = '${contig}';
+    var start = ${start};
+    var end = ${end};
+
+    <!-- Render sidebar for navigation -->
+    refVis("${dictionary}");
+
+</script>
+
+<script>
+var request = "/sequenceDictionary"
+var xhr = new XMLHttpRequest();
+xhr.open('GET', request, true);
+xhr.send();
+
+xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+        var contigList = JSON.parse(xhr.response);
+        var p = pileup.create(document.getElementById('pileup'), {
+            // go to one of the chromosomes in sequence dictionary
+            range: {contig: contig, start: start, stop: end},
+            tracks: [
+                {
+                    viz: pileup.viz.genome(),
+                    isReference: true,
+                    data: pileup.formats.reference({
+                        url: '/reference',
+                        contigList: contigList
+                    }),
+                    name: 'Reference'
+                },
+                {
+                    viz: pileup.viz.scale(),
+                    name: 'Scale'
+                },
+                {
+                    viz: pileup.viz.location(),
+                    name: 'Location'
+                },
+                #if (variantsExist)
+                    #for (s <- variantsPaths.get)
+                        {
+                        viz: pileup.viz.variants(),
+                        data: pileup.formats.variants({
+                            url: '/variants',
+                            key: '${s}'
+                        }),
+                        name: '${s}'
+                        },
+                        {
+                        viz: pileup.viz.genotypes(),
+                        data: pileup.formats.genotypes({
+                        url: '/genotypes',
+                        key: '${s}'
+                        }),
+                        name: 'Genotypes'
+                        },
+                    #end
+                #end
+                #if (featuresExist)
+                    #for (s <- featuresPaths.get)
+                        {
+                        viz: pileup.viz.features(),
+                        data: pileup.formats.features({
+                        url: '/features',
+                        key: '${s}',
+                        }),
+                        name: '${s}'
+                        },
+                    #end
+                #end
+                #if (readsExist)
+                    #for (s <- readsPaths.get)
+                        {
+                        viz: pileup.viz.coverage(),
+                        isReference: false,
+                            data: pileup.formats.ga4gh({
+                            endpoint: '/GA4GHreads',
+                            readGroupId: '${s}',
+                            killChr: false
+                        }),
+                        name: 'Coverage'
+                        },
+                        {
+                        viz: pileup.viz.pileup(),
+                        isReference: false,
+                        data: pileup.formats.ga4gh({
+                            endpoint: '/GA4GHreads',
+                            readGroupId: '${s}',
+                            killChr: false
+                        }),
+                        name: 'Alignment'
+                        },
+                    #end
+                #end
+            ]
+        });
+
+    }
+};
+</script>
+
+</html>

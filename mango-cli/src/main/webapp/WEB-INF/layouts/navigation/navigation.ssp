@@ -1,7 +1,7 @@
 <!-- Top navigation bar -->
-<%@ val isOverall: Boolean %>
+<%@ val isBrowser: Boolean %>
 <nav class="navbar navbar-default">
-    <div class="container">
+    <div class="container" style="float:left;margin-left:200px;">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
                 <span class="sr-only">Toggle navigation</span>
@@ -12,21 +12,10 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li>
-                    <a href="overall">Overall</a>
-                </li>
-                #if (isOverall)
-                    <li style="border-left:1px solid #333" class="dropdown">
-                        <a href="#" data-toggle="dropdown" class="dropdown-toggle">View</a>
-                        <ul class="dropdown-menu" id="menu1">
-                            <input value="indelCheck" name="indelCheck" type="checkbox" id="indelCheck" checked>
-                                <li><label for="indelCheck">Indels</label></li>
-                            <input value="mismatchCheck" name="mismatchCheck" type="checkbox" id="mismatchCheck" checked>
-                                <li><label for="mismatchCheck">Mismatching Bases</label></li>
-                            <input value="coverageCheck" name="coverageCheck" type="checkbox" id="coverageCheck" checked>
-                                <li><label for="coverageCheck">Coverage</label></li>
-                        </ul>
-                    </li>
+                <li><a href="overall">Home</a></li>
+                <li><a href="browser">Browser</a></li>
+                #if (isBrowser)
+                    <li><a href="#menu" class="menu-link">Navigation</a></li>
                 #end
 
             </ul>
