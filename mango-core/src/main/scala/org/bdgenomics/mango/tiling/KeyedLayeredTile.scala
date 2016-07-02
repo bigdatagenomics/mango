@@ -52,7 +52,7 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
 
     data
   }
-  
+
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
    * @param region Region to retrieve data from

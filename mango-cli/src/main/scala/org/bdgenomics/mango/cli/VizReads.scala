@@ -523,6 +523,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold)
           }
         } else sc.emptyRDD[(ReferenceRegion, Long)]
+      println("variant regions found")
+      println(variantRegions)
 
       // filtering for features
       val featureRegions: RDD[(ReferenceRegion, Long)] =
