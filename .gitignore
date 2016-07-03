@@ -22,6 +22,7 @@ parquettest.sh
 *.iml
 .idea/
 workfiles/
+chr20/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/lib/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/main/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/test/
