@@ -29,7 +29,6 @@ import org.bdgenomics.adam.models.ReferenceRegion
  * @tparam T: Tile Type (Alignment, Variant, Feature, etc.)
  */
 trait KTiles[T <: KLayeredTile] extends Serializable {
-  implicit val formats = net.liftweb.json.DefaultFormats
 
   /* Interval RDD holding data tiles. Each node in the tree is a tile spanning a region of size chunkSize */
   def intRDD: IntervalRDD[ReferenceRegion, T]
@@ -37,61 +36,55 @@ trait KTiles[T <: KLayeredTile] extends Serializable {
   /* chunk size of each node in interval tree */
   def chunkSize: Int
 
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): String
-
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
    *
    * @param region Region to retrieve data from
-   * @param ks keys whose data to retrieve
    * @param layerOpt: Option to force fetching of specific Layer
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, ks: List[String], layerOpt: Option[Layer] = None): String = {
+  def getTiles(region: ReferenceRegion, layerOpt: Option[Layer] = None): RDD[(String, Iterable[Any])] = {
 
     // Filter IntervalRDD by region and requested layer
     val data: RDD[(String, Iterable[Any])] = intRDD.filterByInterval(region)
-      .mapValues(r => r.get(region, ks, layerOpt))
+      .mapValues(r => r.get(region, layerOpt))
       .toRDD.flatMap(_._2)
 
-    // return JSONified data
-    val layer = layerOpt.getOrElse(getLayer(region))
-    stringify(data, region, layer)
+    data
   }
-
+  
   /**
    * Gets the tiles overlapping a given region corresponding to the specified keys
    * @param region Region to retrieve data from
-   * @param ks keys whose data to retrieve
    * @param layers: List of layers to fetch from tile
    * @return jsonified data
    */
-  def getTiles(region: ReferenceRegion, ks: List[String], layers: List[Layer]): Map[Layer, String] = {
+  def getTiles(region: ReferenceRegion, layers: List[Layer]): RDD[(Int, Map[String, Iterable[Any]])] = {
 
     // Filter IntervalRDD by region and requested layer
     val data: RDD[(Int, Map[String, Iterable[Any]])] = intRDD.filterByInterval(region)
-      .mapValues(r => r.get(region, ks, layers))
+      .mapValues(r => r.get(region, layers))
       .toRDD.flatMap(_._2)
     // return JSONified data
-    val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
-    json
+    //    val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
+    data
   }
-
-  /**
-   * Gets layer corresponding to the reference region.
-   *
-   * @see LayeredTile
-   * @param region ReferenceRegion whose size to compare
-   * @return Option of layer. If region size exceeds specs in LayeredTile, no layer is returned
-   */
-  def getLayer(region: ReferenceRegion): Layer = {
-    val size = region.length()
-
-    size match {
-      case x if (x < L1.range._1) => L1
-      case _                      => L4
-    }
-  }
+  //
+  //  /**
+  //   * Gets layer corresponding to the reference region.
+  //   *
+  //   * @see LayeredTile
+  //   * @param region ReferenceRegion whose size to compare
+  //   * @return Option of layer. If region size exceeds specs in LayeredTile, no layer is returned
+  //   */
+  //  def getLayer(region: ReferenceRegion): Layer = {
+  //    val size = region.length()
+  //
+  //    size match {
+  //      case x if (x < L1.range._1) => L1
+  //      case _                      => L4
+  //    }
+  //  }
 }
 
 /**
@@ -108,39 +101,67 @@ abstract class KLayeredTile extends Serializable with Logging {
    * and is called by KTiles
    *
    * @param region Region to fetch data
-   * @param ks keys whose data to fetch
    * @param layer: Option to force fetching of specific Layer
    * @return Map of (k, Iterable(data))
    */
-  def get(region: ReferenceRegion, ks: List[String], layer: Option[Layer] = None): Map[String, Iterable[Any]] = {
+  def get(region: ReferenceRegion, layer: Option[Layer] = None): Map[String, Iterable[Any]] = {
 
     val size = region.length()
 
     val data =
       if (layer.isDefined) layerMap.get(layer.get.id)
-      else
-        size match {
-          case x if (x < L1.range._1) => layerMap.get(1)
-          case _                      => None
-        }
-    // if no data exists return empty map
-    val m = data.getOrElse(Map.empty[String, Iterable[Any]])
+      else layerMap.get(0)
 
-    // filter out irrelevent keys
-    m.filter(r => ks.contains(r._1))
+    // if no data exists return empty map
+    data.getOrElse(Map.empty[String, Iterable[Any]])
   }
 
   /**
    * Gets data corresponding to the layer tied to the region size specified. This gets data from layermap
    * and is called by KTiles
    * @param region Region to fetch data
-   * @param ks keys whose data to fetch
    * @param layers: List of layers to fetch
    * @return Map of (k, Iterable(data))
    */
-  def get(region: ReferenceRegion, ks: List[String], layers: List[Layer]): Map[Int, Map[String, Iterable[Any]]] = {
-    val filteredLayers = layerMap.filterKeys(k => layers.map(_.id).contains(k))
-    filteredLayers.mapValues(m => m.filterKeys(k => ks.contains(k)))
+  def get(region: ReferenceRegion, layers: List[Layer]): Map[Int, Map[String, Iterable[Any]]] = {
+    layerMap.filterKeys(k => layers.map(_.id).contains(k))
   }
 }
 
+trait Layer extends Serializable {
+  def id: Int
+  def maxSize: Long
+  def range: Tuple2[Long, Long]
+  val finalSize = 1000
+
+  def patchSize: Int
+  def stride: Int
+
+}
+
+/* For raw data */
+object L0 extends Layer {
+  val id = 0
+  val maxSize = 5000L
+  val range = (0L, maxSize)
+  val patchSize = 0
+  val stride = 0
+}
+
+/* For objects 5000 to 10000 */
+object L1 extends Layer {
+  val id = 1
+  val maxSize = 10000L
+  val range = (5000L, maxSize)
+  val patchSize = 10
+  val stride = 10
+}
+
+/* For objects 10,000 to 100,000 */
+object L2 extends Layer {
+  val id = 2
+  val maxSize = 100000L
+  val range = (L1.maxSize, maxSize)
+  val patchSize = 100
+  val stride = patchSize
+}

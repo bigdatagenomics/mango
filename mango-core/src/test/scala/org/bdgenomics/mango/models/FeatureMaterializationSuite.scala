@@ -20,14 +20,18 @@ package org.bdgenomics.mango.models
 
 import net.liftweb.json._
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
-import org.bdgenomics.mango.layout.FeatureJson
 import org.bdgenomics.mango.util.MangoFunSuite
 
 class FeatureMaterializationSuite extends MangoFunSuite {
 
   implicit val formats = DefaultFormats
 
-  val bedFile = resourcePath("smalltest.bed")
+  val bedFileName = "smalltest.bed"
+  val bedFile2Name = "smalltest2.bed"
+  val bedFile = resourcePath(bedFileName)
+  val bedFile2 = resourcePath(bedFile2Name)
+  val key = LazyMaterialization.filterKeyFromFile(bedFileName)
+  val key2 = LazyMaterialization.filterKeyFromFile(bedFile2Name)
 
   val dict = new SequenceDictionary(Vector(SequenceRecord("chrM", 16699L)))
 
@@ -38,42 +42,14 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 1000L, 1200L)
 
     val json = data.get(region)
-    val results = parse(json).extract[List[FeatureJson]]
-    assert(results.size == 2)
+    assert(json.contains(key))
   }
 
-  sparkTest("assert raw data returns from multiple blocks") {
-    val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
-
-    val region = new ReferenceRegion("chrM", 0L, 3000L)
-
-    val json = data.get(region)
-    val results = parse(json).extract[List[FeatureJson]]
-    assert(results.size == 3)
-  }
-
-  sparkTest("assert tracks are correctly assigned for overlapping tracks") {
-    val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
-
+  sparkTest("can fetch multiple files") {
+    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict, 1000)
     val region = new ReferenceRegion("chrM", 1000L, 1200L)
-
     val json = data.get(region)
-    val results = parse(json).extract[List[FeatureJson]]
 
-    val track0 = results.filter(_.track == 0)
-    val track1 = results.filter(_.track == 1)
-    assert(track0.length == 1)
-    assert(track1.length == 1)
+    assert(json.contains(key) && json.contains(key2))
   }
-
-  sparkTest("can handle regions out of bounds") {
-    val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
-
-    val region = new ReferenceRegion("chrM", 16000L, 17000L)
-
-    val json = data.get(region)
-    val results = parse(json).extract[List[FeatureJson]]
-    assert(results.size == 0)
-  }
-
 }

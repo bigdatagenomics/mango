@@ -15,18 +15,6 @@
 #navbar input[type=checkbox]:checked + li {
   background: #5BC0DE; }
 
-.sampleLegend {
-  height: 20px;
-  color: white;
-  background-color: #333333;
-  border-radius: 0 0 8px 8px;
-  padding: 0 0 3px 3px;
-  margin-bottom: 6px; }
-  .sampleLegend label {
-    margin-right: 5px; }
-  .sampleLegend label, .sampleLegend input {
-    float: right; }
-
 .chrChart {
   width: 1000px;
   margin-left: auto;
@@ -113,6 +101,14 @@ input[type="text"] {
   position: relative;
   width: 180px; }
 
+.chart div {
+  font: 13px sans-serif;
+  text-align: center;
+  padding: 3px 3px 3px 10px;
+  margin: 1px;
+  height: 20px;
+  border: 1px solid black; }
+
 .refVistooltip {
   background: #eee;
   box-shadow: 0 0 5px #999999;
@@ -174,6 +170,13 @@ h2.panel {
 
 #readsArea {
   padding: 0px; }
+
+#pileup {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 100px;
+  bottom: 10px; }
 
 .graphArea {
   padding: 3px; }

@@ -1,0 +1,10 @@
+##fileformat=VCFv4.0
+##source=VCFWriter
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+chrM	15	rs2905035	C	.	20	PASS	.	GT	0/0
+chrM	25	rs2905038	G	T	20	PASS	.	GT	1/1
+chrM	31	rs2905036	G	A	20	PASS	.	GT	1/1
+chrM	40	rs12131893	C	.	20	PASS	.	GT	0/0
+chrM	50	rs6701113	C	T	20	PASS	.	GT	0/1
+chrM	60	rs12131881	C	.	20	PASS	.	GT	0/0

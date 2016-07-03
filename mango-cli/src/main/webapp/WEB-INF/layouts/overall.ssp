@@ -1,87 +1,162 @@
-<%@ val dictionary:     String  %>
+
+<%@ val dictionary: String%>
 <%@ val regions: String %>
-<%@ val readsExist:     Boolean %>
-<%@ val readsSamples:   Option[List[String]] %>
-<%@ val variantsPaths:  Option[List[String]] %>
-<%@ val variantsExist:  Boolean %>
-<%@ val featuresExist:  Boolean %>
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
-<% render("navigation/navigation.ssp", Map("isOverall" -> true)) %>
-<% render("navigation/panAndZoom.ssp", Map("isOverall" -> true)) %>
-
+<% render("navigation/navigation.ssp", Map("isBrowser" -> false)) %>
 <% render("templates/sidebar.ssp") %>
 
-<div class="main">
-    <div id="home">
-        <% render("templates/home.ssp", Map("dictionary" -> dictionary, "regions" -> regions)) %>
-    </div>
-
-    <div id="tracks">
-        <div class="graphArea" id="refArea"></div>
-
-        #if (featuresExist)
-            <div class="graphArea" id="featArea"></div>
-        #end
-
-        #if (variantsExist)
-            <div class="graphArea" id="varArea">
-            <% variantsPaths.get.foreach(s =>
-                render("templates/variants.ssp", Map("sample" -> s, "id" -> s)))%>
-            </div>
-        #end
-
-        #if (readsExist)
-            <div class="graphArea" id="readsArea">
-            <% readsSamples.get.foreach(s =>
-                render("templates/reads.ssp", Map("sample" -> s, "id" -> s.replace("/","")))) %>
-            </div>
-        #end
-    </div>
+<div id="main">
+    <div class="chrChart"></div>
 </div>
 
 
-
-<script src="js/utilities.js"></script>
-<script src="js/formSubmit.js"></script>
-<script src="js/overall.js"></script>
-<script src="js/reference.js"></script>
-
 <script>
     <!-- Define Global Variables -->
-    var readsExist = ${readsExist};
-    var variantsExist = ${variantsExist};
-    var featuresExist = ${featuresExist};
-
-    var sequenceDict = "${dictionary}";
-    sequenceDict = sequenceDict.split(",");
-    autoComplete(sequenceDict);
-    refVis(sequenceDict);
-    toggleContent(false);
-
+    refVis("${dictionary}");
 </script>
 
-#if (featuresExist)
-    <script src="js/features.js"></script>
-#end
-#if (variantsExist)
-    <% var varJsonSamples = variantsPaths.get.reduce((a1, a2) => (a1 + "," + a2)) %>
-    <script>
-        var varSampleIds = "${varJsonSamples}";
-        var varFiles = varSampleIds.split(",").unique();
-    </script>
-    <script src="js/variants.js"></script>
-#end
-#if (readsExist)
-    <% var jsonSamples = readsSamples.get.reduce((a1, a2) => (a1 + "," + a2)) %>
-    <script>
-        var sampleIds = "${jsonSamples}";
-        var rawSamples = sampleIds.split(",").unique();
-        var samples = filterNames(rawSamples);
-    </script>
-    <script src="js/freq.js"></script>
-    <script src="js/reads.js"></script>
-#end
 
+<script>
+home("${dictionary}", "${regions}");
+
+function home(dictionary, regions){
+	// Define the div for the tooltip
+	dictionary= dictionary.split(",");
+	regions=regions.split(",");
+	var div = d3.select(".chrChart").append("div")
+		.attr("class", "tooltip")
+		.style("opacity", 0);
+
+	//Render read summary visualization on the home screen at startup
+	var namelist=[];
+	var lengthlist=[];
+	var totalLength=0;
+	var dataset = [];
+	var clickableRegions = [];
+
+	// this verifies that regions is not just an empty string
+	if (regions != "") {
+		for(i = 0; i < regions.length; i++) {
+			var region = regions[i];
+			var range = region.split(":")[1].split("-");
+			var name = region.split(":")[0];
+			clickableRegions.push({name: name, range});
+		}
+	}
+
+	for (i = 0; i < dictionary.length; i++) {
+		var range = dictionary[i].split(":")[1].split("-");
+		var length = parseInt(range[1]-range[0]);
+		var name = dictionary[i].split(":")[0];
+		// filter and store regions that overlap the current dictionary value. These
+		//  will be printed on the home screen
+		var relevantRegions = clickableRegions.filter(function(d) {return d.name == name});
+		dataset.push({name: name, length: length, regions: relevantRegions });
+		namelist.push(name);
+		lengthlist.push(length);
+		totalLength+=length;
+	}
+
+	// Sorting by numerical value and not lexical order
+	dataset.sort(function(a, b){return b.length-a.length});
+
+	// Can end range with d3.max(lengthlist) = 249250621 or something smaller (fit in screen)
+	var x = d3.scale.linear()
+		.domain([0, 120])
+		.range([0, 150000]);
+
+	var chartWidth = $(".chrChart").width();
+	var height = 22;
+
+	var svg = d3.select(".chrChart")
+		.append('svg')
+		.attr('width', chartWidth);
+
+	var chart = svg.selectAll("g")
+		.data(dataset).enter().append("g");
+
+	var regions = chart.selectAll(".region").data(function(d) {return d.regions});
+
+	chart
+		.append("rect")
+		.attr("class", "chr")
+		.attr("fill", "white")
+		.style("stroke", "black")
+		.attr("x", 0)
+		.attr("y",0)
+		.attr("height", height)
+		.attr("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist); })
+		.text(function(d) { return d.name; })
+		.on("mouseover", function(d) {
+			d3.select(this).attr("fill", "grey");
+			div.transition()
+				.duration(200)
+				.style("opacity", .9);
+			div	.html(d.name)
+				.style("left", (d3.event.pageX) + "px")
+				.style("top", (d3.event.pageY - 48) + "px");
+			})
+		.on("mouseout", function(d) {
+			d3.select(this).attr("fill", "white");
+			div.transition()
+				.duration(500)
+				.style("opacity", 0);
+		});
+
+	regions
+		.enter().append("rect")
+		.attr("class", "region")
+		.attr("x", (function(d) { return (chartWidth * d.range[0])/d3.max(lengthlist); }))
+		.attr("width", (function(d) { return (chartWidth * (d.range[1] - d.range[0]))/d3.max(lengthlist); }))
+		.attr("height", height)
+		.attr("fill", "black")
+		.on("mouseover", function(d) {
+			d3.select(this).attr("fill", "grey");
+			div.transition()
+				.duration(200)
+				.style("opacity", .9);
+			div	.html(d.name + ": <br/>"  + d.range[0] + " - " + d.range[1])
+			.style("left", (d3.event.pageX) + "px")
+			.style("top", (d3.event.pageY - 48) + "px");
+		})
+		.on("mouseout", function(d) {
+			d3.select(this).attr("fill", "black");
+			div.transition()
+				.duration(500)
+				.style("opacity", 0);
+		});
+
+	chart.on('click', function(d) {
+		var start = Math.round(d.length/2.0);
+		var end =  Math.round(d.length/2.0 +1000);
+		var request = '/setContig/' + d.name + '?start=' + start + '&end=' + end;
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', request, true);
+		xhr.send();
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState == 4 && xhr.status == 200) {
+				window.location = '/browser';
+			}
+		}
+	});
+
+	regions.on('click', function(d) {
+		var start = Number(d.range[0]);
+		var end =  Number(d.range[1]);
+		var request = '/setContig/' + d.name + '?start=' + start + '&end=' + end;
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', request, true);
+		xhr.send();
+		d3.event.stopPropagation(); // disables trigger for whole chromosome parent click
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState == 4 && xhr.status == 200) {
+				window.location = '/browser';
+			}
+		}
+  });
+}
+
+</script>
 </html>

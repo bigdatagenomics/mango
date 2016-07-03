@@ -1,3 +1,4 @@
+
 /**
  * Licensed to Big Data Genomics (BDG) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,18 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.bdgenomics.mango.filters
+package org.bdgenomics.mango.layout
 
-import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.mango.layout.CalculatedAlignmentRecord
-
-object AlignmentRecordFilter {
-
-  //Applies quality filter to (reference region, alignment records), returns the RDD
-  def filterByRecordQuality(data: RDD[(ReferenceRegion, CalculatedAlignmentRecord)], quality: String): RDD[(ReferenceRegion, CalculatedAlignmentRecord)] = {
-    val minimumQuality: Double = try { quality.toDouble } catch { case _ => 0 }
-    data.filter(r => r._2.record.getMapq() >= minimumQuality && r._2.record.getMapq() > 0)
-  }
-
-}
+/**
+ * This file contains case classes for json conversions
+ */
+case class VariantJson(contig: String, position: Long, ref: String, alt: String)
+case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
+case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long)
