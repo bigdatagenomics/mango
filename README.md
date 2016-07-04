@@ -26,11 +26,10 @@ $ mvn clean package -DskipTests
 ## Running mango
 mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appassembler-maven-plugin/) and includes all necessary dependencies.
 
-Run the mango-submit script as follows:
+Running an example script:
 ```
-bin/mango-submit REFERENCE_FILE.fa -read_files READS_FILE1.adam,READS_FILE2.adam -var_files VARIANTS_FILE.vcf.adam -feat_file FEATURES_FILE.bed
+From the main folder of mango, run ./example-files/run-example.sh to see a demonstration of the mitchondrial mouse chromosome.
 ```
-Note that the script above visualizes the reads data for two samples at the same time, and same for variants
 For help launching the script, run `bin/mango-submit -h`
 ````
 $ bin/mango-submit -h
