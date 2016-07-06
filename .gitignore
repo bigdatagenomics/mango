@@ -9,7 +9,7 @@
 .lib/
 dist/*
 target/
-*.sh
+scripts/
 lib_managed/
 src_managed/
 project/boot/
