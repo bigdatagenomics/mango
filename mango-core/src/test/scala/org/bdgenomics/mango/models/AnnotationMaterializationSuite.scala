@@ -18,42 +18,37 @@
 
 package org.bdgenomics.mango.models
 
+import net.liftweb.json._
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.mango.layout.{ Interval, GeneJson }
 import org.bdgenomics.mango.util.MangoFunSuite
+import net.liftweb.json.Serialization._
 
-class ReferenceMaterializationSuite extends MangoFunSuite {
+class AnnotationMaterializationSuite extends MangoFunSuite {
+
+  implicit val formats = DefaultFormats
 
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
+  val genePath = resourcePath("dvl1.200.gtf")
   val region = ReferenceRegion("chrM", 0, 500)
 
   sparkTest("test ReferenceRDD creation") {
-    new ReferenceMaterialization(sc, referencePath)
+    new AnnotationMaterialization(sc, referencePath, genePath)
   }
 
-  sparkTest("test ReferenceRDD data retrieval at layer 0") {
-    val refRDD = new ReferenceMaterialization(sc, referencePath)
+  sparkTest("assert reference string is correctly extracted") {
+    val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
+    assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
   }
 
-  sparkTest("assert chunk size specification correctly resizes fragments") {
-    val chunkSize = 100
-    val refRDD = new ReferenceMaterialization(sc, referencePath, chunkSize)
-    val response: String = refRDD.getReferenceString(region)
-    val first = refRDD.intRDD.toRDD.first._2
-    assert(first.length == chunkSize)
+  sparkTest("assert genes are correctly extracted") {
+    val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
+    val region = ReferenceRegion("chrM", 0, 16000)
+    val genes = refRDD.getGeneArray(region)
+    assert(genes.length == 9)
+    assert(write(genes) == refRDD.getGenes(region))
   }
-
-  sparkTest("assert Reference RDDs with different chunk sizes result in same output sequence") {
-    val chunkSize1 = 100
-    val chunkSize2 = 500
-
-    val refRDD1 = new ReferenceMaterialization(sc, referencePath, chunkSize1)
-    val refRDD2 = new ReferenceMaterialization(sc, referencePath, chunkSize2)
-    val response1: String = refRDD1.getReferenceString(region)
-    val response2: String = refRDD2.getReferenceString(region)
-    assert(response1 == response2)
-  }
-
 }

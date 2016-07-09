@@ -62,6 +62,14 @@ xhr.onreadystatechange = function() {
                     viz: pileup.viz.location(),
                     name: 'Location'
                 },
+                {
+                    viz: pileup.viz.genes(),
+                    data: pileup.formats.genes({
+                        url: '/genes',
+                        key: 'genes'
+                    }),
+                    name: 'Genes'
+                },
                 #if (variantsExist)
                     #for (s <- variantsPaths.get)
                         {

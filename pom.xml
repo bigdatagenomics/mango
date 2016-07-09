@@ -57,6 +57,13 @@
 
   <developers>
     <developer>
+      <id>akmorrow13</id>
+      <name>Alyssa Morrow</name>
+      <email>akmorrow@berkeley.edu</email>
+      <organization>U.C. Berkeley, Department of Electrical Engineering and Computer Science</organization>
+      <organizationUrl>http://www.cs.berkeley.edu/</organizationUrl>
+    </developer>
+    <developer>
       <id>erictu</id>
       <name>Eric Tu</name>
       <email>erictu@berkeley.edu</email>
