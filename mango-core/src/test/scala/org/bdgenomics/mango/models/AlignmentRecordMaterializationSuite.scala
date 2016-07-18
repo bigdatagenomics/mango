@@ -59,7 +59,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   sparkTest("Test frequency retrieval") {
     val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
     val region = new ReferenceRegion("chrM", 0L, 20L)
-    val freq = data.getFrequency(region).get(key).get
+    val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
 
     // extract number of positions in string ('position' => 'p')
@@ -69,8 +69,8 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   sparkTest("Test frequency retrieval across interval nodes") {
     val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
     val region = new ReferenceRegion("chrM", 90L, 110L)
-    val freq = data.getFrequency(region).get(key).get
-    val coverage = parse(freq).extract[Array[PositionCount]]
+    val freq = data.getCoverage(region).get(key).get
+    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.position)
     // extract number of positions in string ('position' => 'p')
     assert(coverage.length == 21)
   }

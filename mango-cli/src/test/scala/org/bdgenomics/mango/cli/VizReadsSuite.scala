@@ -20,8 +20,8 @@ package org.bdgenomics.mango.cli
 import net.liftweb.json._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
+import org.scalatra.Ok
 import org.scalatra.test.scalatest.ScalatraSuite
-import org.scalatra.{ NotFound, Ok }
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
@@ -56,12 +56,19 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   sparkTest("/reads/:ref") {
     implicit val VizReads = runVizReads(args)
-    get("/GA4GHreads/chrM?start=0&end=100&key=" + bamKey) {
+    get("/reads/chrM?start=0&end=100&key=" + bamKey) {
       assert(status == Ok("").status.code)
     }
   }
 
-  sparkTest("/features/chrM?start=0&end=2000") {
+  sparkTest("/reads/coverage/:ref") {
+    implicit val VizReads = runVizReads(args)
+    get("/reads/coverage/chrM?start=0&end=100&key=" + bamKey) {
+      assert(status == Ok("").status.code)
+    }
+  }
+
+  sparkTest("/features/:ref") {
     implicit val vizReads = runVizReads(args)
     get("/features/chrM?start=0&end=1200&key=" + featureKey) {
       assert(status == Ok("").status.code)

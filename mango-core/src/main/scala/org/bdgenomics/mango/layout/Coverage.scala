@@ -42,8 +42,13 @@ object Coverage {
       .mapValues(r => r.filter(r => r.position <= region.end && r.position >= region.start && r.position % binSize == 0))
       .collect
 
-    val flattened: Map[String, Array[PositionCount]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
+    val flattened: Map[String, Iterable[PositionCount]] = data.groupBy(_._1) // group by key
+      .map(r => {
+        val grouped = r._2.flatMap(_._2)
+          .groupBy(_.position) // merge duplicated positions over RDD partition borders
+          .map(r => PositionCount(r._1, r._2.map(_.count).sum))
+        (r._1, grouped)
+      })
 
     flattened.mapValues(r => write(r))
   }

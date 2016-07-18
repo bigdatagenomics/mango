@@ -100,7 +100,7 @@ xhr.onreadystatechange = function() {
                         viz: pileup.viz.coverage(),
                         isReference: false,
                             data: pileup.formats.ga4gh({
-                            endpoint: '/GA4GHreads',
+                            endpoint: '/reads',
                             readGroupId: '${s}',
                             killChr: false
                         }),
@@ -110,7 +110,7 @@ xhr.onreadystatechange = function() {
                         viz: pileup.viz.pileup(),
                         isReference: false,
                         data: pileup.formats.ga4gh({
-                            endpoint: '/GA4GHreads',
+                            endpoint: '/reads',
                             readGroupId: '${s}',
                             killChr: false
                         }),
