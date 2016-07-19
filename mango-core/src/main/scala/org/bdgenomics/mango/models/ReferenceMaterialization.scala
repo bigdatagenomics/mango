@@ -71,9 +71,9 @@ class ReferenceMaterialization(@transient sc: SparkContext,
       }
     val sequences: RDD[NucleotideContigFragment] =
       if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta"))
-        sc.loadSequences(referencePath)
+        sc.loadSequences(referencePath).rdd
       else if (referencePath.endsWith(".adam"))
-        sc.loadParquetContigFragments(referencePath, predicate = pred)
+        sc.loadParquetContigFragments(referencePath, predicate = pred).rdd
       else
         throw new UnsupportedFileException("File Types supported for reference are fa, fasta and adam")
 

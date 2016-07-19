@@ -81,14 +81,22 @@ object VizReads extends BDGCommandCompanion with Logging {
   def variantsExist: Boolean = variantData.isDefined
   def featuresExist: Boolean = featureData.isDefined
 
+  // reads cache
   var readsWait = false
   var readsCache: Map[String, String] = Map.empty[String, String]
   var readsRegion: ReferenceRegion = null
 
+  // coverage cache
+  var readsCoverageWait = false
+  var readsCoverageCache: Map[String, String] = Map.empty[String, String]
+  var readsCoverageRegion: ReferenceRegion = null
+
+  // variant cache
   var variantsWait = false
   var variantsCache: Map[Layer, Map[String, String]] = Map.empty[Layer, Map[String, String]]
   var variantsRegion: ReferenceRegion = null
 
+  // features cache
   var featuresWait = false
   var featuresCache: Map[String, String] = Map.empty[String, String]
   var featuresRegion: ReferenceRegion = null
@@ -280,7 +288,7 @@ class VizServlet extends ScalatraServlet {
     Ok(write(VizReads.refRDD.dict.records))
   }
 
-  get("/GA4GHreads/:ref") {
+  get("/reads/:ref") {
     VizTimers.ReadsRequest.time {
 
       if (!VizReads.readsExist) {
@@ -302,6 +310,37 @@ class VizServlet extends ScalatraServlet {
             VizReads.readsWait = false
           }
           val results = VizReads.readsCache.get(key)
+
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.notFound
+        } else VizReads.errors.outOfBounds
+      }
+    }
+  }
+
+  get("/reads/coverage/:ref") {
+    VizTimers.ReadsRequest.time {
+
+      if (!VizReads.readsExist) {
+        VizReads.errors.notFound
+      } else {
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+        val key: String = params("key")
+        contentType = "json"
+
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          while (VizReads.readsCoverageWait) Thread sleep (20)
+          // region was already collected, grab from cache
+          if (viewRegion != VizReads.readsCoverageRegion) {
+            VizReads.readsCoverageWait = true
+            VizReads.readsCoverageCache = VizReads.readsData.get.getCoverage(viewRegion)
+            VizReads.readsCoverageRegion = viewRegion
+            VizReads.readsCoverageWait = false
+          }
+          val results = VizReads.readsCoverageCache.get(key)
 
           if (results.isDefined) {
             Ok(results.get)
