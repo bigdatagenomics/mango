@@ -123,8 +123,9 @@ object FeatureMaterialization {
    */
   def loadFromBed(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
     region match {
-      case Some(_) => sc.loadFeatures(fp).filterByOverlappingRegion(region.get)
-      case None    => sc.loadFeatures(fp)
+      case Some(_) => sc.loadFeatures(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
+        && g.getEnd > region.get.start))
+      case None => sc.loadFeatures(fp).rdd
     }
   }
 
@@ -143,7 +144,7 @@ object FeatureMaterialization {
       }
 
     val proj = Projection(FeatureField.featureId, FeatureField.source, FeatureField.featureType, FeatureField.start, FeatureField.end, FeatureField.contigName)
-    sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
+    sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj)).rdd
   }
 
 }

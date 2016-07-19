@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.File
+import java.io.{ FileNotFoundException, File }
 
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -241,10 +241,10 @@ object AlignmentRecordMaterialization {
    */
   def loadFromBam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     val idxFile: File = new File(fp + ".bai")
-    if (!idxFile.exists()) {
-      sc.loadBam(fp).rdd.filterByOverlappingRegion(region)
+    if (idxFile.exists()) {
+      sc.loadIndexedBam(fp, region).rdd
     } else {
-      sc.loadIndexedBam(fp, region)
+      throw new FileNotFoundException("bam index not provided")
     }
   }
 
@@ -260,6 +260,6 @@ object AlignmentRecordMaterialization {
     val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name))
     val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None)
+    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None).rdd
   }
 }

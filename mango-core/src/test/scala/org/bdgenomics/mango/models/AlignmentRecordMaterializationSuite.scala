@@ -32,7 +32,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   val chunkSize = 100
 
   def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): Long = {
-    sc.loadIndexedBam(file, viewRegion).count
+    sc.loadIndexedBam(file, viewRegion).rdd.count
   }
 
   // test alignment data

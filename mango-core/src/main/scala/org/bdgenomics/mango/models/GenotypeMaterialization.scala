@@ -173,8 +173,9 @@ object GenotypeMaterialization {
         loadAdam(sc, region, fp)
       } else if (fp.endsWith(".vcf")) {
         region match {
-          case Some(_) => sc.loadGenotypes(fp).filterByOverlappingRegion(region.get)
-          case None    => sc.loadGenotypes(fp)
+          case Some(_) => sc.loadGenotypes(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
+            && g.getEnd > region.get.start))
+          case None => sc.loadGenotypes(fp).rdd
         }
       } else {
         throw UnsupportedFileException("File type not supported")
@@ -197,7 +198,7 @@ object GenotypeMaterialization {
         case None    => None
       }
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
-    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj))
+    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).rdd
   }
 
 }
