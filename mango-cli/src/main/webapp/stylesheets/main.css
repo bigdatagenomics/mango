@@ -89,6 +89,11 @@ div.tooltip {
   div.tooltip p {
     margin: 0px; }
 
+.transEff {
+  border-radius: 5px;
+  opacity: 0.7;
+  background-color: white; }
+
 input[type="text"] {
   height: 22px;
   padding: 4px 12px; }

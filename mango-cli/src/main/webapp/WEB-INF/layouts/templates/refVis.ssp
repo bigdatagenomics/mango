@@ -1,6 +1,6 @@
 <div id="refVis"></div>
 <script>
-function refVis(dictionary){
+function refVis(dictionary,fromOverall){
   // Creating reference visualization from sequence dictionary
   var dataset = [];
   // var namelist=[];
@@ -70,13 +70,23 @@ function refVis(dictionary){
   path.on('click', function(d) {
     var start = Math.round(d.data.length/2.);
     var end =  Math.round(d.data.length/2. +1000);
+    if (fromOverall){
+        var request = '/setContig/' + d.data.name + '?start=' + start + '&end=' + end;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', request, true);
+        xhr.send();
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState == 4 && xhr.status == 200) {
+            window.location = '/browser';
+          }
+        }
+    }
     // input range in control intput
     $(".controls>input").val(start + "-" + end);
     // select correct chromosome
     $(".controls>select").val(d.data.name);
     // trigger button click to redirect region
     $(".controls>button").click();
-
   });
 
   path.on('mouseout', function() {                              
