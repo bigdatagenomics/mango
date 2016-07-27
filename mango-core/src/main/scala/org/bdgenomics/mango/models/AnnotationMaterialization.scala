@@ -28,6 +28,7 @@ import org.bdgenomics.adam.rdd.contig.NucleotideContigFragmentRDD
 import org.bdgenomics.adam.rdd.features.{ GeneRDD, FeatureRDD }
 import org.bdgenomics.adam.util.{ ReferenceFile }
 import org.bdgenomics.formats.avro.{ NucleotideContigFragment }
+import org.bdgenomics.mango.core.util.{ VizUtils, Utils }
 import org.bdgenomics.mango.layout.GeneJson
 import org.bdgenomics.utils.misc.Logging
 import picard.sam.CreateSequenceDictionary
@@ -98,6 +99,14 @@ class AnnotationMaterialization(@transient sc: SparkContext,
   def getSequenceDictionary: SequenceDictionary = dict
 
   def getReferenceString(region: ReferenceRegion): String = {
-    reference.getReferenceString(region).toUpperCase()
+    try {
+      val parsedRegion = ReferenceRegion(region.referenceName, region.start,
+        VizUtils.getEnd(region.end, dict.apply(region.referenceName)))
+      reference.getReferenceString(parsedRegion).toUpperCase()
+    } catch {
+      case e: Exception =>
+        log.warn("requested reference region not found in sequence dictionary")
+        ""
+    }
   }
 }

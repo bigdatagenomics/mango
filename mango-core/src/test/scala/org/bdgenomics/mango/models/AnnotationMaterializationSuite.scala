@@ -44,6 +44,14 @@ class AnnotationMaterializationSuite extends MangoFunSuite {
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
   }
 
+  sparkTest("return empty string in region out of bounds") {
+    val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
+    val outOfBounds = ReferenceRegion("chrM", 17000, 20000)
+    val response: String = refRDD.getReferenceString(region)
+    assert(response.length == region.length)
+    assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
+  }
+
   sparkTest("assert genes are correctly extracted") {
     val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
     val region = ReferenceRegion("chrM", 0, 16000)
