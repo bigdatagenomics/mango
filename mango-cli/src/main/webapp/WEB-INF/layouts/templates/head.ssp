@@ -18,6 +18,6 @@
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">
     <link rel="stylesheet" href="resources/styles/jquery-ui.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type = "text/css" href = "stylesheets/main.css">
+    <link rel="icon" type="image/png" href="resources/images/favicon.png">
 </head>
 
