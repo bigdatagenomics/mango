@@ -25,6 +25,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.features.FeatureRDD
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.layout.{ BedRowJson, Coverage }
 import org.bdgenomics.mango.tiling._
@@ -107,8 +108,10 @@ object FeatureMaterialization {
    */
   def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
-    else if (fp.endsWith(".bed")) {
+    else if (fp.endsWith(".bed") || fp.endsWith("gtf")) {
       FeatureMaterialization.loadFromBed(sc, region, fp)
+    } else if (fp.endsWith(".gff3")) {
+      sc.loadGff3(fp).rdd
     } else {
       throw UnsupportedFileException("File type not supported")
     }
@@ -123,8 +126,9 @@ object FeatureMaterialization {
    */
   def loadFromBed(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
     region match {
-      case Some(_) => sc.loadFeatures(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-        && g.getEnd > region.get.start))
+      case Some(_) =>
+        sc.loadFeatures(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
+          && g.getEnd > region.get.start))
       case None => sc.loadFeatures(fp).rdd
     }
   }

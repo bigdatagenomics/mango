@@ -118,11 +118,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.bdgenomics.mango</groupId>
-      <artifactId>mango-core</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.bdgenomics.utils</groupId>
       <artifactId>utils-cli_${scala.version.prefix}</artifactId>
       <scope>compile</scope>

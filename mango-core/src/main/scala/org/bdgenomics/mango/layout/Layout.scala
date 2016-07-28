@@ -18,9 +18,27 @@
  */
 package org.bdgenomics.mango.layout
 
+import org.bdgenomics.adam.models.{ Exon, Gene, ReferenceRegion }
+
 /**
  * This file contains case classes for json conversions
  */
+
+case class Interval(start: Long, end: Long)
+
 case class VariantJson(contig: String, position: Long, ref: String, alt: String)
+
 case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
+
 case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long)
+
+object GeneJson {
+  def apply(rf: Gene): Iterable[GeneJson] = {
+    val transcripts = rf.transcripts
+    transcripts.map(t => GeneJson(t.region, t.id, t.strand, Interval(t.region.start, t.region.end), t.exons, t.geneId, t.names.mkString(",")))
+  }
+}
+
+case class GeneJson(position: ReferenceRegion, id: String, strand: Boolean, codingRegion: Interval,
+                    exons: Iterable[Exon], geneId: String, name: String)
+

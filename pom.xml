@@ -24,8 +24,8 @@
     <java.version>1.8</java.version>
     <jetty.version>9.2.17.v20160517</jetty.version>
     <hadoop.version>2.6.0</hadoop.version>
-    <hadoop-bam.version>7.5.0</hadoop-bam.version>
-    <htsjdk.version>2.3.0</htsjdk.version>
+    <hadoop-bam.version>7.6.0</hadoop-bam.version>
+    <htsjdk.version>2.5.0</htsjdk.version>
     <parquet.version>1.8.1</parquet.version>
     <picard.version>2.3.0</picard.version>
     <scala.version>2.10.4</scala.version>
@@ -56,6 +56,13 @@
   </scm>
 
   <developers>
+    <developer>
+      <id>akmorrow13</id>
+      <name>Alyssa Morrow</name>
+      <email>akmorrow@berkeley.edu</email>
+      <organization>U.C. Berkeley, Department of Electrical Engineering and Computer Science</organization>
+      <organizationUrl>http://www.cs.berkeley.edu/</organizationUrl>
+    </developer>
     <developer>
       <id>erictu</id>
       <name>Eric Tu</name>
