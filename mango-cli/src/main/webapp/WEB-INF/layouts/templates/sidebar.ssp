@@ -1,46 +1,5 @@
 <nav id="menu" class="panel" role="navigation">
     <% render("refVis.ssp")%>
-   	<br>
-    <div >
-		<!-- Transcript Effect -->
-		<h4>Transcript Effect</h4>
-		<button class ="transEff" type="button">3 prime UTR</button>
-		<button class ="transEff" type="button">Intron</button>
-		<button class ="transEff" type="button">5 prime UTR</button>
-		<button class ="transEff" type="button">Missense</button>
-		<button class ="transEff" type="button">Coding sequence</button>
-		<button class ="transEff" type="button">Upstream</button>
-		<button class ="transEff" type="button">Downstream</button>
-		<button class ="transEff" type="button">Splice acceptor</button>
-	</div>
-
-	<div>
-		<h4>Read Depth</h4>
-		<input  type="number" 
-				min ="0"
-				max ="1000"
-				step="100"
-				name="depth">
-	</div>
-
-	<div>
-		<h4>Allele Count</h4>
-		<input  type="number"
-				min ="0"
-				max ="1000"
-				step="100"
-				name="count">
-	</div>
-
-	<div>
-		<h4>Allele Frequency</h4>
-		
-			<input type="text" id="freq" readonly style="display:inline;background:#ccc;border:0;font-weight:bold; align:right;">
-		
-		<div id="slider"></div>
-	</div>
-	<br>
-	<button style="float:right">Submit</button>
 </nav>
 
 <script>
