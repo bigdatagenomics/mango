@@ -28,7 +28,7 @@
     var end = ${end};
 
     <!-- Render sidebar for navigation -->
-    refVis("${dictionary}");
+    refVis("${dictionary}",fromOverall=false);
 
 </script>
 

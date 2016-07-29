@@ -4,7 +4,7 @@
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
-<% render("navigation/navigation.ssp", Map("isBrowser" -> false)) %>
+<% render("navigation/navigation.ssp") %>
 <% render("templates/sidebar.ssp") %>
 
 <div id="main">
@@ -14,7 +14,7 @@
 
 <script>
     <!-- Define Global Variables -->
-    refVis("${dictionary}");
+    refVis("${dictionary}",fromOverall=true);
 </script>
 
 
@@ -53,7 +53,7 @@ function home(dictionary, regions){
 		// filter and store regions that overlap the current dictionary value. These
 		//  will be printed on the home screen
 		var relevantRegions = clickableRegions.filter(function(d) {return d.name == name});
-		dataset.push({name: name, length: length, regions: relevantRegions });
+		dataset.push({name: name, length: length, regions: relevantRegions});
 		namelist.push(name);
 		lengthlist.push(length);
 		totalLength+=length;
@@ -85,7 +85,7 @@ function home(dictionary, regions){
 		.attr("fill", "white")
 		.style("stroke", "black")
 		.attr("x", 0)
-		.attr("y",0)
+		.attr("y",function(d,i){return height*i})
 		.attr("height", height)
 		.attr("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist); })
 		.text(function(d) { return d.name; })
