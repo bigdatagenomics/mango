@@ -102,7 +102,7 @@ class AnnotationMaterialization(@transient sc: SparkContext,
     try {
       val parsedRegion = ReferenceRegion(region.referenceName, region.start,
         VizUtils.getEnd(region.end, dict.apply(region.referenceName)))
-      reference.getReferenceString(parsedRegion).toUpperCase()
+      reference.extract(parsedRegion).toUpperCase()
     } catch {
       case e: Exception =>
         log.warn("requested reference region not found in sequence dictionary")
