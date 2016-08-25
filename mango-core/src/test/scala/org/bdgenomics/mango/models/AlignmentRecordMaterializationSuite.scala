@@ -43,20 +43,19 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   var referencePath = resourcePath("mm10_chrM.fa")
   val files = List(bamFile)
 
-  sparkTest("assert creation") {
+  sparkTest("create new AlignmentRecordMaterialization") {
     val lazyMat = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
   }
 
-  sparkTest("assert raw data returns") {
+  sparkTest("return raw data from AlignmentRecordMaterialization") {
 
     val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
 
     val region = new ReferenceRegion("chrM", 0L, 900L)
-    val results = data.get(region)
-
+    val results = data.get(region).get(key).get
   }
 
-  sparkTest("Test frequency retrieval") {
+  sparkTest("return coverage from AlignmentRecordMaterialization") {
     val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = data.getCoverage(region).get(key).get
@@ -66,7 +65,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     assert(coverage.length == 21)
   }
 
-  sparkTest("Test frequency retrieval across interval nodes") {
+  sparkTest("return coverage overlapping multiple materialized nodes") {
     val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get

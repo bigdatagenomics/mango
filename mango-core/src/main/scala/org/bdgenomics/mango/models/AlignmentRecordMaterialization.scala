@@ -88,15 +88,13 @@ class AlignmentRecordMaterialization(s: SparkContext,
   }
 
   /**
-   * Gets data for multiple keys.
-   * If the RDD has not been initialized, initialize it to the first get request
-   * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-   * If it exists, call get on the IntervalRDD
-   * Otherwise call put on the sections of data that don't exist
-   * Here, ks, is a list of personids (String)
+   * Gets alignment json data for all files.
+   * Filters all alignment data already loaded into the corresponding RDD that overlap a region.
+   * If data has yet been loaded, loads data within this region.
+   *
    * @param region: ReferenceRegion to fetch
    * @param layerOpt: Option to force data retrieval from specific layer
-   * @return JSONified data
+   * @return Map of sampleIds and corresponding JSON
    */
   def get(region: ReferenceRegion, layerOpt: Option[Layer] = None): Map[String, String] = {
     val seqRecord = dict(region.referenceName)
@@ -119,6 +117,15 @@ class AlignmentRecordMaterialization(s: SparkContext,
     }
   }
 
+  /**
+   * Generic function that transforms RDD into map of sampleIds and cooresponding JSON.
+   *
+   * @param data RDD of sampleIds, and data
+   * @param region ReferenceRegion to return overlapping data
+   * @param layer layer to return json for. This can be either the rawLayer containing GA4GH alignment JSON or coverage
+   *              JSON.
+   * @return Map of (SampleId, JSON)
+   */
   def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): Map[String, String] = {
     layer match {
       case `rawLayer`      => stringifyGA4GHAlignments(data, region)
@@ -243,6 +250,7 @@ object AlignmentRecordMaterialization {
     val idxFile: File = new File(fp + ".bai")
     if (idxFile.exists()) {
       sc.loadIndexedBam(fp, region).rdd
+        .filter(r => r.getReadMapped)
     } else {
       throw new FileNotFoundException("bam index not provided")
     }
@@ -257,8 +265,8 @@ object AlignmentRecordMaterialization {
    */
   def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): RDD[AlignmentRecord] = {
     val name = Binary.fromString(region.referenceName)
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name))
-    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start,
+    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name) && (BooleanColumn("readMapped") === true))
+    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
     sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None).rdd
   }
