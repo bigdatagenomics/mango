@@ -64,23 +64,23 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("/reads/:ref") {
+  sparkTest("/reads/:key/:ref") {
     implicit val VizReads = runVizReads(args)
-    get("/reads/chrM?start=0&end=100&key=" + bamKey) {
+    get(s"/reads/${bamKey}/chrM?start=0&end=100") {
       assert(status == Ok("").status.code)
     }
   }
 
-  sparkTest("/reads/coverage/:ref") {
+  sparkTest("/reads/coverage/:key/:ref") {
     implicit val VizReads = runVizReads(args)
-    get("/reads/coverage/chrM?start=0&end=100&key=" + bamKey) {
+    get(s"/reads/coverage/${bamKey}/chrM?start=0&end=100") {
       assert(status == Ok("").status.code)
     }
   }
 
-  sparkTest("/features/:ref") {
+  sparkTest("/features/:key/:ref") {
     implicit val vizReads = runVizReads(args)
-    get("/features/chrM?start=0&end=1200&key=" + featureKey) {
+    get(s"/features/${featureKey}/chrM?start=0&end=1200") {
       assert(status == Ok("").status.code)
     }
   }
@@ -95,7 +95,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     args.testMode = true
 
     implicit val vizReadDiscovery = runVizReads(args)
-    get("/features/chrM?start=0&end=2000&key=" + featureKey) {
+    get(s"/features/${featureKey}/chrM?start=0&end=2000") {
       assert(status == Ok("").status.code)
     }
   }

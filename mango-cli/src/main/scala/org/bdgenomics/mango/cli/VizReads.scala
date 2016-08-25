@@ -249,19 +249,19 @@ class VizServlet extends ScalatraServlet {
     val readsSamples = try {
       Some(VizReads.readsData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
-      case _ => None
+      case e: Exception => None
     }
 
     val variantsPaths = try {
       Some(VizReads.variantData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
-      case _ => None
+      case e: Exception => None
     }
 
     val featuresPaths = try {
       Some(VizReads.featureData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
-      case _ => None
+      case e: Exception => None
     }
 
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/browser.ssp",
@@ -300,7 +300,7 @@ class VizServlet extends ScalatraServlet {
     Ok(write(VizReads.annotationRDD.dict.records))
   }
 
-  get("/reads/:ref") {
+  get("/reads/:key/:ref") {
     VizTimers.ReadsRequest.time {
 
       if (!VizReads.readsExist) {
@@ -331,7 +331,7 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/reads/coverage/:ref") {
+  get("/reads/coverage/:key/:ref") {
     VizTimers.ReadsRequest.time {
 
       if (!VizReads.readsExist) {
@@ -362,7 +362,7 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/genotypes/:ref") {
+  get("/genotypes/:key/:ref") {
     VizTimers.VarRequest.time {
       if (!VizReads.variantsExist)
         VizReads.errors.notFound
@@ -392,7 +392,7 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/variants/:ref") {
+  get("/variants/:key/:ref") {
     VizTimers.VarRequest.time {
       if (!VizReads.variantsExist)
         VizReads.errors.notFound
@@ -422,7 +422,7 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  get("/features/:ref") {
+  get("/features/:key/:ref") {
     VizTimers.FeatRequest.time {
       if (!VizReads.featuresExist)
         VizReads.errors.notFound

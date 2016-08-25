@@ -75,16 +75,14 @@ xhr.onreadystatechange = function() {
                         {
                         viz: pileup.viz.variants(),
                         data: pileup.formats.variants({
-                            url: '/variants',
-                            key: '${s}'
+                            url: '/variants/${s}'
                         }),
                         name: '${s}'
                         },
                         {
                         viz: pileup.viz.genotypes(),
                         data: pileup.formats.genotypes({
-                        url: '/genotypes',
-                        key: '${s}'
+                        url: '/genotypes/${s}'
                         }),
                         name: 'Genotypes'
                         },
@@ -95,8 +93,7 @@ xhr.onreadystatechange = function() {
                         {
                         viz: pileup.viz.features(),
                         data: pileup.formats.features({
-                        url: '/features',
-                        key: '${s}',
+                            url: '/features/${s}'
                         }),
                         name: '${s}'
                         },
