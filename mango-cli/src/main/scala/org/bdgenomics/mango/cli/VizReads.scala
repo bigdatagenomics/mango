@@ -67,6 +67,9 @@ object VizReads extends BDGCommandCompanion with Logging {
   var server: org.eclipse.jetty.server.Server = null
   var globalDict: SequenceDictionary = null
 
+  // Gene URL
+  var genes: Option[String] = None
+
   // Structures storing data types. All but reference is optional
   var annotationRDD: AnnotationMaterialization = null
   var readsData: Option[AlignmentRecordMaterialization] = None
@@ -166,7 +169,7 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
   var referencePath: String = null
 
-  @Argument(required = true, metaVar = "genes", usage = "File with genes. Accepted formats are gtf and .gff3", index = 1)
+  @Args4jOption(required = false, name = "-genes", usage = "Gene URL.")
   var genePath: String = null
 
   @Args4jOption(required = false, name = "-repartition", usage = "The number of partitions")
@@ -263,6 +266,7 @@ class VizServlet extends ScalatraServlet {
 
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/browser.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
+        "genes" -> VizReads.genes,
         "readsPaths" -> readsSamples,
         "readsExist" -> VizReads.readsExist,
         "variantsPaths" -> variantsPaths,
@@ -280,16 +284,6 @@ class VizServlet extends ScalatraServlet {
     val dictOpt = VizReads.globalDict(viewRegion.referenceName)
     if (dictOpt.isDefined) {
       Ok(write(VizReads.annotationRDD.getReferenceString(viewRegion)))
-    } else VizReads.errors.outOfBounds
-  }
-
-  get("/genes/:ref") {
-    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong, params("end").toLong)
-    session("referenceRegion") = viewRegion
-    val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-    if (dictOpt.isDefined) {
-      val genes = VizReads.annotationRDD.getGenes(viewRegion)
-      Ok(genes)
     } else VizReads.errors.outOfBounds
   }
 
@@ -477,6 +471,11 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       preprocess(VizReads.prefetchedRegions)
     }
 
+    // check whether genePath was supplied
+    if (args.genePath != null) {
+      VizReads.genes = Some(args.genePath)
+    }
+
     // start server
     if (!args.testMode) startServer()
 
@@ -488,11 +487,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         throw new FileNotFoundException("reference file not provided")
       })
 
-      val genePath = Option(args.genePath).getOrElse({
-        throw new FileNotFoundException("gene file not provided")
-      })
-
-      VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath, genePath)
+      VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath)
       VizReads.globalDict = VizReads.annotationRDD.getSequenceDictionary
     }
 

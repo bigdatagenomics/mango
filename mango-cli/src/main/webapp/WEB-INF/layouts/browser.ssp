@@ -1,4 +1,5 @@
 <%@ val dictionary:     String  %>
+<%@ val genes:          Option[String] %>
 <%@ val readsExist:     Boolean %>
 <%@ val variantsExist:  Boolean %>
 <%@ val featuresExist:  Boolean %>
@@ -62,14 +63,15 @@ xhr.onreadystatechange = function() {
                     viz: pileup.viz.location(),
                     name: 'Location'
                 },
+                #if (genes.isDefined)
                 {
                     viz: pileup.viz.genes(),
-                    data: pileup.formats.genes({
-                        url: '/genes',
-                        key: 'genes'
+                    data: pileup.formats.bigBed({
+                        url: '${genes.get}'
                     }),
                     name: 'Genes'
                 },
+                #end
                 #if (variantsExist)
                     #for (s <- variantsPaths.get)
                         {

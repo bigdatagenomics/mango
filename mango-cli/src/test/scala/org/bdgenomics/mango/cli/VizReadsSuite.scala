@@ -45,7 +45,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   args.referencePath = referenceFile
   args.variantsPaths = vcfFile
   args.featurePaths = featureFile
-  args.genePath = geneFile
   args.testMode = true
 
   sparkTest("reference/:ref") {
@@ -55,14 +54,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == Ok("").status.code)
       val ref = parse(response.getContent()).extract[String]
       assert(ref.length == 99)
-    }
-  }
-
-  sparkTest("genes/:ref") {
-    implicit val VizReads = runVizReads(args)
-    // should return data
-    get("/genes/chrM?start=10000&end=15000") {
-      assert(status == Ok("").status.code)
     }
   }
 
@@ -116,7 +107,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     args.referencePath = referenceFile
     args.featurePaths = featureFile
     args.variantsPaths = vcfFile
-    args.genePath = geneFile
     args.testMode = true
 
     implicit val vizReadDiscovery = runVizReads(args)
