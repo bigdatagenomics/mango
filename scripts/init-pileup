@@ -1,0 +1,17 @@
+#!/bin/bash -x
+
+# pull pileup submodule
+echo "Fetching pileup.js submodule..."
+git submodule update --remote mango-cli/src/main/webapp/resources/pileup.js
+
+# build pileup
+pwd
+echo "installing pileup.js ..."
+cd mango-cli/src/main/webapp/resources/pileup.js
+npm install
+
+# install pileup
+echo "building pileup.js ..."
+npm run build
+
+
