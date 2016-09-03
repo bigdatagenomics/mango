@@ -22,19 +22,15 @@ import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
-import org.bdgenomics.mango.converters.GA4GHConverter
-import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature, Genotype }
+import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
-import org.bdgenomics.mango.tiling.{ L1, L0, Layer }
 import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
-import org.ga4gh.{ GASearchReadsResponse, GAReadAlignment }
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._

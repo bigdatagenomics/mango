@@ -26,9 +26,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.Genotype
-import org.bdgenomics.mango.tiling._
-import org.bdgenomics.mango.util.Bookkeep
-import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson, Coverage }
+import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
 
 import scala.reflect.ClassTag
 
@@ -50,15 +48,7 @@ class GenotypeMaterialization(s: SparkContext,
   val sd = d
   val files = filePaths
   def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
-  def toTile = (data: Iterable[(String, Genotype)], region: ReferenceRegion) => VariantTile(data, region)
   def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
-
-  /**
-   * Define layers and underlying data types
-   */
-  val genotypeLayer: Layer = L0
-  val freqLayer: Layer = L1
-  val variantLayer: Layer = L2
 
   /**
    * Stringifies data from genotypes to lists of variants and genotypes over the requested regions

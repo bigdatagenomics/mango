@@ -42,3 +42,10 @@ object GeneJson {
 case class GeneJson(position: ReferenceRegion, id: String, strand: Boolean, codingRegion: Interval,
                     exons: Iterable[Exon], geneId: String, name: String)
 
+/**
+ * Class for covertering adam coverage to coverage format readable by pileup.js
+ * @param position Base pair on chromosome
+ * @param count Coverage at the specified base pair
+ */
+case class PositionCount(position: Long, count: Int)
+
