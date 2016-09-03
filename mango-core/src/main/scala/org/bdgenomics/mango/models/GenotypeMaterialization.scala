@@ -40,17 +40,16 @@ class GenotypeMaterialization(s: SparkContext,
                               filePaths: List[String],
                               d: SequenceDictionary,
                               parts: Int,
-                              chunkS: Int) extends LazyMaterialization[Genotype, VariantTile]
-    with KTiles[VariantTile] with Serializable {
+                              chunkS: Int) extends LazyMaterialization[Genotype]
+    with Serializable {
 
   @transient val sc = s
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   val dict = d
   val partitions = parts
-  val chunkSize = chunkS
-  val bookkeep = new Bookkeep(chunkSize)
+  val sd = d
   val files = filePaths
-  def getStart = (g: Genotype) => g.getStart
+  def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
   def toTile = (data: Iterable[(String, Genotype)], region: ReferenceRegion) => VariantTile(data, region)
   def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
 
@@ -61,100 +60,35 @@ class GenotypeMaterialization(s: SparkContext,
   val freqLayer: Layer = L1
   val variantLayer: Layer = L2
 
-  /* If the RDD has not been initialized, initialize it to the first get request
-    * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-    * If it exists, call get on the IntervalRDD
-    * Otherwise call put on the sections of data that don't exist
-    * Here, ks, is an option of list of personids (String)
-    */
-  def get(region: ReferenceRegion, layerOpt: Option[List[Layer]] = None): Map[Layer, Map[String, String]] = {
-    val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, files, true)
-        if (regionsOpt.isDefined) {
-          for (r <- regionsOpt.get) {
-            put(r)
-          }
-        }
-
-        layerOpt match {
-          case Some(_) => {
-            val layers = layerOpt.get
-            val data = getTiles(region, layers)
-            val json = layers.map(layer => (layer, stringify(data.filter(_._1 == layer.id).flatMap(_._2), region, layer))).toMap
-            json
-          }
-          case None => { // get raw variants and corresponding genotypes
-            val data = getTiles(region, List(genotypeLayer)).flatMap(_._2)
-            val variants = stringifyVariants(data, region)
-            val genotypes = stringifyGenotypes(data, region)
-            Map(variantLayer -> variants, genotypeLayer -> genotypes)
-          }
-        }
-
-      }
-      case None => {
-        throw new Exception("Not found in dictionary")
-      }
-    }
-  }
-
-  def stringify(data: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer, variants: Boolean = false): Map[String, String] = {
-    layer match {
-      case `genotypeLayer` => stringifyGenotypes(data, region)
-      case `freqLayer`     => Coverage.stringifyCoverage(data, region)
-      case _               => Map.empty[String, String]
-    }
-  }
-
   /**
-   * Stringifies raw genotypes to a string
-   *
-   * @param rdd
-   * @param region
-   * @return
+   * Stringifies data from genotypes to lists of variants and genotypes over the requested regions
+   * @param data RDD of  filtered (sampleId, Genotype)
+   * @return Map of (key, json) for the ReferenceRegion specified
+   * N
    */
-  def stringifyGenotypes(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
-    val data: Array[(String, Iterable[Genotype])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[Genotype]])
-      .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
+  def stringify(data: RDD[(String, Genotype)]): Map[String, String] = {
 
-    val flattened: Map[String, Array[(String, VariantJson)]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
+    val flattened: Map[String, Array[(String, VariantJson)]] = data
+      .collect
+      .groupBy(_._1)
       .mapValues(v => {
         v.map(r => {
-          (r.getSampleId, VariantJson(r.getContigName, r.getStart, r.getVariant.getReferenceAllele, r.getVariant.getAlternateAllele))
+          (r._2.getSampleId, VariantJson(r._2.getContigName, r._2.getStart,
+            r._2.getVariant.getReferenceAllele, r._2.getVariant.getAlternateAllele))
         })
       })
 
-    val genotypes: Map[String, Iterable[GenotypeJson]] =
+    // stringify genotypes and group with variants
+    val genotypes: Map[String, VariantAndGenotypes] =
       flattened.mapValues(v => {
-        v.groupBy(_._2).mapValues(r => r.map(_._1))
-          .map(r => GenotypeJson(r._2, r._1))
+        VariantAndGenotypes(v.map(_._2),
+          v.groupBy(_._2).mapValues(r => r.map(_._1))
+            .map(r => GenotypeJson(r._2, r._1)).toArray)
       })
+
+    // write variants and genotypes to json
     genotypes.mapValues(v => write(v))
   }
-
-  /**
-   * Stringifies raw genotypes to a string
-   *
-   * @param rdd
-   * @param region
-   * @return
-   */
-  def stringifyVariants(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
-    val data: Array[(String, Iterable[Genotype])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[Genotype]])
-      .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
-
-    val flattened: Map[String, Array[VariantJson]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
-      .mapValues(v => v.map(r => VariantJson(r.getContigName, r.getStart, r.getVariant.getReferenceAllele, r.getVariant.getAlternateAllele)))
-
-    flattened.mapValues(v => write(v))
-  }
-
 }
 
 object GenotypeMaterialization {
@@ -202,3 +136,5 @@ object GenotypeMaterialization {
   }
 
 }
+
+case class VariantAndGenotypes(variants: Array[VariantJson], genotypes: Array[GenotypeJson])

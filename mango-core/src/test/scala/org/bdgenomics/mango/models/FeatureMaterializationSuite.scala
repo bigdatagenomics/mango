@@ -37,18 +37,18 @@ class FeatureMaterializationSuite extends MangoFunSuite {
 
   sparkTest("assert raw data returns from one block") {
 
-    val data = new FeatureMaterialization(sc, List(bedFile), dict, 1000)
+    val data = new FeatureMaterialization(sc, List(bedFile), dict)
 
     val region = new ReferenceRegion("chrM", 1000L, 1200L)
 
-    val json = data.get(region)
+    val json = data.getJson(region)
     assert(json.contains(key))
   }
 
   sparkTest("can fetch multiple files") {
-    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict, 1000)
+    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict)
     val region = new ReferenceRegion("chrM", 1000L, 1200L)
-    val json = data.get(region)
+    val json = data.getJson(region)
 
     assert(json.contains(key) && json.contains(key2))
   }

@@ -44,33 +44,33 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   val files = List(bamFile)
 
   sparkTest("create new AlignmentRecordMaterialization") {
-    val lazyMat = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
+    val lazyMat = AlignmentRecordMaterialization(sc, files, dict)
   }
 
   sparkTest("return raw data from AlignmentRecordMaterialization") {
 
-    val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
+    val data = AlignmentRecordMaterialization(sc, files, dict)
 
     val region = new ReferenceRegion("chrM", 0L, 900L)
-    val results = data.get(region).get(key).get
+    val results = data.getJson(region).get(key).get
   }
 
   sparkTest("return coverage from AlignmentRecordMaterialization") {
-    val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
+    val data = AlignmentRecordMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
 
     // extract number of positions in string ('position' => 'p')
-    assert(coverage.length == 21)
+    assert(coverage.length == region.length())
   }
 
   sparkTest("return coverage overlapping multiple materialized nodes") {
-    val data = AlignmentRecordMaterialization(sc, files, dict, chunkSize)
+    val data = AlignmentRecordMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.position)
     // extract number of positions in string ('position' => 'p')
-    assert(coverage.length == 21)
+    assert(coverage.length == region.length())
   }
 }

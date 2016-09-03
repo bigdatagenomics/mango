@@ -28,14 +28,17 @@ import org.bdgenomics.utils.misc.Logging
 
 import scala.reflect.ClassTag
 
-abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializable with Logging {
+abstract class LazyMaterialization[T: ClassTag] extends Serializable with Logging {
 
   def sc: SparkContext
-  def dict: SequenceDictionary
-  def chunkSize: Int
-  def bookkeep: Bookkeep
+  def sd: SequenceDictionary
+  def chunkSize = 20000
+  val prefetchSize = 10000
+  val bookkeep = new Bookkeep(prefetchSize)
+
   def files: List[String]
   def getFiles: List[String] = files
+  var intRDD: IntervalRDD[ReferenceRegion, (String, T)] = null
 
   /**
    * Used to generically load data from all file types
@@ -43,32 +46,82 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
    */
   def load: (ReferenceRegion, String) => RDD[T]
 
-  def getStart: T => Long
+  /**
+   * Extracts reference region from data type T
+   * @return extracted ReferenceRegion
+   */
+  def getReferenceRegion: (T) => ReferenceRegion
 
   /**
-   * Tiles data
-   * @return new Data Tile
-   * @see TileTypes.scala
+   * Stringify T classtag to json
+   * @param rdd RDD of elements keyed by String
+   * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def toTile: (Iterable[(String, T)], ReferenceRegion) => S
+  def stringify(rdd: RDD[(String, T)]): Map[String, String]
 
   /**
    * Sets partitioner
    * @return partitioner
    */
   def setPartitioner: Partitioner = {
-    GenomicRegionPartitioner(sc.defaultParallelism, dict)
+    GenomicRegionPartitioner(sc.defaultParallelism, sd)
   }
 
   /**
    * gets dictionary
    * @return
    */
-  def getDictionary: SequenceDictionary = {
-    dict
+  def getDictionary: SequenceDictionary = sd
+
+  /**
+   * Gets json data for all files.
+   * Filters all alignment data already loaded into the corresponding RDD that overlap a region.
+   * If data has yet been loaded, loads data within this region.
+   *
+   * @param region: ReferenceRegion to fetch
+   * @return Map of sampleIds and corresponding JSON
+   */
+  def getJson(region: ReferenceRegion): Map[String, String] = {
+    val seqRecord = sd(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
+        if (regionsOpt.isDefined) {
+          for (r <- regionsOpt.get) {
+            put(r)
+          }
+        }
+        stringify(intRDD.filterByInterval(region).toRDD.map(_._2))
+      } case None => {
+        throw new Exception("Not found in dictionary")
+      }
+    }
   }
 
-  var intRDD: IntervalRDD[ReferenceRegion, S] = null
+  /**
+   * Gets raw data for all files.
+   * Filters all alignment data already loaded into the corresponding RDD that overlap a region.
+   * If data has yet been loaded, loads data within this region.
+   *
+   * @param region: ReferenceRegion to fetch
+   * @return Map of sampleIds and corresponding JSON
+   */
+  def get(region: ReferenceRegion): RDD[(String, T)] = {
+    val seqRecord = sd(region.referenceName)
+    seqRecord match {
+      case Some(_) => {
+        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
+        if (regionsOpt.isDefined) {
+          for (r <- regionsOpt.get) {
+            put(r)
+          }
+        }
+        intRDD.filterByInterval(region).toRDD.map(_._2)
+      } case None => {
+        throw new Exception("Not found in dictionary")
+      }
+    }
+  }
 
   /**
    *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
@@ -78,7 +131,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
    * @param region ReferenceRegion in which data is retreived
    */
   def put(region: ReferenceRegion) = {
-    val seqRecord = dict(region.referenceName)
+    val seqRecord = sd(region.referenceName)
     if (seqRecord.isDefined) {
       var data: RDD[(String, T)] = sc.emptyRDD[(String, T)]
 
@@ -89,23 +142,13 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag] extends Serializabl
         data = data.union(d)
       })
 
-      val c = chunkSize // required for Spark closure
-
-      val groupedRecords: RDD[(Long, Iterable[(String, T)])] =
-        data.groupBy(r => getStart(r._2) / c * c) // divide up into tile sizes by start value
-
-      val tiles: RDD[(ReferenceRegion, S)] = groupedRecords.map(f => {
-        val r = ReferenceRegion(region.referenceName, f._1, f._1 + c - 1) // map to chunk size Reference Regions
-        (r, toTile(f._2, r))
-      })
-
       // insert into IntervalRDD
       if (intRDD == null) {
-        intRDD = IntervalRDD(tiles)
+        intRDD = IntervalRDD(data.keyBy(r => getReferenceRegion(r._2)))
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       } else {
         val t = intRDD
-        intRDD = intRDD.multiput(tiles)
+        intRDD = intRDD.multiput(data.keyBy(r => getReferenceRegion(r._2)))
         // TODO: can we do this incrementally instead?
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)

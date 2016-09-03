@@ -19,6 +19,7 @@ package org.bdgenomics.mango.cli
 
 import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
+import net.liftweb.json._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.bdgenomics.mango.converters.GA4GHConverter
@@ -93,7 +94,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   // variant cache
   var variantsWait = false
-  var variantsCache: Map[Layer, Map[String, String]] = Map.empty[Layer, Map[String, String]]
+  var variantsCache: Map[String, String] = Map.empty[String, String]
   var variantsRegion: ReferenceRegion = null
 
   // features cache
@@ -317,7 +318,7 @@ class VizServlet extends ScalatraServlet {
           // region was already collected, grab from cache
           if (viewRegion != VizReads.readsRegion) {
             VizReads.readsWait = true
-            VizReads.readsCache = VizReads.readsData.get.get(viewRegion)
+            VizReads.readsCache = VizReads.readsData.get.getJson(viewRegion)
             VizReads.readsRegion = viewRegion
             VizReads.readsWait = false
           }
@@ -379,13 +380,14 @@ class VizServlet extends ScalatraServlet {
           // region was already collected, grab from cache
           if (viewRegion != VizReads.variantsRegion) {
             VizReads.variantsWait = true
-            VizReads.variantsCache = VizReads.variantData.get.get(viewRegion)
+            VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
             VizReads.variantsRegion = viewRegion
             VizReads.variantsWait = false
           }
-          val results = VizReads.variantsCache.get(VizReads.variantData.get.genotypeLayer).get.get(key)
+          val results = VizReads.variantsCache.get(key)
           if (results.isDefined) {
-            Ok(results.get)
+            // extract genotypes only and parse to strinified json
+            Ok(write(parse(results.get).extract[VariantAndGenotypes].genotypes))
           } else ({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
@@ -409,13 +411,14 @@ class VizServlet extends ScalatraServlet {
           // region was already collected, grab from cache
           if (viewRegion != VizReads.variantsRegion) {
             VizReads.variantsWait = true
-            VizReads.variantsCache = VizReads.variantData.get.get(viewRegion)
+            VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
             VizReads.variantsRegion = viewRegion
             VizReads.variantsWait = false
           }
-          val results = VizReads.variantsCache.get(VizReads.variantData.get.variantLayer).get.get(key)
+          val results = VizReads.variantsCache.get(key)
           if (results.isDefined) {
-            Ok(results.get)
+            // extract variants only and parse to strinified json
+            Ok(write(parse(results.get).extract[VariantAndGenotypes].variants))
           } else Ok({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
@@ -439,7 +442,7 @@ class VizServlet extends ScalatraServlet {
           // region was already collected, grab from cache
           if (viewRegion != VizReads.featuresRegion) {
             VizReads.featuresWait = true
-            VizReads.featuresCache = VizReads.featureData.get.get(viewRegion)
+            VizReads.featuresCache = VizReads.featureData.get.getJson(viewRegion)
             VizReads.featuresRegion = viewRegion
             VizReads.featuresWait = false
           }
@@ -511,7 +514,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!readsPaths.isEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, VizReads.chunkSize))
+          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict))
         }
       }
     }
@@ -552,7 +555,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} is not a valid feature file. Removing... "))
 
         if (!featurePaths.isEmpty) {
-          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, VizReads.chunkSize))
+          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict))
         }
       }
     }
@@ -587,7 +590,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             sc.emptyRDD[(ReferenceRegion, Long)]
           } else {
             var features: RDD[Feature] = sc.emptyRDD[Feature]
-            VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp)))
+            VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp).rdd))
             val threshold = args.threshold
             FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold)
           }
