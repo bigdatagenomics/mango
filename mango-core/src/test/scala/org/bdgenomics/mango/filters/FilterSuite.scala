@@ -29,7 +29,7 @@ class FilterSuite extends MangoFunSuite {
 
   sparkTest("correctly filters features with high density regions") {
     val features = FeatureMaterialization.loadFromBed(sc, None, bedFile)
-    val filtered = FeatureFilter.filter(features, FeatureFilterType.highDensity, 100, threshold)
+    val filtered = FeatureFilter.filter(features.rdd, FeatureFilterType.highDensity, 100, threshold)
 
     val regions: List[(ReferenceRegion, Long)] = filtered.collect.toList
     assert(regions.length == 1)

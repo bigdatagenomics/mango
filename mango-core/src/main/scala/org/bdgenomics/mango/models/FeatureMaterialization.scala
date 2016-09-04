@@ -27,70 +27,32 @@ import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.features.FeatureRDD
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.layout.{ BedRowJson, Coverage }
-import org.bdgenomics.mango.tiling._
-import org.bdgenomics.mango.util.Bookkeep
+import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
 
 class FeatureMaterialization(s: SparkContext,
                              filePaths: List[String],
-                             d: SequenceDictionary,
-                             chunkS: Int) extends LazyMaterialization[Feature, FeatureTile]
-    with KTiles[FeatureTile] with Serializable with Logging {
+                             dict: SequenceDictionary) extends LazyMaterialization[Feature] with Serializable with Logging {
 
-  @transient val sc = s
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  val chunkSize = chunkS
-  val dict = d
-  val bookkeep = new Bookkeep(chunkSize)
+  @transient val sc = s
+  val sd = dict
   val files = filePaths
-  def getStart = (f: Feature) => f.getStart
-  def toTile = (data: Iterable[(String, Feature)], region: ReferenceRegion) => FeatureTile(data, region)
-  def load = (region: ReferenceRegion, file: String) => FeatureMaterialization.load(sc, Some(region), file)
+
+  def getReferenceRegion = (f: Feature) => ReferenceRegion(f)
+  def load = (region: ReferenceRegion, file: String) => FeatureMaterialization.load(sc, Some(region), file).rdd
 
   /**
-   * Gets data for multiple keys.
-   * If the RDD has not been initialized, initialize it to the first get request
-   * Gets the data for an interval for the file loaded by checking in the bookkeeping tree.
-   * If it exists, call get on the IntervalRDD
-   * Otherwise call put on the sections of data that don't exist
-   * Here, ks, is a list of personids (String)
-   * @param region: ReferenceRegion to fetch
-   * @return JSONified data
+   * Strinifies tuples of (sampleId, feature) to json
+   * @param data RDD (sampleId, Feature)
+   * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def get(region: ReferenceRegion): Map[String, String] = {
-    val seqRecord = dict(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, files, true)
-        if (regionsOpt.isDefined) {
-          for (r <- regionsOpt.get) {
-            put(r)
-          }
-        }
+  def stringify(data: RDD[(String, Feature)]): Map[String, String] = {
 
-        val layers = getTiles(region, Some(L0))
-        stringify(layers, region, L0)
-      } case None => {
-        throw new Exception("Not found in dictionary")
-      }
-    }
-  }
-
-  def stringify(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion, layer: Layer): Map[String, String] = {
-    layer match {
-      case L0 => stringifyRaw(rdd, region)
-      case L1 => Coverage.stringifyCoverage(rdd, region)
-    }
-  }
-
-  def stringifyRaw(rdd: RDD[(String, Iterable[Any])], region: ReferenceRegion): Map[String, String] = {
-    val data: Array[(String, Iterable[Feature])] = rdd
-      .mapValues(_.asInstanceOf[Iterable[Feature]])
-      .mapValues(r => r.filter(r => r.getStart <= region.end && r.getEnd >= region.start)).collect
-
-    val flattened: Map[String, Array[BedRowJson]] = data.groupBy(_._1)
-      .map(r => (r._1, r._2.flatMap(_._2)))
+    val flattened: Map[String, Array[BedRowJson]] = data
+      .collect
+      .groupBy(_._1)
+      .map(r => (r._1, r._2.map(_._2)))
       .mapValues(r => r.map(f => BedRowJson(Option(f.getFeatureId).getOrElse("N/A"), Option(f.getFeatureType).getOrElse("N/A"), f.getContigName, f.getStart, f.getEnd)))
 
     flattened.mapValues(r => write(r))
@@ -106,12 +68,12 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
+  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
     else if (fp.endsWith(".bed") || fp.endsWith("gtf")) {
       FeatureMaterialization.loadFromBed(sc, region, fp)
     } else if (fp.endsWith(".gff3")) {
-      sc.loadGff3(fp).rdd
+      sc.loadGff3(fp)
     } else {
       throw UnsupportedFileException("File type not supported")
     }
@@ -124,12 +86,13 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadFromBed(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
+  def loadFromBed(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
     region match {
       case Some(_) =>
-        sc.loadFeatures(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-          && g.getEnd > region.get.start))
-      case None => sc.loadFeatures(fp).rdd
+        val featureRdd = sc.loadFeatures(fp)
+        featureRdd.transform(rdd => rdd.rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
+          && g.getEnd > region.get.start)))
+      case None => sc.loadFeatures(fp)
     }
   }
 
@@ -140,7 +103,7 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Feature] = {
+  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
     val pred: Option[FilterPredicate] =
       region match {
         case Some(_) => Some(((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) && (BinaryColumn("contig.contigName") === region.get.referenceName)))
@@ -148,7 +111,7 @@ object FeatureMaterialization {
       }
 
     val proj = Projection(FeatureField.featureId, FeatureField.source, FeatureField.featureType, FeatureField.start, FeatureField.end, FeatureField.contigName)
-    sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj)).rdd
+    sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
   }
 
 }

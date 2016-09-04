@@ -18,8 +18,10 @@
 package org.bdgenomics.mango.cli
 
 import net.liftweb.json._
+import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
+import org.ga4gh.GASearchReadsResponse
 import org.scalatra.Ok
 import org.scalatra.test.scalatest.ScalatraSuite
 
@@ -73,8 +75,29 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   sparkTest("/reads/coverage/:key/:ref") {
     implicit val VizReads = runVizReads(args)
-    get(s"/reads/coverage/${bamKey}/chrM?start=0&end=100") {
+    get(s"/reads/coverage/${bamKey}/chrM?start=1&end=100") {
       assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[PositionCount]]
+      assert(json.length == 99)
+    }
+  }
+
+  sparkTest("/variants/:key/:ref") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/variants/${vcfKey}/chrM?start=0&end=100") {
+      assert(status == Ok("").status.code)
+      val x = response.getContent()
+      val json = parse(response.getContent()).extract[Array[VariantJson]]
+      assert(json.length == 3)
+    }
+  }
+
+  sparkTest("/genotypes/:key/:ref") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/genotypes/${vcfKey}/chrM?start=0&end=100") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[GenotypeJson]]
+      assert(json.length == 3)
     }
   }
 
@@ -82,6 +105,8 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     implicit val vizReads = runVizReads(args)
     get(s"/features/${featureKey}/chrM?start=0&end=1200") {
       assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[BedRowJson]]
+      assert(json.length == 2)
     }
   }
 
