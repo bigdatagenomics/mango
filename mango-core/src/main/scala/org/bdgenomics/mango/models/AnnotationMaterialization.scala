@@ -49,7 +49,7 @@ class AnnotationMaterialization(@transient sc: SparkContext,
       (sc.loadSequences(referencePath, fragmentLength = 10000), SequenceDictionary(dict))
     } else if (referencePath.endsWith(".adam")) {
       val reference = sc.loadParquetContigFragments(referencePath)
-      (reference, sc.loadDictionary[NucleotideContigFragment](referencePath))
+      (reference, sc.loadReferenceFile(referencePath, fragmentLength = 10000).sequences)
     } else
       throw new UnsupportedFileException("File Types supported for reference are fa, fasta and adam")
 

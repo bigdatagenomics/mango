@@ -34,6 +34,7 @@ import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
+import scala.collection.JavaConversions._
 
 /**
  *
