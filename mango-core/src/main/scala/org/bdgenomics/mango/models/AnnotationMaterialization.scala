@@ -31,6 +31,7 @@ import org.bdgenomics.formats.avro.{ NucleotideContigFragment }
 import org.bdgenomics.mango.core.util.{ VizUtils, Utils }
 import org.bdgenomics.mango.layout.GeneJson
 import org.bdgenomics.utils.misc.Logging
+import org.apache.spark.rdd.EmptyRDD
 import picard.sam.CreateSequenceDictionary
 
 class AnnotationMaterialization(@transient sc: SparkContext,
@@ -49,7 +50,7 @@ class AnnotationMaterialization(@transient sc: SparkContext,
       (sc.loadSequences(referencePath, fragmentLength = 10000), SequenceDictionary(dict))
     } else if (referencePath.endsWith(".adam")) {
       val reference = sc.loadParquetContigFragments(referencePath)
-      (reference, sc.loadDictionary[NucleotideContigFragment](referencePath))
+      (reference, sc.loadReferenceFile(referencePath, fragmentLength = 10000).sequences)
     } else
       throw new UnsupportedFileException("File Types supported for reference are fa, fasta and adam")
 
@@ -72,7 +73,8 @@ class AnnotationMaterialization(@transient sc: SparkContext,
     } catch {
       case e: Exception => {
         log.warn("No vaild gene file provided")
-        GeneRDD(sc.emptyRDD[Gene], this.getSequenceDictionary)
+        // TODO: Resolve parallallelize via sc.emptyRDD
+        GeneRDD(sc.parallelize[Gene](Array[Gene]()), this.getSequenceDictionary)
       }
     }
   }
