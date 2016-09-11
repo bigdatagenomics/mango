@@ -21,6 +21,7 @@ import htsjdk.samtools.{ CigarOperator, TextCigarCodec }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.ga4gh._
+import scala.collection.JavaConversions._
 
 object GA4GHConverter extends Serializable {
 
@@ -32,7 +33,7 @@ object GA4GHConverter extends Serializable {
       val cigar = TextCigarCodec.decode(cigarString)
 
       // loop and build operators
-      cigar.getCigarElements.map(element => {
+      cigar.getCigarElements.toList.map(element => {
 
         // can has cigar unit builder, plz?
         val cuBuilder = GACigarUnit.newBuilder()
