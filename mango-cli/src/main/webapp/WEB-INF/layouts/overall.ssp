@@ -88,9 +88,8 @@ function home(dictionary, regions){
 		.attr("y",function(d,i){return height*i})
 		.attr("height", height)
 		.attr("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist); })
-		.text(function(d) { return d.name; })
 		.on("mouseover", function(d) {
-			d3.select(this).attr("fill", "grey");
+			d3.select(this).attr("fill", "#ccc");
 			div.transition()
 				.duration(200)
 				.style("opacity", .9);
@@ -111,9 +110,9 @@ function home(dictionary, regions){
 		.attr("x", (function(d) { return (chartWidth * d.range[0])/d3.max(lengthlist); }))
 		.attr("width", (function(d) { return (chartWidth * (d.range[1] - d.range[0]))/d3.max(lengthlist); }))
 		.attr("height", height)
-		.attr("fill", "black")
+		.attr("fill", "#ccc")
 		.on("mouseover", function(d) {
-			d3.select(this).attr("fill", "grey");
+			d3.select(this).attr("fill", "#ccc");
 			div.transition()
 				.duration(200)
 				.style("opacity", .9);
@@ -122,11 +121,19 @@ function home(dictionary, regions){
 			.style("top", (d3.event.pageY - 48) + "px");
 		})
 		.on("mouseout", function(d) {
-			d3.select(this).attr("fill", "black");
+			d3.select(this).attr("fill", "#ccc");
 			div.transition()
 				.duration(500)
 				.style("opacity", 0);
 		});
+
+	chart
+		.append("text")
+		.attr("x", "50%")
+		.attr("y",function(d,i){return height*i})
+		.attr("dy", "1.1em")
+		.style('fill', 'black')
+		.text(function(d) { return d.name; });
 
 	chart.on('click', function(d) {
 		var start = Math.round(d.length/2.0);
