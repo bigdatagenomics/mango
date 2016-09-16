@@ -18,29 +18,42 @@
  */
 package org.bdgenomics.mango.layout
 
-import org.bdgenomics.adam.models.{ Exon, Gene, ReferenceRegion }
-
 /**
  * This file contains case classes for json conversions
  */
 
+/**
+ * class for printing intervals to pileup.js
+ * @param start start of region
+ * @param end end of region
+ */
 case class Interval(start: Long, end: Long)
 
+/**
+ * Class for printing variants to pileup.js
+ * @param contig contig name (reference name)
+ * @param position start of variant
+ * @param ref reference
+ * @param alt alternate
+ */
 case class VariantJson(contig: String, position: Long, ref: String, alt: String)
 
+/**
+ * Class for printing json genotypes to pileup.js
+ * @param sampleIds sample Ids for this genotype
+ * @param variant variant of this genotype
+ */
 case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
 
+/**
+ * Class for printing json features to pileup.js
+ * @param id feature Id
+ * @param featureType feature type
+ * @param contig contig name (reference name)
+ * @param start start of feature region
+ * @param stop end of feature region
+ */
 case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long)
-
-object GeneJson {
-  def apply(rf: Gene): Iterable[GeneJson] = {
-    val transcripts = rf.transcripts
-    transcripts.map(t => GeneJson(t.region, t.id, t.strand, Interval(t.region.start, t.region.end), t.exons, t.geneId, t.names.mkString(",")))
-  }
-}
-
-case class GeneJson(position: ReferenceRegion, id: String, strand: Boolean, codingRegion: Interval,
-                    exons: Iterable[Exon], geneId: String, name: String)
 
 /**
  * Class for covertering adam coverage to coverage format readable by pileup.js

@@ -20,7 +20,6 @@ package org.bdgenomics.mango.models
 
 import net.liftweb.json._
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.mango.layout.{ Interval, GeneJson }
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json.Serialization._
 
@@ -34,29 +33,21 @@ class AnnotationMaterializationSuite extends MangoFunSuite {
   val region = ReferenceRegion("chrM", 0, 500)
 
   sparkTest("test ReferenceRDD creation") {
-    new AnnotationMaterialization(sc, referencePath, genePath)
+    new AnnotationMaterialization(sc, referencePath)
   }
 
   sparkTest("assert reference string is correctly extracted") {
-    val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
+    val refRDD = new AnnotationMaterialization(sc, referencePath)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
   }
 
   sparkTest("return empty string in region out of bounds") {
-    val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
+    val refRDD = new AnnotationMaterialization(sc, referencePath)
     val outOfBounds = ReferenceRegion("chrM", 17000, 20000)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
-  }
-
-  sparkTest("assert genes are correctly extracted") {
-    val refRDD = new AnnotationMaterialization(sc, referencePath, genePath)
-    val region = ReferenceRegion("chrM", 0, 16000)
-    val genes = refRDD.getGeneArray(region)
-    assert(genes.length == 9)
-    assert(write(genes) == refRDD.getGenes(region))
   }
 }
