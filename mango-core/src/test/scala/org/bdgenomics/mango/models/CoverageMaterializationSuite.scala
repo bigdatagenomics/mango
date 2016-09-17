@@ -35,7 +35,7 @@ class CoverageMaterializationSuite extends MangoFunSuite {
   val dict = new SequenceDictionary(Vector(SequenceRecord("chrM", 16699L)))
 
   val files = List(coverageFile)
-  
+
   sparkTest("create new CoverageRecordMaterialization") {
     val lazyMat = CoverageRecordMaterialization(sc, files, dict)
   }
