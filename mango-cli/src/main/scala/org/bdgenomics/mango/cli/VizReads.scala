@@ -73,12 +73,17 @@ object VizReads extends BDGCommandCompanion with Logging {
   // Structures storing data types. All but reference is optional
   var annotationRDD: AnnotationMaterialization = null
   var readsData: Option[AlignmentRecordMaterialization] = None
+
+  var coverageData: Option[CoverageMaterialization] = None
+
   var variantData: Option[VariantMaterialization] = None
   var genotypeData: Option[GenotypeMaterialization] = None
+
   var featureData: Option[FeatureMaterialization] = None
 
   // variables tracking whether optional datatypes were loaded
   def readsExist: Boolean = readsData.isDefined
+  def coveragesExist: Boolean = coverageData.isDefined
   def variantsExist: Boolean = variantData.isDefined
   def genotypeExist: Boolean = genotypeData.isDefined
   def featuresExist: Boolean = featureData.isDefined
@@ -186,6 +191,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
 
+  @Args4jOption(required = false, name = "-coverage_files", usage = "A list of coverage files to view, separated by commas (,)")
+  var coveragePaths: String = null
+
   @Args4jOption(required = false, name = "-var_files", usage = "A list of variants files to view, separated by commas (,)")
   var variantsPaths: String = null
 
@@ -263,6 +271,12 @@ class VizServlet extends ScalatraServlet {
       case e: Exception => None
     }
 
+    val coveragesSamples = try {
+      Some(VizReads.coverageData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+    } catch {
+      case e: Exception => None
+    }
+
     val variantsPaths = try {
       Some(VizReads.variantData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
@@ -286,6 +300,8 @@ class VizServlet extends ScalatraServlet {
         "genes" -> VizReads.genes,
         "readsPaths" -> readsSamples,
         "readsExist" -> VizReads.readsExist,
+        "coveragePaths" -> coveragesSamples,
+        "coverageExists" -> VizReads.coveragesExist,
         "variantsPaths" -> variantsPaths,
         "genotypesPaths" -> genotypesPaths,
         "variantsExist" -> VizReads.variantsExist,
@@ -482,6 +498,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     // initialize all datasets
     initAnnotations
     initAlignments
+    initCoverages
     initVariants
     initGenotypes
     initFeatures
@@ -527,6 +544,25 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
         if (!readsPaths.isEmpty) {
           VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict))
+        }
+      }
+    }
+
+    /*
+     * Initialize coverage files
+     */
+    def initCoverages = {
+      if (Option(args.coveragePaths).isDefined) {
+        val coveragePaths = args.coveragePaths.split(",").toList
+          .filter(path => path.endsWith(".adam"))
+
+        // warn for incorrect file formats
+        args.readsPaths.split(",").toList
+          .filter(path => !path.endsWith(".adam"))
+          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
+
+        if (!coveragePaths.isEmpty) {
+          VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict))
         }
       }
     }
