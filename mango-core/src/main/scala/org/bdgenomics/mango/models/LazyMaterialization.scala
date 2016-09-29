@@ -141,7 +141,8 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
         val d = load(region, fp).map(v => (k, v))
         data = data.union(d)
       })
-
+      data.cache()
+      data.count
       // insert into IntervalRDD
       if (intRDD == null) {
         intRDD = IntervalRDD(data.keyBy(r => getReferenceRegion(r._2)))
