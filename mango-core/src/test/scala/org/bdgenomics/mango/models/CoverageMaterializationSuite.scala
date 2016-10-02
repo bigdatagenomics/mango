@@ -35,7 +35,7 @@ class CoverageMaterializationSuite extends MangoFunSuite {
   val dict = new SequenceDictionary(Vector(SequenceRecord("chrM", 16699L)))
 
   val files = List(coverageFile)
-  
+
   sparkTest("create new CoverageRecordMaterialization") {
     val lazyMat = CoverageRecordMaterialization(sc, files, dict)
   }
@@ -45,7 +45,6 @@ class CoverageMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
-    // extract number of positions in string ('position' => 'p')
     assert(coverage.length == region.length())
   }
 
@@ -54,7 +53,6 @@ class CoverageMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.position)
-    // extract number of positions in string ('position' => 'p')
     assert(coverage.length == region.length())
   }
 }

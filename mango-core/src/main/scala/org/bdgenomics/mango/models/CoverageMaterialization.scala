@@ -86,10 +86,11 @@ class CoverageMaterialization(s: SparkContext,
    */
   def stringify(data: RDD[(String, Coverage)]): Map[String, String] = {
     val flattened: Map[String, Array[PositionCount]] = data
+      .map(r => (r._1, PositionCount(r._2.start, r._2.count.toInt)))
+      .groupByKey()
+      .map(r => (r._1, r._2.toArray))
       .collect
-      .groupBy(_._1)
-      .map(r => (r._1, r._2.map(_._2)))
-      .mapValues(r => r.map(f => PositionCount(f.start, f.count.toInt))(collection.breakOut))
+      .toMap
     flattened.mapValues(r => write(r))
   }
 }
