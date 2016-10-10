@@ -82,7 +82,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   def featuresExist: Boolean = featureData.isDefined
 
   // reads cache
-  private object readsWait
+  object readsWait
   var readsCache: Map[String, String] = Map.empty[String, String]
   var readsRegion: ReferenceRegion = null
 
@@ -304,22 +304,25 @@ class VizServlet extends ScalatraServlet {
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
       if (dictOpt.isDefined) {
         print("WAITING \n")
-        var results = None
-        VizReads.readsWait.synchronize{
+        var results: Option[String] = None
+        VizReads.readsWait.synchronized {
           // region was already collected, grab from cache
           print("COLLECTING \n")
           if (viewRegion != VizReads.readsRegion) {
-            VizReads.readsCache = VizReads.readsData.get.getJson(viewRegion)
+            val t1 = VizReads.readsData.get
+            print("COLLECTING - t1 done \n")
+            VizReads.readsCache = t1.getJson(viewRegion)
+            print("COLLECTING - readsCache done \n")
             VizReads.readsRegion = viewRegion
           }
           results = VizReads.readsCache.get(key)
           print("DONE COLLECTING \n")
-          if (results.isDefined) {
-            print("Results defined \n")
-            Ok(results.get)
-          } else VizReads.errors.notFound
-          print("DONE1 \n")
         }
+        if (results.isDefined) {
+          print("Results defined \n")
+          Ok(results.get)
+        } else VizReads.errors.notFound
+        print("DONE1 \n")
       } else VizReads.errors.outOfBounds
       print("DONE 2 \n")
     }
@@ -557,6 +560,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     /**
      * Runs total data scan over all feature and variant files satisfying a certain predicate.
+     *
      * @param variantFilter predicate to be satisfied during variant scan
      * @param featureFilter predicate to be satisfied during feature scan
      * @return Returns list of regions in the genome satisfying predicates
@@ -598,6 +602,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     /**
      * preprocesses data by loading specified regions into memory for reads, variants and features
+     *
      * @param regions Regions to be preprocessed
      */
     def preprocess(regions: List[ReferenceRegion]) = {
