@@ -28,8 +28,9 @@
     <htsjdk.version>2.5.0</htsjdk.version>
     <parquet.version>1.8.1</parquet.version>
     <picard.version>2.3.0</picard.version>
-    <scala.version>2.11.8</scala.version>
+    <scala.version>2.11.7</scala.version>
     <scala.version.prefix>2.11</scala.version.prefix>
+    <old-scala.version.prefix>2.11</old-scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
     <spark.version>2.0.0</spark.version>
     <snappy.version>1.0.5</snappy.version>
@@ -545,22 +546,22 @@
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
-        <artifactId>scalatra_${scala.version.prefix}</artifactId>
+        <artifactId>scalatra_${old-scala.version.prefix}</artifactId>
         <version>${scalatra.version}</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-scalatest_${scala.version.prefix}</artifactId>
+        <artifactId>scalatra-scalatest_${old-scala.version.prefix}</artifactId>
         <version>${scalatra.version}</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-specs2_${scala.version.prefix}</artifactId>
+        <artifactId>scalatra-specs2_${old-scala.version.prefix}</artifactId>
         <version>${scalatra.version}</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra.scalate</groupId>
-        <artifactId>scalate-core_${scala.version.prefix}</artifactId>
+        <artifactId>scalate-core_${old-scala.version.prefix}</artifactId>
         <version>1.7.1</version>
       </dependency>
       <dependency>
