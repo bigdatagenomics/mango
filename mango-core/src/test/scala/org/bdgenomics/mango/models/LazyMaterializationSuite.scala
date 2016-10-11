@@ -18,6 +18,8 @@
 
 package org.bdgenomics.mango.models
 
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.mango.util.{ Bookkeep, MangoFunSuite }
 
@@ -27,22 +29,44 @@ class LazyMaterializationSuite extends MangoFunSuite {
     SequenceRecord("chrM", 20000L),
     SequenceRecord("20", 90000L)))
 
-  sparkTest("Merge Regions") {
-    val r1 = new ReferenceRegion("chr1", 0, 999)
-    val r2 = new ReferenceRegion("chr1", 1000, 1999)
+  sparkTest("Should check and clear memory") {
+    val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
+    lazyDummy.setMemoryFraction(0.001) // this is a very low test value
+    lazyDummy.get(ReferenceRegion("chrM", 0, 100000L)).count
+    assert(lazyDummy.bookkeep.bookkeep.contains("chrM"))
 
-    val merged = Bookkeep.mergeRegions(List(r1, r2))
-    assert(merged.size == 1)
-    assert(merged.head.start == 0 && merged.head.end == 1999)
+    lazyDummy.get(ReferenceRegion("20", 0, 100L)).count
+
+    // these calls should have removed chrM from cache
+    assert(!lazyDummy.bookkeep.bookkeep.contains("chrM"))
   }
 
-  sparkTest("Merge Regions with gap") {
-    val r1 = new ReferenceRegion("chr1", 0, 999)
-    val r2 = new ReferenceRegion("chr1", 1000, 1999)
-    val r3 = new ReferenceRegion("chr1", 3000, 3999)
+}
 
-    val merged = Bookkeep.mergeRegions(List(r1, r2, r3))
-    assert(merged.size == 2)
-    assert(merged.head.end == 1999 && merged.last.end == 3999)
+/**
+ * Dummy class that extends LazyMaterialization. Used for unit testing LazyMaterialization
+ * @param s SparkContext
+ * @param filePaths Dummy filepaths that are not used
+ * @param dict SequenceDictionary
+ */
+class LazyDummy(s: SparkContext,
+                filePaths: List[String],
+                dict: SequenceDictionary) extends LazyMaterialization[ReferenceRegion] with Serializable {
+  @transient implicit val formats = net.liftweb.json.DefaultFormats
+  @transient val sc = s
+  val sd = dict
+  val files = filePaths
+
+  def getReferenceRegion = (r: ReferenceRegion) => r
+
+  def load = (region: ReferenceRegion, file: String) => sc.parallelize(Bookkeep.unmergeRegions(region, 1))
+
+  def stringify(data: RDD[(String, ReferenceRegion)]): Map[String, String] = {
+    data
+      .collect
+      .groupBy(_._1)
+      .map(r => (r._1, r._2.map(_._2)))
+      .mapValues(r => r.map(f => f.toString).mkString(","))
   }
 }
+

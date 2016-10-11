@@ -35,6 +35,10 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
   def chunkSize = 20000
   val prefetchSize = 10000
   val bookkeep = new Bookkeep(prefetchSize)
+  var memoryFraction = 0.85 // default caching fraction
+
+  def setMemoryFraction(fraction: Double) =
+    memoryFraction = fraction
 
   def files: List[String]
   def getFiles: List[String] = files
@@ -85,7 +89,7 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
     val seqRecord = sd(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
+        val regionsOpt = bookkeep.getMissingRegions(region, files)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
             put(r)
@@ -110,7 +114,7 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
     val seqRecord = sd(region.referenceName)
     seqRecord match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMaterializedRegions(region, files)
+        val regionsOpt = bookkeep.getMissingRegions(region, files)
         if (regionsOpt.isDefined) {
           for (r <- regionsOpt.get) {
             put(r)
@@ -131,6 +135,7 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
    * @param region ReferenceRegion in which data is retreived
    */
   def put(region: ReferenceRegion) = {
+    checkMemory
     val seqRecord = sd(region.referenceName)
     if (seqRecord.isDefined) {
       var data: RDD[(String, T)] = sc.emptyRDD[(String, T)]
@@ -154,6 +159,24 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
       bookkeep.rememberValues(region, files)
+    }
+  }
+
+  /**
+   * Checks memory across all executors
+   * @return
+   */
+  private def checkMemory() = {
+    val mem = sc.getExecutorMemoryStatus
+    val (total, available) = mem.map(_._2)
+      .reduce((e1, e2) => (e1._1 + e2._1, e1._2 + e2._2))
+    val fraction: Double = (total - available).toFloat / total
+
+    // if memory usage exceeds 85%, drop last viewed chromosome
+    if (fraction > memoryFraction) {
+      val dropped = bookkeep.dropValues()
+      log.warn(s"memory limit exceeded. Dropping ${dropped} from cache")
+      intRDD = intRDD.filter(_._1.referenceName != dropped)
     }
   }
 

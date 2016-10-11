@@ -20,6 +20,7 @@ package org.bdgenomics.mango.util
 import org.bdgenomics.utils.intervaltree.IntervalTree
 import org.bdgenomics.adam.models.ReferenceRegion
 
+import scala.collection.mutable
 import scala.collection.mutable.{ HashMap, ListBuffer }
 
 /**
@@ -31,11 +32,25 @@ import scala.collection.mutable.{ HashMap, ListBuffer }
 class Bookkeep(chunkSize: Int) extends Serializable {
 
   /*
-   * Holds hash of id: String and IntervalTree of what regions exist
+   * Holds hash of ReferenceName pointing to IntervalTree of (Region, ID)
    */
   var bookkeep: HashMap[String, IntervalTree[ReferenceRegion, String]] = new HashMap()
 
+  /**
+   * Keeps track of ordering of most recently viewed chromosomes
+   */
+  var queue = new mutable.Queue[String]()
+
   def rememberValues(region: ReferenceRegion, k: String): Unit = rememberValues(region, List(k))
+
+  /**
+   * Drops all values from a given sequence record
+   */
+  def dropValues(): String = {
+    val droppedChr = queue.dequeue()
+    bookkeep.remove(droppedChr)
+    droppedChr
+  }
 
   /**
    * Logs key and region values in a bookkeeping structure per chromosome
@@ -47,6 +62,8 @@ class Bookkeep(chunkSize: Int) extends Serializable {
     if (bookkeep.contains(region.referenceName)) {
       bookkeep(region.referenceName).insert(region, ks.toIterator)
     } else {
+      // queue chromosome to keep track of ordering
+      queue.enqueue(region.referenceName)
       val newTree = new IntervalTree[ReferenceRegion, String]()
       newTree.insert(region, ks.toIterator)
       bookkeep += ((region.referenceName, newTree))
@@ -63,9 +80,10 @@ class Bookkeep(chunkSize: Int) extends Serializable {
   def getMissingRegions(region: ReferenceRegion, ks: List[String]): Option[List[ReferenceRegion]] = {
     var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
     var start = region.start / chunkSize * chunkSize
-    var end = start + (chunkSize - 1)
+    val chunkEnd = region.end / chunkSize * chunkSize + chunkSize
+    var end = start + chunkSize
 
-    while (start <= region.end) {
+    while (end <= chunkEnd) {
       val r = new ReferenceRegion(region.referenceName, start, end)
       val size = {
         try {
@@ -89,25 +107,6 @@ class Bookkeep(chunkSize: Int) extends Serializable {
 
   }
 
-  /**
-   * gets materialized regions that are not yet loaded into the bookkeeping structure
-   *
-   * @param region that to be searched over
-   * @param ks in which region is searched over. these are sample IDs
-   * @return List of materialied and merged reference regions not found in bookkeeping structure
-   */
-  def getMaterializedRegions(region: ReferenceRegion, ks: List[String], flanking: Boolean = false): Option[List[ReferenceRegion]] = {
-    val start = region.start / chunkSize * chunkSize
-    val end = start + (chunkSize - 1)
-    val chunkedRegion =
-      if (flanking) {
-        val flankedStart = Math.max(0, (start - chunkSize))
-        val flankedEnd = end + chunkSize
-        ReferenceRegion(region.referenceName, flankedStart, flankedEnd)
-      } else ReferenceRegion(region.referenceName, start, end)
-    getMissingRegions(chunkedRegion, ks)
-  }
-
 }
 object Bookkeep {
 
@@ -120,7 +119,7 @@ object Bookkeep {
   def unmergeRegions(region: ReferenceRegion, chunkSize: Int): List[ReferenceRegion] = {
     var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
     var start = region.start / chunkSize * chunkSize
-    var end = start + (chunkSize - 1)
+    var end = start + chunkSize
 
     while (start <= region.end) {
       val r = new ReferenceRegion(region.referenceName, start, end)
@@ -141,26 +140,21 @@ object Bookkeep {
    * @return Option of list of merged adjacent regions
    */
   def mergeRegions(regions: List[ReferenceRegion]): List[ReferenceRegion] = {
-    val merged = regions.groupBy(_.referenceName)
-      .mapValues(_.sortBy(_.start))
+    val sorted = regions.sortBy(_.start)
 
-    // merge sorted ReferenceRegions by chromosome
-    merged.mapValues(sorted => {
-      var rmerged: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
-      rmerged += sorted.head
-      for (r2 <- sorted) {
-        if (r2 != sorted.head) {
-          val r1 = rmerged.last
-          if (r1.end == r2.start - 1) {
-            rmerged -= r1
-            rmerged += r1.hull(r2)
-          } else {
-            rmerged += r2
+    sorted.foldLeft(List[ReferenceRegion]()) {
+      (curList, r) =>
+        {
+          curList match {
+            case Nil => List(r)
+            case head :: rest => {
+              if (r.overlaps(head) || r.isAdjacent(head))
+                r.merge(head) :: rest
+              else r :: curList
+            }
           }
         }
-      }
-      rmerged.toList
-    }).flatMap(_._2).toList
+    }.reverse
   }
 
 }
