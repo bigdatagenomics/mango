@@ -39,8 +39,6 @@ class AnnotationMaterialization(@transient sc: SparkContext,
     if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta")) {
       val createObj = new CreateSequenceDictionary
       val dict: SAMSequenceDictionary = createObj.makeSequenceDictionary(new File(referencePath))
-      val r: NucleotideContigFragmentRDD = sc.loadSequences(referencePath, fragmentLength = 10000)
-      val d: SequenceDictionary = SequenceDictionary(dict)
       (sc.loadSequences(referencePath, fragmentLength = 10000), SequenceDictionary(dict))
     } else if (referencePath.endsWith(".adam")) {
       val reference = sc.loadParquetContigFragments(referencePath)

@@ -28,7 +28,7 @@ import org.bdgenomics.utils.misc.Logging
 
 import scala.reflect.ClassTag
 
-abstract class LazyMaterialization[T: ClassTag] extends Serializable with Logging {
+abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializable with Logging {
 
   def sc: SparkContext
   def sd: SequenceDictionary
@@ -158,6 +158,7 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
+      intRDD.setName(name)
       bookkeep.rememberValues(region, files)
     }
   }
