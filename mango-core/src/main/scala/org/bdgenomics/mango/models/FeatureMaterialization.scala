@@ -32,7 +32,7 @@ import org.bdgenomics.utils.misc.Logging
 
 class FeatureMaterialization(s: SparkContext,
                              filePaths: List[String],
-                             dict: SequenceDictionary) extends LazyMaterialization[Feature] with Serializable with Logging {
+                             dict: SequenceDictionary) extends LazyMaterialization[Feature]("FeatureRDD") with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   @transient val sc = s

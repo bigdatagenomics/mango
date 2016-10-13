@@ -46,7 +46,7 @@ import scala.collection.JavaConversions._
  */
 class AlignmentRecordMaterialization(s: SparkContext,
                                      filePaths: List[String],
-                                     dict: SequenceDictionary) extends LazyMaterialization[AlignmentRecord]
+                                     dict: SequenceDictionary) extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD")
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats

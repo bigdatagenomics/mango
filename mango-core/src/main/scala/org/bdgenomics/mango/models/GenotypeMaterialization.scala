@@ -38,7 +38,7 @@ class GenotypeMaterialization(s: SparkContext,
                               filePaths: List[String],
                               d: SequenceDictionary,
                               parts: Int,
-                              chunkS: Int) extends LazyMaterialization[Genotype]
+                              chunkS: Int) extends LazyMaterialization[Genotype]("GenotypeRDD")
     with Serializable {
 
   @transient val sc = s
