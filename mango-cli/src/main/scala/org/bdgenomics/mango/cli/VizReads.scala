@@ -38,6 +38,7 @@ import org.scalatra._
 object VizTimers extends Metrics {
   //HTTP requests
   val ReadsRequest = timer("GET reads")
+  val CoverageRequest = timer("GET coverage")
   val FreqRequest = timer("GET frequency")
   val VarRequest = timer("GET variants")
   val VarFreqRequest = timer("Get variant frequency")
@@ -93,10 +94,15 @@ object VizReads extends BDGCommandCompanion with Logging {
   var readsCache: Map[String, String] = Map.empty[String, String]
   var readsRegion: ReferenceRegion = null
 
-  // coverage cache
+  // coverage reads cache
   object readsCoverageWait
   var readsCoverageCache: Map[String, String] = Map.empty[String, String]
   var readsCoverageRegion: ReferenceRegion = null
+
+  // coverage cache
+  object coverageWait
+  var coverageCache: Map[String, String] = Map.empty[String, String]
+  var coverageRegion: ReferenceRegion = null
 
   // variant cache
   object variantsWait
@@ -271,13 +277,13 @@ class VizServlet extends ScalatraServlet {
       case e: Exception => None
     }
 
-    val coveragesSamples = try {
+    val coverageSamples = try {
       Some(VizReads.coverageData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
     }
 
-    val variantsPaths = try {
+    val variantsSamples = try {
       Some(VizReads.variantData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
@@ -355,6 +361,19 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/coverage/:key/:ref") {
+    val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+      VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+    val key: String = params("key")
+    val binning: Int =
+      try
+        params("binning").toInt
+      catch {
+        case e: Exception => 1
+      }
+    getCoverage(viewRegion, key, binning)
+  }
+
   get("/reads/coverage/:key/:ref") {
     VizTimers.ReadsRequest.time {
 
@@ -366,21 +385,40 @@ class VizServlet extends ScalatraServlet {
         val key: String = params("key")
         contentType = "json"
 
-        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-        if (dictOpt.isDefined) {
-          var results: Option[String] = None
-          VizReads.readsCoverageWait.synchronized {
-            // region was already collected, grab from cache
-            if (viewRegion != VizReads.readsCoverageRegion) {
-              VizReads.readsCoverageCache = VizReads.readsData.get.getCoverage(viewRegion)
-              VizReads.readsCoverageRegion = viewRegion
+        // get all coverage files that have been loaded
+        val coverageFiles =
+          if (VizReads.coverageData.isDefined) {
+            Some(VizReads.coverageData.get.files.map(f => LazyMaterialization.filterKeyFromFile(f)))
+          } else None
+
+        // check if there is a precomputed coverage file for this reads file
+        if (coverageFiles.isDefined && coverageFiles.get.contains(key)) { // TODO: I dont know if this is correct for getting keys
+          val binning: Int =
+            try
+              params("binning").toInt
+            catch {
+              case e: Exception => 1
             }
-            results = VizReads.readsCoverageCache.get(key)
-          }
-          if (results.isDefined) {
-            Ok(results.get)
-          } else VizReads.errors.notFound
-        } else VizReads.errors.outOfBounds
+
+          getCoverage(viewRegion, key, binning)
+        } else {
+          // no precomputed coverage
+          val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+          if (dictOpt.isDefined) {
+            var results: Option[String] = None
+            VizReads.readsCoverageWait.synchronized {
+              // region was already collected, grab from cache
+              if (viewRegion != VizReads.readsCoverageRegion) {
+                VizReads.readsCoverageCache = VizReads.readsData.get.getCoverage(viewRegion)
+                VizReads.readsCoverageRegion = viewRegion
+              }
+              results = VizReads.readsCoverageCache.get(key)
+            }
+            if (results.isDefined) {
+              Ok(results.get)
+            } else VizReads.errors.notFound
+          } else VizReads.errors.outOfBounds
+        }
       }
     }
   }
@@ -481,6 +519,38 @@ class VizServlet extends ScalatraServlet {
       }
     }
   }
+
+  /**
+   * Gets Coverage for a get Request. This is used to get both Reads based coverage and generic coverage.
+   * @param viewRegion ReferenceRegion to view coverage over
+   * @param key key for coverage file (see LazyMaterialization)
+   * @return ActionResult of coverage json
+   */
+  def getCoverage(viewRegion: ReferenceRegion, key: String, binning: Int = 1): ActionResult = {
+    VizTimers.CoverageRequest.time {
+
+      if (!VizReads.coveragesExist) {
+        VizReads.errors.notFound
+      } else {
+        contentType = "json"
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          var results: Option[String] = None
+          VizReads.coverageWait.synchronized {
+            // region was already collected, grab from cache
+            if (viewRegion != VizReads.coverageRegion) {
+              VizReads.coverageCache = VizReads.coverageData.get.getCoverage(viewRegion, binning)
+              VizReads.coverageRegion = viewRegion
+            }
+            results = VizReads.coverageCache.get(key)
+          }
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.notFound
+        } else VizReads.errors.outOfBounds
+      }
+    }
+  }
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
@@ -557,9 +627,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .filter(path => path.endsWith(".adam"))
 
         // warn for incorrect file formats
-        args.readsPaths.split(",").toList
-          .filter(path => !path.endsWith(".adam"))
-          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
+        args.coveragePaths.split(",").toList
+          .filter(path => !path.endsWith(".adam") && !path.endsWith(".bed"))
+          .foreach(file => log.warn(s"${file} does is not a valid coverage file. Removing... "))
 
         if (!coveragePaths.isEmpty) {
           VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict))

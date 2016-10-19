@@ -34,11 +34,12 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   val referenceFile = ClassLoader.getSystemClassLoader.getResource("mm10_chrM.fa").getFile
   val vcfFile = ClassLoader.getSystemClassLoader.getResource("truetest.vcf").getFile
   val featureFile = ClassLoader.getSystemClassLoader.getResource("smalltest.bed").getFile
-  val geneFile = ClassLoader.getSystemClassLoader.getResource("dvl1.200.gtf").getFile
+  val coverageFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.coverage.adam").getFile
 
   val bamKey = LazyMaterialization.filterKeyFromFile(bamFile)
   val featureKey = LazyMaterialization.filterKeyFromFile(featureFile)
   val vcfKey = LazyMaterialization.filterKeyFromFile(vcfFile)
+  val coverageKey = LazyMaterialization.filterKeyFromFile(coverageFile)
 
   val args = new VizReadsArgs()
   args.readsPaths = bamFile
@@ -113,6 +114,20 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     implicit val vizReadDiscovery = runVizReads(args)
     get(s"/features/${featureKey}/chrM?start=0&end=2000") {
       assert(status == Ok("").status.code)
+    }
+  }
+
+  sparkTest("/coverage/:key/:ref") {
+    val args = new VizReadsArgs()
+    args.referencePath = referenceFile
+    args.coveragePaths = coverageFile
+    args.testMode = true
+
+    implicit val vizReads = runVizReads(args)
+    get(s"/coverage/${coverageKey}/chrM?start=0&end=1200") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[PositionCount]]
+      assert(json.map(_.position).distinct.length == 1200)
     }
   }
 

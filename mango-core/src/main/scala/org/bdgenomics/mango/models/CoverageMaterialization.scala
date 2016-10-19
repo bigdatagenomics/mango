@@ -42,7 +42,7 @@ import net.liftweb.json.Serialization._
  */
 class CoverageMaterialization(s: SparkContext,
                               filePaths: List[String],
-                              dict: SequenceDictionary) extends LazyMaterialization[Coverage]
+                              dict: SequenceDictionary) extends LazyMaterialization[Coverage]("CoverageRDD")
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
@@ -64,17 +64,20 @@ class CoverageMaterialization(s: SparkContext,
    * Formats raw data from RDD to JSON.
    *
    * @param region Region to obtain coverage for
+   * @param binning Tells what granularity of coverage to return. Used for large regions
    * @return JSONified data map
    */
-  def getCoverage(region: ReferenceRegion): Map[String, String] = {
+  def getCoverage(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
     val covCounts: RDD[(String, PositionCount)] =
       get(region)
         .flatMap(r => {
           val positions = r._2.start until r._2.end
           positions.map(n => (((ReferenceRegion(r._2.contigName, n, n + 1), r._1), r._2.count)))
-            .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
+            .filter(r => r._1._1.overlaps(region) && r._1._1.start % binning == 0) // filter out read fragments not overlapping region
+          // and coverage overlapping binning
         }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequency
         .map(r => (r._1._2, PositionCount(r._1._1.start, r._2.toInt))) //map to sample Id and count
+
     covCounts.collect.groupBy(_._1) // group by sample Id
       .map(r => (r._1, write(r._2.map(_._2))))
   }
@@ -109,6 +112,7 @@ object CoverageRecordMaterialization {
    */
   def load(sc: SparkContext, region: ReferenceRegion, fp: String): CoverageRDD = {
     if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
+    else if (fp.endsWith(".bed")) FeatureMaterialization.loadFromBed(sc, Some(region), fp).toCoverage
     else {
       throw UnsupportedFileException("File type not supported")
     }

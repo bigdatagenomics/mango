@@ -1,11 +1,9 @@
 <%@ val dictionary:     String  %>
 <%@ val genes:          Option[String] %>
-<%@ val readsExist:     Boolean %>
-<%@ val variantsExist:  Boolean %>
-<%@ val featuresExist:  Boolean %>
-<%@ val readsPaths:   Option[List[String]] %>
-<%@ val variantsPaths:  Option[List[String]] %>
-<%@ val featuresPaths:  Option[List[String]] %>
+<%@ val coverage:  Option[List[String]] %>
+<%@ val reads:     Option[List[String]] %>
+<%@ val variants:  Option[List[String]] %>
+<%@ val features:  Option[List[String]] %>
 <%@ val contig: String %>
 <%@ val start: String %>
 <%@ val end: String %>
@@ -72,8 +70,19 @@ xhr.onreadystatechange = function() {
                     name: 'Genes'
                 },
                 #end
-                #if (variantsExist)
-                    #for (s <- variantsPaths.get)
+                #if (coverage.isDefined)
+                    #for (s <- coverage.get)
+                        {
+                        viz: pileup.viz.coverage(),
+                        data: pileup.formats.coverage({
+                        url: '/coverage/${s}'
+                        }),
+                        name: '${s}'
+                        }
+                    #end
+                #end
+                #if (variants.isDefined)
+                    #for (s <- variants.get)
                         {
                         viz: pileup.viz.variants(),
                         data: pileup.formats.variants({
@@ -90,8 +99,8 @@ xhr.onreadystatechange = function() {
                         },
                     #end
                 #end
-                #if (featuresExist)
-                    #for (s <- featuresPaths.get)
+                #if (features.isDefined)
+                    #for (s <- features.get)
                         {
                         viz: pileup.viz.features(),
                         data: pileup.formats.features({
@@ -101,10 +110,10 @@ xhr.onreadystatechange = function() {
                         },
                     #end
                 #end
-                #if (readsExist)
-                    #for (s <- readsPaths.get)
+                #if (reads.isDefined)
+                    #for (s <- reads.get)
                         {
-                        viz: pileup.viz.coverage(),
+                        viz: pileup.viz.pileupCoverage(),
                         isReference: false,
                             data: pileup.formats.ga4gh({
                             endpoint: '/reads',

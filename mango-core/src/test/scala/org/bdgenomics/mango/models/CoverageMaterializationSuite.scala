@@ -45,8 +45,16 @@ class CoverageMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
-    // extract number of positions in string ('position' => 'p')
     assert(coverage.length == region.length())
+  }
+
+  sparkTest("return sampled coverage from CoverageRecordMaterialization over large regions") {
+    val binning = 10
+    val data = CoverageRecordMaterialization(sc, files, dict)
+    val region = new ReferenceRegion("chrM", 0L, 200L)
+    val freq = data.getCoverage(region, binning).get(key).get
+    val coverage = parse(freq).extract[Array[PositionCount]]
+    assert(coverage.length == region.length() / binning)
   }
 
   sparkTest("return coverage overlapping multiple materialized nodes") {
@@ -54,7 +62,6 @@ class CoverageMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.position)
-    // extract number of positions in string ('position' => 'p')
     assert(coverage.length == region.length())
   }
 }
