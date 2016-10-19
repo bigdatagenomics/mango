@@ -43,21 +43,21 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
 
   /**
    * Used to generically load data from all file types
- *
+   *
    * @return Generic RDD of data types from file
    */
   def load: (ReferenceRegion, String) => RDD[T]
 
   /**
    * Extracts reference region from data type T
- *
+   *
    * @return extracted ReferenceRegion
    */
   def getReferenceRegion: (T) => ReferenceRegion
 
   /**
    * Stringify T classtag to json
- *
+   *
    * @param rdd RDD of elements keyed by String
    * @return Map of (key, json) for the ReferenceRegion specified
    */
@@ -65,7 +65,7 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
 
   /**
    * Sets partitioner
- *
+   *
    * @return partitioner
    */
   def setPartitioner: Partitioner = {
@@ -74,7 +74,7 @@ abstract class LazyMaterialization[T: ClassTag] extends Serializable with Loggin
 
   /**
    * gets dictionary
- *
+   *
    * @return
    */
   def getDictionary: SequenceDictionary = sd
@@ -169,7 +169,7 @@ object LazyMaterialization {
 
   /**
    * Extracts location agnostic key form file
- *
+   *
    * @param file file to extract key from
    * @return memoryless key representing file
    */
