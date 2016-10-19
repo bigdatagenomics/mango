@@ -67,7 +67,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.parquet</groupId>
-      <artifactId>parquet-scala_${scala.version.prefix}</artifactId>
+      <artifactId>parquet-scala_2.10</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -77,17 +77,17 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.adam</groupId>
-      <artifactId>adam-cli_${scala.version.prefix}</artifactId>
+      <artifactId>adam-cli-spark2_${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.adam</groupId>
-      <artifactId>adam-core_${scala.version.prefix}</artifactId>
+      <artifactId>adam-core-spark2_${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.adam</groupId>
-      <artifactId>adam-core_${scala.version.prefix}</artifactId>
+      <artifactId>adam-core-spark2_${scala.version.prefix}</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -139,12 +139,12 @@
     </dependency>
     <dependency>
       <groupId>org.scalatra</groupId>
-      <artifactId>scalatra_${scala.version.prefix}</artifactId>
+      <artifactId>scalatra_${old-scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.scalatra.scalate</groupId>
-      <artifactId>scalate-core_${scala.version.prefix}</artifactId>
+      <artifactId>scalate-core_${old-scala.version.prefix}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.seqdoop</groupId>

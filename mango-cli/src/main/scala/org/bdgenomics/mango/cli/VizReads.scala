@@ -82,22 +82,22 @@ object VizReads extends BDGCommandCompanion with Logging {
   def featuresExist: Boolean = featureData.isDefined
 
   // reads cache
-  var readsWait = false
+  object readsWait
   var readsCache: Map[String, String] = Map.empty[String, String]
   var readsRegion: ReferenceRegion = null
 
   // coverage cache
-  var readsCoverageWait = false
+  object readsCoverageWait
   var readsCoverageCache: Map[String, String] = Map.empty[String, String]
   var readsCoverageRegion: ReferenceRegion = null
 
   // variant cache
-  var variantsWait = false
+  object variantsWait
   var variantsCache: Map[String, String] = Map.empty[String, String]
   var variantsRegion: ReferenceRegion = null
 
   // features cache
-  var featuresWait = false
+  object featuresWait
   var featuresCache: Map[String, String] = Map.empty[String, String]
   var featuresRegion: ReferenceRegion = null
 
@@ -304,16 +304,15 @@ class VizServlet extends ScalatraServlet {
 
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
-          while (VizReads.readsWait) Thread sleep (20)
-          // region was already collected, grab from cache
-          if (viewRegion != VizReads.readsRegion) {
-            VizReads.readsWait = true
-            VizReads.readsCache = VizReads.readsData.get.getJson(viewRegion)
-            VizReads.readsRegion = viewRegion
-            VizReads.readsWait = false
+          var results: Option[String] = None
+          VizReads.readsWait.synchronized {
+            // region was already collected, grab from cache
+            if (viewRegion != VizReads.readsRegion) {
+              VizReads.readsCache = VizReads.readsData.get.getJson(viewRegion)
+              VizReads.readsRegion = viewRegion
+            }
+            results = VizReads.readsCache.get(key)
           }
-          val results = VizReads.readsCache.get(key)
-
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.notFound
@@ -335,16 +334,15 @@ class VizServlet extends ScalatraServlet {
 
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
-          while (VizReads.readsCoverageWait) Thread sleep (20)
-          // region was already collected, grab from cache
-          if (viewRegion != VizReads.readsCoverageRegion) {
-            VizReads.readsCoverageWait = true
-            VizReads.readsCoverageCache = VizReads.readsData.get.getCoverage(viewRegion)
-            VizReads.readsCoverageRegion = viewRegion
-            VizReads.readsCoverageWait = false
+          var results: Option[String] = None
+          VizReads.readsCoverageWait.synchronized {
+            // region was already collected, grab from cache
+            if (viewRegion != VizReads.readsCoverageRegion) {
+              VizReads.readsCoverageCache = VizReads.readsData.get.getCoverage(viewRegion)
+              VizReads.readsCoverageRegion = viewRegion
+            }
+            results = VizReads.readsCoverageCache.get(key)
           }
-          val results = VizReads.readsCoverageCache.get(key)
-
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.notFound
@@ -366,15 +364,15 @@ class VizServlet extends ScalatraServlet {
         // if region is in bounds of reference, return data
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
-          while (VizReads.variantsWait) Thread sleep (20)
-          // region was already collected, grab from cache
-          if (viewRegion != VizReads.variantsRegion) {
-            VizReads.variantsWait = true
-            VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
-            VizReads.variantsRegion = viewRegion
-            VizReads.variantsWait = false
+          var results: Option[String] = None
+          VizReads.variantsWait.synchronized {
+            // region was already collected, grab from cache
+            if (viewRegion != VizReads.variantsRegion) {
+              VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
+              VizReads.variantsRegion = viewRegion
+            }
+            results = VizReads.variantsCache.get(key)
           }
-          val results = VizReads.variantsCache.get(key)
           if (results.isDefined) {
             // extract genotypes only and parse to strinified json
             Ok(write(parse(results.get).extract[VariantAndGenotypes].genotypes))
@@ -397,15 +395,15 @@ class VizServlet extends ScalatraServlet {
         // if region is in bounds of reference, return data
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
-          while (VizReads.variantsWait) Thread sleep (20)
-          // region was already collected, grab from cache
-          if (viewRegion != VizReads.variantsRegion) {
-            VizReads.variantsWait = true
-            VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
-            VizReads.variantsRegion = viewRegion
-            VizReads.variantsWait = false
+          var results: Option[String] = None
+          VizReads.variantsWait.synchronized {
+            // region was already collected, grab from cache
+            if (viewRegion != VizReads.variantsRegion) {
+              VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
+              VizReads.variantsRegion = viewRegion
+            }
+            results = VizReads.variantsCache.get(key)
           }
-          val results = VizReads.variantsCache.get(key)
           if (results.isDefined) {
             // extract variants only and parse to strinified json
             Ok(write(parse(results.get).extract[VariantAndGenotypes].variants))
@@ -428,16 +426,15 @@ class VizServlet extends ScalatraServlet {
         // if region is in bounds of reference, return data
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
-          while (VizReads.featuresWait) Thread sleep (20)
-          // region was already collected, grab from cache
-          if (viewRegion != VizReads.featuresRegion) {
-            VizReads.featuresWait = true
-            VizReads.featuresCache = VizReads.featureData.get.getJson(viewRegion)
-            VizReads.featuresRegion = viewRegion
-            VizReads.featuresWait = false
+          var results: Option[String] = None
+          VizReads.featuresWait.synchronized {
+            // region was already collected, grab from cache
+            if (viewRegion != VizReads.featuresRegion) {
+              VizReads.featuresCache = VizReads.featureData.get.getJson(viewRegion)
+              VizReads.featuresRegion = viewRegion
+            }
+            results = VizReads.featuresCache.get(key)
           }
-          val results = VizReads.featuresCache.get(key)
-
           if (results.isDefined) {
             Ok(results.get)
           } else Ok({}) // No data for this key
@@ -553,6 +550,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     /**
      * Runs total data scan over all feature and variant files satisfying a certain predicate.
+     *
      * @param variantFilter predicate to be satisfied during variant scan
      * @param featureFilter predicate to be satisfied during feature scan
      * @return Returns list of regions in the genome satisfying predicates
@@ -564,28 +562,28 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         if (variantFilter.isDefined) {
           if (!VizReads.variantsExist) {
             log.warn("specified discovery predicate for variants but no variant files were provided")
-            sc.emptyRDD[(ReferenceRegion, Long)]
+            sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
           } else {
-            var variants: RDD[Genotype] = VizReads.sc.emptyRDD[Genotype]
+            var variants: RDD[Genotype] = VizReads.sc.parallelize[(Genotype)](Array[(Genotype)]())
             VizReads.variantData.get.files.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp)))
             val threshold = args.threshold
             GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold)
           }
-        } else sc.emptyRDD[(ReferenceRegion, Long)]
+        } else sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
 
       // filtering for features
       val featureRegions: RDD[(ReferenceRegion, Long)] =
         if (featureFilter.isDefined) {
           if (!VizReads.featuresExist) {
             log.warn("specified discovery predicate for features but no variant files were provided")
-            sc.emptyRDD[(ReferenceRegion, Long)]
+            sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
           } else {
-            var features: RDD[Feature] = sc.emptyRDD[Feature]
+            var features: RDD[Feature] = sc.parallelize[(Feature)](Array[(Feature)]())
             VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp).rdd))
             val threshold = args.threshold
             FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold)
           }
-        } else sc.emptyRDD[(ReferenceRegion, Long)]
+        } else sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
 
       // collect and merge all regions together
       val regions = featureRegions.union(variantRegions).map(_._1)
@@ -594,6 +592,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     /**
      * preprocesses data by loading specified regions into memory for reads, variants and features
+     *
      * @param regions Regions to be preprocessed
      */
     def preprocess(regions: List[ReferenceRegion]) = {
