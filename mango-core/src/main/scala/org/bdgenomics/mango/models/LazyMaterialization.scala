@@ -26,6 +26,7 @@ import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd._
 import org.bdgenomics.utils.misc.Logging
 
+import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializable with Logging {
@@ -46,18 +47,21 @@ abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializab
 
   /**
    * Used to generically load data from all file types
+   *
    * @return Generic RDD of data types from file
    */
   def load: (ReferenceRegion, String) => RDD[T]
 
   /**
    * Extracts reference region from data type T
+   *
    * @return extracted ReferenceRegion
    */
   def getReferenceRegion: (T) => ReferenceRegion
 
   /**
    * Stringify T classtag to json
+   *
    * @param rdd RDD of elements keyed by String
    * @return Map of (key, json) for the ReferenceRegion specified
    */
@@ -65,6 +69,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializab
 
   /**
    * Sets partitioner
+   *
    * @return partitioner
    */
   def setPartitioner: Partitioner = {
@@ -73,6 +78,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializab
 
   /**
    * gets dictionary
+   *
    * @return
    */
   def getDictionary: SequenceDictionary = sd
@@ -138,15 +144,15 @@ abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializab
     checkMemory
     val seqRecord = sd(region.referenceName)
     if (seqRecord.isDefined) {
-      var data: RDD[(String, T)] = sc.emptyRDD[(String, T)]
 
+      var list = ListBuffer[RDD[(String, T)]]()
       // get alignment data for all samples
       files.map(fp => {
         val k = LazyMaterialization.filterKeyFromFile(fp)
         val d = load(region, fp).map(v => (k, v))
-        data = data.union(d)
+        list += d
       })
-
+      val data: RDD[(String, T)] = sc.union[(String, T)](list)
       // insert into IntervalRDD
       if (intRDD == null) {
         intRDD = IntervalRDD(data.keyBy(r => getReferenceRegion(r._2)))
@@ -187,6 +193,7 @@ object LazyMaterialization {
 
   /**
    * Extracts location agnostic key form file
+   *
    * @param file file to extract key from
    * @return memoryless key representing file
    */
