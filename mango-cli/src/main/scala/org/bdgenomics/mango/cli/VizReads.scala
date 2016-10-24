@@ -558,35 +558,36 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     def discover(variantFilter: Option[Int], featureFilter: Option[Int]): List[ReferenceRegion] = {
 
       // filtering for variants
-      val variantRegions: RDD[(ReferenceRegion, Long)] =
+      val variantRegions: Option[RDD[(ReferenceRegion, Long)]] =
         if (variantFilter.isDefined) {
           if (!VizReads.variantsExist) {
             log.warn("specified discovery predicate for variants but no variant files were provided")
-            sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
+            None
           } else {
             var variants: RDD[Genotype] = VizReads.sc.parallelize[(Genotype)](Array[(Genotype)]())
             VizReads.variantData.get.files.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp)))
             val threshold = args.threshold
-            GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold)
+            Some(GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold))
           }
-        } else sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
+        } else None
 
       // filtering for features
-      val featureRegions: RDD[(ReferenceRegion, Long)] =
+      val featureRegions: Option[RDD[(ReferenceRegion, Long)]] =
         if (featureFilter.isDefined) {
           if (!VizReads.featuresExist) {
             log.warn("specified discovery predicate for features but no variant files were provided")
-            sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
+            None
           } else {
             var features: RDD[Feature] = sc.parallelize[(Feature)](Array[(Feature)]())
             VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp).rdd))
             val threshold = args.threshold
-            FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold)
+            Some(FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold))
           }
-        } else sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
+        } else None
 
       // collect and merge all regions together
-      val regions = featureRegions.union(variantRegions).map(_._1)
+      val emptyRDD = sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
+      val regions = featureRegions.getOrElse(emptyRDD).union(variantRegions.getOrElse(emptyRDD)).map(_._1)
       Bookkeep.mergeRegions(regions.collect.toList.distinct)
     }
 

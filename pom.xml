@@ -32,6 +32,7 @@
     <scala.version.prefix>2.10</scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
     <spark.version>1.6.1</spark.version>
+    <spark.version.prefix>_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
   </properties>
 
@@ -424,7 +425,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.parquet</groupId>
-        <artifactId>parquet-scala_${scala.version.prefix}</artifactId>
+        <artifactId>parquet-scala_2.10</artifactId>
         <version>${parquet.version}</version>
         <exclusions>
           <exclusion>
@@ -466,17 +467,17 @@
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
-        <artifactId>adam-cli_${scala.version.prefix}</artifactId>
+        <artifactId>adam-cli${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
-        <artifactId>adam-core_${scala.version.prefix}</artifactId>
+        <artifactId>adam-core${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
-        <artifactId>adam-core_${scala.version.prefix}</artifactId>
+        <artifactId>adam-core${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
         <type>test-jar</type>
       </dependency>
