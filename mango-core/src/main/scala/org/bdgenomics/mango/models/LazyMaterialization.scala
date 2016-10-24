@@ -26,6 +26,7 @@ import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.intervalrdd._
 import org.bdgenomics.utils.misc.Logging
 
+import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializable with Logging {
@@ -138,14 +139,15 @@ abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializab
     checkMemory
     val seqRecord = sd(region.referenceName)
     if (seqRecord.isDefined) {
-      var data: RDD[(String, T)] = sc.emptyRDD[(String, T)]
 
+      var list = ListBuffer[RDD[(String, T)]]()
       // get alignment data for all samples
       files.map(fp => {
         val k = LazyMaterialization.filterKeyFromFile(fp)
         val d = load(region, fp).map(v => (k, v))
-        data = data.union(d)
+        list += d
       })
+      val data: RDD[(String, T)] = sc.union[(String, T)](list)
 
       // insert into IntervalRDD
       if (intRDD == null) {
