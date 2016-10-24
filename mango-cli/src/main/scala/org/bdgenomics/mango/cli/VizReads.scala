@@ -288,7 +288,7 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/sequenceDictionary") {
-    Ok(write(VizReads.annotationRDD.dict.records))
+    Ok(write(VizReads.annotationRDD.getSequenceDictionary.records))
   }
 
   get("/reads/:key/:ref") {

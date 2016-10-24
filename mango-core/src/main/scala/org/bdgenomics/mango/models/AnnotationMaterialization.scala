@@ -35,23 +35,20 @@ class AnnotationMaterialization(@transient sc: SparkContext,
   var bookkeep = Array[String]()
 
   // set and name interval rdd
-  val (reference: NucleotideContigFragmentRDD, dict: SequenceDictionary) =
+  val reference: NucleotideContigFragmentRDD =
     if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta")) {
-      val createObj = new CreateSequenceDictionary
-      val dict: SAMSequenceDictionary = createObj.makeSequenceDictionary(new File(referencePath))
-      (sc.loadSequences(referencePath, fragmentLength = 10000), SequenceDictionary(dict))
+      sc.loadSequences(referencePath, fragmentLength = 10000)
     } else if (referencePath.endsWith(".adam")) {
-      val reference = sc.loadParquetContigFragments(referencePath)
-      (reference, sc.loadReferenceFile(referencePath, fragmentLength = 10000).sequences)
+      sc.loadParquetContigFragments(referencePath)
     } else
       throw new UnsupportedFileException("File Types supported for reference are fa, fasta and adam")
 
-  def getSequenceDictionary: SequenceDictionary = dict
+  def getSequenceDictionary: SequenceDictionary = reference.sequences
 
   def getReferenceString(region: ReferenceRegion): String = {
     try {
       val parsedRegion = ReferenceRegion(region.referenceName, region.start,
-        VizUtils.getEnd(region.end, dict.apply(region.referenceName)))
+        VizUtils.getEnd(region.end, reference.sequences.apply(region.referenceName)))
       reference.extract(parsedRegion).toUpperCase()
     } catch {
       case e: Exception =>
