@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+set -e -x -v
+
+# make a tempdir for writing maven cruft to
+MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
+
+# add this tempdir to the poms...
+find . -name pom.xml \
+    -exec sed -i.bak \
+    -e "s:sun.io.serialization.extendedDebugInfo=true:sun.io.serialization.extendedDebugInfo=true -Djava.io.tmpdir=${MANGO_MVN_TMP_DIR}:g" \
+    {} \;
+find . -name "*.bak" -exec rm {} \;
+
+# variable declarations
+export PATH=${JAVA_HOME}/bin/:${PATH}
+export MAVEN_OPTS="-Xmx1536m -XX:MaxPermSize=1g -Dfile.encoding=utf-8"
+DIR=$( cd $( dirname ${BASH_SOURCE[0]} ) && pwd )
+PROJECT_ROOT=${DIR}/..
+VERSION=$(grep "<version>" ${PROJECT_ROOT}/pom.xml  | head -2 | tail -1 | sed 's/ *<version>//g' | sed 's/<\/version>//g')
+
+# is the hadoop version set?
+if ! [[ ${HADOOP_VERSION} ]];
+then
+    echo "HADOOP_VERSION environment variable is not set."
+    echo "Please set this variable before running."
+
+    exit 1
+fi
+
+# is the spark version set?
+if ! [[ ${SPARK_VERSION} ]];
+then
+    echo "SPARK_VERSION environment variable is not set."
+    echo "Please set this variable before running."
+
+    exit 1
+fi
+
+# are we testing for spark 2.0.0? if so, we need to rewrite our poms first
+if [ ${SPARK_VERSION} == 2.0.0 ];
+then
+        echo "Rewriting POM.xml files for Spark 2.0."
+        ./scripts/move_to_spark_2.sh
+fi
+
+# print versions
+echo "Testing MANGO version ${VERSION} on Spark ${SPARK_VERSION} and Hadoop ${HADOOP_VERSION}"
+
+# first, build the sources, run the unit tests
+mvn clean package \
+    -Dhadoop.version=${HADOOP_VERSION} \
+    -Dspark.version=${SPARK_VERSION} \
+    -DargLine=${MANGO_MVN_TMP_DIR}
+
+# we are done with maven, so clean up the maven temp dir
+find ${MANGO_MVN_TMP_DIR}
+rm -rf ${MANGO_MVN_TMP_DIR}
+
+echo
+echo "All the tests passed"
+echo
