@@ -130,7 +130,8 @@ object VizReads extends BDGCommandCompanion with Logging {
    * @return List of sequence dictionary strings of form referenceName:0-referenceName.length
    */
   def formatDictionaryOpts(dict: SequenceDictionary): String = {
-    dict.records.map(r => r.name + ":0-" + r.length).mkString(",")
+    val sorted = dict.records.sortBy(_.length).reverse
+    sorted.map(r => r.name + ":0-" + r.length).mkString(",")
   }
 
   /**
@@ -288,7 +289,7 @@ class VizServlet extends ScalatraServlet {
   }
 
   get("/sequenceDictionary") {
-    Ok(write(VizReads.annotationRDD.dict.records))
+    Ok(write(VizReads.annotationRDD.getSequenceDictionary.records))
   }
 
   get("/reads/:key/:ref") {

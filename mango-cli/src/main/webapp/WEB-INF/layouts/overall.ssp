@@ -19,16 +19,16 @@
 
 
 <script>
-home("${dictionary}", "${regions}");
+$( document ).ready(function() {
+	home("${dictionary}", "${regions}");
+});
 
 function home(dictionary, regions){
 	// Define the div for the tooltip
 	dictionary= dictionary.split(",");
-	regions=regions.split(",");
 	var div = d3.select(".chrChart").append("div")
 		.attr("class", "tooltip")
 		.style("opacity", 0);
-
 	//Render read summary visualization on the home screen at startup
 	var namelist=[];
 	var lengthlist=[];
@@ -46,10 +46,14 @@ function home(dictionary, regions){
 		}
 	}
 
+  // keeps track of names and indices
+	var nameMap = [];
+
 	for (i = 0; i < dictionary.length; i++) {
 		var range = dictionary[i].split(":")[1].split("-");
 		var length = parseInt(range[1]-range[0]);
 		var name = dictionary[i].split(":")[0];
+    nameMap[i] = name;
 		// filter and store regions that overlap the current dictionary value. These
 		//  will be printed on the home screen
 		var relevantRegions = clickableRegions.filter(function(d) {return d.name == name});
@@ -67,11 +71,23 @@ function home(dictionary, regions){
 		.domain([0, 120])
 		.range([0, 150000]);
 
-	var chartWidth = $(".chrChart").width();
-	var height = 22;
+  var minBarWidth = 10;
+  var hoverOpacity = 0.4; // opacity when hovering over bars
+	var regionOpacity = hoverOpacity - 0.2; // opacity of discovery regions
+  var labelWidth = 100;
+	var labelPadding = 20;
+	var chartWidth = $(".chrChart").width() - 20;
+	var barWidth = chartWidth - labelWidth;
+	// height of each chromosome bar
+	var barHeight = 22;
+	var chartHeight = barHeight * dictionary.length;
+
+  var color = d3.scale.category20b();
 
 	var svg = d3.select(".chrChart")
 		.append('svg')
+		.attr('overflow', 'scroll')
+		.attr('height', chartHeight + 'px')
 		.attr('width', chartWidth);
 
 	var chart = svg.selectAll("g")
@@ -79,17 +95,48 @@ function home(dictionary, regions){
 
 	var regions = chart.selectAll(".region").data(function(d) {return d.regions});
 
+  // print text first so it hides behind rect in the case of overflow
+	chart
+		.append("text")
+			.append('tspan')
+			.attr("x", labelPadding +"px")
+			.attr("y",function(d){return barHeight*nameMap.indexOf(d.name)})
+			.attr("dy", "1.1em")
+			.style('fill', 'black')
+			.text(function(d) { return d.name; })
+			.each(wrap)
+		.on("mouseover", function(d) {
+			d3.select(this).attr("fill-opacity", regionOpacity)
+										 .style("cursor", "pointer");
+			div.transition()
+				.style("opacity", 0.9)
+				.duration(200);
+			div	.html(d.name)
+			.style("left", (d3.event.pageX) + "px")
+			.style("top", (d3.event.pageY - 48) + "px");
+		})
+		.on("mouseout", function(d) {
+			d3.select(this).attr("fill-opacity", 1);
+			div.transition()
+				.style("opacity", 0)
+				.duration(200);
+		});
+
+  // append bars
 	chart
 		.append("rect")
 		.attr("class", "chr")
 		.attr("fill", "white")
+		.attr('fill', function(d) {
+			return color(d.name);
+		})
 		.style("stroke", "black")
-		.attr("x", 0)
-		.attr("y",function(d,i){return height*i})
-		.attr("height", height)
-		.attr("width", function(d) { return (chartWidth * d.length)/d3.max(lengthlist); })
+		.attr("x", labelWidth)
+		.attr("y",function(d){return barHeight*nameMap.indexOf(d.name)})
+		.attr("height", barHeight)
+		.attr("width", function(d) { return Math.max(minBarWidth,(barWidth * d.length)/d3.max(lengthlist)); })
 		.on("mouseover", function(d) {
-			d3.select(this).attr("fill", "#ccc");
+			d3.select(this).attr("fill-opacity", hoverOpacity);
 			div.transition()
 				.duration(200)
 				.style("opacity", .9);
@@ -98,42 +145,38 @@ function home(dictionary, regions){
 				.style("top", (d3.event.pageY - 48) + "px");
 			})
 		.on("mouseout", function(d) {
-			d3.select(this).attr("fill", "white");
+			d3.select(this).attr('fill-opacity', 1);
 			div.transition()
 				.duration(500)
 				.style("opacity", 0);
 		});
 
+  // append clickable discovery regions
 	regions
 		.enter().append("rect")
 		.attr("class", "region")
-		.attr("x", (function(d) { return (chartWidth * d.range[0])/d3.max(lengthlist); }))
-		.attr("width", (function(d) { return (chartWidth * (d.range[1] - d.range[0]))/d3.max(lengthlist); }))
-		.attr("height", height)
-		.attr("fill", "#ccc")
+		.attr("x", (function(d) { return labelWidth + (barWidth * d.range[0])/d3.max(lengthlist); }))
+		.attr("y",function(d){return barHeight*nameMap.indexOf(d.name)})
+		.attr("width", (function(d) { return (barWidth * (d.range[1] - d.range[0]))/d3.max(lengthlist); }))
+		.attr("height", barHeight)
+		.attr('fill', 'white')
+		.attr('fill-opacity', regionOpacity)
 		.on("mouseover", function(d) {
-			d3.select(this).attr("fill", "#ccc");
+			d3.select(this).attr("fill-opacity", 1);
 			div.transition()
-				.duration(200)
-				.style("opacity", .9);
+				.style("opacity", 0.9)
+				.duration(200);
 			div	.html(d.name + ": <br/>"  + d.range[0] + " - " + d.range[1])
 			.style("left", (d3.event.pageX) + "px")
 			.style("top", (d3.event.pageY - 48) + "px");
 		})
 		.on("mouseout", function(d) {
-			d3.select(this).attr("fill", "#ccc");
+			d3.select(this).attr("fill-opacity", regionOpacity);
 			div.transition()
-				.duration(500)
-				.style("opacity", 0);
+				.style("opacity", 0)
+				.duration(200);
 		});
 
-	chart
-		.append("text")
-		.attr("x", "50%")
-		.attr("y",function(d,i){return height*i})
-		.attr("dy", "1.1em")
-		.style('fill', 'black')
-		.text(function(d) { return d.name; });
 
 	chart.on('click', function(d) {
 		var start = Math.round(d.length/2.0);
@@ -163,6 +206,19 @@ function home(dictionary, regions){
 			}
 		}
   });
+
+	// wraps svg text elements to hide overflow with ellipsis (...)
+	function wrap() {
+		var self = d3.select(this),
+			textLength = self.node().getComputedTextLength(),
+			textLength = self.node().getComputedTextLength(),
+			text = self.text();
+		while (textLength > (labelWidth - 2 * labelPadding) && text.length > 0) {
+			text = text.slice(0, -1);
+			self.text(text + '...');
+			textLength = self.node().getComputedTextLength();
+		}
+	}
 }
 
 </script>
