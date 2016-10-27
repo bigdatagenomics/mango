@@ -95,6 +95,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   object variantsWait
   var variantsCache: Map[String, String] = Map.empty[String, String]
   var variantsRegion: ReferenceRegion = null
+  var variantsBinning: Int = -1
 
   // features cache
   object featuresWait
@@ -366,11 +367,18 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           var results: Option[String] = None
+          val binning: Int =
+            try
+              params("binning").toInt
+            catch {
+              case e: Exception => 1
+            }
           VizReads.variantsWait.synchronized {
             // region was already collected, grab from cache
-            if (viewRegion != VizReads.variantsRegion) {
-              VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
+            if (viewRegion != VizReads.variantsRegion || binning != VizReads.variantsBinning) {
+              VizReads.variantsCache = VizReads.variantData.get.getGenotype(viewRegion, binning)
               VizReads.variantsRegion = viewRegion
+              VizReads.variantsBinning = binning
             }
             results = VizReads.variantsCache.get(key)
           }
@@ -397,11 +405,18 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           var results: Option[String] = None
+          val binning: Int =
+            try
+              params("binning").toInt
+            catch {
+              case e: Exception => 1
+            }
           VizReads.variantsWait.synchronized {
             // region was already collected, grab from cache
-            if (viewRegion != VizReads.variantsRegion) {
-              VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
+            if (viewRegion != VizReads.variantsRegion || binning != VizReads.variantsBinning) {
+              VizReads.variantsCache = VizReads.variantData.get.getGenotype(viewRegion, binning)
               VizReads.variantsRegion = viewRegion
+              VizReads.variantsBinning = binning
             }
             results = VizReads.variantsCache.get(key)
           }

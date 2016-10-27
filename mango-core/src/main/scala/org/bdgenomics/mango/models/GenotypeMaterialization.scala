@@ -29,6 +29,7 @@ import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
 
 import scala.reflect.ClassTag
+import scala.math.max
 
 /*
  * Handles loading and tracking of data from persistent storage into memory for Genotype data.
@@ -52,6 +53,7 @@ class GenotypeMaterialization(s: SparkContext,
 
   /**
    * Stringifies data from genotypes to lists of variants and genotypes over the requested regions
+   *
    * @param data RDD of  filtered (sampleId, Genotype)
    * @return Map of (key, json) for the ReferenceRegion specified
    * N
@@ -64,8 +66,62 @@ class GenotypeMaterialization(s: SparkContext,
       .mapValues(v => {
         v.map(r => {
           (r._2.getSampleId, VariantJson(r._2.getContigName, r._2.getStart,
-            r._2.getVariant.getReferenceAllele, r._2.getVariant.getAlternateAllele))
+            r._2.getVariant.getReferenceAllele, r._2.getVariant.getAlternateAllele, r._2.getEnd))
         })
+      })
+
+    // stringify genotypes and group with variants
+    val genotypes: Map[String, VariantAndGenotypes] =
+      flattened.mapValues(v => {
+        VariantAndGenotypes(v.map(_._2),
+          v.groupBy(_._2).mapValues(r => r.map(_._1))
+            .map(r => GenotypeJson(r._2, r._1)).toArray)
+      })
+
+    // write variants and genotypes to json
+    genotypes.mapValues(v => write(v))
+  }
+
+  /**
+   * Formats raw data from RDD to JSON.
+   *
+   * @param region Region to obtain coverage for
+   * @param binning Tells what granularity of coverage to return. Used for large regions
+   * @return JSONified data map
+   */
+  def getGenotype(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
+    val data: RDD[(String, Genotype)] = get(region)
+    if (binning == 1) {
+      return stringify(data)
+    }
+    val flattened: Map[String, Array[(String, VariantJson)]] = data
+      .map(r => {
+        val geno = r._2
+        val bin: Int = (geno.getStart / binning).toInt
+        ((r._1, bin), geno)
+      })
+      .reduceByKey((a, b) => {
+        val end = max(a.getEnd, b.getEnd)
+        val start = max(a.getStart, b.getStart)
+        a.setStart(start)
+        a.setEnd(end)
+        a
+      })
+      .map(r => {
+        val n = r._2
+        var ref = n.getVariant.getReferenceAllele
+        var alt = n.getVariant.getAlternateAllele
+        if (n.getEnd - n.getStart != ref.length) {
+          ref = "NNNN"
+          alt = "NNNN"
+        }
+        (r._1._1, (n.getSampleId, VariantJson(n.getContigName, n.getStart,
+          ref, alt, n.getEnd)))
+      })
+      .collect
+      .groupBy(_._1)
+      .mapValues(v => {
+        v.map(_._2)
       })
 
     // stringify genotypes and group with variants
