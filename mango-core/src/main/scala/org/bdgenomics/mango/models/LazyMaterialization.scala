@@ -141,11 +141,11 @@ abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializab
     if (seqRecord.isDefined) {
 
       val data: RDD[(String, T)] =
-      // get alignment data for all samples
-      files.map(fp => {
-        val k = LazyMaterialization.filterKeyFromFile(fp)
-        load(region, fp).map(v => (k, v))
-      }).reduce(_ union _)
+        // get alignment data for all samples
+        files.map(fp => {
+          val k = LazyMaterialization.filterKeyFromFile(fp)
+          load(region, fp).map(v => (k, v))
+        }).reduce(_ union _)
 
       // insert into IntervalRDD
       if (intRDD == null) {
