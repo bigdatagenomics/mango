@@ -57,7 +57,7 @@ case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
 case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long)
 
 /**
- * Class for coverting adam coverage to coverage format readable by pileup.js
+ * Class for converting adam coverage to coverage format readable by pileup.js
  * @param position Base pair on chromosome
  * @param count Coverage at the specified base pair
  */

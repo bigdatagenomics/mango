@@ -29,7 +29,7 @@ import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
 
 import scala.reflect.ClassTag
-import scala.math.max
+import scala.math.{ max, min }
 
 /*
  * Handles loading and tracking of data from persistent storage into memory for Genotype data.
@@ -48,6 +48,7 @@ class GenotypeMaterialization(s: SparkContext,
   val partitions = parts
   val sd = d
   val files = filePaths
+  val variantPlaceholder = "N"
   def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
   def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
 
@@ -98,28 +99,18 @@ class GenotypeMaterialization(s: SparkContext,
       .map(r => {
         val geno = r._2
         val bin: Int = (geno.getStart / binning).toInt
-        ((r._1, bin), geno)
+        val json = (geno.getSampleId, VariantJson(geno.getContigName, geno.getStart,
+          geno.getVariant.getReferenceAllele, geno.getVariant.getAlternateAllele, geno.getEnd))
+        ((r._1, bin), json)
       })
       .reduceByKey((a, b) => {
-        val end = max(a.getEnd, b.getEnd)
-        val start = max(a.getStart, b.getStart)
-        a.setStart(start)
-        a.setEnd(end)
-        a
-      })
-      .map(r => {
-        val n = r._2
-        var ref = n.getVariant.getReferenceAllele
-        var alt = n.getVariant.getAlternateAllele
-        if (n.getEnd - n.getStart != ref.length) {
-          ref = "NNNN"
-          alt = "NNNN"
-        }
-        (r._1._1, (n.getSampleId, VariantJson(n.getContigName, n.getStart,
-          ref, alt, n.getEnd)))
+        val end = max(a._2.end, b._2.end)
+        val start = min(a._2.position, b._2.position)
+        (a._1, VariantJson(a._2.contig, start,
+          variantPlaceholder, variantPlaceholder, end))
       })
       .collect
-      .groupBy(_._1)
+      .groupBy(_._1._1)
       .mapValues(v => {
         v.map(_._2)
       })
