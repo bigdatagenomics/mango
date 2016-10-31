@@ -48,7 +48,6 @@ class GenotypeMaterialization(s: SparkContext,
   val partitions = parts
   val sd = d
   val files = filePaths
-  val variantPlaceholder = "N"
   def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
   def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
 
@@ -71,56 +70,11 @@ class GenotypeMaterialization(s: SparkContext,
         })
       })
 
-    // stringify genotypes and group with variants
-    val genotypes: Map[String, VariantAndGenotypes] =
+    // stringify genotypes and group
+    val genotypes: Map[String, Array[GenotypeJson]] =
       flattened.mapValues(v => {
-        VariantAndGenotypes(v.map(_._2),
-          v.groupBy(_._2).mapValues(r => r.map(_._1))
-            .map(r => GenotypeJson(r._2, r._1)).toArray)
-      })
-
-    // write variants and genotypes to json
-    genotypes.mapValues(v => write(v))
-  }
-
-  /**
-   * Formats raw data from RDD to JSON.
-   *
-   * @param region Region to obtain coverage for
-   * @param binning Tells what granularity of coverage to return. Used for large regions
-   * @return JSONified data map
-   */
-  def getGenotype(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
-    val data: RDD[(String, Genotype)] = get(region)
-    if (binning == 1) {
-      return stringify(data)
-    }
-    val flattened: Map[String, Array[(String, VariantJson)]] = data
-      .map(r => {
-        val geno = r._2
-        val bin: Int = (geno.getStart / binning).toInt
-        val json = (geno.getSampleId, VariantJson(geno.getContigName, geno.getStart,
-          geno.getVariant.getReferenceAllele, geno.getVariant.getAlternateAllele, geno.getEnd))
-        ((r._1, bin), json)
-      })
-      .reduceByKey((a, b) => {
-        val end = max(a._2.end, b._2.end)
-        val start = min(a._2.position, b._2.position)
-        (a._1, VariantJson(a._2.contig, start,
-          variantPlaceholder, variantPlaceholder, end))
-      })
-      .collect
-      .groupBy(_._1._1)
-      .mapValues(v => {
-        v.map(_._2)
-      })
-
-    // stringify genotypes and group with variants
-    val genotypes: Map[String, VariantAndGenotypes] =
-      flattened.mapValues(v => {
-        VariantAndGenotypes(v.map(_._2),
-          v.groupBy(_._2).mapValues(r => r.map(_._1))
-            .map(r => GenotypeJson(r._2, r._1)).toArray)
+        v.groupBy(_._2).mapValues(r => r.map(_._1))
+          .map(r => GenotypeJson(r._2, r._1)).toArray
       })
 
     // write variants and genotypes to json
@@ -165,13 +119,10 @@ object GenotypeMaterialization {
   def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some(((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName)))
+        case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
         case None    => None
       }
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
     sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).rdd
   }
-
 }
-
-case class VariantAndGenotypes(variants: Array[VariantJson], genotypes: Array[GenotypeJson])
