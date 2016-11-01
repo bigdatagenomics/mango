@@ -29,7 +29,6 @@ import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
 
 import scala.reflect.ClassTag
-import scala.math.{ max, min }
 
 /*
  * Handles loading and tracking of data from persistent storage into memory for Genotype data.

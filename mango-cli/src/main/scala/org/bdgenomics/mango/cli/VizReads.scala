@@ -382,7 +382,7 @@ class VizServlet extends ScalatraServlet {
             results = VizReads.genotypesCache.get(key)
           }
           if (results.isDefined) {
-            Ok(results)
+            Ok(results.get)
           } else ({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
@@ -419,7 +419,7 @@ class VizServlet extends ScalatraServlet {
           }
           if (results.isDefined) {
             // extract variants only and parse to stringified json
-            Ok(results)
+            Ok(results.get)
           } else Ok({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
