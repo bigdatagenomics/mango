@@ -73,12 +73,14 @@ object VizReads extends BDGCommandCompanion with Logging {
   // Structures storing data types. All but reference is optional
   var annotationRDD: AnnotationMaterialization = null
   var readsData: Option[AlignmentRecordMaterialization] = None
-  var variantData: Option[GenotypeMaterialization] = None
+  var variantData: Option[VariantMaterialization] = None
+  var genotypeData: Option[GenotypeMaterialization] = None
   var featureData: Option[FeatureMaterialization] = None
 
   // variables tracking whether optional datatypes were loaded
   def readsExist: Boolean = readsData.isDefined
   def variantsExist: Boolean = variantData.isDefined
+  def genotypeExist: Boolean = genotypeData.isDefined
   def featuresExist: Boolean = featureData.isDefined
 
   // reads cache
@@ -95,6 +97,11 @@ object VizReads extends BDGCommandCompanion with Logging {
   object variantsWait
   var variantsCache: Map[String, String] = Map.empty[String, String]
   var variantsRegion: ReferenceRegion = null
+
+  // variant cache
+  object genotypesWait
+  var genotypesCache: Map[String, String] = Map.empty[String, String]
+  var genotypesRegion: ReferenceRegion = null
 
   // features cache
   object featuresWait
@@ -366,17 +373,16 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           var results: Option[String] = None
-          VizReads.variantsWait.synchronized {
+          VizReads.genotypesWait.synchronized {
             // region was already collected, grab from cache
-            if (viewRegion != VizReads.variantsRegion) {
-              VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
-              VizReads.variantsRegion = viewRegion
+            if (viewRegion != VizReads.genotypesRegion) {
+              VizReads.genotypesCache = VizReads.genotypeData.get.getJson(viewRegion)
+              VizReads.genotypesRegion = viewRegion
             }
-            results = VizReads.variantsCache.get(key)
+            results = VizReads.genotypesCache.get(key)
           }
           if (results.isDefined) {
-            // extract genotypes only and parse to strinified json
-            Ok(write(parse(results.get).extract[VariantAndGenotypes].genotypes))
+            Ok(results.get)
           } else ({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
@@ -397,17 +403,23 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           var results: Option[String] = None
+          val binning: Int =
+            try
+              params("binning").toInt
+            catch {
+              case e: Exception => 1
+            }
           VizReads.variantsWait.synchronized {
             // region was already collected, grab from cache
             if (viewRegion != VizReads.variantsRegion) {
-              VizReads.variantsCache = VizReads.variantData.get.getJson(viewRegion)
+              VizReads.variantsCache = VizReads.variantData.get.getVariants(viewRegion, binning)
               VizReads.variantsRegion = viewRegion
             }
             results = VizReads.variantsCache.get(key)
           }
           if (results.isDefined) {
-            // extract variants only and parse to strinified json
-            Ok(write(parse(results.get).extract[VariantAndGenotypes].variants))
+            // extract variants only and parse to stringified json
+            Ok(results.get)
           } else Ok({}) // No data for this key
         } else VizReads.errors.outOfBounds
       }
@@ -523,7 +535,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!variantsPaths.isEmpty) {
-          VizReads.variantData = Some(GenotypeMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
+          VizReads.variantData = Some(VariantMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
+          VizReads.genotypeData = Some(GenotypeMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
         }
       }
     }
@@ -605,6 +618,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           VizReads.readsData.get.get(region)
         if (VizReads.variantData.isDefined)
           VizReads.variantData.get.get(region)
+        if (VizReads.genotypeData.isDefined)
+          VizReads.genotypeData.get.get(region)
       }
     }
 
