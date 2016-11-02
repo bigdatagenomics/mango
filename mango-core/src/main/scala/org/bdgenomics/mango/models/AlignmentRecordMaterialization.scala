@@ -81,7 +81,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
           t.map(n => ((ReferenceRegion(r._2.getContigName, n, n + 1), r._1), 1))
             .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
         }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
-        .map(r => (r._1._2, PositionCount(r._1._1.start, r._2)))
+        .map(r => (r._1._2, PositionCount(r._1._1.start, r._1._1.start + 1, r._2)))
 
     covCounts.collect.groupBy(_._1) // group by sample Id
       .map(r => (r._1, write(r._2.map(_._2))))
@@ -94,6 +94,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
    */
   def stringify(data: RDD[(String, AlignmentRecord)]): Map[String, String] = {
     val flattened: Map[String, Array[AlignmentRecord]] = data
+      .filter(r => r._2.getMapq > 0)
       .collect
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))

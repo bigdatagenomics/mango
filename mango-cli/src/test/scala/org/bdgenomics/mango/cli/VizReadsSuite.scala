@@ -127,7 +127,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     get(s"/coverage/${coverageKey}/chrM?start=0&end=1200") {
       assert(status == Ok("").status.code)
       val json = parse(response.getContent()).extract[Array[PositionCount]]
-      assert(json.map(_.position).distinct.length == 1200)
+      assert(json.map(_.start).distinct.length == 1200)
     }
   }
 

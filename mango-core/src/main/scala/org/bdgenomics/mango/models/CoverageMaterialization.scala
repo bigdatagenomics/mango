@@ -50,7 +50,7 @@ class CoverageMaterialization(s: SparkContext,
   val sd = dict
   val files = filePaths
 
-  def load = (region: ReferenceRegion, file: String) => CoverageRecordMaterialization.load(sc, region, file).rdd
+  def load = (region: ReferenceRegion, file: String) => CoverageMaterialization.load(sc, region, file).rdd
 
   /**
    * Extracts ReferenceRegion from CoverageRecord
@@ -69,16 +69,24 @@ class CoverageMaterialization(s: SparkContext,
    */
   def getCoverage(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
     val covCounts: RDD[(String, PositionCount)] =
-      get(region)
-        .flatMap(r => {
-          val positions = r._2.start until r._2.end
-          positions.map(n => (((ReferenceRegion(r._2.contigName, n, n + 1), r._1), r._2.count)))
-            .filter(r => r._1._1.overlaps(region) && r._1._1.start % binning == 0) // filter out read fragments not overlapping region
-          // and coverage overlapping binning
-        }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequency
-        .map(r => (r._1._2, PositionCount(r._1._1.start, r._2.toInt))) //map to sample Id and count
+      if (binning > 1) {
+        get(region)
+          .map(r => {
+            // map to bin start, bin end
+            val pc = r._2
+            val start = pc.start - (pc.start % binning)
+            val end = start + binning
+            ((r._1, start), PositionCount(start, end, pc.count.toInt))
+          }).reduceByKey((a, b) => {
+            // reduce by start
+            PositionCount(a.start, a.end, (a.count + b.count) / 2)
+          }).map(r => (r._1._1, r._2))
+      } else {
+        get(region).mapValues(r => PositionCount(r.start, r.end, r.count.toInt))
+      }
 
     covCounts.collect.groupBy(_._1) // group by sample Id
+      .mapValues(r => r.sortBy(_._2.start)) // sort coverage
       .map(r => (r._1, write(r._2.map(_._2))))
   }
   /**
@@ -92,12 +100,12 @@ class CoverageMaterialization(s: SparkContext,
       .collect
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))
-      .mapValues(r => r.map(f => PositionCount(f.start, f.count.toInt))(collection.breakOut))
+      .mapValues(r => r.map(f => PositionCount(f.start, f.end, f.count.toInt)))
     flattened.mapValues(r => write(r))
   }
 }
 
-object CoverageRecordMaterialization {
+object CoverageMaterialization {
 
   def apply(sc: SparkContext, files: List[String], sd: SequenceDictionary): CoverageMaterialization = {
     new CoverageMaterialization(sc, files, sd)
@@ -127,6 +135,6 @@ object CoverageRecordMaterialization {
    */
   def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): CoverageRDD = {
     val predicate = ((LongColumn("end") <= region.end) && (LongColumn("start") >= region.start) && (BinaryColumn("contigName") === region.referenceName))
-    sc.loadParquetCoverage(fp, Some(predicate))
+    sc.loadParquetCoverage(fp, Some(predicate)).flatten()
   }
 }

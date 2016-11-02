@@ -271,14 +271,33 @@ class VizServlet extends ScalatraServlet {
     VizReads.featuresRegion = region
 
     // generate file keys for front end
-    val readsSamples = try {
-      Some(VizReads.readsData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+    val readsSamples: Option[List[(String, Option[String])]] = try {
+      val reads = VizReads.readsData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r))
+
+      // check if there are precomputed coverage files for reads. If so, send this information to the frontend
+      // to avoid extra coverage computation
+      if (VizReads.coverageData.isDefined) {
+        Some(reads.map(r => {
+          val coverage = VizReads.coverageData.get.getFiles.map(c => LazyMaterialization.filterKeyFromFile(c))
+            .find(c => {
+              c.contains(r)
+            })
+          (r, coverage)
+        }))
+      } else Some(reads.map((_, None)))
+
     } catch {
       case e: Exception => None
     }
 
     val coverageSamples = try {
-      Some(VizReads.coverageData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+      val coverage = VizReads.coverageData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r))
+
+      // filter out coverage samples that will be displayed with reads
+      if (readsSamples.isDefined) {
+        val readsCoverage = readsSamples.get.map(_._2).flatten
+        Some(coverage.filter(c => !readsCoverage.contains(c)))
+      } else Some(coverage)
     } catch {
       case e: Exception => None
     }
@@ -528,7 +547,6 @@ class VizServlet extends ScalatraServlet {
    */
   def getCoverage(viewRegion: ReferenceRegion, key: String, binning: Int = 1): ActionResult = {
     VizTimers.CoverageRequest.time {
-
       if (!VizReads.coveragesExist) {
         VizReads.errors.notFound
       } else {

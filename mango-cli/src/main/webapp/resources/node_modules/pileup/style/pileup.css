@@ -195,16 +195,16 @@
   stroke: black;
   stroke-width: 2;
 }
-.pileup .network-status {
+.network-status {
   height: 100%;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  top: 30px;
+  top: 20px;
 }
-.pileup .network-status-message {
+.network-status-message {
   padding: 4px 8px;
   width: auto;
   background: #eee;

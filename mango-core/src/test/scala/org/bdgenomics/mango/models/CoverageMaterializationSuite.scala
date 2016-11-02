@@ -37,11 +37,11 @@ class CoverageMaterializationSuite extends MangoFunSuite {
   val files = List(coverageFile)
 
   sparkTest("create new CoverageRecordMaterialization") {
-    val lazyMat = CoverageRecordMaterialization(sc, files, dict)
+    val lazyMat = CoverageMaterialization(sc, files, dict)
   }
 
   sparkTest("return coverage from CoverageRecordMaterialization") {
-    val data = CoverageRecordMaterialization(sc, files, dict)
+    val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
@@ -50,7 +50,7 @@ class CoverageMaterializationSuite extends MangoFunSuite {
 
   sparkTest("return sampled coverage from CoverageRecordMaterialization over large regions") {
     val binning = 10
-    val data = CoverageRecordMaterialization(sc, files, dict)
+    val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 200L)
     val freq = data.getCoverage(region, binning).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
@@ -58,10 +58,10 @@ class CoverageMaterializationSuite extends MangoFunSuite {
   }
 
   sparkTest("return coverage overlapping multiple materialized nodes") {
-    val data = CoverageRecordMaterialization(sc, files, dict)
+    val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get
-    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.position)
+    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
     assert(coverage.length == region.length())
   }
 }

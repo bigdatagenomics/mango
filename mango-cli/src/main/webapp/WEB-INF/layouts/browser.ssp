@@ -1,7 +1,7 @@
 <%@ val dictionary:     String  %>
 <%@ val genes:          Option[String] %>
 <%@ val coverage:  Option[List[String]] %>
-<%@ val reads:     Option[List[String]] %>
+<%@ val reads:     Option[List[(String, Option[String])]] %>
 <%@ val variants:  Option[List[String]] %>
 <%@ val features:  Option[List[String]] %>
 <%@ val contig: String %>
@@ -78,7 +78,7 @@ xhr.onreadystatechange = function() {
                         url: '/coverage/${s}'
                         }),
                         name: '${s}'
-                        }
+                        },
                     #end
                 #end
                 #if (variants.isDefined)
@@ -112,22 +112,32 @@ xhr.onreadystatechange = function() {
                 #end
                 #if (reads.isDefined)
                     #for (s <- reads.get)
-                        {
-                        viz: pileup.viz.pileupCoverage(),
-                        isReference: false,
-                            data: pileup.formats.ga4gh({
-                            endpoint: '/reads',
-                            readGroupId: '${s}',
-                            killChr: false
-                        }),
-                        name: 'Coverage'
-                        },
+                        #if (s._2.isDefined)
+                            {
+                            viz: pileup.viz.coverage(),
+                            data: pileup.formats.coverage({
+                            url: '/coverage/${s._2.get}'
+                            }),
+                            name: '${s._2.get}'
+                            },
+                        #else
+                            {
+                            viz: pileup.viz.pileupcoverage(),
+                            isReference: false,
+                                data: pileup.formats.ga4gh({
+                                endpoint: '/reads',
+                                readGroupId: '${s._1}',
+                                killChr: false
+                            }),
+                            name: 'Coverage'
+                            },
+                        #end
                         {
                         viz: pileup.viz.pileup(),
                         isReference: false,
                         data: pileup.formats.ga4gh({
                             endpoint: '/reads',
-                            readGroupId: '${s}',
+                            readGroupId: '${s._1}',
                             killChr: false
                         }),
                         name: 'Alignment'

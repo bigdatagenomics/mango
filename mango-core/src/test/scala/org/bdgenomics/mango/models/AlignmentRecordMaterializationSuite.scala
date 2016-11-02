@@ -61,7 +61,6 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
 
-    // extract number of positions in string ('position' => 'p')
     assert(coverage.length == region.length())
   }
 
@@ -69,8 +68,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val data = AlignmentRecordMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get
-    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.position)
-    // extract number of positions in string ('position' => 'p')
+    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
     assert(coverage.length == region.length())
   }
 }
