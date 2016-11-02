@@ -86,8 +86,9 @@ class VariantMaterialization(s: SparkContext,
     if (binning <= 1) {
       return stringify(data)
     } else {
-      val x = data
+      val binnedData = data
         .map(r => {
+          // Add bin to key
           ((r._1, (r._2.getStart / binning).toInt), r._2)
         })
         .reduceByKey((a, b) => {
@@ -108,9 +109,10 @@ class VariantMaterialization(s: SparkContext,
           a
         })
         .map(r => {
+          // Remove bin from key
           (r._1._1, r._2)
         })
-      stringify(x)
+      stringify(binnedData)
     }
   }
 }

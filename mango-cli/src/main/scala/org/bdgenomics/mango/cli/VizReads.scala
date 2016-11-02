@@ -189,6 +189,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-var_files", usage = "A list of variants files to view, separated by commas (,)")
   var variantsPaths: String = null
 
+  @Args4jOption(required = false, name = "-geno_files", usage = "A list of genotype files to view, separated by commas (,)")
+  var genotypesPaths: String = null
+
   @Args4jOption(required = false, name = "-feat_files", usage = "The feature files to view, separated by commas (,)")
   var featurePaths: String = null
 
@@ -266,6 +269,12 @@ class VizServlet extends ScalatraServlet {
       case e: Exception => None
     }
 
+    val genotypesPaths = try {
+      Some(VizReads.genotypeData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+    } catch {
+      case e: Exception => None
+    }
+
     val featuresPaths = try {
       Some(VizReads.featureData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
@@ -278,6 +287,7 @@ class VizServlet extends ScalatraServlet {
         "readsPaths" -> readsSamples,
         "readsExist" -> VizReads.readsExist,
         "variantsPaths" -> variantsPaths,
+        "genotypesPaths" -> genotypesPaths,
         "variantsExist" -> VizReads.variantsExist,
         "featuresPaths" -> featuresPaths,
         "featuresExist" -> VizReads.featuresExist,
@@ -473,6 +483,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     initAnnotations
     initAlignments
     initVariants
+    initGenotypes
     initFeatures
 
     // run discovery mode if it is specified in the startup script
@@ -536,7 +547,26 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
         if (!variantsPaths.isEmpty) {
           VizReads.variantData = Some(VariantMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
-          VizReads.genotypeData = Some(GenotypeMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
+        }
+      }
+    }
+
+    /**
+     * Initialize loaded genotype files
+     */
+    def initGenotypes() = {
+      if (Option(args.genotypesPaths).isDefined) {
+        // filter out incorrect file formats
+        val genotypesPaths = args.genotypesPaths.split(",").toList
+          .filter(path => path.endsWith(".vcf") || path.endsWith(".adam"))
+
+        // warn for incorrect file formats
+        args.genotypesPaths.split(",").toList
+          .filter(path => !path.endsWith(".vcf") && !path.endsWith(".adam"))
+          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
+
+        if (!genotypesPaths.isEmpty) {
+          VizReads.genotypeData = Some(GenotypeMaterialization(sc, genotypesPaths, VizReads.globalDict, partitionCount))
         }
       }
     }
