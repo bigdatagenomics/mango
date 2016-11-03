@@ -25,6 +25,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.variation.VariantRDD
 import org.bdgenomics.formats.avro.Variant
 import org.bdgenomics.mango.layout.VariantJson
 
@@ -37,20 +38,16 @@ import scala.math.{ max, min }
  */
 class VariantMaterialization(s: SparkContext,
                              filePaths: List[String],
-                             d: SequenceDictionary,
-                             parts: Int,
-                             chunkS: Int) extends LazyMaterialization[Variant]("VariantRDD")
+                             dict: SequenceDictionary) extends LazyMaterialization[Variant]("VariantRDD")
     with Serializable {
 
   @transient val sc = s
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  val dict = d
-  val partitions = parts
-  val sd = d
+  val sd = dict
   val files = filePaths
   val variantPlaceholder = "N"
   def getReferenceRegion = (v: Variant) => ReferenceRegion(v.getContigName, v.getStart, v.getEnd)
-  def load = (region: ReferenceRegion, file: String) => VariantMaterialization.load(sc, Some(region), file)
+  def load = (region: ReferenceRegion, file: String) => VariantMaterialization.load(sc, Some(region), file).rdd
 
   /**
    * Stringifies data from variants to lists of variants over the requested regions
@@ -119,38 +116,33 @@ class VariantMaterialization(s: SparkContext,
 
 object VariantMaterialization {
 
-  def apply(sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int): VariantMaterialization = {
-    new VariantMaterialization(sc, files, dict, partitions, 100)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary): VariantMaterialization = {
+    new VariantMaterialization(sc, files, dict)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int, chunkSize: Int): VariantMaterialization = {
-    new VariantMaterialization(sc, files, dict, partitions, chunkSize)
-  }
-
-  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Variant] = {
-    val variants: RDD[Variant] =
-      if (fp.endsWith(".adam")) {
-        loadAdam(sc, region, fp)
-      } else if (fp.endsWith(".vcf")) {
-        region match {
-          case Some(_) => sc.loadVariants(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-            && g.getEnd > region.get.start))
-          case None => sc.loadVariants(fp).rdd
-        }
-      } else {
-        throw UnsupportedFileException("File type not supported")
+  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): VariantRDD = {
+    if (fp.endsWith(".adam")) {
+      loadAdam(sc, region, fp)
+    } else if (fp.endsWith(".vcf")) {
+      region match {
+        case Some(_) =>
+          sc.loadVariants(fp).transform(rdd => rdd.filter(g =>
+            (g.getContigName == region.get.referenceName && g.getStart < region.get.end
+              && g.getEnd > region.get.start)))
+        case None => sc.loadVariants(fp)
       }
-
-    variants
+    } else {
+      throw UnsupportedFileException("File type not supported")
+    }
   }
 
-  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Variant] = {
+  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): VariantRDD = {
     val pred: Option[FilterPredicate] =
       region match {
         case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
         case None    => None
       }
     val proj = Projection(VariantField.contig, VariantField.start, VariantField.referenceAllele, VariantField.variantAllele, VariantField.end)
-    sc.loadParquetVariants(fp, predicate = pred, projection = Some(proj)).rdd
+    sc.loadParquetVariants(fp, predicate = pred, projection = Some(proj))
   }
 }

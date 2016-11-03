@@ -59,13 +59,6 @@ class BookkeepSuite extends FunSuite {
     assert(regions.get.head.end == 1000)
   }
 
-  test("unmerges regions") {
-    val regions = Bookkeep.unmergeRegions(region2, 100)
-    assert(regions.length == 5)
-    assert(regions.head.start == 500)
-    assert(regions.head.end == 600)
-  }
-
   test("merges regions") {
     val newRegion = ReferenceRegion("chr1", 150, 500)
     val regions = List(region2, newRegion, region1)

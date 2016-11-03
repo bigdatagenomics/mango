@@ -45,7 +45,7 @@ class VariantMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Fetch from 1 vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
-    val data = VariantMaterialization(sc, List(vcfFile1), sd, 10)
+    val data = VariantMaterialization(sc, List(vcfFile1), sd)
     val json = data.getVariants(region).get(key).get
     val vAndg = parse(json).extract[Array[VariantJson]]
 
@@ -54,7 +54,7 @@ class VariantMaterializationSuite extends MangoFunSuite {
 
   sparkTest("more than 1 vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
-    val data = VariantMaterialization(sc, vcfFiles, sd, 10)
+    val data = VariantMaterialization(sc, vcfFiles, sd)
     val json = data.getVariants(region)
     var vAndg = parse(json.get(key).get).extract[Array[VariantJson]]
 

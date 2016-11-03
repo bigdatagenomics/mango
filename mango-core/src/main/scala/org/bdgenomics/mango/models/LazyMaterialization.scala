@@ -29,12 +29,17 @@ import org.bdgenomics.utils.misc.Logging
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
-abstract class LazyMaterialization[T: ClassTag](name: String) extends Serializable with Logging {
+/**
+ * Tracks regions of data already in memory and loads regions as needed.
+ *
+ * @param name Name of Materialization structure. Used for Spark UI.
+ * @param prefetch prefetch size to lazily grab data. Defaults to 1000000
+ */
+abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[Int] = None) extends Serializable with Logging {
 
   def sc: SparkContext
   def sd: SequenceDictionary
-  def chunkSize = 20000
-  val prefetchSize = 10000
+  val prefetchSize = prefetch.getOrElse(1000000)
   val bookkeep = new Bookkeep(prefetchSize)
   var memoryFraction = 0.85 // default caching fraction
 

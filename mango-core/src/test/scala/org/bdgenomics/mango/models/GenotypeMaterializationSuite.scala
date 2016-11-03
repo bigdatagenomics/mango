@@ -45,7 +45,7 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Fetch from 1 vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
-    val data = GenotypeMaterialization(sc, List(vcfFile1), sd, 10)
+    val data = GenotypeMaterialization(sc, List(vcfFile1), sd)
     val json = data.getJson(region).get(key).get
     val vAndg = parse(json).extract[Array[GenotypeJson]]
 
@@ -54,7 +54,7 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
 
   sparkTest("more than 1 vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
-    val data = GenotypeMaterialization(sc, vcfFiles, sd, 10)
+    val data = GenotypeMaterialization(sc, vcfFiles, sd)
     val json = data.getJson(region)
     var vAndg = parse(json.get(key).get).extract[Array[GenotypeJson]]
 
