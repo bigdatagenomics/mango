@@ -3,6 +3,7 @@
 <%@ val coverage:  Option[List[String]] %>
 <%@ val reads:     Option[List[(String, Option[String])]] %>
 <%@ val variants:  Option[List[String]] %>
+<%@ val genotypes:  Option[List[String]] %>
 <%@ val features:  Option[List[String]] %>
 <%@ val contig: String %>
 <%@ val start: String %>
@@ -90,6 +91,10 @@ xhr.onreadystatechange = function() {
                         }),
                         name: '${s}'
                         },
+                    #end
+                #end
+                #if (genotypes.isDefined)
+                    #for (s <- genotypes.get)
                         {
                         viz: pileup.viz.genotypes(),
                         data: pileup.formats.genotypes({

@@ -302,19 +302,19 @@ class VizServlet extends ScalatraServlet {
       case e: Exception => None
     }
 
-    val variantsSamples = try {
+    val variantSamples = try {
       Some(VizReads.variantData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
     }
 
-    val genotypesPaths = try {
+    val genotypeSamples = try {
       Some(VizReads.genotypeData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
     }
 
-    val featuresPaths = try {
+    val featureSamples = try {
       Some(VizReads.featureData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
@@ -323,15 +323,11 @@ class VizServlet extends ScalatraServlet {
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/browser.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
         "genes" -> VizReads.genes,
-        "readsPaths" -> readsSamples,
-        "readsExist" -> VizReads.readsExist,
-        "coveragePaths" -> coveragesSamples,
-        "coverageExists" -> VizReads.coveragesExist,
-        "variantsPaths" -> variantsPaths,
-        "genotypesPaths" -> genotypesPaths,
-        "variantsExist" -> VizReads.variantsExist,
-        "featuresPaths" -> featuresPaths,
-        "featuresExist" -> VizReads.featuresExist,
+        "reads" -> readsSamples,
+        "coverage" -> coverageSamples,
+        "variants" -> variantSamples,
+        "genotypes" -> genotypeSamples,
+        "features" -> featureSamples,
         "contig" -> session("referenceRegion").asInstanceOf[ReferenceRegion].referenceName,
         "start" -> session("referenceRegion").asInstanceOf[ReferenceRegion].start.toString,
         "end" -> session("referenceRegion").asInstanceOf[ReferenceRegion].end.toString))
@@ -411,7 +407,8 @@ class VizServlet extends ScalatraServlet {
           } else None
 
         // check if there is a precomputed coverage file for this reads file
-        if (coverageFiles.isDefined && coverageFiles.get.contains(key)) { // TODO: I dont know if this is correct for getting keys
+        if (coverageFiles.isDefined && coverageFiles.get.contains(key)) {
+          // TODO: I dont know if this is correct for getting keys
           val binning: Int =
             try
               params("binning").toInt
@@ -606,8 +603,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     if (!args.testMode) startServer()
 
     /*
-     * Initialize required reference file
-     */
+   * Initialize required reference file
+   */
     def initAnnotations() = {
       val referencePath = Option(args.referencePath).getOrElse({
         throw new FileNotFoundException("reference file not provided")
@@ -618,8 +615,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     }
 
     /*
-     * Initialize loaded alignment files
-     */
+   * Initialize loaded alignment files
+   */
     def initAlignments = {
       if (Option(args.readsPaths).isDefined) {
         val readsPaths = args.readsPaths.split(",").toList
@@ -637,8 +634,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     }
 
     /*
-     * Initialize coverage files
-     */
+   * Initialize coverage files
+   */
     def initCoverages = {
       if (Option(args.coveragePaths).isDefined) {
         val coveragePaths = args.coveragePaths.split(",").toList
