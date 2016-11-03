@@ -19,53 +19,46 @@
 package org.bdgenomics.mango.models
 
 import net.liftweb.json._
-import org.bdgenomics.adam.models.{ SequenceRecord, SequenceDictionary, ReferenceRegion }
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.mango.util.MangoFunSuite
+import org.bdgenomics.adam.rdd.ADAMContext._
 
-class AlignmentRecordMaterializationSuite extends MangoFunSuite {
+class CoverageMaterializationSuite extends MangoFunSuite {
 
   implicit val formats = DefaultFormats
 
+  val coverageFileName = "mouse_chrM.coverage.adam"
+  val coverageFile = resourcePath(coverageFileName)
+  val key = LazyMaterialization.filterKeyFromFile(coverageFileName)
+
   val dict = new SequenceDictionary(Vector(SequenceRecord("chrM", 16699L)))
-  val chunkSize = 100
 
-  def getDataCountFromBamFile(file: String, viewRegion: ReferenceRegion): Long = {
-    sc.loadIndexedBam(file, viewRegion).rdd.count
+  val files = List(coverageFile)
+
+  sparkTest("create new CoverageRecordMaterialization") {
+    val lazyMat = CoverageMaterialization(sc, files, dict)
   }
 
-  // test alignment data
-  val bamFile = resourcePath("mouse_chrM.bam")
-  val key = LazyMaterialization.filterKeyFromFile(bamFile)
-
-  // test reference data
-  var referencePath = resourcePath("mm10_chrM.fa")
-  val files = List(bamFile)
-
-  sparkTest("create new AlignmentRecordMaterialization") {
-    val lazyMat = AlignmentRecordMaterialization(sc, files, dict)
-  }
-
-  sparkTest("return raw data from AlignmentRecordMaterialization") {
-
-    val data = AlignmentRecordMaterialization(sc, files, dict)
-
-    val region = new ReferenceRegion("chrM", 0L, 900L)
-    val results = data.getJson(region).get(key).get
-  }
-
-  sparkTest("return coverage from AlignmentRecordMaterialization") {
-    val data = AlignmentRecordMaterialization(sc, files, dict)
+  sparkTest("return coverage from CoverageRecordMaterialization") {
+    val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]]
-
     assert(coverage.length == region.length())
   }
 
+  sparkTest("return sampled coverage from CoverageRecordMaterialization over large regions") {
+    val binning = 10
+    val data = CoverageMaterialization(sc, files, dict)
+    val region = new ReferenceRegion("chrM", 0L, 200L)
+    val freq = data.getCoverage(region, binning).get(key).get
+    val coverage = parse(freq).extract[Array[PositionCount]]
+    assert(coverage.length == region.length() / binning)
+  }
+
   sparkTest("return coverage overlapping multiple materialized nodes") {
-    val data = AlignmentRecordMaterialization(sc, files, dict)
+    val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = data.getCoverage(region).get(key).get
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)

@@ -1,11 +1,10 @@
 <%@ val dictionary:     String  %>
 <%@ val genes:          Option[String] %>
-<%@ val readsExist:     Boolean %>
-<%@ val variantsExist:  Boolean %>
-<%@ val featuresExist:  Boolean %>
-<%@ val readsPaths:   Option[List[String]] %>
-<%@ val variantsPaths:  Option[List[String]] %>
-<%@ val featuresPaths:  Option[List[String]] %>
+<%@ val coverage:  Option[List[String]] %>
+<%@ val reads:     Option[List[(String, Option[String])]] %>
+<%@ val variants:  Option[List[String]] %>
+<%@ val genotypes:  Option[List[String]] %>
+<%@ val features:  Option[List[String]] %>
 <%@ val contig: String %>
 <%@ val start: String %>
 <%@ val end: String %>
@@ -72,8 +71,19 @@ xhr.onreadystatechange = function() {
                     name: 'Genes'
                 },
                 #end
-                #if (variantsExist)
-                    #for (s <- variantsPaths.get)
+                #if (coverage.isDefined)
+                    #for (s <- coverage.get)
+                        {
+                        viz: pileup.viz.coverage(),
+                        data: pileup.formats.coverage({
+                        url: '/coverage/${s}'
+                        }),
+                        name: '${s}'
+                        },
+                    #end
+                #end
+                #if (variants.isDefined)
+                    #for (s <- variants.get)
                         {
                         viz: pileup.viz.variants(),
                         data: pileup.formats.variants({
@@ -81,6 +91,10 @@ xhr.onreadystatechange = function() {
                         }),
                         name: '${s}'
                         },
+                    #end
+                #end
+                #if (genotypes.isDefined)
+                    #for (s <- genotypes.get)
                         {
                         viz: pileup.viz.genotypes(),
                         data: pileup.formats.genotypes({
@@ -90,8 +104,8 @@ xhr.onreadystatechange = function() {
                         },
                     #end
                 #end
-                #if (featuresExist)
-                    #for (s <- featuresPaths.get)
+                #if (features.isDefined)
+                    #for (s <- features.get)
                         {
                         viz: pileup.viz.features(),
                         data: pileup.formats.features({
@@ -101,24 +115,34 @@ xhr.onreadystatechange = function() {
                         },
                     #end
                 #end
-                #if (readsExist)
-                    #for (s <- readsPaths.get)
-                        {
-                        viz: pileup.viz.coverage(),
-                        isReference: false,
-                            data: pileup.formats.ga4gh({
-                            endpoint: '/reads',
-                            readGroupId: '${s}',
-                            killChr: false
-                        }),
-                        name: 'Coverage'
-                        },
+                #if (reads.isDefined)
+                    #for (s <- reads.get)
+                        #if (s._2.isDefined)
+                            {
+                            viz: pileup.viz.coverage(),
+                            data: pileup.formats.coverage({
+                            url: '/coverage/${s._2.get}'
+                            }),
+                            name: '${s._2.get}'
+                            },
+                        #else
+                            {
+                            viz: pileup.viz.pileupcoverage(),
+                            isReference: false,
+                                data: pileup.formats.ga4gh({
+                                endpoint: '/reads',
+                                readGroupId: '${s._1}',
+                                killChr: false
+                            }),
+                            name: 'Coverage'
+                            },
+                        #end
                         {
                         viz: pileup.viz.pileup(),
                         isReference: false,
                         data: pileup.formats.ga4gh({
                             endpoint: '/reads',
-                            readGroupId: '${s}',
+                            readGroupId: '${s._1}',
                             killChr: false
                         }),
                         name: 'Alignment'

@@ -29,7 +29,7 @@ class AnnotationMaterializationSuite extends MangoFunSuite {
 
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
-  val genePath = resourcePath("dvl1.200.gtf")
+  val referencePath_2bit = resourcePath("mm10_chrM.2bit")
   val region = ReferenceRegion("chrM", 0, 500)
 
   sparkTest("test ReferenceRDD creation") {
@@ -45,7 +45,13 @@ class AnnotationMaterializationSuite extends MangoFunSuite {
 
   sparkTest("return empty string in region out of bounds") {
     val refRDD = new AnnotationMaterialization(sc, referencePath)
-    val outOfBounds = ReferenceRegion("chrM", 17000, 20000)
+    val response: String = refRDD.getReferenceString(region)
+    assert(response.length == region.length)
+    assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
+  }
+
+  sparkTest("can load 2bit file") {
+    val refRDD = new AnnotationMaterialization(sc, referencePath_2bit)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
