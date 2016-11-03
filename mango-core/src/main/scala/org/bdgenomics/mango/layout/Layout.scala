@@ -35,8 +35,9 @@ case class Interval(start: Long, end: Long)
  * @param position start of variant
  * @param ref reference
  * @param alt alternate
+ * @param end end of variant
  */
-case class VariantJson(contig: String, position: Long, ref: String, alt: String)
+case class VariantJson(contig: String, position: Long, ref: String, alt: String, end: Long)
 
 /**
  * Class for printing json genotypes to pileup.js
@@ -56,7 +57,7 @@ case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
 case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long)
 
 /**
- * Class for covertering adam coverage to coverage format readable by pileup.js
+ * Class for converting adam coverage to coverage format readable by pileup.js
  * @param position Base pair on chromosome
  * @param count Coverage at the specified base pair
  */

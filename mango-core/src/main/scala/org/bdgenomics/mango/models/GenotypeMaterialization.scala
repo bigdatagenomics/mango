@@ -52,6 +52,7 @@ class GenotypeMaterialization(s: SparkContext,
 
   /**
    * Stringifies data from genotypes to lists of variants and genotypes over the requested regions
+   *
    * @param data RDD of  filtered (sampleId, Genotype)
    * @return Map of (key, json) for the ReferenceRegion specified
    * N
@@ -64,16 +65,15 @@ class GenotypeMaterialization(s: SparkContext,
       .mapValues(v => {
         v.map(r => {
           (r._2.getSampleId, VariantJson(r._2.getContigName, r._2.getStart,
-            r._2.getVariant.getReferenceAllele, r._2.getVariant.getAlternateAllele))
+            r._2.getVariant.getReferenceAllele, r._2.getVariant.getAlternateAllele, r._2.getEnd))
         })
       })
 
-    // stringify genotypes and group with variants
-    val genotypes: Map[String, VariantAndGenotypes] =
+    // stringify genotypes and group
+    val genotypes: Map[String, Array[GenotypeJson]] =
       flattened.mapValues(v => {
-        VariantAndGenotypes(v.map(_._2),
-          v.groupBy(_._2).mapValues(r => r.map(_._1))
-            .map(r => GenotypeJson(r._2, r._1)).toArray)
+        v.groupBy(_._2).mapValues(r => r.map(_._1))
+          .map(r => GenotypeJson(r._2, r._1)).toArray
       })
 
     // write variants and genotypes to json
@@ -118,13 +118,10 @@ object GenotypeMaterialization {
   def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some(((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName)))
+        case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
         case None    => None
       }
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
     sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).rdd
   }
-
 }
-
-case class VariantAndGenotypes(variants: Array[VariantJson], genotypes: Array[GenotypeJson])

@@ -46,6 +46,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   args.variantsPaths = vcfFile
   args.featurePaths = featureFile
   args.testMode = true
+  args.genotypesPaths = vcfFile
 
   sparkTest("reference/:ref") {
     implicit val VizReads = runVizReads(args)
