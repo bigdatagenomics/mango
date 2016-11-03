@@ -24,6 +24,7 @@ import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.contig.NucleotideContigFragmentRDD
+import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.mango.core.util.{ VizUtils, Utils }
 import org.bdgenomics.utils.misc.Logging
 import picard.sam.CreateSequenceDictionary
@@ -33,15 +34,15 @@ class AnnotationMaterialization(@transient sc: SparkContext,
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   var bookkeep = Array[String]()
+  val fragmentLength = 10000
 
   // set and name interval rdd
-  val reference: NucleotideContigFragmentRDD =
-    if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta")) {
+  val reference: ReferenceFile =
+    if (referencePath.endsWith(".2bit")) {
+      sc.loadReferenceFile(referencePath, 10000)
+    } else {
       sc.loadSequences(referencePath, fragmentLength = 10000)
-    } else if (referencePath.endsWith(".adam")) {
-      sc.loadParquetContigFragments(referencePath)
-    } else
-      throw new UnsupportedFileException("File Types supported for reference are fa, fasta and adam")
+    }
 
   def getSequenceDictionary: SequenceDictionary = reference.sequences
 
