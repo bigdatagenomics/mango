@@ -135,6 +135,10 @@ object VizReads extends BDGCommandCompanion with Logging {
     var largeRegion = RequestEntityTooLarge("Region too large")
     var unprocessableFile = UnprocessableEntity("File type not supported")
     var notFound = NotFound("File not found")
+    def noContent(region: ReferenceRegion): ActionResult = {
+      val msg = s"No content available at ${region.toString}"
+      NoContent(Map.empty, msg)
+    }
   }
 
   def apply(cmdLine: Array[String]): BDGCommand = {
@@ -190,9 +194,6 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-genes", usage = "Gene URL.")
   var genePath: String = null
-
-  @Args4jOption(required = false, name = "-repartition", usage = "The number of partitions")
-  var partitionCount: Int = 0
 
   @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
@@ -370,7 +371,7 @@ class VizServlet extends ScalatraServlet {
           }
           if (results.isDefined) {
             Ok(results.get)
-          } else VizReads.errors.notFound
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -432,7 +433,7 @@ class VizServlet extends ScalatraServlet {
             }
             if (results.isDefined) {
               Ok(results.get)
-            } else VizReads.errors.notFound
+            } else VizReads.errors.noContent(viewRegion)
           } else VizReads.errors.outOfBounds
         }
       }
@@ -463,7 +464,7 @@ class VizServlet extends ScalatraServlet {
           }
           if (results.isDefined) {
             Ok(results.get)
-          } else ({}) // No data for this key
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -500,7 +501,7 @@ class VizServlet extends ScalatraServlet {
           if (results.isDefined) {
             // extract variants only and parse to stringified json
             Ok(results.get)
-          } else Ok({}) // No data for this key
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -530,7 +531,7 @@ class VizServlet extends ScalatraServlet {
           }
           if (results.isDefined) {
             Ok(results.get)
-          } else Ok({}) // No data for this key
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -561,7 +562,7 @@ class VizServlet extends ScalatraServlet {
           }
           if (results.isDefined) {
             Ok(results.get)
-          } else VizReads.errors.notFound
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -573,12 +574,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
-
-    val partitionCount =
-      if (args.partitionCount <= 0)
-        VizReads.sc.defaultParallelism
-      else
-        args.partitionCount
 
     // initialize all datasets
     initAnnotations
@@ -667,7 +662,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!variantsPaths.isEmpty) {
-          VizReads.variantData = Some(VariantMaterialization(sc, variantsPaths, VizReads.globalDict, partitionCount))
+          VizReads.variantData = Some(VariantMaterialization(sc, variantsPaths, VizReads.globalDict))
         }
       }
     }
@@ -687,7 +682,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
           .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
 
         if (!genotypesPaths.isEmpty) {
-          VizReads.genotypeData = Some(GenotypeMaterialization(sc, genotypesPaths, VizReads.globalDict, partitionCount))
+          VizReads.genotypeData = Some(GenotypeMaterialization(sc, genotypesPaths, VizReads.globalDict))
         }
       }
     }
@@ -730,7 +725,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
             None
           } else {
             var variants: RDD[Genotype] = VizReads.sc.parallelize[(Genotype)](Array[(Genotype)]())
-            VizReads.variantData.get.files.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp)))
+            VizReads.variantData.get.files.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp).rdd))
             val threshold = args.threshold
             Some(GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold))
           }

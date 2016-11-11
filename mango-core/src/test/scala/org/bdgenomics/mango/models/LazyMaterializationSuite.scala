@@ -31,11 +31,11 @@ class LazyMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Should check and clear memory") {
     val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
-    lazyDummy.setMemoryFraction(0.001) // this is a very low test value
-    lazyDummy.get(ReferenceRegion("chrM", 0, 100000L)).count
+    lazyDummy.setMemoryFraction(0.0000001) // this is a very low test value
+    lazyDummy.get(ReferenceRegion("chrM", 0, 10L)).count
     assert(lazyDummy.bookkeep.bookkeep.contains("chrM"))
 
-    lazyDummy.get(ReferenceRegion("20", 0, 100L)).count
+    lazyDummy.get(ReferenceRegion("20", 0, 10L)).count
 
     // these calls should have removed chrM from cache
     assert(!lazyDummy.bookkeep.bookkeep.contains("chrM"))
@@ -51,7 +51,7 @@ class LazyMaterializationSuite extends MangoFunSuite {
  */
 class LazyDummy(s: SparkContext,
                 filePaths: List[String],
-                dict: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD") with Serializable {
+                dict: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD", Some(100)) with Serializable {
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   @transient val sc = s
   val sd = dict
@@ -59,7 +59,10 @@ class LazyDummy(s: SparkContext,
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 
-  def load = (region: ReferenceRegion, file: String) => sc.parallelize(Bookkeep.unmergeRegions(region, 1))
+  def load = (region: ReferenceRegion, file: String) => {
+    sc.parallelize(Array.range(region.start.toInt, region.end.toInt)
+      .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
+  }
 
   def stringify(data: RDD[(String, ReferenceRegion)]): Map[String, String] = {
     data

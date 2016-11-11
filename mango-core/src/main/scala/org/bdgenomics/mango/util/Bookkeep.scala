@@ -111,27 +111,6 @@ class Bookkeep(chunkSize: Int) extends Serializable {
 object Bookkeep {
 
   /**
-   * take region and divide it up into chunkSize regions
-   * @param region Region to divide
-   * @param chunkSize chunksize to partition region by
-   * @return list of divided smaller region
-   */
-  def unmergeRegions(region: ReferenceRegion, chunkSize: Int): List[ReferenceRegion] = {
-    var regions: ListBuffer[ReferenceRegion] = new ListBuffer[ReferenceRegion]()
-    var start = region.start / chunkSize * chunkSize
-    var end = start + chunkSize
-
-    while (start <= region.end) {
-      val r = new ReferenceRegion(region.referenceName, start, end)
-      regions += r
-      start += chunkSize
-      end += chunkSize
-    }
-
-    regions.toList
-  }
-
-  /**
    * generates a list of closely overlapping regions, counting for gaps in the list
    *
    * @note For example, given a list of regions with ranges (0, 999), (1000, 1999) and (3000, 3999)

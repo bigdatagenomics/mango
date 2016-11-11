@@ -35,6 +35,16 @@ import org.bdgenomics.utils.misc.Logging
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
 import scala.collection.JavaConversions._
+import org.bdgenomics.utils.instrumentation.Metrics
+
+// metric variables
+object AlignmentTimers extends Metrics {
+  val loadADAMData = timer("LOAD alignments from parquet")
+  val loadBAMData = timer("LOAD alignments from BAM files")
+  val getCoverageData = timer("get coverage data from IntervalRDD")
+  val getAlignmentData = timer("get alignment data from IntervalRDD")
+  val convertToGaReads = timer("convert parquet alignments to GA4GH Reads")
+}
 
 /**
  *
@@ -74,17 +84,20 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * cooresponding frequency.
    */
   def getCoverage(region: ReferenceRegion): Map[String, String] = {
-    val covCounts: RDD[(String, PositionCount)] =
-      get(region)
-        .flatMap(r => {
-          val t: List[Long] = List.range(r._2.getStart, r._2.getEnd)
-          t.map(n => ((ReferenceRegion(r._2.getContigName, n, n + 1), r._1), 1))
-            .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
-        }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
-        .map(r => (r._1._2, PositionCount(r._1._1.start, r._1._1.start + 1, r._2)))
 
-    covCounts.collect.groupBy(_._1) // group by sample Id
-      .map(r => (r._1, write(r._2.map(_._2))))
+    AlignmentTimers.getCoverageData.time {
+      val covCounts: RDD[(String, PositionCount)] =
+        get(region)
+          .flatMap(r => {
+            val t: List[Long] = List.range(r._2.getStart, r._2.getEnd)
+            t.map(n => ((ReferenceRegion(r._2.getContigName, n, n + 1), r._1), 1))
+              .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
+          }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
+          .map(r => (r._1._2, PositionCount(r._1._1.start, r._1._1.start + 1, r._2)))
+
+      covCounts.collect.groupBy(_._1) // group by sample Id
+        .map(r => (r._1, write(r._2.map(_._2))))
+    }
   }
 
   /**
@@ -93,19 +106,25 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return JSONified data
    */
   def stringify(data: RDD[(String, AlignmentRecord)]): Map[String, String] = {
-    val flattened: Map[String, Array[AlignmentRecord]] = data
-      .filter(r => r._2.getMapq > 0)
-      .collect
-      .groupBy(_._1)
-      .map(r => (r._1, r._2.map(_._2)))
+    val flattened: Map[String, Array[AlignmentRecord]] =
+      AlignmentTimers.getAlignmentData.time {
+        data
+          .filter(r => r._2.getMapq > 0)
+          .collect
+          .groupBy(_._1)
+          .map(r => (r._1, r._2.map(_._2)))
+      }
 
-    val gaReads: Map[String, List[GAReadAlignment]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGAReadAlignment(r)).toList)
+    AlignmentTimers.convertToGaReads.time {
 
-    gaReads.mapValues(v => {
-      GASearchReadsResponse.newBuilder()
-        .setAlignments(v)
-        .build().toString
-    })
+      val gaReads: Map[String, List[GAReadAlignment]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGAReadAlignment(r)).toList)
+
+      gaReads.mapValues(v => {
+        GASearchReadsResponse.newBuilder()
+          .setAlignments(v)
+          .build().toString
+      })
+    }
   }
 }
 
@@ -140,11 +159,13 @@ object AlignmentRecordMaterialization {
    * @return RDD of data from the file over specified ReferenceRegion
    */
   def loadFromBam(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
-    val idxFile: File = new File(fp + ".bai")
-    if (idxFile.exists()) {
-      sc.loadIndexedBam(fp, region)
-    } else {
-      throw new FileNotFoundException("bam index not provided")
+    AlignmentTimers.loadBAMData.time {
+      val idxFile: File = new File(fp + ".bai")
+      if (idxFile.exists()) {
+        sc.loadIndexedBam(fp, region)
+      } else {
+        throw new FileNotFoundException("bam index not provided")
+      }
     }
   }
 
@@ -156,10 +177,12 @@ object AlignmentRecordMaterialization {
    * @return RDD of data from the file over specified ReferenceRegion
    */
   def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
-    val name = Binary.fromString(region.referenceName)
-    val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name) && (BooleanColumn("readMapped") === true))
-    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped,
-      AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-    sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None)
+    AlignmentTimers.loadADAMData.time {
+      val name = Binary.fromString(region.referenceName)
+      val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name) && (BooleanColumn("readMapped") === true))
+      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped,
+        AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None)
+    }
   }
 }

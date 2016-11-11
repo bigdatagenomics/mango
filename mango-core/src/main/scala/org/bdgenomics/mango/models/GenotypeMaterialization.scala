@@ -25,6 +25,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.variation.GenotypeRDD
 import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
 
@@ -36,19 +37,15 @@ import scala.reflect.ClassTag
  */
 class GenotypeMaterialization(s: SparkContext,
                               filePaths: List[String],
-                              d: SequenceDictionary,
-                              parts: Int,
-                              chunkS: Int) extends LazyMaterialization[Genotype]("GenotypeRDD")
+                              dict: SequenceDictionary) extends LazyMaterialization[Genotype]("GenotypeRDD")
     with Serializable {
 
   @transient val sc = s
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  val dict = d
-  val partitions = parts
-  val sd = d
+  val sd = dict
   val files = filePaths
   def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
-  def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file)
+  def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file).rdd
 
   /**
    * Stringifies data from genotypes to lists of variants and genotypes over the requested regions
@@ -83,23 +80,20 @@ class GenotypeMaterialization(s: SparkContext,
 
 object GenotypeMaterialization {
 
-  def apply(sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int): GenotypeMaterialization = {
-    new GenotypeMaterialization(sc, files, dict, partitions, 100)
+  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary): GenotypeMaterialization = {
+    new GenotypeMaterialization(sc, files, dict)
   }
 
-  def apply[T: ClassTag, C: ClassTag](sc: SparkContext, files: List[String], dict: SequenceDictionary, partitions: Int, chunkSize: Int): GenotypeMaterialization = {
-    new GenotypeMaterialization(sc, files, dict, partitions, chunkSize)
-  }
-
-  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
-    val genotypes: RDD[Genotype] =
+  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): GenotypeRDD = {
+    val genotypes: GenotypeRDD =
       if (fp.endsWith(".adam")) {
         loadAdam(sc, region, fp)
       } else if (fp.endsWith(".vcf")) {
         region match {
-          case Some(_) => sc.loadGenotypes(fp).rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-            && g.getEnd > region.get.start))
-          case None => sc.loadGenotypes(fp).rdd
+          case Some(_) => sc.loadGenotypes(fp).transform(rdd =>
+            rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
+              && g.getEnd > region.get.start)))
+          case None => sc.loadGenotypes(fp)
         }
       } else {
         throw UnsupportedFileException("File type not supported")
@@ -107,21 +101,21 @@ object GenotypeMaterialization {
 
     val key = LazyMaterialization.filterKeyFromFile(fp)
     // map unique ids to features to be used in tiles
-    genotypes.map(r => {
-      if (r.getSampleId == null) new Genotype(r.getVariant, r.getContigName, r.getStart, r.getEnd, r.getVariantCallingAnnotations,
-        key, r.getSampleDescription, r.getProcessingDescription, r.getAlleles, r.getExpectedAlleleDosage, r.getReferenceReadDepth,
-        r.getAlternateReadDepth, r.getReadDepth, r.getMinReadDepth, r.getGenotypeQuality, r.getGenotypeLikelihoods, r.getNonReferenceLikelihoods, r.getStrandBiasComponents, r.getSplitFromMultiAllelic, r.getIsPhased, r.getPhaseSetId, r.getPhaseQuality)
-      else r
-    })
+    genotypes.transform(rdd =>
+      rdd.map(r => {
+        if (r.getSampleId == null)
+          r.setSampleId(key)
+        r
+      }))
   }
 
-  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): RDD[Genotype] = {
+  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): GenotypeRDD = {
     val pred: Option[FilterPredicate] =
       region match {
         case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
         case None    => None
       }
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
-    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).rdd
+    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj))
   }
 }
