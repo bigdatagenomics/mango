@@ -17,19 +17,15 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ FileNotFoundException, File }
-
 import net.liftweb.json.Serialization.write
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.adam.projections.{ Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.features.CoverageRDD
+import org.bdgenomics.adam.rdd.feature.CoverageRDD
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
-import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
 
 /**
