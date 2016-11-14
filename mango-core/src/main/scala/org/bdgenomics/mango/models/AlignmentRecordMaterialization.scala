@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ FileNotFoundException, File }
+import java.io.{ PrintWriter, StringWriter, FileNotFoundException, File }
 
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -143,11 +143,17 @@ object AlignmentRecordMaterialization {
    */
   def load(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
     if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
-    else if (fp.endsWith(".sam") || fp.endsWith(".bam")) {
-      AlignmentRecordMaterialization.loadFromBam(sc, region, fp)
-        .transform(rdd => rdd.filter(_.getReadMapped))
-    } else {
-      throw UnsupportedFileException("File type not supported")
+    else {
+      try {
+        AlignmentRecordMaterialization.loadFromBam(sc, region, fp)
+          .transform(rdd => rdd.filter(_.getReadMapped))
+      } catch {
+        case e: Exception => {
+          val sw = new StringWriter
+          e.printStackTrace(new PrintWriter(sw))
+          throw UnsupportedFileException("bam index not provided. Stack trace: " + sw.toString)
+        }
+      }
     }
   }
 
@@ -160,11 +166,14 @@ object AlignmentRecordMaterialization {
    */
   def loadFromBam(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
     AlignmentTimers.loadBAMData.time {
-      val idxFile: File = new File(fp + ".bai")
-      if (idxFile.exists()) {
+      try {
         sc.loadIndexedBam(fp, region)
-      } else {
-        throw new FileNotFoundException("bam index not provided")
+      } catch {
+        case e: Exception => {
+          val sw = new StringWriter
+          e.printStackTrace(new PrintWriter(sw))
+          throw UnsupportedFileException("bam index not provided. Stack trace: " + sw.toString)
+        }
       }
     }
   }
@@ -179,10 +188,10 @@ object AlignmentRecordMaterialization {
   def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
     AlignmentTimers.loadADAMData.time {
       val name = Binary.fromString(region.referenceName)
-      val pred: FilterPredicate = ((LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name) && (BooleanColumn("readMapped") === true))
+      val pred: FilterPredicate = (LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name) && (BooleanColumn("readMapped") === true)
       val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped,
         AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = None)
+      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
     }
   }
 }
