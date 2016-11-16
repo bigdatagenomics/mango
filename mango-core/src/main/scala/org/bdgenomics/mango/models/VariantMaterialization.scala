@@ -27,12 +27,11 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variation.VariantRDD
+import org.bdgenomics.adam.rdd.variant.VariantRDD
 import org.bdgenomics.formats.avro.Variant
 import org.bdgenomics.mango.layout.VariantJson
 
 import scala.reflect.ClassTag
-import scala.math.{ max, min }
 
 /*
  * Handles loading and tracking of data from persistent storage into memory for Variant data.
@@ -130,8 +129,8 @@ object VariantMaterialization {
         region match {
           case Some(_) =>
             sc.loadVariants(fp).transform(rdd => rdd.filter(g =>
-              (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-                && g.getEnd > region.get.start)))
+              g.getContigName == region.get.referenceName && g.getStart < region.get.end
+                && g.getEnd > region.get.start))
           case None => sc.loadVariants(fp)
         }
       } catch {
@@ -150,7 +149,7 @@ object VariantMaterialization {
         case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
         case None    => None
       }
-    val proj = Projection(VariantField.contig, VariantField.start, VariantField.referenceAllele, VariantField.variantAllele, VariantField.end)
+    val proj = Projection(VariantField.contigName, VariantField.start, VariantField.referenceAllele, VariantField.alternateAllele, VariantField.end)
     sc.loadParquetVariants(fp, predicate = pred, projection = Some(proj))
   }
 }
