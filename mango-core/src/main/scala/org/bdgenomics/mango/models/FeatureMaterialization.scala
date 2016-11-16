@@ -29,6 +29,7 @@ import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
+import java.io.{ StringWriter, PrintWriter }
 
 class FeatureMaterialization(s: SparkContext,
                              filePaths: List[String],
@@ -44,6 +45,7 @@ class FeatureMaterialization(s: SparkContext,
 
   /**
    * Strinifies tuples of (sampleId, feature) to json
+   *
    * @param data RDD (sampleId, Feature)
    * @return Map of (key, json) for the ReferenceRegion specified
    */
@@ -63,6 +65,7 @@ object FeatureMaterialization {
 
   /**
    * Loads feature data from bam, sam and ADAM file formats
+   *
    * @param sc SparkContext
    * @param region Region to load
    * @param fp filepath to load from
@@ -70,34 +73,40 @@ object FeatureMaterialization {
    */
   def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
-    else if (fp.endsWith(".bed") || fp.endsWith("gtf")) {
-      FeatureMaterialization.loadFromBed(sc, region, fp)
-    } else if (fp.endsWith(".gff3")) {
-      sc.loadGff3(fp)
-    } else {
-      throw UnsupportedFileException("File type not supported")
+    else {
+      try {
+        FeatureMaterialization.loadData(sc, region, fp)
+      } catch {
+        case e: Exception => {
+          val sw = new StringWriter
+          e.printStackTrace(new PrintWriter(sw))
+          throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
+        }
+      }
     }
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from persistent storage
+   *
    * @param sc SparkContext
    * @param region Region to load
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadFromBed(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
+  def loadData(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
     region match {
       case Some(_) =>
         val featureRdd = sc.loadFeatures(fp)
-        featureRdd.transform(rdd => rdd.rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-          && g.getEnd > region.get.start)))
+        featureRdd.transform(rdd => rdd.rdd.filter(g => g.getContigName == region.get.referenceName && g.getStart < region.get.end
+          && g.getEnd > region.get.start))
       case None => sc.loadFeatures(fp)
     }
   }
 
   /**
    * Loads ADAM data using predicate pushdowns
+   *
    * @param sc SparkContext
    * @param region Region to load
    * @param fp filepath to load from
@@ -106,7 +115,7 @@ object FeatureMaterialization {
   def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some(((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) && (BinaryColumn("contig.contigName") === region.get.referenceName)))
+        case Some(_) => Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) && (BinaryColumn("contig.contigName") === region.get.referenceName))
         case None    => None
       }
 

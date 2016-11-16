@@ -28,7 +28,7 @@ class FilterSuite extends MangoFunSuite {
   val threshold = 2 // mark as high density if any bins have > 2 artifacts
 
   sparkTest("correctly filters features with high density regions") {
-    val features = FeatureMaterialization.loadFromBed(sc, None, bedFile)
+    val features = FeatureMaterialization.load(sc, None, bedFile)
     val filtered = FeatureFilter.filter(features.rdd, FeatureFilterType.highDensity, 100, threshold)
 
     val regions: List[(ReferenceRegion, Long)] = filtered.collect.toList
