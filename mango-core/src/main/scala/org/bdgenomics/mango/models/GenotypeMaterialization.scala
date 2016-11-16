@@ -25,7 +25,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variation.GenotypeRDD
+import org.bdgenomics.adam.rdd.variant.GenotypeRDD
 import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
 

@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro._
 
 import scala.collection.mutable.{ ArrayBuffer, ListBuffer }
 
-class MangoKryoRegistrator extends KryoRegistrator {
+class MangoKryoRegistrator extends ADAMKryoRegistrator {
   override def registerClasses(kryo: Kryo): Unit = {
     kryo.register(classOf[ListBuffer[AlignmentRecord]])
     kryo.register(classOf[ArrayBuffer[AlignmentRecord]])
@@ -36,21 +36,12 @@ class MangoKryoRegistrator extends KryoRegistrator {
     kryo.register(classOf[AlignmentRecord], new AvroSerializer[AlignmentRecord]())
     kryo.register(classOf[Genotype], new AvroSerializer[Genotype]())
     kryo.register(classOf[Variant], new AvroSerializer[Variant]())
-    kryo.register(classOf[DatabaseVariantAnnotation], new AvroSerializer[DatabaseVariantAnnotation]())
     kryo.register(classOf[NucleotideContigFragment], new AvroSerializer[NucleotideContigFragment]())
     kryo.register(classOf[Contig], new AvroSerializer[Contig]())
     kryo.register(classOf[RecordGroupMetadata], new AvroSerializer[RecordGroupMetadata]())
-    kryo.register(classOf[StructuralVariant], new AvroSerializer[StructuralVariant]())
-    kryo.register(classOf[VariantCallingAnnotations], new AvroSerializer[VariantCallingAnnotations]())
-    kryo.register(classOf[DatabaseVariantAnnotation], new AvroSerializer[DatabaseVariantAnnotation]())
     kryo.register(classOf[Dbxref], new AvroSerializer[Dbxref]())
     kryo.register(classOf[Feature], new AvroSerializer[Feature]())
     kryo.register(classOf[ReferencePosition], new ReferencePositionSerializer)
-    kryo.register(classOf[ReferencePositionPair], new ReferencePositionPairSerializer)
-    kryo.register(classOf[SingleReadBucket], new SingleReadBucketSerializer)
-    kryo.register(classOf[IndelRealignmentTarget])
-    kryo.register(classOf[TargetSet], new TargetSetSerializer)
-    kryo.register(classOf[ZippedTargetSet], new ZippedTargetSetSerializer)
     kryo.register(classOf[TwoBitFile], new TwoBitFileSerializer)
   }
 }
