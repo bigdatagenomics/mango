@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ PrintWriter, StringWriter, FileNotFoundException, File }
+import java.io.{ PrintWriter, StringWriter }
 
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate

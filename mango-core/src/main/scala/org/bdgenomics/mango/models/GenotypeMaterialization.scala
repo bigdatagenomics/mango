@@ -17,8 +17,6 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ PrintWriter, StringWriter }
-
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -27,9 +25,10 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ GenotypeField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variation.GenotypeRDD
+import org.bdgenomics.adam.rdd.variant.GenotypeRDD
 import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
+import java.io.{ PrintWriter, StringWriter }
 
 import scala.reflect.ClassTag
 
@@ -106,6 +105,7 @@ object GenotypeMaterialization {
           }
         }
       }
+
     val key = LazyMaterialization.filterKeyFromFile(fp)
     // map unique ids to features to be used in tiles
     genotypes.transform(rdd =>
