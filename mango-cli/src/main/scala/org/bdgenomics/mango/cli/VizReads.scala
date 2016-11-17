@@ -615,14 +615,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     def initAlignments = {
       if (Option(args.readsPaths).isDefined) {
         val readsPaths = args.readsPaths.split(",").toList
-          .filter(path => path.endsWith(".bam") || path.endsWith(".adam"))
 
-        // warn for incorrect file formats
-        args.readsPaths.split(",").toList
-          .filter(path => !path.endsWith(".bam") && !path.endsWith(".adam"))
-          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
-
-        if (!readsPaths.isEmpty) {
+        if (readsPaths.nonEmpty) {
           VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict))
         }
       }
@@ -634,14 +628,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     def initCoverages = {
       if (Option(args.coveragePaths).isDefined) {
         val coveragePaths = args.coveragePaths.split(",").toList
-          .filter(path => path.endsWith(".adam"))
 
-        // warn for incorrect file formats
-        args.coveragePaths.split(",").toList
-          .filter(path => !path.endsWith(".adam") && !path.endsWith(".bed"))
-          .foreach(file => log.warn(s"${file} does is not a valid coverage file. Removing... "))
-
-        if (!coveragePaths.isEmpty) {
+        if (coveragePaths.nonEmpty) {
           VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict))
         }
       }
@@ -652,16 +640,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      */
     def initVariants() = {
       if (Option(args.variantsPaths).isDefined) {
-        // filter out incorrect file formats
         val variantsPaths = args.variantsPaths.split(",").toList
-          .filter(path => path.endsWith(".vcf") || path.endsWith(".adam"))
 
-        // warn for incorrect file formats
-        args.variantsPaths.split(",").toList
-          .filter(path => !path.endsWith(".vcf") && !path.endsWith(".adam"))
-          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
-
-        if (!variantsPaths.isEmpty) {
+        if (variantsPaths.nonEmpty) {
           VizReads.variantData = Some(VariantMaterialization(sc, variantsPaths, VizReads.globalDict))
         }
       }
@@ -672,16 +653,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
      */
     def initGenotypes() = {
       if (Option(args.genotypesPaths).isDefined) {
-        // filter out incorrect file formats
         val genotypesPaths = args.genotypesPaths.split(",").toList
-          .filter(path => path.endsWith(".vcf") || path.endsWith(".adam"))
 
-        // warn for incorrect file formats
-        args.genotypesPaths.split(",").toList
-          .filter(path => !path.endsWith(".vcf") && !path.endsWith(".adam"))
-          .foreach(file => log.warn(s"${file} does is not a valid variant file. Removing... "))
-
-        if (!genotypesPaths.isEmpty) {
+        if (genotypesPaths.nonEmpty) {
           VizReads.genotypeData = Some(GenotypeMaterialization(sc, genotypesPaths, VizReads.globalDict))
         }
       }
@@ -693,16 +667,8 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     def initFeatures() = {
       val featurePaths = Option(args.featurePaths)
       if (featurePaths.isDefined) {
-        // filter out incorrect file formats
         val featurePaths = args.featurePaths.split(",").toList
-          .filter(path => path.endsWith(".bed") || path.endsWith(".adam"))
-
-        // warn for incorrect file formats
-        args.featurePaths.split(",").toList
-          .filter(path => !path.endsWith(".bed") && !path.endsWith(".adam"))
-          .foreach(file => log.warn(s"${file} is not a valid feature file. Removing... "))
-
-        if (!featurePaths.isEmpty) {
+        if (featurePaths.nonEmpty) {
           VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict))
         }
       }

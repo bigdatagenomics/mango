@@ -17,6 +17,8 @@
  */
 package org.bdgenomics.mango.models
 
+import java.io.{ PrintWriter, StringWriter }
+
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -122,16 +124,22 @@ object VariantMaterialization {
   def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): VariantRDD = {
     if (fp.endsWith(".adam")) {
       loadAdam(sc, region, fp)
-    } else if (fp.endsWith(".vcf")) {
-      region match {
-        case Some(_) =>
-          sc.loadVariants(fp).transform(rdd => rdd.filter(g =>
-            (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-              && g.getEnd > region.get.start)))
-        case None => sc.loadVariants(fp)
-      }
     } else {
-      throw UnsupportedFileException("File type not supported")
+      try {
+        region match {
+          case Some(_) =>
+            sc.loadVariants(fp).transform(rdd => rdd.filter(g =>
+              g.getContigName == region.get.referenceName && g.getStart < region.get.end
+                && g.getEnd > region.get.start))
+          case None => sc.loadVariants(fp)
+        }
+      } catch {
+        case e: Exception => {
+          val sw = new StringWriter
+          e.printStackTrace(new PrintWriter(sw))
+          throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
+        }
+      }
     }
   }
 

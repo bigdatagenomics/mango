@@ -28,6 +28,7 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.GenotypeRDD
 import org.bdgenomics.formats.avro.Genotype
 import org.bdgenomics.mango.layout.{ GenotypeJson, VariantJson }
+import java.io.{ PrintWriter, StringWriter }
 
 import scala.reflect.ClassTag
 
@@ -88,15 +89,21 @@ object GenotypeMaterialization {
     val genotypes: GenotypeRDD =
       if (fp.endsWith(".adam")) {
         loadAdam(sc, region, fp)
-      } else if (fp.endsWith(".vcf")) {
-        region match {
-          case Some(_) => sc.loadGenotypes(fp).transform(rdd =>
-            rdd.filter(g => (g.getContigName == region.get.referenceName && g.getStart < region.get.end
-              && g.getEnd > region.get.start)))
-          case None => sc.loadGenotypes(fp)
-        }
       } else {
-        throw UnsupportedFileException("File type not supported")
+        try {
+          region match {
+            case Some(_) => sc.loadGenotypes(fp).transform(rdd =>
+              rdd.filter(g => g.getContigName == region.get.referenceName && g.getStart < region.get.end
+                && g.getEnd > region.get.start))
+            case None => sc.loadGenotypes(fp)
+          }
+        } catch {
+          case e: Exception => {
+            val sw = new StringWriter
+            e.printStackTrace(new PrintWriter(sw))
+            throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
+          }
+        }
       }
 
     val key = LazyMaterialization.filterKeyFromFile(fp)
