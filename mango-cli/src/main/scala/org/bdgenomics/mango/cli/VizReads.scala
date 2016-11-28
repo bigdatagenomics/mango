@@ -591,7 +591,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       VizReads.prefetchedRegions = discover(Option(args.variantDiscoveryMode), Option(args.featureDiscoveryMode))
       preprocess(VizReads.prefetchedRegions)
     } else if (args.gnocchiMode) {
-      VizReads.prefetchedRegions = discoverGnocchi()
+      VizReads.prefetchedRegions = discoverGnocchi
       preprocess(VizReads.prefetchedRegions)
     }
 
@@ -724,7 +724,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     }
 
     /**
-     * Runs total data scan over all feature and variant files satisfying a certain predicate.
+     * Runs total data scan over all feature.
      *
      * @return Returns list of regions in the genome satisfying predicates
      */
@@ -738,7 +738,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         } else {
           var features: RDD[Feature] = sc.parallelize[(Feature)](Array[(Feature)]())
           VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp).rdd))
-          Some(GenericFilter.regionReformat(VizReads.chunkSize, features.map(r => (ReferenceRegion((r)), r))))
+          Some(GenericFilter.chunkByRegion(VizReads.chunkSize, features.map(r => (ReferenceRegion((r)), r))))
         }
       }
       // collect and merge all regions together
