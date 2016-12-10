@@ -40,7 +40,7 @@ class FeatureMaterialization(s: SparkContext,
   val sd = dict
   val files = filePaths
 
-  def getReferenceRegion = (f: Feature) => ReferenceRegion(f)
+  def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
   def load = (region: ReferenceRegion, file: String) => FeatureMaterialization.load(sc, Some(region), file).rdd
 
   /**

@@ -33,12 +33,12 @@ class LazyMaterializationSuite extends MangoFunSuite {
     val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
     lazyDummy.setMemoryFraction(0.0000001) // this is a very low test value
     lazyDummy.get(ReferenceRegion("chrM", 0, 10L)).count
-    assert(lazyDummy.bookkeep.bookkeep.contains("chrM"))
+    assert(lazyDummy.bookkeep.queue.contains("chrM"))
 
     lazyDummy.get(ReferenceRegion("20", 0, 10L)).count
 
     // these calls should have removed chrM from cache
-    assert(!lazyDummy.bookkeep.bookkeep.contains("chrM"))
+    assert(!lazyDummy.bookkeep.queue.contains("chrM"))
   }
 
 }
