@@ -17,11 +17,12 @@
  */
 package org.bdgenomics.mango.util
 
-import org.bdgenomics.utils.intervaltree.IntervalTree
 import org.bdgenomics.adam.models.ReferenceRegion
-
+import org.bdgenomics.utils.intervalarray.IntervalArray
+import org.bdgenomics.utils.misc.Logging
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap, ListBuffer }
+import scala.reflect.ClassTag
 
 /**
  * Bookkeep keeps track of what chunks of data have been loaded into memory. This is
@@ -29,12 +30,12 @@ import scala.collection.mutable.{ HashMap, ListBuffer }
  * which stores the regions that have been loaded for each id (which is a string)
  * @param chunkSize Chunk size is the size at which data is loaded into memory
  */
-class Bookkeep(chunkSize: Int) extends Serializable {
+class Bookkeep(chunkSize: Int) extends Serializable with Logging {
 
   /*
    * Holds hash of ReferenceName pointing to IntervalTree of (Region, ID)
    */
-  var bookkeep: HashMap[String, IntervalTree[ReferenceRegion, String]] = new HashMap()
+  var bookkeep: IntervalArray[ReferenceRegion, List[String]] = new IntervalArray(Array.empty[(ReferenceRegion, List[String])], 200)
 
   /**
    * Keeps track of ordering of most recently viewed chromosomes
@@ -47,9 +48,15 @@ class Bookkeep(chunkSize: Int) extends Serializable {
    * Drops all values from a given sequence record
    */
   def dropValues(): String = {
-    val droppedChr = queue.dequeue()
-    bookkeep.remove(droppedChr)
-    droppedChr
+    try {
+      val droppedChr = queue.dequeue()
+      bookkeep = bookkeep.filter(_._1.referenceName != droppedChr)
+      droppedChr
+    } catch {
+      case e: NoSuchElementException =>
+        log.warn("bookkeeping queue is empty")
+        null
+    }
   }
 
   /**
@@ -59,15 +66,9 @@ class Bookkeep(chunkSize: Int) extends Serializable {
    * @param ks: keys to remember
    */
   def rememberValues(region: ReferenceRegion, ks: List[String]): Unit = {
-    if (bookkeep.contains(region.referenceName)) {
-      bookkeep(region.referenceName).insert(region, ks.toIterator)
-    } else {
-      // queue chromosome to keep track of ordering
+    if (!queue.contains(region.referenceName))
       queue.enqueue(region.referenceName)
-      val newTree = new IntervalTree[ReferenceRegion, String]()
-      newTree.insert(region, ks.toIterator)
-      bookkeep += ((region.referenceName, newTree))
-    }
+    bookkeep = bookkeep.insert(Iterator((region, ks)))
   }
 
   /**
@@ -87,7 +88,7 @@ class Bookkeep(chunkSize: Int) extends Serializable {
       val r = new ReferenceRegion(region.referenceName, start, end)
       val size = {
         try {
-          bookkeep(r.referenceName).search(r).length
+          bookkeep.get(r).size
         } catch {
           case ex: NoSuchElementException => 0
         }

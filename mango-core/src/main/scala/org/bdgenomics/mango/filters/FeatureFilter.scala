@@ -32,8 +32,8 @@ object FeatureFilter {
 
   def filter(features: RDD[Feature], x: FeatureFilterType, window: Long, threshold: Long): RDD[(ReferenceRegion, Long)] = {
     x match {
-      case FeatureFilterType.lowDensity  => GenericFilter.filterByDensity(window, threshold, features.map(r => (ReferenceRegion((r)), r)), false)
-      case FeatureFilterType.highDensity => GenericFilter.filterByDensity(window, threshold, features.map(r => (ReferenceRegion((r)), r)), true)
+      case FeatureFilterType.lowDensity  => GenericFilter.filterByDensity(window, threshold, features.map(r => (ReferenceRegion.unstranded((r)), r)), false)
+      case FeatureFilterType.highDensity => GenericFilter.filterByDensity(window, threshold, features.map(r => (ReferenceRegion.unstranded((r)), r)), true)
       case _                             => throw new Exception("Invalid filter for Features")
     }
   }

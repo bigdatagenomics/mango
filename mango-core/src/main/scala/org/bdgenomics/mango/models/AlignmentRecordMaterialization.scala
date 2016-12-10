@@ -71,7 +71,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @param ar AlignmentRecord
    * @return extracted ReferenceRegion
    */
-  def getReferenceRegion = (ar: AlignmentRecord) => ReferenceRegion(ar)
+  def getReferenceRegion = (ar: AlignmentRecord) => ReferenceRegion.unstranded(ar)
 
   /*
    * Gets Frequency over a given region for each specified sample

@@ -34,23 +34,6 @@ trait MangoFunSuite extends SparkFunSuite {
     ("spark.kryo.referenceTracking", "true"))
 
   def resourcePath(path: String) = ClassLoader.getSystemClassLoader.getResource(path).getFile
-  def tmpFile(path: String) = Files.createTempDirectory("").toAbsolutePath.toString + "/" + path
-
-  def checkFiles(expectedPath: String, actualPath: String): Unit = {
-    val actualFile = Source.fromFile(actualPath)
-    val actualLines = actualFile.getLines.toList
-
-    val expectedFile = Source.fromFile(expectedPath)
-    val expectedLines = expectedFile.getLines.toList
-
-    assert(expectedLines.size === actualLines.size)
-    expectedLines.zip(actualLines).zipWithIndex.foreach {
-      case ((expected, actual), idx) =>
-        assert(
-          expected == actual,
-          s"Line ${idx + 1} differs.\nExpected:\n${expectedLines.mkString("\n")}\n\nActual:\n${actualLines.mkString("\n")}")
-    }
-  }
 
   def runVizReads(args: VizReadsArgs): VizReads = {
     val vizReads = new VizReads(args)
@@ -58,10 +41,5 @@ trait MangoFunSuite extends SparkFunSuite {
     vizReads
   }
 
-  def copyResource(name: String): String = {
-    val tempFile = Files.createTempFile(name, "." + name.split('.').last)
-    Files.write(tempFile, Resources.toByteArray(getClass().getResource("/" + name)))
-    tempFile.toString
-  }
 }
 
