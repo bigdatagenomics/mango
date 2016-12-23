@@ -17,17 +17,12 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.File
-
-import htsjdk.samtools.SAMSequenceDictionary
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.contig.NucleotideContigFragmentRDD
 import org.bdgenomics.adam.util.ReferenceFile
-import org.bdgenomics.mango.core.util.{ VizUtils, Utils }
+import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.utils.misc.Logging
-import picard.sam.CreateSequenceDictionary
 
 class AnnotationMaterialization(@transient sc: SparkContext,
                                 referencePath: String) extends Serializable with Logging {
