@@ -23,7 +23,7 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json.Serialization._
 
-class AnnotationMaterializationSuite extends MangoFunSuite {
+class ReferenceMaterializationSuite extends MangoFunSuite {
 
   implicit val formats = DefaultFormats
 
@@ -33,25 +33,25 @@ class AnnotationMaterializationSuite extends MangoFunSuite {
   val region = ReferenceRegion("chrM", 0, 500)
 
   sparkTest("test ReferenceRDD creation") {
-    new AnnotationMaterialization(sc, referencePath)
+    new ReferenceMaterialization(sc, referencePath)
   }
 
   sparkTest("assert reference string is correctly extracted") {
-    val refRDD = new AnnotationMaterialization(sc, referencePath)
+    val refRDD = new ReferenceMaterialization(sc, referencePath)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
   }
 
   sparkTest("return empty string in region out of bounds") {
-    val refRDD = new AnnotationMaterialization(sc, referencePath)
+    val refRDD = new ReferenceMaterialization(sc, referencePath)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")
   }
 
   sparkTest("can load 2bit file") {
-    val refRDD = new AnnotationMaterialization(sc, referencePath_2bit)
+    val refRDD = new ReferenceMaterialization(sc, referencePath_2bit)
     val response: String = refRDD.getReferenceString(region)
     assert(response.length == region.length)
     assert(response.take(50) == "GTTAATGTAGCTTAATAACAAAGCAAAGCACTGAAAATGCTTAGATGGAT")

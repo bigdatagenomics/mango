@@ -72,7 +72,7 @@ object VizReads extends BDGCommandCompanion with Logging {
   var genes: Option[String] = None
 
   // Structures storing data types. All but reference is optional
-  var annotationRDD: AnnotationMaterialization = null
+  var annotationRDD: ReferenceMaterialization = null
   var readsData: Option[AlignmentRecordMaterialization] = None
 
   var coverageData: Option[CoverageMaterialization] = None
@@ -605,7 +605,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         throw new FileNotFoundException("reference file not provided")
       })
 
-      VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath)
+      VizReads.annotationRDD = new ReferenceMaterialization(sc, referencePath)
       VizReads.globalDict = VizReads.annotationRDD.getSequenceDictionary
     }
 

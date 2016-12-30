@@ -20,35 +20,51 @@ package org.bdgenomics.mango.models
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models._
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.ReferenceFile
+import org.bdgenomics.adam.util.{ IndexedFastaFile, ReferenceFile }
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.utils.misc.Logging
 
-class AnnotationMaterialization(@transient sc: SparkContext,
-                                referencePath: String) extends Serializable with Logging {
+/**
+ * Materializes reference files used to view reference in Genome Browser. Supported files
+ * include 2bit, fasta, fa, and NucleotideContigFragmentRDDs in ADAM format. Note that
+ * 2bit files must be saved locally, while other formats can be accessed through hdfs.
+ * Note: paths must be absolute.
+ *
+ * @param sc SparkContext
+ * @param referencePath path to reference
+ */
+class ReferenceMaterialization(@transient sc: SparkContext,
+                               referencePath: String) extends Serializable with Logging {
 
+  // required to parse json
   @transient implicit val formats = net.liftweb.json.DefaultFormats
+
+  // keeps track of loaded chromsomes.
   var bookkeep = Array[String]()
+
+  // length of reference strings to load.
   val fragmentLength = 10000
 
   // set and name interval rdd
   val reference: ReferenceFile =
     if (referencePath.endsWith(".2bit")) {
-      sc.loadReferenceFile(referencePath, 10000)
+      sc.loadReferenceFile(referencePath, fragmentLength)
+    } else if (referencePath.endsWith(".fa") || referencePath.endsWith(".fasta")) {
+      IndexedFastaFile(sc, referencePath)
     } else {
-      sc.loadSequences(referencePath, fragmentLength = 10000)
+      sc.loadSequences(referencePath, fragmentLength = fragmentLength)
     }
 
   def getSequenceDictionary: SequenceDictionary = reference.sequences
 
   def getReferenceString(region: ReferenceRegion): String = {
     try {
-      val parsedRegion = ReferenceRegion(region.referenceName, region.start,
+      val parsedRegion = ReferenceRegion(region.referenceName, VizUtils.getStart(region.start),
         VizUtils.getEnd(region.end, reference.sequences.apply(region.referenceName)))
       reference.extract(parsedRegion).toUpperCase()
     } catch {
       case e: Exception =>
-        log.warn("requested reference region not found in sequence dictionary")
+        log.warn(s"requested reference region not found in sequence dictionary: ${e.getMessage}")
         ""
     }
   }
