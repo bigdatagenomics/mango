@@ -54,7 +54,7 @@ case class GenotypeJson(sampleIds: Array[String], variant: VariantJson)
  * @param start start of feature region
  * @param stop end of feature region
  */
-case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long)
+case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long, score: Int)
 
 /**
  * Class for covertering adam coverage to coverage format readable by pileup.js

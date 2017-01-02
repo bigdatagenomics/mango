@@ -22,7 +22,13 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceRecord }
 object VizUtils {
 
   /*
-   * Defualy bin size for screen resolution
+   * Default score for feature files. Used for grey scale in browser.
+   * For more information see https://genome.ucsc.edu/FAQ/FAQformat#format1 as reference.
+   */
+  val defaultScore: Int = 1000
+
+  /*
+   * Defualt bin size for screen resolution
    */
   val screenSize: Int = 1000
 

@@ -27,6 +27,7 @@ import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.formats.avro.Feature
+import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
 import java.io.{ StringWriter, PrintWriter }
@@ -55,7 +56,16 @@ class FeatureMaterialization(s: SparkContext,
       .collect
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))
-      .mapValues(r => r.map(f => BedRowJson(Option(f.getFeatureId).getOrElse("N/A"), Option(f.getFeatureType).getOrElse("N/A"), f.getContigName, f.getStart, f.getEnd)))
+      .mapValues(r =>
+        r.map(f => {
+          val score = Option(f.getScore)
+            .getOrElse(VizUtils.defaultScore.toDouble)
+            .asInstanceOf[Double].toInt
+          BedRowJson(Option(f.getFeatureId).getOrElse("N/A"),
+            Option(f.getFeatureType).getOrElse("N/A"),
+            f.getContigName, f.getStart, f.getEnd,
+            score)
+        }))
 
     flattened.mapValues(r => write(r))
   }
@@ -119,7 +129,8 @@ object FeatureMaterialization {
         case None    => None
       }
 
-    val proj = Projection(FeatureField.featureId, FeatureField.source, FeatureField.featureType, FeatureField.start, FeatureField.end, FeatureField.contigName)
+    val proj = Projection(FeatureField.featureId, FeatureField.contigName, FeatureField.start, FeatureField.end,
+      FeatureField.score, FeatureField.featureType)
     sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
   }
 
