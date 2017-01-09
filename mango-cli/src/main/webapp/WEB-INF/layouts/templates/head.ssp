@@ -13,6 +13,7 @@
     <!-- pileup requirements -->
     <script src="resources/node_modules/pileup/dist/pileup.min.js"></script>
     <script src="js/formSubmit.js"></script>
+    <script src="js/contigWheel.js"></script>
     <link rel="stylesheet" href="resources/node_modules/pileup/style/pileup.css">
 
     <link rel="stylesheet" href="resources/styles/bootstrap.min.css">

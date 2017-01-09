@@ -27,133 +27,129 @@
     var start = ${start};
     var end = ${end};
 
-    <!-- Render sidebar for navigation -->
-    refVis("${dictionary}",fromOverall=false);
+    var request = "/sequenceDictionary"
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', request, true);
+    xhr.send();
 
-</script>
-
-<script>
-var request = "/sequenceDictionary"
-var xhr = new XMLHttpRequest();
-xhr.open('GET', request, true);
-xhr.send();
-
-xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4 && xhr.status == 200) {
-        var contigList = JSON.parse(xhr.response);
-        var p = pileup.create(document.getElementById('pileup'), {
-            // go to one of the chromosomes in sequence dictionary
-            range: {contig: contig, start: start, stop: end},
-            tracks: [
-                {
-                    viz: pileup.viz.genome(),
-                    isReference: true,
-                    data: pileup.formats.reference({
-                        url: '/reference',
-                        contigList: contigList
-                    }),
-                    name: 'Reference'
-                },
-                {
-                    viz: pileup.viz.scale(),
-                    name: 'Scale'
-                },
-                {
-                    viz: pileup.viz.location(),
-                    name: 'Location'
-                },
-                #if (genes.isDefined)
-                {
-                    viz: pileup.viz.genes(),
-                    data: pileup.formats.bigBed({
-                        url: '${genes.get}'
-                    }),
-                    name: 'Genes'
-                },
-                #end
-                #if (coverage.isDefined)
-                    #for (s <- coverage.get)
-                        {
-                        viz: pileup.viz.coverage(),
-                        data: pileup.formats.coverage({
-                        url: '/coverage/${s}'
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            var contigList = JSON.parse(xhr.response);
+            var browser = pileup.create(document.getElementById('pileup'), {
+                // go to one of the chromosomes in sequence dictionary
+                range: {contig: contig, start: start, stop: end},
+                tracks: [
+                    {
+                        viz: pileup.viz.genome(),
+                        isReference: true,
+                        data: pileup.formats.reference({
+                            url: '/reference',
+                            contigList: contigList
                         }),
-                        name: '${s}'
-                        },
-                    #end
-                #end
-                #if (variants.isDefined)
-                    #for (s <- variants.get)
-                        {
-                        viz: pileup.viz.variants(),
-                        data: pileup.formats.variants({
-                            url: '/variants/${s}'
+                        name: 'Reference'
+                    },
+                    {
+                        viz: pileup.viz.scale(),
+                        name: 'Scale'
+                    },
+                    {
+                        viz: pileup.viz.location(),
+                        name: 'Location'
+                    },
+                    #if (genes.isDefined)
+                    {
+                        viz: pileup.viz.genes(),
+                        data: pileup.formats.bigBed({
+                            url: '${genes.get}'
                         }),
-                        name: '${s}'
-                        },
+                        name: 'Genes'
+                    },
                     #end
-                #end
-                #if (genotypes.isDefined)
-                    #for (s <- genotypes.get)
-                        {
-                        viz: pileup.viz.genotypes(),
-                        data: pileup.formats.genotypes({
-                        url: '/genotypes/${s}'
-                        }),
-                        name: 'Genotypes'
-                        },
-                    #end
-                #end
-                #if (features.isDefined)
-                    #for (s <- features.get)
-                        {
-                        viz: pileup.viz.features(),
-                        data: pileup.formats.features({
-                            url: '/features/${s}'
-                        }),
-                        name: '${s}'
-                        },
-                    #end
-                #end
-                #if (reads.isDefined)
-                    #for (s <- reads.get)
-                        #if (s._2.isDefined)
+                    #if (coverage.isDefined)
+                        #for (s <- coverage.get)
                             {
                             viz: pileup.viz.coverage(),
                             data: pileup.formats.coverage({
-                            url: '/coverage/${s._2.get}'
+                            url: '/coverage/${s}'
                             }),
-                            name: '${s._2.get}'
+                            name: '${s}'
                             },
-                        #else
+                        #end
+                    #end
+                    #if (variants.isDefined)
+                        #for (s <- variants.get)
                             {
-                            viz: pileup.viz.pileupcoverage(),
+                            viz: pileup.viz.variants(),
+                            data: pileup.formats.variants({
+                                url: '/variants/${s}'
+                            }),
+                            name: '${s}'
+                            },
+                        #end
+                    #end
+                    #if (genotypes.isDefined)
+                        #for (s <- genotypes.get)
+                            {
+                            viz: pileup.viz.genotypes(),
+                            data: pileup.formats.genotypes({
+                            url: '/genotypes/${s}'
+                            }),
+                            name: 'Genotypes'
+                            },
+                        #end
+                    #end
+                    #if (features.isDefined)
+                        #for (s <- features.get)
+                            {
+                            viz: pileup.viz.features(),
+                            data: pileup.formats.features({
+                                url: '/features/${s}'
+                            }),
+                            name: '${s}'
+                            },
+                        #end
+                    #end
+                    #if (reads.isDefined)
+                        #for (s <- reads.get)
+                            #if (s._2.isDefined)
+                                {
+                                viz: pileup.viz.coverage(),
+                                data: pileup.formats.coverage({
+                                url: '/coverage/${s._2.get}'
+                                }),
+                                name: '${s._2.get}'
+                                },
+                            #else
+                                {
+                                viz: pileup.viz.pileupcoverage(),
+                                isReference: false,
+                                    data: pileup.formats.ga4gh({
+                                    endpoint: '/reads',
+                                    readGroupId: '${s._1}',
+                                    killChr: false
+                                }),
+                                name: 'Coverage'
+                                },
+                            #end
+                            {
+                            viz: pileup.viz.pileup(),
                             isReference: false,
-                                data: pileup.formats.ga4gh({
+                            data: pileup.formats.ga4gh({
                                 endpoint: '/reads',
                                 readGroupId: '${s._1}',
                                 killChr: false
                             }),
-                            name: 'Coverage'
+                            name: 'Alignment'
                             },
                         #end
-                        {
-                        viz: pileup.viz.pileup(),
-                        isReference: false,
-                        data: pileup.formats.ga4gh({
-                            endpoint: '/reads',
-                            readGroupId: '${s._1}',
-                            killChr: false
-                        }),
-                        name: 'Alignment'
-                        },
                     #end
-                #end
-            ]
-        });
+                ]
+            });
 
-    }
-};
+            <!-- Render sidebar for navigation -->
+            refVis("${dictionary}", browser, fromOverall=false);
+        }
+    };
 </script>
 
 </html>
