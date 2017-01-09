@@ -2,9 +2,22 @@
 
 set +x
 
+grep -q "spark2" pom.xml
+if [[ $? == 0 ]];
+then
+    echo "POM is already set up for Spark 2 (Spark 1/2 artifacts have -spark2 suffix in artifact names)."
+    echo "Cowardly refusing to move to Spark 2 a second time..."
+
+    exit 1
+fi
+
+svp="\${scala.version.prefix}"
+substitution_cmd="s/_$svp/-spark2_$svp/g"
+
 find . -name "pom.xml" -exec sed \
-     -e "/scala\.version/ s/2\.10\.4/2.11.7/g" \
-     -e "/scala\.version\.prefix/ s/2\.10/2.11/g" \
-     -e "/spark\.version/ s/1\.6\.1/2.0.0/g" \
-     -e "/spark\.version\.prefix/ s/\_/-spark2_/g" \
-     -i.spark2.bak '{}' \;
+    -e "/utils-/ s/_2\.1/-spark2_2.1/g" \
+    -e "/adam-/ s/_2\.1/-spark2_2.1/g" \
+    -e "/utils-/ $substitution_cmd" \
+    -e "/adam-/ $substitution_cmd" \
+    -e "/spark.version/ s/1.6.3/2.0.0/g" \
+    -i.spark2.bak '{}' \;

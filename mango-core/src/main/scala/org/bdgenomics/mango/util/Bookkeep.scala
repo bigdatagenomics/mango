@@ -18,7 +18,7 @@
 package org.bdgenomics.mango.util
 
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.utils.intervalarray.IntervalArray
+import org.bdgenomics.utils.interval.array.{ IntervalArray, ConcreteIntervalArray }
 import org.bdgenomics.utils.misc.Logging
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap, ListBuffer }
@@ -33,9 +33,14 @@ import scala.reflect.ClassTag
 class Bookkeep(chunkSize: Int) extends Serializable with Logging {
 
   /*
+   * The maximum width across all intervals in this bookkeeping structure.
+   */
+  private val maxIntervalWidth = 200
+
+  /*
    * Holds hash of ReferenceName pointing to IntervalTree of (Region, ID)
    */
-  var bookkeep: IntervalArray[ReferenceRegion, List[String]] = new IntervalArray(Array.empty[(ReferenceRegion, List[String])], 200)
+  var bookkeep: IntervalArray[ReferenceRegion, List[String]] = new ConcreteIntervalArray(Array.empty[(ReferenceRegion, List[String])], maxIntervalWidth)
 
   /**
    * Keeps track of ordering of most recently viewed chromosomes

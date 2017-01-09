@@ -23,7 +23,7 @@ import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.mango.util.Bookkeep
-import org.bdgenomics.utils.intervalrdd._
+import org.bdgenomics.utils.interval.rdd.IntervalRDD
 import org.bdgenomics.utils.misc.Logging
 
 import scala.collection.mutable.ListBuffer
