@@ -17,10 +17,10 @@
   <name>mango: an ADAM-based genomics visualization toolkit</name>
 
   <properties>
-    <adam.version>0.20.1-SNAPSHOT</adam.version>
+    <adam.version>0.21.0</adam.version>
     <avro.version>1.8.0</avro.version>
-    <bdg-formats.version>0.10.0</bdg-formats.version>
-    <bdg-utils.version>0.2.11-SNAPSHOT</bdg-utils.version>
+    <bdg-formats.version>0.10.1</bdg-formats.version>
+    <bdg-utils.version>0.2.12-SNAPSHOT</bdg-utils.version>
     <java.version>1.8</java.version>
     <jetty.version>9.2.17.v20160517</jetty.version>
     <hadoop.version>2.6.0</hadoop.version>
@@ -28,10 +28,10 @@
     <htsjdk.version>2.5.0</htsjdk.version>
     <parquet.version>1.8.1</parquet.version>
     <picard.version>2.3.0</picard.version>
-    <scala.version>2.10.4</scala.version>
+    <scala.version>2.10.6</scala.version>
     <scala.version.prefix>2.10</scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
-    <spark.version>1.6.1</spark.version>
+    <spark.version>1.6.3</spark.version>
     <spark.version.prefix>_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
   </properties>
@@ -469,17 +469,35 @@
         <groupId>org.bdgenomics.adam</groupId>
         <artifactId>adam-cli${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.bdgenomics.utils</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
         <artifactId>adam-core${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.bdgenomics.utils</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.adam</groupId>
         <artifactId>adam-core${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${adam.version}</version>
         <type>test-jar</type>
+        <exclusions>
+          <exclusion>
+            <groupId>org.bdgenomics.utils</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.bdg-formats</groupId>
