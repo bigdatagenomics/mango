@@ -19,6 +19,7 @@ package org.bdgenomics.mango.models
 
 import java.io.{ PrintWriter, StringWriter }
 import net.liftweb.json.Serialization.write
+import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -47,7 +48,7 @@ class CoverageMaterialization(s: SparkContext,
   val sd = dict
   val files = filePaths
 
-  def load = (region: ReferenceRegion, file: String) => CoverageMaterialization.load(sc, region, file).rdd
+  def load = (file: String, region: Option[ReferenceRegion]) => CoverageMaterialization.load(sc, file, region).rdd
 
   /**
    * Extracts ReferenceRegion from CoverageRecord
@@ -115,11 +116,11 @@ object CoverageMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, region: ReferenceRegion, fp: String): CoverageRDD = {
-    if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
+  def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): CoverageRDD = {
+    if (fp.endsWith(".adam")) loadAdam(sc, fp, region)
     else {
       try {
-        FeatureMaterialization.loadData(sc, Some(region), fp).toCoverage
+        FeatureMaterialization.loadData(sc, fp, region).toCoverage
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -137,8 +138,12 @@ object CoverageMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): CoverageRDD = {
-    val predicate = (LongColumn("end") <= region.end) && (LongColumn("start") >= region.start) && (BinaryColumn("contigName") === region.referenceName)
-    sc.loadParquetCoverage(fp, Some(predicate)).flatten()
+  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): CoverageRDD = {
+    val pred: Option[FilterPredicate] =
+      region match {
+        case Some(_) => Some((LongColumn("end") <= region.get.end) && (LongColumn("start") >= region.get.start) && (BinaryColumn("contigName") === region.get.referenceName))
+        case None    => None
+      }
+    sc.loadParquetCoverage(fp, predicate = pred).flatten()
   }
 }

@@ -54,7 +54,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[I
    * Used to generically load data from all file types
    * @return Generic RDD of data types from file
    */
-  def load: (ReferenceRegion, String) => RDD[T]
+  def load: (String, Option[ReferenceRegion]) => RDD[T]
 
   /**
    * Extracts reference region from data type T
@@ -133,6 +133,8 @@ abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[I
     }
   }
 
+  def getAll(): RDD[T] = files.map(fp => load(fp, None)).reduce(_ union _)
+
   /**
    *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
    * Fetches the data from disk, using predicates and range filtering
@@ -149,7 +151,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[I
         // get alignment data for all samples
         files.map(fp => {
           val k = LazyMaterialization.filterKeyFromFile(fp)
-          load(region, fp).map(v => (k, v))
+          load(fp, Some(region)).map(v => (k, v))
         }).reduce(_ union _)
 
       // insert into IntervalRDD

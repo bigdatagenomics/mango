@@ -48,7 +48,7 @@ class VariantMaterialization(s: SparkContext,
   val files = filePaths
   val variantPlaceholder = "N"
   def getReferenceRegion = (v: Variant) => ReferenceRegion(v.getContigName, v.getStart, v.getEnd)
-  def load = (region: ReferenceRegion, file: String) => VariantMaterialization.load(sc, Some(region), file).rdd
+  def load = (file: String, region: Option[ReferenceRegion]) => VariantMaterialization.load(sc, file, region).rdd
 
   /**
    * Stringifies data from variants to lists of variants over the requested regions
@@ -121,9 +121,9 @@ object VariantMaterialization {
     new VariantMaterialization(sc, files, dict)
   }
 
-  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): VariantRDD = {
+  def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantRDD = {
     if (fp.endsWith(".adam")) {
-      loadAdam(sc, region, fp)
+      loadAdam(sc, fp, region)
     } else {
       try {
         region match {
@@ -143,7 +143,7 @@ object VariantMaterialization {
     }
   }
 
-  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): VariantRDD = {
+  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantRDD = {
     val pred: Option[FilterPredicate] =
       region match {
         case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))

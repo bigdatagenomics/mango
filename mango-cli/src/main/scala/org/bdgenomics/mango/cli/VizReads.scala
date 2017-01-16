@@ -25,7 +25,7 @@ import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
-import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
+import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
@@ -119,9 +119,9 @@ object VizReads extends BDGCommandCompanion with Logging {
   var featuresCache: Map[String, String] = Map.empty[String, String]
   var featuresRegion: ReferenceRegion = null
 
-  // regions to prefetch during variant discovery. sent to front
+  // regions to prefetch during discovery. sent to front
   // end for visual processing
-  var prefetchedRegions: List[ReferenceRegion] = List()
+  var prefetchedRegions: List[(ReferenceRegion, Double)] = List()
 
   // used to determine size of data tiles
   var chunkSize: Int = 1000
@@ -162,8 +162,9 @@ object VizReads extends BDGCommandCompanion with Logging {
    * @param regions: regions to format to string
    * @return list of strinified reference regions
    */
-  def formatReferenceRegions(regions: List[ReferenceRegion]): String = {
-    regions.map(r => r.referenceName + ":" + r.start + "-" + r.end).mkString(",")
+  def formatClickableRegions(regions: List[(ReferenceRegion, Double)]): String = {
+    regions.map(r => s"${r._1.referenceName}:${r._1.start}-${r._1.end}" +
+      s"-${BigDecimal(r._2).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble}").mkString(",")
   }
 
   //Correctly shuts down the server
@@ -218,15 +219,6 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-discover", usage = "This turns on discovery mode on start up.")
   var discoveryMode: Boolean = false
-
-  @Args4jOption(required = false, name = "-variantMode", usage = "This determines variant predicate for discovery mode.")
-  var variantDiscoveryMode: Int = 0
-
-  @Args4jOption(required = false, name = "-featureMode", usage = "This determines feature predicate for discovery mode.")
-  var featureDiscoveryMode: Int = 0
-
-  @Args4jOption(required = false, name = "-threshold", usage = "This threshold for density discovery mode.")
-  var threshold: Int = 10
 }
 
 class VizServlet extends ScalatraServlet {
@@ -243,11 +235,12 @@ class VizServlet extends ScalatraServlet {
   get("/overall") {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
-    // set initial referenceRegion so it is defined
-    session("referenceRegion") = ReferenceRegion("chr", 1, 100)
+    // set initial referenceRegion so it is defined. pick first chromosome to view
+    val firstChr = VizReads.globalDict.records.head.name
+    session("referenceRegion") = ReferenceRegion(firstChr, 1, 100)
     templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
-        "regions" -> VizReads.formatReferenceRegions(VizReads.prefetchedRegions)))
+        "regions" -> VizReads.formatClickableRegions(VizReads.prefetchedRegions)))
   }
 
   get("/setContig/:ref") {
@@ -261,7 +254,9 @@ class VizServlet extends ScalatraServlet {
     try {
       session("referenceRegion")
     } catch {
-      case e: Exception => session("referenceRegion") = ReferenceRegion(VizReads.globalDict.records.head.name, 0, 100)
+      case e: Exception =>
+        val firstChr = VizReads.globalDict.records.head.name
+        session("referenceRegion") = ReferenceRegion(firstChr, 0, 100)
     }
 
     val templateEngine = new TemplateEngine
@@ -585,7 +580,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     // run discovery mode if it is specified in the startup script
     if (args.discoveryMode) {
-      VizReads.prefetchedRegions = discover(Option(args.variantDiscoveryMode), Option(args.variantDiscoveryMode))
+      VizReads.prefetchedRegions = discoverFrequencies()
       preprocess(VizReads.prefetchedRegions)
     }
 
@@ -675,59 +670,62 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     }
 
     /**
-     * Runs total data scan over all feature and variant files satisfying a certain predicate.
+     * Runs total data scan over all feature, variant and coverage files, calculating the normalied frequency at all
+     * windows in the genome.
      *
-     * @param variantFilter predicate to be satisfied during variant scan
-     * @param featureFilter predicate to be satisfied during feature scan
-     * @return Returns list of regions in the genome satisfying predicates
+     * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
      */
-    def discover(variantFilter: Option[Int], featureFilter: Option[Int]): List[ReferenceRegion] = {
+    def discoverFrequencies(): List[(ReferenceRegion, Double)] = {
 
-      // filtering for variants
-      val variantRegions: Option[RDD[(ReferenceRegion, Long)]] =
-        if (variantFilter.isDefined) {
-          if (!VizReads.variantsExist) {
-            log.warn("specified discovery predicate for variants but no variant files were provided")
-            None
-          } else {
-            var variants: RDD[Genotype] = VizReads.sc.parallelize[(Genotype)](Array[(Genotype)]())
-            VizReads.variantData.get.files.foreach(fp => variants = variants.union(GenotypeMaterialization.load(sc, None, fp).rdd))
-            val threshold = args.threshold
-            Some(GenotypeFilter.filter(variants, GenotypeFilterType(variantFilter.get), VizReads.chunkSize, threshold))
-          }
-        } else None
+      val discovery = Discovery(VizReads.annotationRDD.getSequenceDictionary)
+      var regions: List[(ReferenceRegion, Double)] = List()
 
-      // filtering for features
-      val featureRegions: Option[RDD[(ReferenceRegion, Long)]] =
-        if (featureFilter.isDefined) {
-          if (!VizReads.featuresExist) {
-            log.warn("specified discovery predicate for features but no variant files were provided")
-            None
-          } else {
-            var features: RDD[Feature] = sc.parallelize[(Feature)](Array[(Feature)]())
-            VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp).rdd))
-            val threshold = args.threshold
-            Some(FeatureFilter.filter(features, FeatureFilterType(featureFilter.get), VizReads.chunkSize, threshold))
-          }
-        } else None
+      // get feature frequency
+      if (VizReads.featuresExist) {
+        val featureRegions = VizReads.featureData.get.getAll().map(ReferenceRegion.unstranded(_))
+        regions = regions ++ discovery.getFrequencies(featureRegions)
+      }
 
-      // collect and merge all regions together
-      val emptyRDD = sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
-      val regions = featureRegions.getOrElse(emptyRDD).union(variantRegions.getOrElse(emptyRDD)).map(_._1)
-      Bookkeep.mergeRegions(regions.collect.toList.distinct)
+      // get variant frequency
+      if (VizReads.variantsExist) {
+        val variantRegions = VizReads.variantData.get.getAll().map(ReferenceRegion(_))
+        regions = regions ++ discovery.getFrequencies(variantRegions)
+      }
+
+      // get coverage frequency
+      // Note: calculating coverage frequency is an expensive operation. Only perform if sc is not local.
+      if (VizReads.coveragesExist && !sc.isLocal) {
+        val coverageRegions = VizReads.coverageData.get.getAll().map(ReferenceRegion(_))
+        regions = regions ++ discovery.getFrequencies(coverageRegions)
+      }
+
+      // group all regions together and reduce down for all data types
+      regions = regions.groupBy(_._1).map(r => (r._1, r._2.map(a => a._2).sum)).toList
+
+      // normalize and filter by regions with data
+      val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
+      regions.map(r => (r._1, r._2 / max))
+        .filter(_._2 > 0.0)
     }
 
     /**
-     * preprocesses data by loading specified regions into memory for reads, variants and features
+     * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
      *
      * @param regions Regions to be preprocessed
      */
-    def preprocess(regions: List[ReferenceRegion]) = {
-      for (region <- regions) {
+    def preprocess(regions: List[(ReferenceRegion, Double)]) = {
+      // select two of the highest occupied regions to load
+      // The number of selected regions is low to reduce unnecessary loading while
+      // jump starting Thread setup for Spark on the specific data files
+      val selectedRegions = regions.sortBy(_._2).takeRight(2).map(_._1)
+
+      for (region <- selectedRegions) {
         if (VizReads.featureData.isDefined)
           VizReads.featureData.get.get(region)
         if (VizReads.readsData.isDefined)
           VizReads.readsData.get.get(region)
+        if (VizReads.coverageData.isDefined)
+          VizReads.coverageData.get.get(region)
         if (VizReads.variantData.isDefined)
           VizReads.variantData.get.get(region)
         if (VizReads.genotypeData.isDefined)

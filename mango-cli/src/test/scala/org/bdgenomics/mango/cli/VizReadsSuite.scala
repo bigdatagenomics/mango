@@ -21,7 +21,6 @@ import net.liftweb.json._
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.ga4gh.GASearchReadsResponse
 import org.scalatra.Ok
 import org.scalatra.test.scalatest.ScalatraSuite
 
@@ -49,7 +48,21 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   args.testMode = true
   args.genotypesPaths = vcfFile
 
-  sparkTest("reference/:ref") {
+  sparkTest("Should pass for discovery mode") {
+    val args = new VizReadsArgs()
+    args.discoveryMode = true
+    args.referencePath = referenceFile
+    args.featurePaths = featureFile
+    args.variantsPaths = vcfFile
+    args.testMode = true
+
+    implicit val vizReads = runVizReads(args)
+    get(s"/features/${featureKey}/chrM?start=0&end=2000") {
+      assert(status == Ok("").status.code)
+    }
+  }
+
+  sparkTest("/reference/:ref") {
     implicit val VizReads = runVizReads(args)
     // should return data
     get("/reference/chrM?start=1&end=100") {
@@ -100,20 +113,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == Ok("").status.code)
       val json = parse(response.getContent()).extract[Array[BedRowJson]]
       assert(json.length == 2)
-    }
-  }
-
-  sparkTest("Should pass for discovery mode") {
-    val args = new VizReadsArgs()
-    args.discoveryMode = true
-    args.referencePath = referenceFile
-    args.featurePaths = featureFile
-    args.variantsPaths = vcfFile
-    args.testMode = true
-
-    implicit val vizReadDiscovery = runVizReads(args)
-    get(s"/features/${featureKey}/chrM?start=0&end=2000") {
-      assert(status == Ok("").status.code)
     }
   }
 

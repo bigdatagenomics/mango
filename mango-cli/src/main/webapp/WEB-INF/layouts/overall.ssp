@@ -1,5 +1,5 @@
 
-<%@ val dictionary: String%>
+<%@ val dictionary: String %>
 <%@ val regions: String %>
 
 <html xmlns="http://www.w3.org/1999/html">
@@ -35,9 +35,15 @@ function home(dictionary, regions) {
 	if (regions != "") {
 		for(i = 0; i < regions.length; i++) {
 			var region = regions[i];
-			var range = region.split(":")[1].split("-");
 			var name = region.split(":")[0];
-			clickableRegions.push({name: name, range});
+			var numerics = region.split(":")[1].split("-");
+
+			// numeric range (start and end)
+			var range = [parseInt(numerics[0]), parseInt(numerics[1])];
+
+			// normailized region density. Used for opacity styling.
+			var value = parseFloat(numerics[2]);
+			clickableRegions.push({name: name, range: range, value: value});
 		}
 	}
 
@@ -154,21 +160,21 @@ function home(dictionary, regions) {
 		.attr("y",function(d){return barHeight*nameMap.indexOf(d.name)})
 		.attr("width", (function(d) { return (barWidth * (d.range[1] - d.range[0]))/d3.max(lengthlist); }))
 		.attr("height", barHeight)
-		.attr('fill', 'white')
-		.attr('fill-opacity', regionOpacity)
+		.attr('fill', 'black')
+		.attr('fill-opacity', (function(d) { return d.value; }))
 		.on("mouseover", function(d) {
 			d3.select(this).attr("fill-opacity", 1);
 			div.transition()
-				.style("opacity", 0.9)
+				.style("opacity", 1)
 				.duration(200);
 			div	.html(d.name + ": <br/>"  + d.range[0] + " - " + d.range[1])
 			.style("left", (d3.event.pageX) + "px")
 			.style("top", (d3.event.pageY - 48) + "px");
 		})
 		.on("mouseout", function(d) {
-			d3.select(this).attr("fill-opacity", regionOpacity);
+			d3.select(this).attr("fill-opacity", d.value);
 			div.transition()
-				.style("opacity", 0)
+				.style("opacity", d.value)
 				.duration(200);
 		});
 

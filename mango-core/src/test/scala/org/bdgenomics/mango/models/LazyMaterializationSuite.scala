@@ -59,9 +59,9 @@ class LazyDummy(s: SparkContext,
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 
-  def load = (region: ReferenceRegion, file: String) => {
-    sc.parallelize(Array.range(region.start.toInt, region.end.toInt)
-      .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
+  def load = (file: String, region: Option[ReferenceRegion]) => {
+    sc.parallelize(Array.range(region.get.start.toInt, region.get.end.toInt)
+      .map(r => ReferenceRegion(region.get.referenceName, r, r + 1)))
   }
 
   def stringify(data: RDD[(String, ReferenceRegion)]): Map[String, String] = {
