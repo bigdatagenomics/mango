@@ -2,13 +2,13 @@
 
 A scalable genome browser built on top of the [ADAM](https://github.com/bigdatagenomics/adam) genomics processing engine. Apache 2 licensed.
 
-mango visualizes reads, variants, and features using [D3](http://d3js.org/).
+mango visualizes reads, variants, and features using [Pileup.js](https://github.com/hammerlab/pileup.js).
 
-mango uses [IntervalRDDs](https://github.com/akmorrow13/spark-intervalrdd) to perform fast indexed lookups on interval-keyed data.
+mango uses [IntervalRDDs](https://github.com/bigdatagenomics/utils/tree/master/utils-intervalrdd) to perform fast indexed lookups on interval-keyed data.
 
-![1000 bp region](https://raw.github.com/bigdatagenomics/mango/master/images/1k_chrM.png)
+![Homepage](https://raw.github.com/bigdatagenomics/mango/master/images/overall.png)
 
-![50000 bp region](https://raw.github.com/bigdatagenomics/mango/master/images/50k_chr11.png)
+![Reads](https://raw.github.com/bigdatagenomics/mango/master/images/browser.png)
 # Getting Started
 
 ## Installation
@@ -28,7 +28,7 @@ mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appas
 
 Running an example script:
 ```
-From the main folder of mango, run ./example-files/run-example.sh to see a demonstration of the mitchondrial mouse chromosome.
+From the main folder of mango, run ./example-files/run-example.sh to see a demonstration of chromosome 17, region 7500000-7515000.
 ```
 For help launching the script, run `bin/mango-submit -h`
 ````
@@ -52,7 +52,6 @@ Using SPARK_SUBMIT=/Applications/spark-1.6.1-bin-hadoop2.4/bin/spark-submit
  Now view the mango genomics browser at `localhost:8080` or the port specified:
 ```
 View the visualization at: 8080
-Variant Frequency visualization at: /variants
 Quit at: /quit
 ```
 Note that for logging, you must use the /quit url for the log to be produced.

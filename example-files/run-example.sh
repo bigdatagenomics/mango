@@ -1,2 +1,2 @@
-bin/mango-submit ./example-files/mm10_chrM.2bit \
--read_files ./example-files/mouse_chrM.bam.adam  
+bin/mango-submit ./example-files/hg19.17.2bit \
+-read_files ./example-files/chr17.7500000-7515000.bam.adam  
