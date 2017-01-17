@@ -1,10 +1,10 @@
-<div id="refVis"></div>
-<script>
-function refVis(dictionary,fromOverall){
+/**
+ * Handles javascript for visualizing chromosome clickable wheel for navigation
+**/
+
+function refVis(dictionary, browser, fromOverall) {
   // Creating reference visualization from sequence dictionary
   var dataset = [];
-  // var namelist=[];
-  // var lengthlist=[];
   var totalLength=0;
 
   // create dataset for chromosomes
@@ -27,7 +27,7 @@ function refVis(dictionary,fromOverall){
     .attr('width', width)
     .attr('height', height)
     .append('g')
-    .attr('transform', 'translate(' + (width / 2) + 
+    .attr('transform', 'translate(' + (width / 2) +
       ',' + (height / 2) + ')');
   var arc = d3.svg.arc()
     .innerRadius(radius-innerWidth)
@@ -40,33 +40,33 @@ function refVis(dictionary,fromOverall){
     .enter()
     .append('path')
     .attr('d', arc)
-    .attr('fill', function(d, i) { 
+    .attr('fill', function(d, i) {
       return color(d.data.name);
     });
-  var tooltip = d3.select('#refVis')       
-  .append('div')                          
-  .attr('class', 'refVistooltip');              
+  var tooltip = d3.select('#refVis')
+  .append('div')
+  .attr('class', 'refVistooltip');
 
-  tooltip.append('div')                   
-    .attr('class', 'name');              
+  tooltip.append('div')
+    .attr('class', 'name');
 
-  tooltip.append('div')                     
-    .attr('class', 'length');   
+  tooltip.append('div')
+    .attr('class', 'length');
 
-   tooltip.append('div')                                         
-    .attr('class', 'percent');                             
+   tooltip.append('div')
+    .attr('class', 'percent');
 
-  path.on('mouseover', function(d) {                            
-    var total = d3.sum(dataset.map(function(d) {                
-      return d.length;                                           
-    }));                                                        
+  path.on('mouseover', function(d) {
+    var total = d3.sum(dataset.map(function(d) {
+      return d.length;
+    }));
     var percent = Math.round(1000 * d.data.length / total) / 10; //force 1 s.f.
-    tooltip.select('.name').html(d.data.name);                
-    tooltip.select('.length').html(d.data.length);                
-    tooltip.select('.percent').html(percent + '%');             
-    tooltip.style('display', 'block');                          
-  });                                                           
-  
+    tooltip.select('.name').html(d.data.name);
+    tooltip.select('.length').html(d.data.length);
+    tooltip.select('.percent').html(percent + '%');
+    tooltip.style('display', 'block');
+  });
+
   path.on('click', function(d) {
     var start = Math.round(d.data.length/2.);
     var end =  Math.round(d.data.length/2. +1000);
@@ -84,15 +84,14 @@ function refVis(dictionary,fromOverall){
     // input range in control intput
     $(".controls>input").val(start + "-" + end);
     // select correct chromosome
-    $(".controls>select").val(d.data.name);
-    // trigger button click to redirect region
-    $(".controls>button").click();
+    $("#list").val(d.data.name).trigger('change');
+
+    // trigger event from updating controls for pileup browser
+    browser.setRange({contig: d.data.name, start: start, stop: end});
   });
 
-  path.on('mouseout', function() {                              
-    tooltip.style('display', 'none');                           
-  });                                                           
-             
-}
+  path.on('mouseout', function() {
+    tooltip.style('display', 'none');
+  });
 
-</script>
+}

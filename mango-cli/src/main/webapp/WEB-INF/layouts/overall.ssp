@@ -4,26 +4,21 @@
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
-<% render("navigation/navigation.ssp") %>
-<% render("templates/sidebar.ssp") %>
+<% render("navigation/navigation.ssp", Map("isBrowser" -> false)) %>
 
 <div id="main">
     <div class="chrChart"></div>
 </div>
-
-
-<script>
-    <!-- Define Global Variables -->
-    refVis("${dictionary}",fromOverall=true);
-</script>
-
 
 <script>
 $( document ).ready(function() {
 	home("${dictionary}", "${regions}");
 });
 
-function home(dictionary, regions){
+function home(dictionary, regions) {
+	// split regions
+	regions = regions.split(",");
+
 	// Define the div for the tooltip
 	dictionary= dictionary.split(",");
 	var div = d3.select(".chrChart").append("div")
