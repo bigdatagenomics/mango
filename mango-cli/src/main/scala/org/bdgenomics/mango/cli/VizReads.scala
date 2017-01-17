@@ -25,7 +25,7 @@ import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.{ Feature, Genotype }
 import org.bdgenomics.mango.core.util.VizUtils
-import org.bdgenomics.mango.filters.{ FeatureFilterType, GenotypeFilterType, FeatureFilter, GenotypeFilter }
+import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
@@ -224,6 +224,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-featureMode", usage = "This determines feature predicate for discovery mode.")
   var featureDiscoveryMode: Int = 0
+
+  @Args4jOption(required = false, name = "-gnocchi", usage = "This turns on discovery mode on start up for gnocchi visualizations.")
+  var gnocchiMode: Boolean = false
 
   @Args4jOption(required = false, name = "-threshold", usage = "This threshold for density discovery mode.")
   var threshold: Int = 10
@@ -585,7 +588,10 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     // run discovery mode if it is specified in the startup script
     if (args.discoveryMode) {
-      VizReads.prefetchedRegions = discover(Option(args.variantDiscoveryMode), Option(args.variantDiscoveryMode))
+      VizReads.prefetchedRegions = discover(Option(args.variantDiscoveryMode), Option(args.featureDiscoveryMode))
+      preprocess(VizReads.prefetchedRegions)
+    } else if (args.gnocchiMode) {
+      VizReads.prefetchedRegions = discoverGnocchi
       preprocess(VizReads.prefetchedRegions)
     }
 
@@ -714,6 +720,30 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       // collect and merge all regions together
       val emptyRDD = sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
       val regions = featureRegions.getOrElse(emptyRDD).union(variantRegions.getOrElse(emptyRDD)).map(_._1)
+      Bookkeep.mergeRegions(regions.collect.toList.distinct)
+    }
+
+    /**
+     * Runs total data scan over all feature.
+     *
+     * @return Returns list of regions in the genome satisfying predicates
+     */
+    def discoverGnocchi(): List[ReferenceRegion] = {
+
+      // filtering for features
+      val featureRegions: Option[RDD[(ReferenceRegion, Long)]] = {
+        if (!VizReads.featuresExist) {
+          log.warn("specified discovery predicate for features but no variant files were provided")
+          None
+        } else {
+          var features: RDD[Feature] = sc.parallelize[(Feature)](Array[(Feature)]())
+          VizReads.featureData.get.files.foreach(fp => features = features.union(FeatureMaterialization.load(sc, None, fp).rdd))
+          Some(GenericFilter.chunkByRegion(VizReads.chunkSize, features.map(r => (ReferenceRegion((r)), r))))
+        }
+      }
+      // collect and merge all regions together
+      val emptyRDD = sc.parallelize[(ReferenceRegion, Long)](Array[(ReferenceRegion, Long)]())
+      val regions = featureRegions.getOrElse(emptyRDD).map(_._1)
       Bookkeep.mergeRegions(regions.collect.toList.distinct)
     }
 

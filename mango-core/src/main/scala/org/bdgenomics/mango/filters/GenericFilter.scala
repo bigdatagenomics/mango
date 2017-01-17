@@ -25,10 +25,18 @@ import org.bdgenomics.adam.models.ReferenceRegion
  */
 object GenericFilter {
 
+  /**
+   * Filter a region by density per window
+   *
+   * @param window binning window
+   * @param threshold density threshold
+   * @param rdd Reference region rdd to reformat
+   * @param highDensity high or low density filter
+   * @return Returns a reformatted RDD with regions that fit region size
+   */
   def filterByDensity(window: Long, threshold: Long, rdd: RDD[(ReferenceRegion, Any)], highDensity: Boolean = true): RDD[(ReferenceRegion, Long)] = {
     // reformat regions to fit window size
-    val densities = rdd.map(r => (ReferenceRegion(r._1.referenceName, r._1.start / window * window, r._1.start / window * window + window - 1), 1L))
-      .reduceByKey(_ + _) // reduce by region to count
+    val densities = chunkByRegion(window, rdd)
 
     // filter by threshold based on whether we are filtering by high or low densities
     highDensity match {
@@ -37,4 +45,16 @@ object GenericFilter {
     }
   }
 
+  /**
+   * Reformat regions to fit window size
+   *
+   * @param window binning window
+   * @param rdd Reference region rdd to reformat
+   * @return Returns a reformatted RDD with regions that fit region size
+   */
+  def chunkByRegion(window: Long, rdd: RDD[(ReferenceRegion, Any)]): RDD[(ReferenceRegion, Long)] = {
+
+    rdd.map(r => (ReferenceRegion(r._1.referenceName, r._1.start / window * window, r._1.start / window * window + window - 1), 1L))
+      .reduceByKey(_ + _) // reduce by region to count
+  }
 }
