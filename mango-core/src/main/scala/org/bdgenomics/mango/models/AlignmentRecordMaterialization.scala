@@ -64,7 +64,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
   val sd = dict
   val files = filePaths
 
-  def load = (region: ReferenceRegion, file: String) => AlignmentRecordMaterialization.load(sc, region, file).rdd
+  def load = (file: String, region: Option[ReferenceRegion]) => AlignmentRecordMaterialization.load(sc, file, region).rdd
 
   /**
    * Extracts ReferenceRegion from AlignmentRecord
@@ -77,8 +77,6 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * Gets Frequency over a given region for each specified sample
    *
    * @param region: ReferenceRegion to query over
-   * @param sampleIds: List[String] all samples to fetch frequency
-   * @param sampleSize: number of frequency values to return
    *
    * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
    * cooresponding frequency.
@@ -141,11 +139,11 @@ object AlignmentRecordMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
-    if (fp.endsWith(".adam")) loadAdam(sc, region, fp)
+  def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): AlignmentRecordRDD = {
+    if (fp.endsWith(".adam")) loadAdam(sc, fp, region)
     else {
       try {
-        AlignmentRecordMaterialization.loadFromBam(sc, region, fp)
+        AlignmentRecordMaterialization.loadFromBam(sc, fp, region)
           .transform(rdd => rdd.filter(_.getReadMapped))
       } catch {
         case e: Exception => {
@@ -164,7 +162,7 @@ object AlignmentRecordMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadFromBam(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
+  def loadFromBam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): AlignmentRecordRDD = {
     AlignmentTimers.loadBAMData.time {
       try {
         sc.loadIndexedBam(fp, region)
@@ -185,13 +183,19 @@ object AlignmentRecordMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, region: ReferenceRegion, fp: String): AlignmentRecordRDD = {
+  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): AlignmentRecordRDD = {
     AlignmentTimers.loadADAMData.time {
-      val name = Binary.fromString(region.referenceName)
-      val pred: FilterPredicate = (LongColumn("end") >= region.start) && (LongColumn("start") <= region.end) && (BinaryColumn("contigName") === name) && (BooleanColumn("readMapped") === true)
-      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
+      val pred: Option[FilterPredicate] =
+        region match {
+          case Some(_) => {
+            val name = Binary.fromString(region.get.referenceName)
+            Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end)
+              && (BinaryColumn("contig.contigName") === name) && (BooleanColumn("readMapped") === true))
+          } case None => None
+        }
+      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped,
         AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-      sc.loadParquetAlignments(fp, predicate = Some(pred), projection = Some(proj))
+      sc.loadParquetAlignments(fp, predicate = pred, projection = Some(proj))
     }
   }
 }

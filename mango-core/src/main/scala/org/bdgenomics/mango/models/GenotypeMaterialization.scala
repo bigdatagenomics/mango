@@ -46,7 +46,7 @@ class GenotypeMaterialization(s: SparkContext,
   val sd = dict
   val files = filePaths
   def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
-  def load = (region: ReferenceRegion, file: String) => GenotypeMaterialization.load(sc, Some(region), file).rdd
+  def load = (file: String, region: Option[ReferenceRegion]) => GenotypeMaterialization.load(sc, file, region).rdd
 
   /**
    * Stringifies data from genotypes to lists of variants and genotypes over the requested regions
@@ -85,10 +85,10 @@ object GenotypeMaterialization {
     new GenotypeMaterialization(sc, files, dict)
   }
 
-  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): GenotypeRDD = {
+  def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): GenotypeRDD = {
     val genotypes: GenotypeRDD =
       if (fp.endsWith(".adam")) {
-        loadAdam(sc, region, fp)
+        loadAdam(sc, fp, region)
       } else {
         try {
           region match {
@@ -116,7 +116,7 @@ object GenotypeMaterialization {
       }))
   }
 
-  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): GenotypeRDD = {
+  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): GenotypeRDD = {
     val pred: Option[FilterPredicate] =
       region match {
         case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))

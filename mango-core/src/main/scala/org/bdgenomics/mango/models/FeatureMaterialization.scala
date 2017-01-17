@@ -42,7 +42,7 @@ class FeatureMaterialization(s: SparkContext,
   val files = filePaths
 
   def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
-  def load = (region: ReferenceRegion, file: String) => FeatureMaterialization.load(sc, Some(region), file).rdd
+  def load = (file: String, region: Option[ReferenceRegion]) => FeatureMaterialization.load(sc, region, file).rdd
 
   /**
    * Strinifies tuples of (sampleId, feature) to json
@@ -82,10 +82,10 @@ object FeatureMaterialization {
    * @return RDD of data from the file over specified ReferenceRegion
    */
   def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
-    if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, region, fp)
+    if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, region)
     else {
       try {
-        FeatureMaterialization.loadData(sc, region, fp)
+        FeatureMaterialization.loadData(sc, fp, region)
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -104,7 +104,7 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadData(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
+  def loadData(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): FeatureRDD = {
     region match {
       case Some(_) =>
         val featureRdd = sc.loadFeatures(fp)
@@ -122,7 +122,7 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
+  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): FeatureRDD = {
     val pred: Option[FilterPredicate] =
       region match {
         case Some(_) => Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) && (BinaryColumn("contig.contigName") === region.get.referenceName))
