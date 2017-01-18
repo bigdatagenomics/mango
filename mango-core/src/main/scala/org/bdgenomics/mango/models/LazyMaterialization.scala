@@ -35,7 +35,8 @@ import scala.reflect.ClassTag
  * @param name Name of Materialization structure. Used for Spark UI.
  * @param prefetch prefetch size to lazily grab data. Defaults to 1000000
  */
-abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[Int] = None) extends Serializable with Logging {
+abstract class LazyMaterialization[T: ClassTag](name: String,
+                                                prefetch: Option[Int] = None) extends Serializable with Logging {
 
   def sc: SparkContext
   def sd: SequenceDictionary
@@ -61,6 +62,12 @@ abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[I
    * @return extracted ReferenceRegion
    */
   def getReferenceRegion: (T) => ReferenceRegion
+
+  /**
+   * Reassigns ReferenceRegion for ClassTag T
+   * @return T with new ReferenceRegion
+   */
+  def setContigName: (T, String) => T
 
   /**
    * Stringify T classtag to json
@@ -147,20 +154,26 @@ abstract class LazyMaterialization[T: ClassTag](name: String, prefetch: Option[I
     val seqRecord = sd(region.referenceName)
     if (seqRecord.isDefined) {
 
-      val data: RDD[(String, T)] =
+      // do we need to modify the chromosome prefix?
+      val hasChrPrefix = seqRecord.get.name.startsWith("chr")
+
+      val data =
         // get alignment data for all samples
         files.map(fp => {
           val k = LazyMaterialization.filterKeyFromFile(fp)
           load(fp, Some(region)).map(v => (k, v))
-        }).reduce(_ union _)
+        }).reduce(_ union _).map(r => {
+          val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
+          (region, (r._1, setContigName(r._2, region.referenceName)))
+        })
 
       // insert into IntervalRDD
       if (intRDD == null) {
-        intRDD = IntervalRDD(data.keyBy(r => getReferenceRegion(r._2)))
+        intRDD = IntervalRDD(data)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       } else {
         val t = intRDD
-        intRDD = intRDD.multiput(data.keyBy(r => getReferenceRegion(r._2)))
+        intRDD = intRDD.multiput(data)
         // TODO: can we do this incrementally instead?
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
@@ -201,6 +214,42 @@ object LazyMaterialization {
     val slash = file.split("/")
     val fileName = slash.last
     fileName.replace(".", "_")
+  }
+
+  /**
+   * Either strips, maintains or adds the prefix "chr" depending on the expected chr name.
+   *
+   * @param region Region to modify
+   * @param chrPrefix Whether or not the prefix requires "chr" as a prefix
+   * @return Modified chrPrefix
+   */
+  def modifyChrPrefix(region: ReferenceRegion, chrPrefix: Boolean): ReferenceRegion = {
+    val hasPrefix = region.referenceName.contains("chr")
+    // case 1: expected and actual prefixes match, do nothing
+    if ((hasPrefix && chrPrefix) || (!hasPrefix && !chrPrefix)) region
+    // case 2: we must add the prefix
+    else if (hasPrefix)
+      ReferenceRegion(region.referenceName.drop(3), region.start, region.end)
+    // case 3: we must strip the prefix
+    else
+      ReferenceRegion(("chr").concat(region.referenceName), region.start, region.end)
+  }
+
+  /**
+   * Gets predicate ReferenceRegion options for chromosome name based on searchable region. For example, "chr20"
+   * should also search "20", and "20" should also trigger the search of "chr20".
+   *
+   * @param region ReferenceRegion to modify referenceName
+   * @return Tuple2 of ReferenceRegions, with and without the "chr" prefix
+   */
+  def getContigPredicate(region: ReferenceRegion): Tuple2[ReferenceRegion, ReferenceRegion] = {
+    if (region.referenceName.startsWith("chr")) {
+      val modifiedRegion = ReferenceRegion(region.referenceName.drop(3), region.start, region.end, region.strand)
+      Tuple2(region, modifiedRegion)
+    } else {
+      val modifiedRegion = ReferenceRegion(("chr").concat(region.referenceName), region.start, region.end, region.strand)
+      Tuple2(region, modifiedRegion)
+    }
   }
 }
 

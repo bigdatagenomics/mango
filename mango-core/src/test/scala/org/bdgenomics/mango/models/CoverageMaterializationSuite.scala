@@ -64,4 +64,15 @@ class CoverageMaterializationSuite extends MangoFunSuite {
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
     assert(coverage.length == region.length())
   }
+
+  sparkTest("Should handle chromosomes with different prefixes") {
+    val dict = new SequenceDictionary(Vector(SequenceRecord("M", 16699L)))
+
+    val data = CoverageMaterialization(sc, files, dict)
+    val region = new ReferenceRegion("M", 90L, 110L)
+    val freq = data.getCoverage(region).get(key).get
+    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
+    assert(coverage.length == region.length())
+  }
+
 }

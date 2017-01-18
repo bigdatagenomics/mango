@@ -41,8 +41,27 @@ class FeatureMaterialization(s: SparkContext,
   val sd = dict
   val files = filePaths
 
+  /**
+   * Extracts ReferenceRegion from Feature
+   *
+   * @param f Feature
+   * @return extracted ReferenceRegion
+   */
   def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
+
   def load = (file: String, region: Option[ReferenceRegion]) => FeatureMaterialization.load(sc, region, file).rdd
+
+  /**
+   * Reset ReferenceName for Feature
+   *
+   * @param f Feature to be modified
+   * @param contig to replace Feature contigName
+   * @return Feature with new ReferenceRegion
+   */
+  def setContigName = (f: Feature, contig: String) => {
+    f.setContigName(contig)
+    f
+  }
 
   /**
    * Strinifies tuples of (sampleId, feature) to json
@@ -107,9 +126,12 @@ object FeatureMaterialization {
   def loadData(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): FeatureRDD = {
     region match {
       case Some(_) =>
+        val contigs = LazyMaterialization.getContigPredicate(region.get)
         val featureRdd = sc.loadFeatures(fp)
-        featureRdd.transform(rdd => rdd.rdd.filter(g => g.getContigName == region.get.referenceName && g.getStart < region.get.end
-          && g.getEnd > region.get.start))
+        featureRdd.transform(rdd => rdd.rdd.filter(g =>
+          (g.getContigName == contigs._1.referenceName || g.getContigName == contigs._2.referenceName)
+            && g.getStart < region.get.end
+            && g.getEnd > region.get.start))
       case None => sc.loadFeatures(fp)
     }
   }
@@ -125,8 +147,11 @@ object FeatureMaterialization {
   def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): FeatureRDD = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) && (BinaryColumn("contig.contigName") === region.get.referenceName))
-        case None    => None
+        case Some(_) =>
+          val contigs = LazyMaterialization.getContigPredicate(region.get)
+          Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) &&
+            (BinaryColumn("contig.contigName") === contigs._1.referenceName) || BinaryColumn("contig.contigName") === contigs._2.referenceName)
+        case None => None
       }
 
     val proj = Projection(FeatureField.featureId, FeatureField.contigName, FeatureField.start, FeatureField.end,

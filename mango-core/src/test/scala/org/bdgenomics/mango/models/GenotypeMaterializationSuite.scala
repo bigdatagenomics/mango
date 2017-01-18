@@ -65,4 +65,22 @@ class GenotypeMaterializationSuite extends MangoFunSuite {
     assert(vAndg.length == 3)
   }
 
+  sparkTest("Should handle chromosomes with different prefixes") {
+
+    val sd = new SequenceDictionary(Vector(SequenceRecord("1", 2000L),
+      SequenceRecord("M", 20000L)))
+
+    val region = new ReferenceRegion("M", 0, 999)
+    val data = GenotypeMaterialization(sc, vcfFiles, sd)
+    val json = data.getJson(region)
+    var vAndg = parse(json.get(key).get).extract[Array[GenotypeJson]]
+
+    assert(vAndg.length == 3)
+
+    vAndg = parse(json.get(key2).get).extract[Array[GenotypeJson]]
+
+    assert(vAndg.length == 3)
+
+  }
+
 }

@@ -52,4 +52,15 @@ class FeatureMaterializationSuite extends MangoFunSuite {
 
     assert(json.contains(key) && json.contains(key2))
   }
+
+  sparkTest("Should handle chromosomes with different prefixes") {
+    val dict = new SequenceDictionary(Vector(SequenceRecord("M", 16699L)))
+
+    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict)
+    val region = new ReferenceRegion("M", 1000L, 1200L)
+    val json = data.getJson(region)
+
+    assert(json.contains(key) && json.contains(key2))
+  }
+
 }
