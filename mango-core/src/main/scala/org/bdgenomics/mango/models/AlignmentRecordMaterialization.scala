@@ -58,7 +58,9 @@ object AlignmentTimers extends Metrics {
  */
 class AlignmentRecordMaterialization(s: SparkContext,
                                      filePaths: List[String],
-                                     dict: SequenceDictionary) extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD")
+                                     dict: SequenceDictionary,
+                                     prefetchSize: Option[Int] = None)
+    extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD", prefetchSize)
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats

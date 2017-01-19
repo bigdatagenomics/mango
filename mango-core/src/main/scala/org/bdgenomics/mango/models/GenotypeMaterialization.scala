@@ -38,7 +38,9 @@ import scala.reflect.ClassTag
  */
 class GenotypeMaterialization(s: SparkContext,
                               filePaths: List[String],
-                              dict: SequenceDictionary) extends LazyMaterialization[Genotype]("GenotypeRDD")
+                              dict: SequenceDictionary,
+                              prefetchSize: Option[Int] = None)
+    extends LazyMaterialization[Genotype]("GenotypeRDD", prefetchSize)
     with Serializable {
 
   @transient val sc = s
@@ -106,28 +108,11 @@ object GenotypeMaterialization {
   }
 
   def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): GenotypeRDD = {
-    val genotypes: GenotypeRDD =
-      if (fp.endsWith(".adam")) {
-        loadAdam(sc, fp, region)
-      } else {
-        try {
-          region match {
-            case Some(_) =>
-              val contigs = LazyMaterialization.getContigPredicate(region.get)
-              sc.loadGenotypes(fp).transform(rdd =>
-                rdd.filter(g => (g.getContigName == contigs._1.referenceName || g.getContigName == contigs._2.referenceName)
-                  && g.getStart < region.get.end
-                  && g.getEnd > region.get.start))
-            case None => sc.loadGenotypes(fp)
-          }
-        } catch {
-          case e: Exception => {
-            val sw = new StringWriter
-            e.printStackTrace(new PrintWriter(sw))
-            throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
-          }
-        }
-      }
+    val x = VariantMaterialization.loadVariantContext(sc, fp, region)
+
+    val y = x.rdd.take(3).map(r => r.genotypes.toArray)
+
+    val genotypes = x.toGenotypeRDD
 
     val key = LazyMaterialization.filterKeyFromFile(fp)
     // map unique ids to features to be used in tiles

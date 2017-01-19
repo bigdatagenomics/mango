@@ -571,6 +571,11 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
 
+    // choose prefetch size
+    val prefetch =
+      if (sc.isLocal) 10000
+      else 100000
+
     // initialize all datasets
     initAnnotations
     initAlignments
@@ -613,7 +618,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         val readsPaths = args.readsPaths.split(",").toList
 
         if (readsPaths.nonEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict))
+          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
         }
       }
     }
@@ -626,7 +631,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         val coveragePaths = args.coveragePaths.split(",").toList
 
         if (coveragePaths.nonEmpty) {
-          VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict))
+          VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, Some(prefetch)))
         }
       }
     }
@@ -639,7 +644,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         val variantsPaths = args.variantsPaths.split(",").toList
 
         if (variantsPaths.nonEmpty) {
-          VizReads.variantData = Some(VariantMaterialization(sc, variantsPaths, VizReads.globalDict))
+          VizReads.variantData = Some(new VariantMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
         }
       }
     }
@@ -652,7 +657,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         val genotypesPaths = args.genotypesPaths.split(",").toList
 
         if (genotypesPaths.nonEmpty) {
-          VizReads.genotypeData = Some(GenotypeMaterialization(sc, genotypesPaths, VizReads.globalDict))
+          VizReads.genotypeData = Some(new GenotypeMaterialization(sc, genotypesPaths, VizReads.globalDict, Some(prefetch)))
         }
       }
     }
@@ -665,7 +670,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (featurePaths.isDefined) {
         val featurePaths = args.featurePaths.split(",").toList
         if (featurePaths.nonEmpty) {
-          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict))
+          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, Some(prefetch)))
         }
       }
     }

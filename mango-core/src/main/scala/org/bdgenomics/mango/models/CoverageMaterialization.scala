@@ -40,7 +40,9 @@ import org.bdgenomics.utils.misc.Logging
  */
 class CoverageMaterialization(s: SparkContext,
                               filePaths: List[String],
-                              dict: SequenceDictionary) extends LazyMaterialization[Coverage]("CoverageRDD")
+                              dict: SequenceDictionary,
+                              prefetchSize: Option[Int] = None)
+    extends LazyMaterialization[Coverage]("CoverageRDD", prefetchSize)
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats

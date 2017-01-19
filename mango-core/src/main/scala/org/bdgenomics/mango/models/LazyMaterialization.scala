@@ -40,7 +40,8 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
 
   def sc: SparkContext
   def sd: SequenceDictionary
-  val prefetchSize = prefetch.getOrElse(1000000)
+  val prefetchSize = prefetch.getOrElse(10000)
+
   val bookkeep = new Bookkeep(prefetchSize)
   var memoryFraction = 0.85 // default caching fraction
 

@@ -34,7 +34,10 @@ import java.io.{ StringWriter, PrintWriter }
 
 class FeatureMaterialization(s: SparkContext,
                              filePaths: List[String],
-                             dict: SequenceDictionary) extends LazyMaterialization[Feature]("FeatureRDD") with Serializable with Logging {
+                             dict: SequenceDictionary,
+                             prefetchSize: Option[Int] = None)
+    extends LazyMaterialization[Feature]("FeatureRDD", prefetchSize)
+    with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   @transient val sc = s

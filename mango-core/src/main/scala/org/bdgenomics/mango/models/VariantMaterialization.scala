@@ -27,7 +27,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variant.VariantRDD
+import org.bdgenomics.adam.rdd.variant.{ VariantContextRDD, VariantRDD }
 import org.bdgenomics.formats.avro.Variant
 import org.bdgenomics.mango.layout.VariantJson
 
@@ -39,7 +39,9 @@ import scala.reflect.ClassTag
  */
 class VariantMaterialization(s: SparkContext,
                              filePaths: List[String],
-                             dict: SequenceDictionary) extends LazyMaterialization[Variant]("VariantRDD")
+                             dict: SequenceDictionary,
+                             prefetchSize: Option[Int] = None)
+    extends LazyMaterialization[Variant]("VariantRDD", prefetchSize)
     with Serializable {
 
   @transient val sc = s
@@ -148,12 +150,7 @@ object VariantMaterialization {
       loadAdam(sc, fp, region)
     } else {
       try {
-        region match {
-          case Some(_) =>
-            val regions = LazyMaterialization.getContigPredicate(region.get)
-            sc.loadIndexedVcf(fp, Iterable(regions._1, regions._2)).toVariantRDD
-          case None => sc.loadVariants(fp)
-        }
+        loadVariantContext(sc, fp, region).toVariantRDD
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -161,6 +158,15 @@ object VariantMaterialization {
           throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
         }
       }
+    }
+  }
+
+  def loadVariantContext(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantContextRDD = {
+    region match {
+      case Some(_) =>
+        val regions = LazyMaterialization.getContigPredicate(region.get)
+        sc.loadIndexedVcf(fp, Iterable(regions._1, regions._2))
+      case None => sc.loadVcf(fp)
     }
   }
 
