@@ -20,7 +20,6 @@ package org.bdgenomics.mango.cli
 import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
-import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.core.util.{ VizUtils, VizCacheIndicator }
@@ -490,7 +489,7 @@ class VizServlet extends ScalatraServlet {
           VizReads.featuresWait.synchronized {
             // region was already collected, grab from cache
             if (VizCacheIndicator(viewRegion, binning) != VizReads.featuresIndicator) {
-              VizReads.featuresCache = VizReads.featureData.get.getJson(viewRegion)
+              VizReads.featuresCache = VizReads.featureData.get.getJson(viewRegion, binning)
               VizReads.featuresIndicator = VizCacheIndicator(viewRegion, binning)
             }
             results = VizReads.featuresCache.get(key)

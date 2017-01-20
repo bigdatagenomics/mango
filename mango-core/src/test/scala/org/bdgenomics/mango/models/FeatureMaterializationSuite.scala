@@ -20,6 +20,7 @@ package org.bdgenomics.mango.models
 
 import net.liftweb.json._
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
+import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.mango.util.MangoFunSuite
 
 class FeatureMaterializationSuite extends MangoFunSuite {
@@ -51,6 +52,12 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val json = data.getJson(region)
 
     assert(json.contains(key) && json.contains(key2))
+
+    val keyData = parse(json.get(key).get).extract[Array[BedRowJson]]
+      .sortBy(_.start)
+
+    assert(keyData.length == 2)
+    assert(keyData.head.start == 1107)
   }
 
   sparkTest("Should handle chromosomes with different prefixes") {
@@ -61,6 +68,19 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val json = data.getJson(region)
 
     assert(json.contains(key) && json.contains(key2))
+
+  }
+
+  sparkTest("Bins features over large ranges") {
+    val dict = new SequenceDictionary(Vector(SequenceRecord("M", 16699L)))
+
+    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict)
+    val region = new ReferenceRegion("M", 1000L, 1200L)
+    val json = data.getJson(region, binning = 200)
+    val keyData = parse(json.get(key).get).extract[Array[BedRowJson]]
+    assert(keyData.length == 1)
+    assert(keyData.head.start == 1000)
+    assert(keyData.head.stop == 1210) // should extend longest feature in bin
   }
 
 }

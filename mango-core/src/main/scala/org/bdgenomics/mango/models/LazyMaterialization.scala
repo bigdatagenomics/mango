@@ -117,6 +117,34 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
   }
 
   /**
+   * Bins region by binning size
+   * @param r ReferenceRegion
+   * @param binning binning size
+   * @return binned ReferenceRegion
+   */
+  private def binRegion(r: ReferenceRegion, binning: Int): ReferenceRegion = {
+    val start = r.start - (r.start % binning)
+    r.copy(start = start, end = (start + binning))
+  }
+
+  /**
+   * Bins elements into one record based on ReferenceRegion. Regions are set width bins, so
+   * if elements can overflow a bin, the element with the longest region is chosen during
+   * reduceByKey.
+   *
+   * @param rdd RDD to bin. (key, element) pairs.
+   * @param binning Size to bin by
+   * @return RDD of binned elements. Key contains modified binned ReferenceRegion
+   */
+  def bin(rdd: RDD[(String, T)], binning: Int): RDD[((String, ReferenceRegion), T)] = {
+    rdd.map(r => ((r._1, binRegion(getReferenceRegion(r._2), binning)), r._2))
+      .reduceByKey((a, b) => {
+        if (getReferenceRegion((a)).end > getReferenceRegion(b).end) a
+        else b
+      })
+  }
+
+  /**
    * Gets raw data for all files.
    * Filters all alignment data already loaded into the corresponding RDD that overlap a region.
    * If data has yet been loaded, loads data within this region.

@@ -88,6 +88,34 @@ class FeatureMaterialization(@transient sc: SparkContext,
 
     flattened.mapValues(r => write(r))
   }
+
+  /**
+   * Formats raw data from RDD to JSON.
+   *
+   * @param region Region to obtain coverage for
+   * @param binning Tells what granularity of coverage to return. Used for large regions
+   * @return JSONified data map;
+   */
+  def getJson(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
+    val data = get(region)
+
+    val binnedData =
+      if (binning > 1) {
+        bin(data, binning)
+          .map(r => {
+            // map to bin start, bin end
+            val start = r._1._2.start
+            val binned = Feature.newBuilder(r._2)
+              .setStart(start)
+              .setEnd(Math.max(r._2.getEnd, start + binning))
+              .setFeatureId("N/A")
+              .setFeatureType("N/A")
+              .build()
+            (r._1._1, binned)
+          })
+      } else data
+    stringify(binnedData)
+  }
 }
 
 object FeatureMaterialization {

@@ -95,6 +95,13 @@ object GenotypeJson {
     new GenotypeJson(variant, tuple.sampleIds)
   }
 
+  /**
+   * Makes genotype json without genotype sample names
+   * @param variant Variant
+   * @return GenotypeJson
+   */
+  def apply(variant: Variant): GenotypeJson = new GenotypeJson(variant, null)
+
 }
 
 /**

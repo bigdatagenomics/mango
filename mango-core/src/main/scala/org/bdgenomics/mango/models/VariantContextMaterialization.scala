@@ -28,7 +28,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.{ VariantContextRDD }
-import org.bdgenomics.formats.avro.GenotypeAllele
+import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
 import org.bdgenomics.mango.layout.GenotypeJson
 
 /*
@@ -100,41 +100,26 @@ class VariantContextMaterialization(@transient sc: SparkContext,
               binning: Int = 1): Map[String, String] = {
     val data: RDD[(String, GenotypeJson)] = get(region)
 
-    val binnedData =
+    val binnedData: RDD[(String, GenotypeJson)] =
       if (binning <= 1) {
         if (!showGenotypes)
           data.map(r => (r._1, GenotypeJson(r._2.variant, null)))
         else data
       } else {
-        data
+        bin(data, binning)
           .map(r => {
-            // Add bin to key
-            ((r._1, (r._2.variant.getStart / binning).toInt), r._2)
-          })
-          .reduceByKey((a, b) => {
-            if (a.variant.getEnd < b.variant.getEnd) {
-              a.variant.setEnd(b.variant.getEnd)
-            }
-            if (a.variant.getStart > b.variant.getStart) {
-              a.variant.setStart(b.variant.getStart)
-            }
-            // Determine if the ref alleles match and if the starting indices are the same (due to binning)
-            if (a.variant.getReferenceAllele != b.variant.getReferenceAllele || a.variant.getStart != b.variant.getStart) {
-              a.variant.setReferenceAllele(variantPlaceholder)
-            }
-            // Determine if the alt alleles match and if the starting indices are the same (due to binning)
-            if (a.variant.getAlternateAllele != b.variant.getAlternateAllele || a.variant.getStart != b.variant.getStart) {
-              a.variant.setAlternateAllele(variantPlaceholder)
-            }
-            a
-          })
-          .map(r => {
-            // Remove bin from key, nullify genotypes over large ranges
-            (r._1._1, GenotypeJson(r._2.variant, null))
+            // Reset variant to match binned region
+            val start = r._1._2.start
+            val binned = Variant.newBuilder(r._2.variant)
+              .setStart(start)
+              .setEnd(Math.max(r._2.variant.getEnd, start + binning))
+              .setReferenceAllele(variantPlaceholder)
+              .setAlternateAllele(variantPlaceholder)
+              .build()
+            (r._1._1, GenotypeJson(binned))
           })
       }
     stringify(binnedData)
-
   }
 
   /**
