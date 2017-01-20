@@ -32,17 +32,14 @@ import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
 import java.io.{ StringWriter, PrintWriter }
 
-class FeatureMaterialization(s: SparkContext,
-                             filePaths: List[String],
-                             dict: SequenceDictionary,
+class FeatureMaterialization(@transient sc: SparkContext,
+                             files: List[String],
+                             sd: SequenceDictionary,
                              prefetchSize: Option[Int] = None)
-    extends LazyMaterialization[Feature]("FeatureRDD", prefetchSize)
+    extends LazyMaterialization[Feature]("FeatureRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  @transient val sc = s
-  val sd = dict
-  val files = filePaths
 
   /**
    * Extracts ReferenceRegion from Feature

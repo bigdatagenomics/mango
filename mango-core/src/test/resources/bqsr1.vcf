@@ -1,0 +1,11 @@
+##fileformat=VCFv4.1
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chrM	12	rs2186463	C	G	.	.	WGT=3
+chrM	12	rs146752890	C	G	.	.	WGT=1
+chrM	78	rs139377059	C	T	.	.	WGT=1
+chrM	78	rs2186465	C	T	.	.	WGT=3
+chrM	83	rs113579590	C	A	.	.	WGT=3
+chrM	114	rs61969398	C	G	.	.	WGT=3
+chrM	122	rs12172168	G	A	.	.	WGT=3

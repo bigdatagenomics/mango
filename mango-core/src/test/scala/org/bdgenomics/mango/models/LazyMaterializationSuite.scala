@@ -70,17 +70,14 @@ class LazyMaterializationSuite extends MangoFunSuite {
 
 /**
  * Dummy class that extends LazyMaterialization. Used for unit testing LazyMaterialization
- * @param s SparkContext
- * @param filePaths Dummy filepaths that are not used
- * @param dict SequenceDictionary
+ * @param sc SparkContext
+ * @param files Dummy filepaths that are not used
+ * @param sd SequenceDictionary
  */
-class LazyDummy(s: SparkContext,
-                filePaths: List[String],
-                dict: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD", Some(100)) with Serializable {
+class LazyDummy(@transient sc: SparkContext,
+                files: List[String],
+                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD", sc, files, sd, Some(100)) with Serializable {
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  @transient val sc = s
-  val sd = dict
-  val files = filePaths
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 

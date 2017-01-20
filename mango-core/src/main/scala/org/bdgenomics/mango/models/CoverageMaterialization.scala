@@ -38,17 +38,14 @@ import org.bdgenomics.utils.misc.Logging
  * @see LazyMaterialization
  * @see KTiles
  */
-class CoverageMaterialization(s: SparkContext,
-                              filePaths: List[String],
-                              dict: SequenceDictionary,
+class CoverageMaterialization(@transient sc: SparkContext,
+                              files: List[String],
+                              sd: SequenceDictionary,
                               prefetchSize: Option[Int] = None)
-    extends LazyMaterialization[Coverage]("CoverageRDD", prefetchSize)
+    extends LazyMaterialization[Coverage]("CoverageRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  @transient val sc = s
-  val sd = dict
-  val files = filePaths
 
   def load = (file: String, region: Option[ReferenceRegion]) => CoverageMaterialization.load(sc, file, region).rdd
 
