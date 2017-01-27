@@ -196,19 +196,20 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-genes", usage = "Gene URL.")
   var genePath: String = null
 
-  @Args4jOption(required = false, name = "-read_files", usage = "A list of reads files to view, separated by commas (,)")
+  @Args4jOption(required = false, name = "-reads", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
 
-  @Args4jOption(required = false, name = "-coverage_files", usage = "A list of coverage files to view, separated by commas (,)")
+  @Args4jOption(required = false, name = "-coverage", usage = "A list of coverage files to view, separated by commas (,)")
   var coveragePaths: String = null
 
-  @Args4jOption(required = false, name = "-var_files", usage = "A list of variants files to view, separated by commas (,)")
+  @Args4jOption(required = false, name = "-variants", usage = "A list of variants files to view, separated by commas (,). " +
+    "Vcf files require a corresponding tbi index.")
   var variantsPaths: String = null
 
-  @Args4jOption(required = false, name = "-geno_files", usage = "A list of genotype files to view, separated by commas (,)")
+  @Args4jOption(required = false, name = "-genotypes", usage = "A list of genotype files to view, separated by commas (,)")
   var genotypesPaths: String = null
 
-  @Args4jOption(required = false, name = "-feat_files", usage = "The feature files to view, separated by commas (,)")
+  @Args4jOption(required = false, name = "-features", usage = "The feature files to view, separated by commas (,)")
   var featurePaths: String = null
 
   @Args4jOption(required = false, name = "-port", usage = "The port to bind to for visualization. The default is 8080.")
@@ -437,7 +438,7 @@ class VizServlet extends ScalatraServlet {
 
   get("/genotypes/:key/:ref") {
     VizTimers.VarRequest.time {
-      if (!VizReads.variantsExist)
+      if (!VizReads.genotypeExist)
         VizReads.errors.notFound
       else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,

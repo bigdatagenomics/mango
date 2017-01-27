@@ -29,6 +29,31 @@ class LazyMaterializationSuite extends MangoFunSuite {
     SequenceRecord("chrM", 20000L),
     SequenceRecord("20", 90000L)))
 
+  test("Should correctly reassigns chr prefix") {
+    var region = ReferenceRegion("chr20", 1, 100)
+    var hasChrPrefix = true
+
+    // case 1: should keep chr prefix
+    var modified = LazyMaterialization.modifyChrPrefix(region, hasChrPrefix)
+    assert(modified.referenceName == region.referenceName)
+
+    // case 2: should remove chr prefix
+    hasChrPrefix = false
+    modified = LazyMaterialization.modifyChrPrefix(region, hasChrPrefix)
+    assert(modified.referenceName == "20")
+
+    // case 3: should add chr prefix
+    hasChrPrefix = true
+    region = ReferenceRegion("20", 1, 100)
+    modified = LazyMaterialization.modifyChrPrefix(region, hasChrPrefix)
+    assert(modified.referenceName == "chr20")
+
+    // case 4: should leave prefix off
+    hasChrPrefix = false
+    modified = LazyMaterialization.modifyChrPrefix(region, hasChrPrefix)
+    assert(modified.referenceName == region.referenceName)
+  }
+
   sparkTest("Should check and clear memory") {
     val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
     lazyDummy.setMemoryFraction(0.0000001) // this is a very low test value
@@ -62,6 +87,11 @@ class LazyDummy(s: SparkContext,
   def load = (file: String, region: Option[ReferenceRegion]) => {
     sc.parallelize(Array.range(region.get.start.toInt, region.get.end.toInt)
       .map(r => ReferenceRegion(region.get.referenceName, r, r + 1)))
+  }
+
+  def setContigName = (r: ReferenceRegion, contig: String) => {
+    ReferenceRegion(contig, r.start, r.end)
+    r
   }
 
   def stringify(data: RDD[(String, ReferenceRegion)]): Map[String, String] = {

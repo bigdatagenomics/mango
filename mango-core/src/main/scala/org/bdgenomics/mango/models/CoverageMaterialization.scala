@@ -53,10 +53,21 @@ class CoverageMaterialization(s: SparkContext,
   /**
    * Extracts ReferenceRegion from CoverageRecord
    *
-   * @param ar CoverageRecord
+   * @param c CoverageRecord
    * @return extracted ReferenceRegion
    */
-  def getReferenceRegion = (ar: Coverage) => ReferenceRegion(ar)
+  def getReferenceRegion = (c: Coverage) => ReferenceRegion(c)
+
+  /**
+   * Reset ReferenceName for Coverage
+   *
+   * @param c Coverage to be modified
+   * @param contig to replace Coverage contigName
+   * @return Coverage with new ReferenceRegion
+   */
+  def setContigName = (c: Coverage, contig: String) => {
+    c.copy(contigName = contig)
+  }
 
   /**
    * Formats raw data from RDD to JSON.
@@ -134,15 +145,18 @@ object CoverageMaterialization {
    * Loads ADAM data using predicate pushdowns
    *
    * @param sc SparkContext
-   * @param region Region to load
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @param region Region to load
+   * @return CoverageRDD of data from the file over specified ReferenceRegion
    */
   def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): CoverageRDD = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some((LongColumn("end") <= region.get.end) && (LongColumn("start") >= region.get.start) && (BinaryColumn("contigName") === region.get.referenceName))
-        case None    => None
+        case Some(_) =>
+          val contigs = LazyMaterialization.getContigPredicate(region.get)
+          Some((LongColumn("end") <= region.get.end) && (LongColumn("start") >= region.get.start) &&
+            (BinaryColumn("contigName") === contigs._1.referenceName || BinaryColumn("contigName") === contigs._2.referenceName))
+        case None => None
       }
     sc.loadParquetCoverage(fp, predicate = pred).flatten()
   }

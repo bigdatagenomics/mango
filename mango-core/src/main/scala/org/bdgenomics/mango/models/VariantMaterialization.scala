@@ -46,9 +46,31 @@ class VariantMaterialization(s: SparkContext,
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   val sd = dict
   val files = filePaths
+
+  // placeholder used for ref/alt positions to display in browser
   val variantPlaceholder = "N"
+
+  /**
+   * Extracts ReferenceRegion from Variant
+   *
+   * @param v Variant
+   * @return extracted ReferenceRegion
+   */
   def getReferenceRegion = (v: Variant) => ReferenceRegion(v.getContigName, v.getStart, v.getEnd)
+
   def load = (file: String, region: Option[ReferenceRegion]) => VariantMaterialization.load(sc, file, region).rdd
+
+  /**
+   * Reset ReferenceName for Variant
+   *
+   * @param v Variant to be modified
+   * @param contig to replace Variant contigName
+   * @return Variant with new ReferenceRegion
+   */
+  def setContigName = (v: Variant, contig: String) => {
+    v.setContigName(contig)
+    v
+  }
 
   /**
    * Stringifies data from variants to lists of variants over the requested regions
@@ -128,9 +150,8 @@ object VariantMaterialization {
       try {
         region match {
           case Some(_) =>
-            sc.loadVariants(fp).transform(rdd => rdd.filter(g =>
-              g.getContigName == region.get.referenceName && g.getStart < region.get.end
-                && g.getEnd > region.get.start))
+            val regions = LazyMaterialization.getContigPredicate(region.get)
+            sc.loadIndexedVcf(fp, Iterable(regions._1, regions._2)).toVariantRDD
           case None => sc.loadVariants(fp)
         }
       } catch {
@@ -146,8 +167,12 @@ object VariantMaterialization {
   def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantRDD = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
-        case None    => None
+        case Some(_) =>
+          val contigs = LazyMaterialization.getContigPredicate(region.get)
+          val contigPredicate = (BinaryColumn("variant.contig.contigName") === contigs._1.referenceName
+            || BinaryColumn("variant.contig.contigName") === contigs._2.referenceName)
+          Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && contigPredicate)
+        case None => None
       }
     val proj = Projection(VariantField.contigName, VariantField.start, VariantField.referenceAllele, VariantField.alternateAllele, VariantField.end)
     sc.loadParquetVariants(fp, predicate = pred, projection = Some(proj))

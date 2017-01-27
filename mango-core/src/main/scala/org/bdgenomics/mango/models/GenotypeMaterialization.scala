@@ -45,8 +45,28 @@ class GenotypeMaterialization(s: SparkContext,
   @transient implicit val formats = net.liftweb.json.DefaultFormats
   val sd = dict
   val files = filePaths
+
+  /**
+   * Extracts ReferenceRegion from Genotype
+   *
+   * @param g Genotype
+   * @return extracted ReferenceRegion
+   */
   def getReferenceRegion = (g: Genotype) => ReferenceRegion(g.getContigName, g.getStart, g.getEnd)
+
   def load = (file: String, region: Option[ReferenceRegion]) => GenotypeMaterialization.load(sc, file, region).rdd
+
+  /**
+   * Reset ReferenceName for Genotype
+   *
+   * @param g Genotype to be modified
+   * @param contig to replace Genotype contigName
+   * @return Genotype with new ReferenceRegion
+   */
+  def setContigName = (g: Genotype, contig: String) => {
+    g.setContigName(contig)
+    g
+  }
 
   /**
    * Stringifies data from genotypes to lists of variants and genotypes over the requested regions
@@ -92,9 +112,12 @@ object GenotypeMaterialization {
       } else {
         try {
           region match {
-            case Some(_) => sc.loadGenotypes(fp).transform(rdd =>
-              rdd.filter(g => g.getContigName == region.get.referenceName && g.getStart < region.get.end
-                && g.getEnd > region.get.start))
+            case Some(_) =>
+              val contigs = LazyMaterialization.getContigPredicate(region.get)
+              sc.loadGenotypes(fp).transform(rdd =>
+                rdd.filter(g => (g.getContigName == contigs._1.referenceName || g.getContigName == contigs._2.referenceName)
+                  && g.getStart < region.get.end
+                  && g.getEnd > region.get.start))
             case None => sc.loadGenotypes(fp)
           }
         } catch {
@@ -119,8 +142,11 @@ object GenotypeMaterialization {
   def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): GenotypeRDD = {
     val pred: Option[FilterPredicate] =
       region match {
-        case Some(_) => Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && (BinaryColumn("variant.contig.contigName") === region.get.referenceName))
-        case None    => None
+        case Some(_) =>
+          val contigs = LazyMaterialization.getContigPredicate(region.get)
+          Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) &&
+            (BinaryColumn("variant.contig.contigName") === contigs._1.referenceName || BinaryColumn("variant.contig.contigName") === contigs._2.referenceName))
+        case None => None
       }
     val proj = Projection(GenotypeField.variant, GenotypeField.alleles, GenotypeField.sampleId)
     sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj))

@@ -19,12 +19,13 @@ package org.bdgenomics.mango.models
 
 import java.io.{ PrintWriter, StringWriter }
 
+import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
@@ -34,6 +35,7 @@ import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
+import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.JavaConversions._
 import org.bdgenomics.utils.instrumentation.Metrics
 
@@ -72,6 +74,18 @@ class AlignmentRecordMaterialization(s: SparkContext,
    * @return extracted ReferenceRegion
    */
   def getReferenceRegion = (ar: AlignmentRecord) => ReferenceRegion.unstranded(ar)
+
+  /**
+   * Reset ReferenceName for AlignmentRecord
+   *
+   * @param ar AlignmentRecord to be modified
+   * @param contig to replace AlignmentRecord contigName
+   * @return AlignmentRecord with new ReferenceRegion
+   */
+  def setContigName = (ar: AlignmentRecord, contig: String) => {
+    ar.setContigName(contig)
+    ar
+  }
 
   /*
    * Gets Frequency over a given region for each specified sample
@@ -126,7 +140,7 @@ class AlignmentRecordMaterialization(s: SparkContext,
   }
 }
 
-object AlignmentRecordMaterialization {
+object AlignmentRecordMaterialization extends Logging {
 
   def apply(sc: SparkContext, files: List[String], sd: SequenceDictionary): AlignmentRecordMaterialization = {
     new AlignmentRecordMaterialization(sc, files, sd)
@@ -164,14 +178,22 @@ object AlignmentRecordMaterialization {
    */
   def loadFromBam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): AlignmentRecordRDD = {
     AlignmentTimers.loadBAMData.time {
-      try {
-        sc.loadIndexedBam(fp, region)
-      } catch {
-        case e: Exception => {
-          val sw = new StringWriter
-          e.printStackTrace(new PrintWriter(sw))
-          throw UnsupportedFileException("bam index not provided. Stack trace: " + sw.toString)
-        }
+      region match {
+        case Some(_) =>
+          val regions = LazyMaterialization.getContigPredicate(region.get)
+          var alignments: AlignmentRecordRDD = null
+          // hack to get around issue in hadoop_bam, which throws error if contigName is not found in bam file
+          val path = new Path(fp)
+          val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))
+          for (r <- List(regions._1, regions._2)) {
+            if (fileSd.containsRefName(r.referenceName)) {
+              val x = sc.loadIndexedBam(fp, r)
+              if (alignments == null) alignments = x
+              else alignments = alignments.transform(rdd => rdd.union(x.rdd))
+            }
+          }
+          alignments
+        case _ => sc.loadBam(fp)
       }
     }
   }
@@ -188,13 +210,17 @@ object AlignmentRecordMaterialization {
       val pred: Option[FilterPredicate] =
         region match {
           case Some(_) => {
-            val name = Binary.fromString(region.get.referenceName)
-            Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end)
-              && (BinaryColumn("contig.contigName") === name) && (BooleanColumn("readMapped") === true))
+            val contigs = LazyMaterialization.getContigPredicate(region.get)
+            Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) &&
+              (BinaryColumn("contigName") === Binary.fromString(contigs._1.referenceName) ||
+                BinaryColumn("contigName") === Binary.fromString(contigs._2.referenceName)) &&
+                (BooleanColumn("readMapped") === true))
           } case None => None
         }
-      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName, AlignmentRecordField.start, AlignmentRecordField.readMapped,
-        AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand, AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
+        AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
+        AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
+        AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
       sc.loadParquetAlignments(fp, predicate = pred, projection = Some(proj))
     }
   }
