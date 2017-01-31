@@ -76,21 +76,19 @@ class CoverageMaterialization(@transient sc: SparkContext,
    * @return JSONified data map
    */
   def getCoverage(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
+    val data: RDD[(String, Coverage)] = get(region)
+
     val covCounts: RDD[(String, PositionCount)] =
       if (binning > 1) {
-        get(region)
+        bin(data, binning)
           .map(r => {
             // map to bin start, bin end
-            val pc = r._2
-            val start = pc.start - (pc.start % binning)
-            val end = start + binning
-            ((r._1, start), PositionCount(start, end, pc.count.toInt))
-          }).reduceByKey((a, b) => {
-            // reduce by start
-            PositionCount(a.start, a.end, (a.count + b.count) / 2)
-          }).map(r => (r._1._1, r._2))
+            val start = r._1._2.start
+            val end = Math.max(r._2.end, start + binning)
+            (r._1._1, PositionCount(start, end, r._2.count.toInt))
+          })
       } else {
-        get(region).mapValues(r => PositionCount(r.start, r.end, r.count.toInt))
+        data.mapValues(r => PositionCount(r.start, r.end, r.count.toInt))
       }
 
     covCounts.collect.groupBy(_._1) // group by sample Id

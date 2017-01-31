@@ -102,7 +102,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(json.length == 3)
       assert(json.head.variant.getStart == 19)
       assert(json.head.sampleIds.length == 2)
-
     }
   }
 

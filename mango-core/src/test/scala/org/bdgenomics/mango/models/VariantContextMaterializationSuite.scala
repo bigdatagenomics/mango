@@ -97,19 +97,19 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     assert(vAndg.length == 7)
   }
 
-  sparkTest("does not return genotypes at zoomed out regions") {
+  sparkTest("Should bin and not return genotypes at zoomed out regions") {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data = new VariantContextMaterialization(sc, List(vcfFile1), sd)
-    val json = data.getJson(region, true, binning = 100).get(key).get
+    val json = data.getJson(region, true, binning = 20).get(key).get
 
     val vAndg = parse(json).extract[Array[String]].map(r => GenotypeJson(r))
       .sortBy(_.variant.getStart)
 
     // should bin all variants
-    assert(vAndg.length == 1)
+    assert(vAndg.length == 3)
     assert(vAndg.head.sampleIds.length == 0)
-    assert(vAndg.head.variant.getStart == 19)
-    assert(vAndg.head.variant.getEnd == 50)
+    assert(vAndg.head.variant.getStart == 0)
+    assert(vAndg.head.variant.getEnd == 20)
   }
 
   sparkTest("Should handle chromosomes with different prefixes") {
