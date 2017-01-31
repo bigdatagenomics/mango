@@ -169,7 +169,14 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
     }
   }
 
-  def getAll(): RDD[T] = files.map(fp => load(fp, None)).reduce(_ union _)
+  def getAll(): RDD[T] = {
+    val hasChrPrefix = sd.records.head.name.startsWith("chr")
+    files.map(fp => load(fp, None)).reduce(_ union _)
+      .map(r => {
+        val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r), hasChrPrefix)
+        setContigName(r, region.referenceName)
+      })
+  }
 
   /**
    *  Transparent to the user, should only be called by get if IntervalRDD.get does not return data
