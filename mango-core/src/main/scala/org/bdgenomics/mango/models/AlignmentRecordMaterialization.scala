@@ -50,21 +50,20 @@ object AlignmentTimers extends Metrics {
 
 /**
  *
- * @param s SparkContext
- * @param dict Sequence Dictionay calculated from reference
+ * @param sc SparkContext
+ * @param sd Sequence Dictionay calculated from reference
  * extends LazyMaterialization and KTiles
  * @see LazyMaterialization
  * @see KTiles
  */
-class AlignmentRecordMaterialization(s: SparkContext,
-                                     filePaths: List[String],
-                                     dict: SequenceDictionary) extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD")
+class AlignmentRecordMaterialization(@transient sc: SparkContext,
+                                     files: List[String],
+                                     sd: SequenceDictionary,
+                                     prefetchSize: Option[Int] = None)
+    extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
   @transient implicit val formats = net.liftweb.json.DefaultFormats
-  @transient val sc = s
-  val sd = dict
-  val files = filePaths
 
   def load = (file: String, region: Option[ReferenceRegion]) => AlignmentRecordMaterialization.load(sc, file, region).rdd
 

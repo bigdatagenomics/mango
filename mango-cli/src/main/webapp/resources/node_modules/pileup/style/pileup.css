@@ -18,6 +18,10 @@
 .pileup-root text, .track-label {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
+/* hack to hide track label for genotypes */
+.genotypes > .track-label {
+  display: none;
+}
 .track-label {
   flex: 0 0 100px;  /* fixed-width track labels */
   text-align: right;
@@ -177,7 +181,7 @@
 }
 
 /* pileup track */
-.pileup-root > .pileup {
+.pileup-root > .pileup, .pileup-root > .genotypes {
   flex: 1;  /* stretch to fill remaining space */
 }
 .pileup .alignment .match {

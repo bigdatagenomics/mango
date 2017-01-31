@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.models
 
-import org.apache.spark._
+import org.apache.spark.{ HashPartitioner, Partitioner, SparkContext }
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
@@ -36,18 +36,19 @@ import scala.reflect.ClassTag
  * @param prefetch prefetch size to lazily grab data. Defaults to 1000000
  */
 abstract class LazyMaterialization[T: ClassTag](name: String,
+                                                @transient sc: SparkContext,
+                                                files: List[String],
+                                                sd: SequenceDictionary,
                                                 prefetch: Option[Int] = None) extends Serializable with Logging {
 
-  def sc: SparkContext
-  def sd: SequenceDictionary
-  val prefetchSize = prefetch.getOrElse(1000000)
+  val prefetchSize = prefetch.getOrElse(10000)
+
   val bookkeep = new Bookkeep(prefetchSize)
   var memoryFraction = 0.85 // default caching fraction
 
   def setMemoryFraction(fraction: Double) =
     memoryFraction = fraction
 
-  def files: List[String]
   def getFiles: List[String] = files
   var intRDD: IntervalRDD[ReferenceRegion, (String, T)] = null
 
@@ -135,7 +136,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
         }
         intRDD.filterByInterval(region).toRDD.map(_._2)
       } case None => {
-        throw new Exception("Not found in dictionary")
+        throw new Exception(s"${region} not found in dictionary")
       }
     }
   }
@@ -158,7 +159,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
       val hasChrPrefix = seqRecord.get.name.startsWith("chr")
 
       val data =
-        // get alignment data for all samples
+        // get data for all samples
         files.map(fp => {
           val k = LazyMaterialization.filterKeyFromFile(fp)
           load(fp, Some(region)).map(v => (k, v))
@@ -167,19 +168,21 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
           (region, (r._1, setContigName(r._2, region.referenceName)))
         })
 
-      // insert into IntervalRDD
+      // tag regions as found, even if there is no data
+      bookkeep.rememberValues(region, files)
+
+      // insert into IntervalRDD if there is data
       if (intRDD == null) {
-        intRDD = IntervalRDD(data)
+        // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
+        intRDD = IntervalRDD(data.partitionBy(new HashPartitioner(sc.defaultParallelism)))
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       } else {
         val t = intRDD
         intRDD = intRDD.multiput(data)
-        // TODO: can we do this incrementally instead?
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
       intRDD.setName(name)
-      bookkeep.rememberValues(region, files)
     }
   }
 
@@ -224,15 +227,24 @@ object LazyMaterialization {
    * @return Modified chrPrefix
    */
   def modifyChrPrefix(region: ReferenceRegion, chrPrefix: Boolean): ReferenceRegion = {
-    val hasPrefix = region.referenceName.contains("chr")
+    region.copy(referenceName = modifyChrPrefix(region.referenceName, chrPrefix))
+  }
+
+  /**
+   * Either strips, maintains or adds the prefix "chr" depending on the expected chr name.
+   *
+   * @param name String to modify
+   * @param chrPrefix Whether or not the prefix requires "chr" as a prefix
+   * @return Modified chrPrefix
+   */
+  def modifyChrPrefix(name: String, chrPrefix: Boolean): String = {
+    val hasPrefix = name.contains("chr")
     // case 1: expected and actual prefixes match, do nothing
-    if ((hasPrefix && chrPrefix) || (!hasPrefix && !chrPrefix)) region
+    if ((hasPrefix && chrPrefix) || (!hasPrefix && !chrPrefix)) name
     // case 2: we must add the prefix
-    else if (hasPrefix)
-      ReferenceRegion(region.referenceName.drop(3), region.start, region.end)
+    else if (hasPrefix) name.drop(3)
     // case 3: we must strip the prefix
-    else
-      ReferenceRegion(("chr").concat(region.referenceName), region.start, region.end)
+    else ("chr").concat(name)
   }
 
   /**
