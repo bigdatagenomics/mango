@@ -44,10 +44,21 @@ object VizUtils {
   val screenSize: Int = 1000
 
   /**
+   * Returns the valid start for ReferenceRegion.
+   *
+   * @param start: start of ReferenceRegion that has been queried
+   * @return First valid base in region being viewed
+   */
+  def getStart(start: Long, zeroBase: Boolean = false): Long = {
+    if (zeroBase) Math.max(start, 0L)
+    else Math.max(start, 1L)
+  }
+
+  /**
    * Returns the very last base in a given chromosome that
    * can be viewed relative to the reference
    *
-   * @param end: end of referenceregion that has been queried
+   * @param end: end of ReferenceRegion that has been queried
    * @param rec: Option of sequence record that is being viewed
    * @return Last valid base in region being viewed
    */
