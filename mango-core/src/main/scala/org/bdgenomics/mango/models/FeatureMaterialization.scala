@@ -178,7 +178,7 @@ object FeatureMaterialization {
         case Some(_) =>
           val contigs = LazyMaterialization.getContigPredicate(region.get)
           Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) &&
-            (BinaryColumn("contig.contigName") === contigs._1.referenceName) || BinaryColumn("contig.contigName") === contigs._2.referenceName)
+            (BinaryColumn("contigName") === contigs._1.referenceName) || BinaryColumn("contigName") === contigs._2.referenceName)
         case None => None
       }
 
