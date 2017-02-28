@@ -38,7 +38,7 @@ import org.bdgenomics.mango.layout.GenotypeJson
 class VariantContextMaterialization(@transient sc: SparkContext,
                                     files: List[String],
                                     sd: SequenceDictionary,
-                                    prefetchSize: Option[Int] = None)
+                                    prefetchSize: Option[Long] = None)
     extends LazyMaterialization[GenotypeJson]("VariantContextRDD", sc, files, sd, prefetchSize)
     with Serializable {
 
@@ -98,7 +98,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
   def getJson(region: ReferenceRegion,
               showGenotypes: Boolean,
               binning: Int = 1): Map[String, String] = {
-    val data: RDD[(String, GenotypeJson)] = get(region)
+    val data: RDD[(String, GenotypeJson)] = get(Some(region))
 
     val binnedData: RDD[(String, GenotypeJson)] =
       if (binning <= 1) {

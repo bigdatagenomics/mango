@@ -35,7 +35,7 @@ import java.io.{ StringWriter, PrintWriter }
 class FeatureMaterialization(@transient sc: SparkContext,
                              files: List[String],
                              sd: SequenceDictionary,
-                             prefetchSize: Option[Int] = None)
+                             prefetchSize: Option[Long] = None)
     extends LazyMaterialization[Feature]("FeatureRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
@@ -97,7 +97,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * @return JSONified data map;
    */
   def getJson(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
-    val data = get(region)
+    val data = get(Some(region))
 
     val binnedData =
       if (binning > 1) {

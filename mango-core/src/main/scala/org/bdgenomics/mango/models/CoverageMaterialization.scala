@@ -41,7 +41,7 @@ import org.bdgenomics.utils.misc.Logging
 class CoverageMaterialization(@transient sc: SparkContext,
                               files: List[String],
                               sd: SequenceDictionary,
-                              prefetchSize: Option[Int] = None)
+                              prefetchSize: Option[Long] = None)
     extends LazyMaterialization[Coverage]("CoverageRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
@@ -76,7 +76,7 @@ class CoverageMaterialization(@transient sc: SparkContext,
    * @return JSONified data map
    */
   def getCoverage(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
-    val data: RDD[(String, Coverage)] = get(region)
+    val data: RDD[(String, Coverage)] = get(Some(region))
 
     val covCounts: RDD[(String, PositionCount)] =
       if (binning > 1) {

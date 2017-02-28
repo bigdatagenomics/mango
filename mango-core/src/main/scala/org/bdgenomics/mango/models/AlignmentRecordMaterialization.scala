@@ -59,7 +59,7 @@ object AlignmentTimers extends Metrics {
 class AlignmentRecordMaterialization(@transient sc: SparkContext,
                                      files: List[String],
                                      sd: SequenceDictionary,
-                                     prefetchSize: Option[Int] = None)
+                                     prefetchSize: Option[Long] = None)
     extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
@@ -98,7 +98,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
 
     AlignmentTimers.getCoverageData.time {
       val covCounts: RDD[(String, PositionCount)] =
-        get(region)
+        get(Some(region))
           .flatMap(r => {
             val t: List[Long] = List.range(r._2.getStart, r._2.getEnd)
             t.map(n => ((ReferenceRegion(r._2.getContigName, n, n + 1), r._1), 1))

@@ -57,10 +57,10 @@ class LazyMaterializationSuite extends MangoFunSuite {
   sparkTest("Should check and clear memory") {
     val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
     lazyDummy.setMemoryFraction(0.0000001) // this is a very low test value
-    lazyDummy.get(ReferenceRegion("chrM", 0, 10L)).count
+    lazyDummy.get(Some(ReferenceRegion("chrM", 0, 10L))).count
     assert(lazyDummy.bookkeep.queue.contains("chrM"))
 
-    lazyDummy.get(ReferenceRegion("20", 0, 10L)).count
+    lazyDummy.get(Some(ReferenceRegion("20", 0, 10L))).count
 
     // these calls should have removed chrM from cache
     assert(!lazyDummy.bookkeep.queue.contains("chrM"))
@@ -76,7 +76,7 @@ class LazyMaterializationSuite extends MangoFunSuite {
  */
 class LazyDummy(@transient sc: SparkContext,
                 files: List[String],
-                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD", sc, files, sd, Some(100)) with Serializable {
+                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD", sc, files, sd, Some(100L)) with Serializable {
   @transient implicit val formats = net.liftweb.json.DefaultFormats
 
   def getReferenceRegion = (r: ReferenceRegion) => r

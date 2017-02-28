@@ -25,8 +25,6 @@ import org.bdgenomics.adam.rdd.GenomicRegionPartitioner
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.interval.rdd.IntervalRDD
 import org.bdgenomics.utils.misc.Logging
-
-import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 /**
@@ -39,9 +37,9 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
                                                 @transient sc: SparkContext,
                                                 files: List[String],
                                                 sd: SequenceDictionary,
-                                                prefetch: Option[Int] = None) extends Serializable with Logging {
+                                                prefetch: Option[Long] = None) extends Serializable with Logging {
 
-  val prefetchSize = prefetch.getOrElse(10000)
+  val prefetchSize = prefetch.getOrElse(sd.records.map(_.length).max)
 
   val bookkeep = new Bookkeep(prefetchSize)
   var memoryFraction = 0.85 // default caching fraction
@@ -99,22 +97,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
    * @param region: ReferenceRegion to fetch
    * @return Map of sampleIds and corresponding JSON
    */
-  def getJson(region: ReferenceRegion): Map[String, String] = {
-    val seqRecord = sd(region.referenceName)
-    seqRecord match {
-      case Some(_) => {
-        val regionsOpt = bookkeep.getMissingRegions(region, files)
-        if (regionsOpt.isDefined) {
-          for (r <- regionsOpt.get) {
-            put(r)
-          }
-        }
-        stringify(intRDD.filterByInterval(region).toRDD.map(_._2))
-      } case None => {
-        throw new Exception("Not found in dictionary")
-      }
-    }
-  }
+  def getJson(region: ReferenceRegion): Map[String, String] = stringify(get(Some(region)))
 
   /**
    * Bins region by binning size
@@ -149,33 +132,40 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
    * Filters all alignment data already loaded into the corresponding RDD that overlap a region.
    * If data has yet been loaded, loads data within this region.
    *
-   * @param region: ReferenceRegion to fetch
+   * @param regionOpt: ReferenceRegion to fetch
    * @return Map of sampleIds and corresponding JSON
    */
-  def get(region: ReferenceRegion): RDD[(String, T)] = {
-    val seqRecord = sd(region.referenceName)
-    seqRecord match {
+  def get(regionOpt: Option[ReferenceRegion] = None): RDD[(String, T)] = {
+    regionOpt match {
       case Some(_) => {
-        val regionsOpt = bookkeep.getMissingRegions(region, files)
-        if (regionsOpt.isDefined) {
-          for (r <- regionsOpt.get) {
-            put(r)
+        val region = regionOpt.get
+        val seqRecord = sd(region.referenceName)
+        seqRecord match {
+          case Some(_) => {
+            val regions = bookkeep.getMissingRegions(region, files)
+            for (r <- regions) {
+              put(r)
+            }
+            intRDD.filterByInterval(region).toRDD.map(_._2)
+          }
+          case None => {
+            throw new Exception(s"${region} not found in dictionary")
           }
         }
-        intRDD.filterByInterval(region).toRDD.map(_._2)
-      } case None => {
-        throw new Exception(s"${region} not found in dictionary")
+      }
+      case None => {
+        val data = loadAllFiles()
+
+        // tag entire sequence dictionary
+        bookkeep.rememberValues(sd, files)
+
+        // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
+        intRDD = IntervalRDD(data.partitionBy(new HashPartitioner(sc.defaultParallelism)))
+        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        intRDD.setName(name)
+        intRDD.toRDD.map(_._2)
       }
     }
-  }
-
-  def getAll(): RDD[T] = {
-    val hasChrPrefix = sd.records.head.name.startsWith("chr")
-    files.map(fp => load(fp, None)).reduce(_ union _)
-      .map(r => {
-        val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r), hasChrPrefix)
-        setContigName(r, region.referenceName)
-      })
   }
 
   /**
@@ -190,18 +180,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
     val seqRecord = sd(region.referenceName)
     if (seqRecord.isDefined) {
 
-      // do we need to modify the chromosome prefix?
-      val hasChrPrefix = seqRecord.get.name.startsWith("chr")
-
-      val data =
-        // get data for all samples
-        files.map(fp => {
-          val k = LazyMaterialization.filterKeyFromFile(fp)
-          load(fp, Some(region)).map(v => (k, v))
-        }).reduce(_ union _).map(r => {
-          val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
-          (region, (r._1, setContigName(r._2, region.referenceName)))
-        })
+      val data = loadAllFiles(Some(region))
 
       // tag regions as found, even if there is no data
       bookkeep.rememberValues(region, files)
@@ -219,6 +198,36 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
       }
       intRDD.setName(name)
     }
+  }
+
+  /**
+   * Loads data from all files in materialization structure.
+   *
+   * @note: Modifies chromosome prefix depending on any discrepancies between the region requested and the
+   * sequence dictionary.
+   *
+   * @param regionOpt Optional region to fetch. If none, fetches all data
+   * @return RDD of data. Primary index is ReferenceRegion and secondary index is filename.
+   */
+  private def loadAllFiles(regionOpt: Option[ReferenceRegion] = None): RDD[(ReferenceRegion, (String, T))] = {
+    // do we need to modify the chromosome prefix?
+    val hasChrPrefix =
+      if (regionOpt.isDefined) {
+        val seqRecord = sd(regionOpt.get.referenceName)
+        seqRecord.get.name.startsWith("chr")
+      } else {
+        // if no region, grab first referenceName available
+        sd.records.head.name.startsWith("chr")
+      }
+
+    // get data for all files
+    files.map(fp => {
+      val k = LazyMaterialization.filterKeyFromFile(fp)
+      load(fp, regionOpt).map(v => (k, v))
+    }).reduce(_ union _).map(r => {
+      val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
+      (region, (r._1, setContigName(r._2, region.referenceName)))
+    })
   }
 
   /**

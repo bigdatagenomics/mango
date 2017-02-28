@@ -555,7 +555,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     // run discovery mode if it is specified in the startup script
     if (args.discoveryMode) {
       VizReads.prefetchedRegions = discoverFrequencies()
-      preprocess(VizReads.prefetchedRegions)
     }
 
     // check whether genePath was supplied
@@ -646,21 +645,28 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
       // get feature frequency
       if (VizReads.featuresExist) {
-        val featureRegions = VizReads.featureData.get.getAll().map(ReferenceRegion.unstranded(_))
+        val featureRegions = VizReads.featureData.get.get().map(r => ReferenceRegion.unstranded(r._2))
         regions = regions ++ discovery.getFrequencies(featureRegions)
       }
 
       // get variant frequency
       if (VizReads.variantsExist) {
-        val variantRegions = VizReads.variantContextData.get.getAll().map(r => ReferenceRegion(r.variant))
+        val variantRegions = VizReads.variantContextData.get.get().map(r => ReferenceRegion(r._2.variant))
         regions = regions ++ discovery.getFrequencies(variantRegions)
       }
 
       // get coverage frequency
       // Note: calculating coverage frequency is an expensive operation. Only perform if sc is not local.
       if (VizReads.coveragesExist && !sc.isLocal) {
-        val coverageRegions = VizReads.coverageData.get.getAll().map(ReferenceRegion(_))
+        val coverageRegions = VizReads.coverageData.get.get().map(r => ReferenceRegion(r._2))
         regions = regions ++ discovery.getFrequencies(coverageRegions)
+      }
+
+      // get coverage frequency
+      // Note: calculating coverage frequency is an expensive operation. Only perform if sc is not local.
+      if (VizReads.readsExist && !sc.isLocal) {
+        // materialize alignments
+        VizReads.readsData.get.get().count
       }
 
       // group all regions together and reduce down for all data types
@@ -670,29 +676,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
       regions.map(r => (r._1, r._2 / max))
         .filter(_._2 > 0.0)
-    }
-
-    /**
-     * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
-     *
-     * @param regions Regions to be preprocessed
-     */
-    def preprocess(regions: List[(ReferenceRegion, Double)]) = {
-      // select two of the highest occupied regions to load
-      // The number of selected regions is low to reduce unnecessary loading while
-      // jump starting Thread setup for Spark on the specific data files
-      val selectedRegions = regions.sortBy(_._2).takeRight(2).map(_._1)
-
-      for (region <- selectedRegions) {
-        if (VizReads.featureData.isDefined)
-          VizReads.featureData.get.get(region)
-        if (VizReads.readsData.isDefined)
-          VizReads.readsData.get.get(region)
-        if (VizReads.coverageData.isDefined)
-          VizReads.coverageData.get.get(region)
-        if (VizReads.variantContextData.isDefined)
-          VizReads.variantContextData.get.get(region)
-      }
     }
 
     /**
