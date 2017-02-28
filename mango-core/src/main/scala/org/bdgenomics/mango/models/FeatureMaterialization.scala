@@ -35,11 +35,9 @@ import java.io.{ StringWriter, PrintWriter }
 class FeatureMaterialization(@transient sc: SparkContext,
                              files: List[String],
                              sd: SequenceDictionary,
-                             prefetchSize: Option[Int] = None)
-    extends LazyMaterialization[Feature]("FeatureRDD", sc, files, sd, prefetchSize)
+                             prefetchSize: Option[Long] = None)
+    extends LazyMaterialization[Feature, BedRowJson](FeatureMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
-
-  @transient implicit val formats = net.liftweb.json.DefaultFormats
 
   /**
    * Extracts ReferenceRegion from Feature
@@ -62,16 +60,15 @@ class FeatureMaterialization(@transient sc: SparkContext,
     f.setContigName(contig)
     f
   }
-
   /**
    * Strinifies tuples of (sampleId, feature) to json
    *
    * @param data RDD (sampleId, Feature)
    * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def stringify(data: RDD[(String, Feature)]): Map[String, String] = {
+  def toJson(data: RDD[(String, Feature)]): Map[String, Array[BedRowJson]] = {
 
-    val flattened: Map[String, Array[BedRowJson]] = data
+    data
       .collect
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))
@@ -85,8 +82,6 @@ class FeatureMaterialization(@transient sc: SparkContext,
             f.getContigName, f.getStart, f.getEnd,
             score)
         }))
-
-    flattened.mapValues(r => write(r))
   }
 
   /**
@@ -96,8 +91,8 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * @param binning Tells what granularity of coverage to return. Used for large regions
    * @return JSONified data map;
    */
-  def getJson(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
-    val data = get(region)
+  def getJson(region: ReferenceRegion, binning: Int = 1): Map[String, Array[BedRowJson]] = {
+    val data = get(Some(region))
 
     val binnedData =
       if (binning > 1) {
@@ -114,11 +109,14 @@ class FeatureMaterialization(@transient sc: SparkContext,
             (r._1._1, binned)
           })
       } else data
-    stringify(binnedData)
+    toJson(binnedData)
   }
+
 }
 
 object FeatureMaterialization {
+
+  val name = "Feature"
 
   /**
    * Loads feature data from bam, sam and ADAM file formats

@@ -43,7 +43,14 @@ class CoverageMaterializationSuite extends MangoFunSuite {
   sparkTest("return coverage from CoverageRecordMaterialization") {
     val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 20L)
-    val freq = data.getCoverage(region).get(key).get
+    val coverage = data.getCoverage(region).get(key).get
+    assert(coverage.length == region.length())
+  }
+
+  sparkTest("can parse coverage json") {
+    val data = CoverageMaterialization(sc, files, dict)
+    val region = new ReferenceRegion("chrM", 0L, 20L)
+    val freq = data.stringify(data.getCoverage(region).get(key).get)
     val coverage = parse(freq).extract[Array[PositionCount]]
     assert(coverage.length == region.length())
   }
@@ -52,16 +59,14 @@ class CoverageMaterializationSuite extends MangoFunSuite {
     val binning = 10
     val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 200L)
-    val freq = data.getCoverage(region, binning).get(key).get
-    val coverage = parse(freq).extract[Array[PositionCount]]
+    val coverage = data.getCoverage(region, binning).get(key).get
     assert(coverage.length == region.length() / binning)
   }
 
   sparkTest("return coverage overlapping multiple materialized nodes") {
     val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 90L, 110L)
-    val freq = data.getCoverage(region).get(key).get
-    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
+    val coverage = data.getCoverage(region).get(key).get
     assert(coverage.length == region.length())
   }
 
@@ -70,8 +75,7 @@ class CoverageMaterializationSuite extends MangoFunSuite {
 
     val data = CoverageMaterialization(sc, files, dict)
     val region = new ReferenceRegion("M", 90L, 110L)
-    val freq = data.getCoverage(region).get(key).get
-    val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
+    val coverage = data.getCoverage(region).get(key).get
     assert(coverage.length == region.length())
   }
 

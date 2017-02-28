@@ -33,11 +33,14 @@ import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
+import org.bdgenomics.utils.instrumentation.Metrics
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.JavaConversions._
-import org.bdgenomics.utils.instrumentation.Metrics
+import scala.reflect._
+
+import scala.reflect.ClassTag
 
 // metric variables
 object AlignmentTimers extends Metrics {
@@ -59,11 +62,9 @@ object AlignmentTimers extends Metrics {
 class AlignmentRecordMaterialization(@transient sc: SparkContext,
                                      files: List[String],
                                      sd: SequenceDictionary,
-                                     prefetchSize: Option[Int] = None)
-    extends LazyMaterialization[AlignmentRecord]("AlignmentRecordRDD", sc, files, sd, prefetchSize)
+                                     prefetchSize: Option[Long] = None)
+    extends LazyMaterialization[AlignmentRecord, GAReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
-
-  @transient implicit val formats = net.liftweb.json.DefaultFormats
 
   def load = (file: String, region: Option[ReferenceRegion]) => AlignmentRecordMaterialization.load(sc, file, region).rdd
 
@@ -98,17 +99,26 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
 
     AlignmentTimers.getCoverageData.time {
       val covCounts: RDD[(String, PositionCount)] =
-        get(region)
+        get(Some(region))
           .flatMap(r => {
             val t: List[Long] = List.range(r._2.getStart, r._2.getEnd)
             t.map(n => ((ReferenceRegion(r._2.getContigName, n, n + 1), r._1), 1))
               .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
           }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
-          .map(r => (r._1._2, PositionCount(r._1._1.start, r._1._1.start + 1, r._2)))
+          .map(r => (r._1._2, PositionCount(r._1._1.referenceName, r._1._1.start, r._1._1.start + 1, r._2)))
 
       covCounts.collect.groupBy(_._1) // group by sample Id
         .map(r => (r._1, write(r._2.map(_._2))))
     }
+  }
+
+  def toCoverage(arr: Array[GAReadAlignment], region: ReferenceRegion): Array[PositionCount] = {
+    arr.flatMap(r => {
+      val t: List[Long] = List.range(r.getAlignment.getPosition.getPosition, r.getAlignment.getPosition.getPosition + r.getAlignedSequence.length)
+      t.map(n => (ReferenceRegion(r.getAlignment.getPosition.getReferenceName, n, n + 1), 1))
+        .filter(_._1.overlaps(region)) // filter out read fragments not overlapping region
+    }).groupBy(_._1).map(r => (r._1, r._2.map(_._2).sum)) // reduce coverage by combining adjacent frequenct
+      .map(r => PositionCount(r._1.referenceName, r._1.start, r._1.end, r._2)).toArray
   }
 
   /**
@@ -116,7 +126,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
    * @param data RDD of (id, AlignmentRecord) tuples
    * @return JSONified data
    */
-  def stringify(data: RDD[(String, AlignmentRecord)]): Map[String, String] = {
+  def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
     val flattened: Map[String, Array[AlignmentRecord]] =
       AlignmentTimers.getAlignmentData.time {
         data
@@ -126,22 +136,27 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
           .map(r => (r._1, r._2.map(_._2)))
       }
 
-    AlignmentTimers.convertToGaReads.time {
+    flattened.mapValues(l => l.map(r => GA4GHConverter.toGAReadAlignment(r)))
+  }
 
-      val gaReads: Map[String, List[GAReadAlignment]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGAReadAlignment(r)).toList)
+  /**
+   * Formats raw data from KLayeredTile to JSON. This is requied by KTiles
+   * @param data RDD of (id, AlignmentRecord) tuples
+   * @return JSONified data
+   */
+  override def stringify(data: Array[GAReadAlignment]): String = {
+    GASearchReadsResponse.newBuilder()
+      .setAlignments(data.toList)
+      .build().toString
 
-      gaReads.mapValues(v => {
-        GASearchReadsResponse.newBuilder()
-          .setAlignments(v)
-          .build().toString
-      })
-    }
   }
 }
 
 object AlignmentRecordMaterialization extends Logging {
 
-  def apply(sc: SparkContext, files: List[String], sd: SequenceDictionary): AlignmentRecordMaterialization = {
+  val name = "AlignmentRecord"
+
+  def apply(sc: SparkContext, files: List[String], sd: SequenceDictionary, prefetchSize: Option[Int] = None): AlignmentRecordMaterialization = {
     new AlignmentRecordMaterialization(sc, files, sd)
   }
 

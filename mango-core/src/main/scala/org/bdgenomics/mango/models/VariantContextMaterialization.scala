@@ -38,11 +38,10 @@ import org.bdgenomics.mango.layout.GenotypeJson
 class VariantContextMaterialization(@transient sc: SparkContext,
                                     files: List[String],
                                     sd: SequenceDictionary,
-                                    prefetchSize: Option[Int] = None)
-    extends LazyMaterialization[GenotypeJson]("VariantContextRDD", sc, files, sd, prefetchSize)
+                                    prefetchSize: Option[Long] = None)
+    extends LazyMaterialization[GenotypeJson, GenotypeJson](VariantContextMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable {
 
-  @transient implicit val formats = net.liftweb.json.DefaultFormats
   // placeholder used for ref/alt positions to display in browser
   val variantPlaceholder = "N"
 
@@ -78,14 +77,16 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    * @return Map of (key, json) for the ReferenceRegion specified
    * N
    */
-  def stringify(data: RDD[(String, GenotypeJson)]): Map[String, String] = {
-
-    val flattened: Map[String, Array[String]] = data
-      .collect
-      .groupBy(_._1).map(r => (r._1, r._2.map(_._2.toString())))
+  def toJson(data: RDD[(String, GenotypeJson)]): Map[String, Array[GenotypeJson]] = {
+    data.collect
+      .groupBy(_._1).map(r => (r._1, r._2.map(_._2))) //.map(r => (r._1, r._2.map(_._2.toString())))
 
     // write variants to json
-    flattened.mapValues(write(_))
+    //    flattened.mapValues(write(_))
+  }
+
+  override def stringify(data: Array[GenotypeJson]): String = {
+    write(data.map(_.toString))
   }
 
   /**
@@ -97,8 +98,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    */
   def getJson(region: ReferenceRegion,
               showGenotypes: Boolean,
-              binning: Int = 1): Map[String, String] = {
-    val data: RDD[(String, GenotypeJson)] = get(region)
+              binning: Int = 1): Map[String, Array[GenotypeJson]] = {
+    val data: RDD[(String, GenotypeJson)] = get(Some(region))
 
     val binnedData: RDD[(String, GenotypeJson)] =
       if (binning <= 1) {
@@ -119,7 +120,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
             (r._1._1, GenotypeJson(binned))
           })
       }
-    stringify(binnedData)
+    toJson(binnedData)
   }
 
   /**
@@ -137,6 +138,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
  * formats are vcf and adam.
  */
 object VariantContextMaterialization {
+
+  val name = "VariantContext"
 
   /**
    * Loads variant data from adam and vcf files into a VariantContextRDD

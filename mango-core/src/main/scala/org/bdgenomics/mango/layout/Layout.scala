@@ -120,5 +120,5 @@ case class BedRowJson(id: String, featureType: String, contig: String, start: Lo
  * @param end Base pair end chromosome
  * @param count Coverage at the specified base pair
  */
-case class PositionCount(start: Long, end: Long, count: Int)
+case class PositionCount(contig: String, start: Long, end: Long, count: Int)
 

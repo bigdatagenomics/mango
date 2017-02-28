@@ -20,7 +20,7 @@ package org.bdgenomics.mango.util
 import java.nio.file.Files
 
 import com.google.common.io.Resources
-import org.bdgenomics.mango.cli.{ VizReads, VizReadsArgs }
+import org.bdgenomics.mango.cli.{ ServerArgs, MangoServer }
 import org.bdgenomics.utils.misc.SparkFunSuite
 
 import scala.io.Source
@@ -35,10 +35,10 @@ trait MangoFunSuite extends SparkFunSuite {
 
   def resourcePath(path: String) = ClassLoader.getSystemClassLoader.getResource(path).getFile
 
-  def runVizReads(args: VizReadsArgs): VizReads = {
-    val vizReads = new VizReads(args)
-    vizReads.run(sc)
-    vizReads
+  def runServer(args: ServerArgs): MangoServer = {
+    val server = new MangoServer(args)
+    server.run(sc)
+    server
   }
 
 }
