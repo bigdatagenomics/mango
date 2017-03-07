@@ -50,7 +50,7 @@
         <configuration>
           <programs>
             <program>
-              <mainClass>org.bdgenomics.mango.cli.VizReads</mainClass>
+              <mainClass>org.bdgenomics.mango.cli.MangoServletWrapper</mainClass>
               <id>mango</id>
             </program>
           </programs>

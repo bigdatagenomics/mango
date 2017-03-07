@@ -27,13 +27,14 @@ import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, SequenceDictionar
 import org.bdgenomics.adam.projections.{ Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.feature.CoverageRDD
+import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
 
 /**
  *
- * @param s SparkContext
- * @param dict Sequence Dictionay calculated from reference
+ * @param sc SparkContext
+ * @param sd Sequence Dictionay calculated from reference
  * extends LazyMaterialization and KTiles
  * @see LazyMaterialization
  * @see KTiles
@@ -45,9 +46,7 @@ class CoverageMaterialization(@transient sc: SparkContext,
     extends LazyMaterialization[Coverage]("CoverageRDD", sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
-  @transient implicit val formats = net.liftweb.json.DefaultFormats
-
-  def load = (file: String, region: Option[ReferenceRegion]) => CoverageMaterialization.load(sc, file, region).rdd
+  def load = (file: String, regions: Iterable[ReferenceRegion]) => CoverageMaterialization.load(sc, file, regions).rdd
 
   /**
    * Extracts ReferenceRegion from CoverageRecord
@@ -124,11 +123,11 @@ object CoverageMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): CoverageRDD = {
-    if (fp.endsWith(".adam")) loadAdam(sc, fp, region)
+  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): CoverageRDD = {
+    if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
-        FeatureMaterialization.loadData(sc, fp, region).toCoverage
+        FeatureMaterialization.loadData(sc, fp, regions).toCoverage
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -143,18 +142,14 @@ object CoverageMaterialization {
    *
    * @param sc SparkContext
    * @param fp filepath to load from
-   * @param region Region to load
+   * @param regions Iterable of  ReferenceRegions to load
    * @return CoverageRDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): CoverageRDD = {
-    val pred: Option[FilterPredicate] =
-      region match {
-        case Some(_) =>
-          val contigs = LazyMaterialization.getContigPredicate(region.get)
-          Some((LongColumn("end") <= region.get.end) && (LongColumn("start") >= region.get.start) &&
-            (BinaryColumn("contigName") === contigs._1.referenceName || BinaryColumn("contigName") === contigs._2.referenceName))
-        case None => None
-      }
+  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): CoverageRDD = {
+    val prefixRegions: Iterable[ReferenceRegion] = regions.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+    val pred = Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
     sc.loadParquetCoverage(fp, predicate = pred).flatten()
   }
+
+
 }

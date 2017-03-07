@@ -49,7 +49,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
    */
   def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
 
-  def load = (file: String, region: Option[ReferenceRegion]) => FeatureMaterialization.load(sc, region, file).rdd
+  def load = (file: String, regions: Iterable[ReferenceRegion]) => FeatureMaterialization.load(sc, regions, file).rdd
 
   /**
    * Reset ReferenceName for Feature
@@ -124,15 +124,15 @@ object FeatureMaterialization {
    * Loads feature data from bam, sam and ADAM file formats
    *
    * @param sc SparkContext
-   * @param region Region to load
+   * @param regions Iterable of ReferenceRegion to load
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, region: Option[ReferenceRegion], fp: String): FeatureRDD = {
-    if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, region)
+  def load(sc: SparkContext, regions: Iterable[ReferenceRegion], fp: String): FeatureRDD = {
+    if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, regions)
     else {
       try {
-        FeatureMaterialization.loadData(sc, fp, region)
+        FeatureMaterialization.loadData(sc, fp, regions)
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -151,7 +151,7 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadData(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): FeatureRDD = {
+  def loadData(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureRDD = {
     region match {
       case Some(_) =>
         val contigs = LazyMaterialization.getContigPredicate(region.get)
