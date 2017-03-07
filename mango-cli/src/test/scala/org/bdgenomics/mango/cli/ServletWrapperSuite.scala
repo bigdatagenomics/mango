@@ -22,12 +22,12 @@ import org.bdgenomics.mango.util.MangoFunSuite
 
 import org.scalatra.test.scalatest.ScalatraSuite
 
-class ServerSuite extends MangoFunSuite with ScalatraSuite {
+class ServletWrapperSuite extends MangoFunSuite {
 
   test("formats dictionary ops") {
     val sd = new SequenceDictionary(Vector(SequenceRecord("chr2", 1000), SequenceRecord("chr1", 10000)))
 
-    val ops = MangoServer.formatDictionaryOpts(sd)
+    val ops = MangoServletWrapper.formatDictionaryOpts(sd)
     val ans = s"chr1:0-10000,chr2:0-1000"
     assert(ops == ans)
   }
@@ -37,14 +37,14 @@ class ServerSuite extends MangoFunSuite with ScalatraSuite {
     val region2 = (ReferenceRegion("chr2", 10, 12), 1.0)
     val regions = List(region1, region2)
 
-    val formatted = MangoServer.formatClickableRegions(regions)
+    val formatted = MangoServletWrapper.formatClickableRegions(regions)
     val ans = s"${region1._1.referenceName}:${region1._1.start}-${region1._1.end}-1.0,${region2._1.referenceName}:${region2._1.start}-${region2._1.end}-1.0"
     assert(formatted == ans)
   }
 
   test("expands region") {
     val region = ReferenceRegion("chr1", 15, 32)
-    val expanded = MangoServer.expand(region, minLength = 1000)
+    val expanded = MangoServletWrapper.expand(region, minLength = 1000)
     assert(expanded.referenceName == region.referenceName)
     assert(expanded.start == 0)
     assert(expanded.end == 1000)

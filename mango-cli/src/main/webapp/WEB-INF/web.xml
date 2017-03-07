@@ -2,7 +2,7 @@
 <web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
     <servlet>
         <servlet-name>mango</servlet-name>
-        <servlet-class>org.bdgenomics.mango.cli.MangoServer</servlet-class>
+        <servlet-class>org.bdgenomics.mango.cli.MangoServlet</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>mango</servlet-name>

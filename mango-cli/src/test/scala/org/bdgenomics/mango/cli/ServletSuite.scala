@@ -31,10 +31,10 @@ import org.ga4gh.{ GASearchReadsResponse, GAReadAlignment }
 import org.scalatra.{ NotFound, RequestEntityTooLarge, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
-class RequestSuite extends MangoFunSuite with ScalatraSuite {
+class ServletSuite extends MangoFunSuite with ScalatraSuite {
 
   implicit val formats = DefaultFormats
-  addServlet(classOf[MangoRequest], "/*")
+  addServlet(classOf[MangoServlet], "/*")
 
   val bamFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.bam").getFile
   val referenceFile = ClassLoader.getSystemClassLoader.getResource("mm10_chrM.fa").getFile
@@ -178,31 +178,31 @@ class RequestSuite extends MangoFunSuite with ScalatraSuite {
       assert(json.head.sampleIds.length == 2)
     }
   }
-  //
-  //  sparkTest("variants: region out of bounds error") {
-  //    get(s"/variants/${vcfKey}/chr1?start=0&end=100") {
-  //      assert(status == HttpError.outOfBounds.status.code)
-  //    }
-  //  }
-  //
-  //  sparkTest("variants: no content error") {
-  //    implicit val VizReads = runServer(args)
-  //    val region = ReferenceRegion("chrM", 10000, 12000)
-  //    get(s"/variants/${vcfKey}/${region.referenceName}?start=${region.start}&end=${region.end}") {
-  //      assert(status == HttpError.noContent(region).status.code)
-  //    }
-  //  }
-  //
-  //  sparkTest("does not return genotypes when binned") {
-  //    implicit val VizReads = runServer(args)
-  //    get(s"/variants/${vcfKey}/chrM?start=0&end=100&binning=100") {
-  //      assert(status == Ok("").status.code)
-  //      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
-  //        .sortBy(_.variant.getStart)
-  //      assert(json.length == 1)
-  //      assert(json.head.sampleIds.length == 0)
-  //    }
-  //  }
+
+  sparkTest("variants: region out of bounds error") {
+    get(s"/variants/${vcfKey}/chr1?start=0&end=100") {
+      assert(status == HttpError.outOfBounds.status.code)
+    }
+  }
+
+  sparkTest("variants: no content error") {
+    implicit val VizReads = runServer(args)
+    val region = ReferenceRegion("chrM", 10000, 12000)
+    get(s"/variants/${vcfKey}/${region.referenceName}?start=${region.start}&end=${region.end}") {
+      assert(status == HttpError.noContent(region).status.code)
+    }
+  }
+
+  sparkTest("does not return genotypes when binned") {
+    implicit val VizReads = runServer(args)
+    get(s"/variants/${vcfKey}/chrM?start=0&end=100&binning=100") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
+        .sortBy(_.variant.getStart)
+      assert(json.length == 1)
+      assert(json.head.sampleIds.length == 0)
+    }
+  }
 
   /************** Feature Tests ***************************/
 
@@ -264,5 +264,4 @@ class RequestSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == HttpError.outOfBounds.status.code)
     }
   }
-
 }

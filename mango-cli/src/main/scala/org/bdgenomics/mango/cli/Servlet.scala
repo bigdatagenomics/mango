@@ -19,11 +19,10 @@ package org.bdgenomics.mango.cli
 
 import net.liftweb.json.Serialization._
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.mango.cli.MangoServer._
+import org.bdgenomics.mango.cli.MangoServletWrapper._
 import org.bdgenomics.mango.core.util.{ VizUtils }
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models._
-import org.bdgenomics.mango.cli.util.ResolutionCache
 import org.bdgenomics.utils.misc.Logging
 import org.eclipse.jetty.server.Server
 import org.fusesource.scalate.TemplateEngine
@@ -75,7 +74,7 @@ object HttpError {
  * - /variants: returns variants and genotypes
  * - /features: returns features
  */
-class MangoRequest extends ScalatraServlet {
+class MangoServlet extends ScalatraServlet with Logging {
   implicit val formats = net.liftweb.json.DefaultFormats
 
   get("/?") {
@@ -83,7 +82,7 @@ class MangoRequest extends ScalatraServlet {
   }
 
   get("/quit") {
-    MangoRequest.quit(server)
+    MangoServlet.quit(server)
   }
 
   get("/overall") {
@@ -209,10 +208,14 @@ class MangoRequest extends ScalatraServlet {
 
               // fetch region and store in cache
               val data = materializer.getReads.get.getJson(expandedRegion)
+
               val x = cache.setReads(data.toMap, expandedRegion)
             }
             // region was already collected, grab from cache
+            val startTime = System.currentTimeMillis()
             results = cache.getReads(viewRegion, key)
+            val endTime = System.currentTimeMillis()
+            println("getting reads from cache took " + (endTime - startTime) + " milliseconds")
           }
           if (results.isDefined) {
             // filter elements by region
@@ -234,7 +237,7 @@ class MangoRequest extends ScalatraServlet {
         case e: Exception => 1
       }
     contentType = "json"
-    MangoRequest.getCoverage(viewRegion, key, binning)
+    MangoServlet.getCoverage(viewRegion, key, binning)
   }
 
   get("/reads/coverage/:key/:ref") {
@@ -262,7 +265,7 @@ class MangoRequest extends ScalatraServlet {
               case e: Exception => 1
             }
 
-          MangoRequest.getCoverage(viewRegion, key, binning)
+          MangoServlet.getCoverage(viewRegion, key, binning)
         } else {
           // no precomputed coverage. compute from reads
           val dictOpt = globalDict(viewRegion.referenceName)
@@ -375,7 +378,7 @@ class MangoRequest extends ScalatraServlet {
 /**
  * Helper functions Request Class
  */
-object MangoRequest extends Logging {
+object MangoServlet extends Logging {
 
   /**
    * Starts server once on startup
@@ -388,7 +391,6 @@ object MangoRequest extends Logging {
     server.start()
     println("View the visualization at: " + port)
     println("Quit at: /quit")
-    server.join()
     server
   }
 

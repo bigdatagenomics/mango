@@ -93,15 +93,13 @@ class ServerArgs extends Args4jBase with ParquetArgs {
   var discoveryMode: Boolean = false
 }
 
-case class Materializer(materializer: Seq[Any]) {
-
-  def getObject = materializer
+case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
 
   /**
    * Access functions for materializer
    */
   def getReads(): Option[AlignmentRecordMaterialization] = {
-    val x = materializer.flatMap(r =>
+    val x = objects.flatMap(r =>
       r match {
         case m: AlignmentRecordMaterialization => Some(m)
         case _                                 => None
@@ -111,7 +109,7 @@ case class Materializer(materializer: Seq[Any]) {
   }
 
   def getCoverage(): Option[CoverageMaterialization] = {
-    val x = materializer.flatMap(r =>
+    val x = objects.flatMap(r =>
       r match {
         case m: CoverageMaterialization => Some(m)
         case _                          => None
@@ -121,7 +119,7 @@ case class Materializer(materializer: Seq[Any]) {
   }
 
   def getVariantContext(): Option[VariantContextMaterialization] = {
-    val x = materializer.flatMap(r =>
+    val x = objects.flatMap(r =>
       r match {
         case m: VariantContextMaterialization => Some(m)
         case _                                => None
@@ -131,7 +129,7 @@ case class Materializer(materializer: Seq[Any]) {
   }
 
   def getFeatures(): Option[FeatureMaterialization] = {
-    val x = materializer.flatMap(r =>
+    val x = objects.flatMap(r =>
       r match {
         case m: FeatureMaterialization => Some(m)
         case _                         => None
@@ -155,7 +153,7 @@ case class Materializer(materializer: Seq[Any]) {
 /**
  * Contains caching, error and util function information for formatting and serving Json data
  */
-object MangoServer extends BDGCommandCompanion with Logging {
+object MangoServletWrapper extends BDGCommandCompanion with Logging {
 
   val commandName: String = "Mango"
   val commandDescription: String = "Genomic visualization for ADAM"
@@ -165,12 +163,12 @@ object MangoServer extends BDGCommandCompanion with Logging {
   var server: org.eclipse.jetty.server.Server = null
   var globalDict: SequenceDictionary = null
 
-  // Gene URL
-  var genes: Option[String] = None
-
   // Structures storing data types. All but reference is optional
   var annotationRDD: AnnotationMaterialization = null
   var materializer: Materializer = null
+
+  // Gene URL
+  var genes: Option[String] = None
 
   var showGenotypes: Boolean = false
 
@@ -186,10 +184,10 @@ object MangoServer extends BDGCommandCompanion with Logging {
   // regions to prefetch during discovery. sent to front
   // end for visual processing
   var prefetchedRegions: List[(ReferenceRegion, Double)] = List()
-  var cacheSize: Long = 0
+  var cacheSize: Long = 1000
 
   def apply(cmdLine: Array[String]): BDGCommand = {
-    new MangoServer(Args4j[ServerArgs](cmdLine))
+    new MangoServletWrapper(Args4j[ServerArgs](cmdLine))
   }
 
   /**
@@ -214,7 +212,7 @@ object MangoServer extends BDGCommandCompanion with Logging {
       s"-${BigDecimal(r._2).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble}").mkString(",")
   }
 
-  def expand(region: ReferenceRegion, minLength: Long = MangoServer.cacheSize): ReferenceRegion = {
+  def expand(region: ReferenceRegion, minLength: Long = MangoServletWrapper.cacheSize): ReferenceRegion = {
     require(minLength > 0, s"minimum length ${minLength} must be greater than 0")
     val start = region.start - (region.start % minLength)
     val end = Math.max(region.end, start + minLength)
@@ -225,55 +223,71 @@ object MangoServer extends BDGCommandCompanion with Logging {
 /**
  * Initializes all data types to be served to frontend. Optionally runs discovery mode.
  *
- * @param args VizReadsArgs
+ * @param args ServerArgs
  */
-class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[ServerArgs] with Logging {
-  val companion: BDGCommandCompanion = MangoServer
+class MangoServletWrapper(protected val args: ServerArgs) extends BDGSparkCommand[ServerArgs] with Logging {
+  val companion: BDGCommandCompanion = MangoServletWrapper
 
   override def run(sc: SparkContext): Unit = {
-    MangoServer.sc = sc
+    MangoServletWrapper.sc = sc
 
     // choose prefetch size
     val prefetch =
       if (args.testMode) 1000 // for testing purposes, do not overload memory
-      else if (sc.isLocal) 40000
+      else if (sc.isLocal) 20000
       else 100000
+
+    // set default cache size to be half of prefetch size
+    MangoServletWrapper.cacheSize = prefetch / 2
 
     // initialize required annotation dataset
     initAnnotations
 
     // check whether genePath was supplied
     if (args.genePath != null) {
-      MangoServer.genes = Some(args.genePath)
+      MangoServletWrapper.genes = Some(args.genePath)
     }
 
-    // start MangoServer
-    if (!args.testMode) MangoServer.server = MangoRequest.startServer(args.port)
+    // set materializer
+    MangoServletWrapper.materializer = Materializer(Seq(initAlignments, initCoverages, initVariantContext, initFeatures).flatten)
+
+    // FIGURE OUT CACHING SIZE
+    // get total size of files on disk
+
+    lazy val fileSizes = MangoServletWrapper.materializer.objects.map(r => r.getSizeInBytes).sum * 15
+    println(fileSizes)
+    lazy val bps = MangoServletWrapper.annotationRDD.getSequenceDictionary.records.map(_.length).sum
+    lazy val bpSize = fileSizes / bps
+    lazy val cacheRange = ((Runtime.getRuntime.freeMemory() * 0.15) / bpSize).toLong
+    // TODO
+    MangoServletWrapper.cacheSize = 10000
+    //    MangoServletWrapper.cacheSize = Math.max((cacheRange / 1000) * 1000, MangoServletWrapper.cacheSize)
+    //    println(MangoServletWrapper.cacheSize)
+
+    // run discovery mode if it is specified in the startup script
+    if (args.discoveryMode) {
+      MangoServletWrapper.prefetchedRegions = discoverFrequencies()
+    }
+
+    /************************* start MangoServletWrapper ***********************************/
+
+    if (!args.testMode) {
+      MangoServletWrapper.server = MangoServlet.startServer(args.port)
+
+      // note: this must be called last
+      MangoServletWrapper.server.join()
+    }
 
     /*
-   * Initialize required reference file
-   */
+    * Initialize required reference file
+    */
     def initAnnotations = {
       val referencePath = Option(args.referencePath).getOrElse({
         throw new FileNotFoundException("reference file not provided")
       })
 
-      MangoServer.annotationRDD = new AnnotationMaterialization(sc, referencePath)
-      MangoServer.globalDict = MangoServer.annotationRDD.getSequenceDictionary
-    }
-
-    // set materializer
-    MangoServer.materializer = Materializer(Seq(initAlignments, initCoverages, initVariantContext, initFeatures).flatten)
-
-    // run discovery mode if it is specified in the startup script
-    if (args.discoveryMode) {
-      discoverFrequencies() match {
-        case (a, b) =>
-          MangoServer.prefetchedRegions = a; MangoServer.cacheSize = b
-        case _ =>
-      }
-    } else {
-      MangoServer.cacheSize = 2 * prefetch
+      MangoServletWrapper.annotationRDD = new AnnotationMaterialization(sc, referencePath)
+      MangoServletWrapper.globalDict = MangoServletWrapper.annotationRDD.getSequenceDictionary
     }
 
     /*
@@ -285,8 +299,8 @@ class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[Server
 
         if (readsPaths.nonEmpty) {
           object readsWait
-          MangoServer.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
-          Some(AlignmentRecordMaterialization(sc, readsPaths, MangoServer.globalDict, Some(prefetch)))
+          MangoServletWrapper.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
+          Some(AlignmentRecordMaterialization(sc, readsPaths, MangoServletWrapper.globalDict, Some(prefetch)))
         } else None
       } else None
     }
@@ -300,8 +314,8 @@ class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[Server
 
         if (coveragePaths.nonEmpty) {
           object coverageWait
-          MangoServer.syncObject += (CoverageMaterialization.name -> coverageWait)
-          Some(new CoverageMaterialization(sc, coveragePaths, MangoServer.globalDict, Some(prefetch)))
+          MangoServletWrapper.syncObject += (CoverageMaterialization.name -> coverageWait)
+          Some(new CoverageMaterialization(sc, coveragePaths, MangoServletWrapper.globalDict, Some(prefetch)))
         } else None
       } else None
     }
@@ -311,15 +325,15 @@ class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[Server
      */
     def initVariantContext: Option[VariantContextMaterialization] = {
       // set flag for visualizing genotypes
-      MangoServer.showGenotypes = args.showGenotypes
+      MangoServletWrapper.showGenotypes = args.showGenotypes
 
       if (Option(args.variantsPaths).isDefined) {
         val variantsPaths = args.variantsPaths.split(",").toList
 
         if (variantsPaths.nonEmpty) {
           object variantsWait
-          MangoServer.syncObject += (VariantContextMaterialization.name -> variantsWait)
-          Some(new VariantContextMaterialization(sc, variantsPaths, MangoServer.globalDict, Some(prefetch)))
+          MangoServletWrapper.syncObject += (VariantContextMaterialization.name -> variantsWait)
+          Some(new VariantContextMaterialization(sc, variantsPaths, MangoServletWrapper.globalDict, Some(prefetch)))
         } else None
       } else None
     }
@@ -333,8 +347,8 @@ class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[Server
         val featurePaths = args.featurePaths.split(",").toList
         if (featurePaths.nonEmpty) {
           object featuresWait
-          MangoServer.syncObject += (FeatureMaterialization.name -> featuresWait)
-          Some(new FeatureMaterialization(sc, featurePaths, MangoServer.globalDict, Some(prefetch)))
+          MangoServletWrapper.syncObject += (FeatureMaterialization.name -> featuresWait)
+          Some(new FeatureMaterialization(sc, featurePaths, MangoServletWrapper.globalDict, Some(prefetch)))
         } else None
       } else None
     }
@@ -345,13 +359,13 @@ class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[Server
      *
      * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
      */
-    def discoverFrequencies(): (List[(ReferenceRegion, Double)], Long) = {
+    def discoverFrequencies(): List[(ReferenceRegion, Double)] = {
 
-      val discovery = Discovery(MangoServer.annotationRDD.getSequenceDictionary)
+      val discovery = Discovery(MangoServletWrapper.annotationRDD.getSequenceDictionary)
       var regions: List[(ReferenceRegion, Double)] = List()
 
       // parse all materialization structures to calculate region frequencies
-      MangoServer.materializer.getObject
+      MangoServletWrapper.materializer.objects
         .foreach(m => m match {
           case vcm: VariantContextMaterialization => {
             regions = regions ++ discovery.getFrequencies(vcm.get()
@@ -377,26 +391,27 @@ class MangoServer(protected val args: ServerArgs) extends BDGSparkCommand[Server
           }
         })
 
-      val cacheRange =
-        if (!sc.isLocal) {
-          // evaluate memory size
-          val bps = MangoServer.annotationRDD.getSequenceDictionary.records.map(_.length).sum
-          val mem = sc.getExecutorMemoryStatus
-          // get max and remaining memory
-          val temp = mem.map(_._2).reduce((e1, e2) => ((e1._1 + e2._1), (e1._2 + e2._2)))
-          val bpSize = (temp._1 - temp._2) / bps
-          // based on 0.15 driver allocation to cache, calculate the number of base pairs that can be stored
-          val cacheRange = ((sc.getConf.getSizeAsBytes("spark.driver.memory") * 0.15) / bpSize).toLong
-          (cacheRange * 1000) / 1000
-        } else 2 * prefetch
+      // if running in cluster mode, use discovery mode to calculate driver memory constraints for middle
+      // end cache
+      if (!sc.isLocal) {
+        // evaluate memory size
+        val bps = MangoServletWrapper.annotationRDD.getSequenceDictionary.records.map(_.length).sum
+        val mem = sc.getExecutorMemoryStatus
+        // get max and remaining memory
+        val temp = mem.map(_._2).reduce((e1, e2) => ((e1._1 + e2._1), (e1._2 + e2._2)))
+        val bpSize = (temp._1 - temp._2) / bps
+        // based on 0.15 driver allocation to cache, calculate the number of base pairs that can be stored
+        val cacheRange = ((Runtime.getRuntime.freeMemory() * 0.15) / bpSize).toLong
+        MangoServletWrapper.cacheSize = Math.max((cacheRange * 1000) / 1000, MangoServletWrapper.cacheSize)
+      }
 
       // group all regions together and reduce down for all data types
       regions = regions.groupBy(_._1).map(r => (r._1, r._2.map(a => a._2).sum)).toList
 
       // normalize and filter by regions with data
       val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
-      (regions.map(r => (r._1, r._2 / max))
-        .filter(_._2 > 0.0), cacheRange)
+      regions.map(r => (r._1, r._2 / max))
+        .filter(_._2 > 0.0)
     }
   }
 }

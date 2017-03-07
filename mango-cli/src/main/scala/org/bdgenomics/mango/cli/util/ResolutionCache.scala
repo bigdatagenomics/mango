@@ -27,10 +27,27 @@ import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
 case class GenomicCache() {
-  var cache: Map[String, Object] = Map.empty[String, Object]
 
-  private def get[T](name: String, region: ReferenceRegion, key: String, resolutionOpt: Option[Int] = None): Option[Array[T]] = {
-    val tCache = cache.get(name)
+  // seq of Resolution caches for all genomic datatypes
+  var cache: Seq[ResolutionCache[_]] = Seq.empty[ResolutionCache[_]]
+
+  /**
+   * Gets json from the resolution cache specified by type T
+   *
+   * @param region region to filter by
+   * @param key key that represents a file
+   * @param resolutionOpt Optional resolution. Currently used for variants and features
+   * @tparam T Genomic json type
+   * @return Optional array of json
+   */
+  private def get[T: TypeTag](region: ReferenceRegion, key: String, resolutionOpt: Option[Int] = None): Option[Array[T]] = {
+
+    // get ResolutionCache associated with type T
+    val tCache = cache.find(m => m match {
+      case r if (r.selfTypeTag.tpe =:= typeOf[T]) => true
+      case _                                      => false
+    })
+
     if (tCache.isDefined) {
       val d = tCache.get.asInstanceOf[ResolutionCache[T]]
 
@@ -41,7 +58,16 @@ case class GenomicCache() {
     } else None
   }
 
-  private def set[T: ClassTag](name: String, data: Map[String, Array[T]], region: ReferenceRegion, regionConverter: (T) => ReferenceRegion, resolution: Int = 1) = {
+  /**
+   * Sets data for type T in cache by creating a ResolutionCache[T] and inserting it into the cache object
+   *
+   * @param data Data to insert in cache. Map has filenames as keys
+   * @param region ReferenceRegion that data covers
+   * @param regionConverter function that converts object into ReferenceRegion
+   * @param resolution Resolution to fetch
+   * @tparam T Type to fetch cache
+   */
+  private def set[T: TypeTag: ClassTag](data: Map[String, Array[T]], region: ReferenceRegion, regionConverter: (T) => ReferenceRegion, resolution: Int = 1) = {
     // map data to regions
     val mappedData = data.mapValues(v => v.map(r => {
       val region = regionConverter(r)
@@ -49,43 +75,49 @@ case class GenomicCache() {
     }))
     // create ResolutionCache from mapped data
     val resCache = new ResolutionCache[T](mappedData, region, resolution)
-    cache += (name -> resCache)
+    cache = cache.filter(m => m match {
+      case r if (r.selfTypeTag.tpe =:= typeOf[T]) => false
+      case _                                      => true
+    }) :+ resCache
   }
 
-  def getKey(t: Any): String = {
-    t match {
-      case a: GAReadAlignment => AlignmentRecordMaterialization.name
-      case v: GenotypeJson    => VariantContextMaterialization.name
-      case f: BedRowJson      => FeatureMaterialization.name
-      case c: PositionCount   => CoverageMaterialization.name
-    }
-  }
+  /**
+   * Setters for specific genomic types
+   */
 
   def setReads(data: Map[String, Array[GAReadAlignment]], coveredRegion: ReferenceRegion) =
-    set[GAReadAlignment](AlignmentRecordMaterialization.name, data, coveredRegion, RegionConverters.readsConverter)
+    set[GAReadAlignment](data, coveredRegion, RegionConverters.readsConverter)
 
   def setVariants(data: Map[String, Array[GenotypeJson]], coveredRegion: ReferenceRegion, resolution: Int) =
-    set[GenotypeJson](VariantContextMaterialization.name, data, coveredRegion, RegionConverters.variantConverter, resolution)
+    set[GenotypeJson](data, coveredRegion, RegionConverters.variantConverter, resolution)
 
   def setFeatures(data: Map[String, Array[BedRowJson]], coveredRegion: ReferenceRegion, resolution: Int) =
-    set[BedRowJson](FeatureMaterialization.name, data, coveredRegion, RegionConverters.featureConverter, resolution: Int)
+    set[BedRowJson](data, coveredRegion, RegionConverters.featureConverter, resolution: Int)
 
   def setCoverage(data: Map[String, Array[PositionCount]], coveredRegion: ReferenceRegion, resolution: Int) =
-    set[PositionCount](CoverageMaterialization.name, data, coveredRegion, RegionConverters.coverageConverter, resolution)
+    set[PositionCount](data, coveredRegion, RegionConverters.coverageConverter, resolution)
+
+  /**
+   * Getters for specific genomic types
+   */
 
   def getReads(region: ReferenceRegion, key: String, resolutionOpt: Option[Int] = None): Option[Array[GAReadAlignment]] =
-    get[GAReadAlignment](AlignmentRecordMaterialization.name, region, key, resolutionOpt)
+    get[GAReadAlignment](region, key, resolutionOpt)
 
   def getVariants(region: ReferenceRegion, key: String, resolutionOpt: Option[Int] = None): Option[Array[GenotypeJson]] =
-    get[GenotypeJson](VariantContextMaterialization.name, region, key, resolutionOpt)
+    get[GenotypeJson](region, key, resolutionOpt)
 
   def getFeatures(region: ReferenceRegion, key: String, resolutionOpt: Option[Int] = None): Option[Array[BedRowJson]] =
-    get[BedRowJson](FeatureMaterialization.name, region, key, resolutionOpt)
+    get[BedRowJson](region, key, resolutionOpt)
 
   def getCoverage(region: ReferenceRegion, key: String, resolutionOpt: Option[Int] = None): Option[Array[PositionCount]] =
-    get[PositionCount](CoverageMaterialization.name, region, key, resolutionOpt)
+    get[PositionCount](region, key, resolutionOpt)
 }
 
+/**
+ * Object of Converters which take a genomic type and output the ReferenceRegion that object overlaps.
+ * Support for Alignments, Features, Coverage and Variants
+ */
 object RegionConverters {
 
   def readsConverter(r: GAReadAlignment): ReferenceRegion = {
@@ -112,8 +144,11 @@ object RegionConverters {
  * @param coveredRegion Region that cache covers
  * @tparam T data type stored in cache
  */
-case class ResolutionCache[T: ClassTag](cache: Map[Int, Map[String, IntervalArray[ReferenceRegion, T]]], coveredRegion: ReferenceRegion)
+case class ResolutionCache[T: TypeTag: ClassTag](cache: Map[Int, Map[String, IntervalArray[ReferenceRegion, T]]], coveredRegion: ReferenceRegion)
     extends Serializable with Logging {
+
+  // Used for type reflection in GenomicCache
+  val selfTypeTag = typeTag[T]
 
   def this(data: Map[String, Array[(ReferenceRegion, T)]], region: ReferenceRegion, resolution: Int) = {
     this(Map((resolution -> data.mapValues(r => IntervalArray(r, 200, true)))), region)
@@ -144,6 +179,12 @@ case class ResolutionCache[T: ClassTag](cache: Map[Int, Map[String, IntervalArra
     }
   }
 
+  /**
+   * Returns whether the cache has data for a given ReferenceRegion
+   *
+   * @param range ReferenceRegion
+   * @return Returns true if cache covers range, false otherwise
+   */
   def coversRange(range: ReferenceRegion): Boolean = coveredRegion.contains(range)
 
 }
