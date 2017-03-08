@@ -32,7 +32,7 @@ class BookkeepSuite extends FunSuite {
     bookkeep.rememberValues(region1, sampleId)
     val regions = bookkeep.getMissingRegions(ReferenceRegion("chr1", 0, 850), List(sampleId))
     assert(regions.length == 1)
-    assert(regions.head.end == 850)
+    assert(regions.head.end == 900)
 
   }
 
@@ -78,4 +78,14 @@ class BookkeepSuite extends FunSuite {
     val missing = bookkeep.getMissingRegions(ReferenceRegion("chrM", 0, 10000), samples)
     assert(missing.length == 0)
   }
+
+  test("get and put region where region equals chunk size") {
+    val newRegion = ReferenceRegion("chr1", 10000, 20000)
+    val bookkeep = new Bookkeep(10000)
+    bookkeep.rememberValues(newRegion, sampleId)
+
+    val regions = bookkeep.getMissingRegions(newRegion, List(sampleId))
+    assert(regions.length == 0)
+  }
+
 }

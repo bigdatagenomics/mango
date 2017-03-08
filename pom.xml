@@ -20,10 +20,10 @@
     <adam.version>0.21.1-SNAPSHOT</adam.version>
     <avro.version>1.8.0</avro.version>
     <bdg-formats.version>0.10.1</bdg-formats.version>
-    <bdg-utils.version>0.2.12-SNAPSHOT</bdg-utils.version>
+    <bdg-utils.version>0.2.14-SNAPSHOT</bdg-utils.version>
     <java.version>1.8</java.version>
     <jetty.version>9.2.17.v20160517</jetty.version>
-    <hadoop.version>2.6.0</hadoop.version>
+    <hadoop.version>2.7.3</hadoop.version>
     <hadoop-bam.version>7.6.0</hadoop-bam.version>
     <htsjdk.version>2.5.0</htsjdk.version>
     <parquet.version>1.8.1</parquet.version>
@@ -35,11 +35,13 @@
     <spark.version.prefix>_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
+    <play2.version>2.4.6</play2.version>
+    <play2.plugin.version>1.0.0-beta5</play2.plugin.version>
   </properties>
 
   <modules>
     <module>mango-core</module>
-    <module>mango-cli</module>
+    <module>mango-play</module>
   </modules>
 
   <licenses>
@@ -315,6 +317,23 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.3.1</version>
+          <executions>
+            <execution>
+              <id>mango-dist</id>
+              <phase>install</phase>
+              <goals>
+                <goal>exec</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <executable>${project.basedir}/../bin/mango-install.sh</executable>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -556,26 +575,6 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest_${scala.version.prefix}</artifactId>
         <version>2.2.6</version>
-      </dependency>
-      <dependency>
-        <groupId>org.scalatra</groupId>
-        <artifactId>scalatra_${scala.version.prefix}</artifactId>
-        <version>${scalatra.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-scalatest_${scala.version.prefix}</artifactId>
-        <version>${scalatra.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.scalatra</groupId>
-        <artifactId>scalatra-specs2_${scala.version.prefix}</artifactId>
-        <version>${scalatra.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.scalatra.scalate</groupId>
-        <artifactId>scalate-core_${scala.version.prefix}</artifactId>
-        <version>1.7.1</version>
       </dependency>
       <dependency>
         <groupId>org.xerial.snappy</groupId>

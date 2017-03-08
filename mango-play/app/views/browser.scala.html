@@ -1,0 +1,169 @@
+@(contig: String, start: Long, end: Long, genes: Option[String],
+    coverage: Option[List[String]],
+    reads: Option[List[(String, Option[String])]],
+    variants: Option[List[(String, String)]],
+    features: Option[List[String]],
+    isBrowser: Boolean = true)
+
+
+<html xmlns="http://www.w3.org/1999/html">
+    @head()
+    @navigation(isBrowser)
+    @sidebar()
+
+    <div id="main">
+        <div id="pileup"></div>
+    </div>
+
+
+    <script>
+        <!--Define Variables for Pileup.js-->
+        var contig = "@contig";
+        var start = @start;
+        var end = @end;
+
+        var request = "/sequenceDictionary"
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', request, true);
+        xhr.send();
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+
+                var dictionary = JSON.parse(xhr.response);
+
+                // add reference and genes
+                var tracks = [
+                    {
+                    viz: pileup.viz.genome(),
+                    isReference: true,
+                    data: pileup.formats.reference({
+                        url: '/reference',
+                        contigList: dictionary
+                    }),
+                    name: 'Reference'
+                    },
+                    {
+                    viz: pileup.viz.scale(),
+                    name: 'Scale'
+                    },
+                    {
+                    viz: pileup.viz.location(),
+                    name: 'Location'
+                    },
+                    @if(genes.isDefined){
+                        {
+                            viz: pileup.viz.genes(),
+                            data: pileup.formats.bigBed({
+                                url: '@genes.get'
+                            }),
+                            name: 'Genes'
+                        },
+                    }
+                ];
+
+                // generate and add variants, if defined
+                @if(variants.isDefined){
+                    @for(s <- variants.get){
+                        var data = pileup.formats.variants({
+                        url: '/variants/@s._1',
+                        samples: '@s._2'.split(",")
+                        })
+                        tracks.push({
+                            viz: pileup.viz.variants(),
+                            data: data,
+                            name: '@s._1'
+                        })
+                       @if(s._2.length > 0){
+                            tracks.push({
+                                viz: pileup.viz.genotypes(),
+                                data: data,
+                                name: ''
+                            })
+                       }
+                    }
+                }
+
+                // add coverage
+                @if(coverage.isDefined){
+                    @for(s <- coverage.get){
+                        tracks.push({
+                            viz: pileup.viz.coverage(),
+                            data: pileup.formats.coverage({
+                            url: '/coverage/@s'
+                        }),
+                        name: '@s'
+                        });
+                    }
+                }
+
+                // add features
+                @if(features.isDefined){
+                    @for(s <- features.get){
+                        tracks.push({
+                            viz: pileup.viz.features(),
+                            data: pileup.formats.features({
+                            url: '/features/@s'
+                        }),
+                        name: '@s'
+                        });
+                    }
+                }
+
+                // add reads
+                @if(reads.isDefined) {
+                    @for(s <- reads.get) {
+                        @s._2 match {
+                            case Some(_) => {
+                                tracks.push({
+                                    viz: pileup.viz.coverage(),
+                                    data: pileup.formats.coverage({
+                                        url: '/coverage/@s._2.get'
+                                    }),
+                                    name: '@s._2.get'
+                                });
+                            }
+                            case None => {
+                                tracks.push({
+                                    viz: pileup.viz.pileupcoverage(),
+                                    isReference: false,
+                                    data: pileup.formats.ga4gh({
+                                        endpoint: '/reads',
+                                        readGroupId: '@s._1',
+                                        killChr: false
+                                    }),
+                                    name: 'Coverage'
+                                });
+                            }
+                        }
+
+                        tracks.push({
+                            viz: pileup.viz.pileup(),
+                            isReference: false,
+                            data: pileup.formats.ga4gh({
+                            endpoint: '/reads',
+                            readGroupId: '@s._1',
+                            killChr: false
+                            }),
+                            name: 'Alignment'
+                        });
+                    }
+                }
+
+
+
+
+                var browser = pileup.create(document.getElementById('pileup'), {
+                    // go to one of the chromosomes in sequence dictionary
+                    range: {contig: contig, start: start, stop: end},
+                    tracks: tracks
+                });
+
+                <!-- Render sidebar for navigation -->
+                refVis(dictionary, browser, fromOverall=false);
+
+            }
+        };
+
+    </script>
+</html>

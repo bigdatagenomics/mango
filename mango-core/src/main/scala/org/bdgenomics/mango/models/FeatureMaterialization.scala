@@ -17,9 +17,6 @@
  */
 package org.bdgenomics.mango.models
 
-import net.liftweb.json.Serialization.write
-import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
@@ -27,7 +24,7 @@ import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.mango.core.util.VizUtils
+import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
 import java.io.{ StringWriter, PrintWriter }
@@ -36,10 +33,8 @@ class FeatureMaterialization(@transient sc: SparkContext,
                              files: List[String],
                              sd: SequenceDictionary,
                              prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[Feature]("FeatureRDD", sc, files, sd, prefetchSize)
+    extends LazyMaterialization[Feature, BedRowJson](FeatureMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
-
-  @transient implicit val formats = net.liftweb.json.DefaultFormats
 
   /**
    * Extracts ReferenceRegion from Feature
@@ -49,7 +44,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
    */
   def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
 
-  def load = (file: String, regions: Iterable[ReferenceRegion]) => FeatureMaterialization.load(sc, regions, file).rdd
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => FeatureMaterialization.load(sc, file, regions).rdd
 
   /**
    * Reset ReferenceName for Feature
@@ -62,16 +57,15 @@ class FeatureMaterialization(@transient sc: SparkContext,
     f.setContigName(contig)
     f
   }
-
   /**
    * Strinifies tuples of (sampleId, feature) to json
    *
    * @param data RDD (sampleId, Feature)
    * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def stringify(data: RDD[(String, Feature)]): Map[String, String] = {
+  def toJson(data: RDD[(String, Feature)]): Map[String, Array[BedRowJson]] = {
 
-    val flattened: Map[String, Array[BedRowJson]] = data
+    data
       .collect
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))
@@ -85,8 +79,6 @@ class FeatureMaterialization(@transient sc: SparkContext,
             f.getContigName, f.getStart, f.getEnd,
             score)
         }))
-
-    flattened.mapValues(r => write(r))
   }
 
   /**
@@ -96,7 +88,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * @param binning Tells what granularity of coverage to return. Used for large regions
    * @return JSONified data map;
    */
-  def getJson(region: ReferenceRegion, binning: Int = 1): Map[String, String] = {
+  override def getJson(region: ReferenceRegion, verbose: Boolean = false, binning: Int = 1): Map[String, Array[BedRowJson]] = {
     val data = get(Some(region))
 
     val binnedData =
@@ -114,21 +106,24 @@ class FeatureMaterialization(@transient sc: SparkContext,
             (r._1._1, binned)
           })
       } else data
-    stringify(binnedData)
+    toJson(binnedData)
   }
+
 }
 
 object FeatureMaterialization {
+
+  val name = "Feature"
 
   /**
    * Loads feature data from bam, sam and ADAM file formats
    *
    * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegion to load
    * @param fp filepath to load from
+   * @param regions Iterable of ReferenceRegion to load
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, regions: Iterable[ReferenceRegion], fp: String): FeatureRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureRDD = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, regions)
     else {
       try {
@@ -147,20 +142,23 @@ object FeatureMaterialization {
    * Loads data from bam files (indexed or unindexed) from persistent storage
    *
    * @param sc SparkContext
-   * @param region Region to load
+   * @param regions Iterable of ReferenceRegions to load
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadData(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureRDD = {
-    region match {
-      case Some(_) =>
-        val contigs = LazyMaterialization.getContigPredicate(region.get)
-        val featureRdd = sc.loadFeatures(fp)
-        featureRdd.transform(rdd => rdd.rdd.filter(g =>
-          (g.getContigName == contigs._1.referenceName || g.getContigName == contigs._2.referenceName)
-            && g.getStart < region.get.end
-            && g.getEnd > region.get.start))
-      case None => sc.loadFeatures(fp)
+  def loadData(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureRDD = {
+    // if regions are specified, specifically load regions. Otherwise, load all data
+    if (regions.isDefined) {
+      val predicateRegions = regions.get
+        .flatMap(r => LazyMaterialization.getContigPredicate(r))
+        .toArray
+
+      sc.loadFeatures(fp)
+        .transform(rdd => rdd.rdd.filter(g =>
+          !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
+
+    } else {
+      sc.loadFeatures(fp)
     }
   }
 
@@ -168,23 +166,22 @@ object FeatureMaterialization {
    * Loads ADAM data using predicate pushdowns
    *
    * @param sc SparkContext
-   * @param region Region to load
+   * @param regions Iterable of ReferenceRegion to load
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): FeatureRDD = {
-    val pred: Option[FilterPredicate] =
-      region match {
-        case Some(_) =>
-          val contigs = LazyMaterialization.getContigPredicate(region.get)
-          Some((LongColumn("end") >= region.get.start) && (LongColumn("start") <= region.get.end) &&
-            (BinaryColumn("contigName") === contigs._1.referenceName) || BinaryColumn("contigName") === contigs._2.referenceName)
-        case None => None
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureRDD = {
+    val pred =
+      if (regions.isDefined) {
+        val predicateRegions: Iterable[ReferenceRegion] = regions.get
+          .flatMap(r => LazyMaterialization.getContigPredicate(r))
+        Some(ResourceUtils.formReferenceRegionPredicate(predicateRegions))
+      } else {
+        None
       }
 
     val proj = Projection(FeatureField.featureId, FeatureField.contigName, FeatureField.start, FeatureField.end,
       FeatureField.score, FeatureField.featureType)
     sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
   }
-
 }

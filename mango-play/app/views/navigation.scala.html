@@ -1,0 +1,24 @@
+@(isBrowser: Boolean)
+
+<!-- Top navigation bar -->
+<nav class="navbar navbar-default">
+    <div class="container" style="float:left;margin-left:200px;">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="browser">Browser</a></li>
+                @if(isBrowser){
+                    <li><a href="#menu" class="menu-link">Navigation</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+</nav>

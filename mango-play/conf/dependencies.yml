@@ -1,0 +1,9 @@
+require:
+    - play
+    - provided -> spark-core_2.10 1.6.0
+repositories:
+    - provided:
+        type:       local
+        artifact:   "${application.path}/lib/[module]-[revision].jar"
+        contains:
+            - provided -> *

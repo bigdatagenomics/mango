@@ -1,4 +1,3 @@
-
 /**
  * Licensed to Big Data Genomics (BDG) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +19,7 @@ package org.bdgenomics.mango.layout
 
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.Variant
 
 /**
@@ -66,6 +66,16 @@ case class GenotypeJson(variant: Variant, sampleIds: Array[String]) {
     write(GenotypeString(VariantJson(variant), sampleIds))(formats)
   }
 
+  /**
+   * Checks whether this overlaps ReferenceRegion.
+   *
+   * @param region ReferenceRegion to query for overlap
+   * @return Boolean whther GenotypeJson overlaps region
+   */
+  def overlaps(region: ReferenceRegion): Boolean = {
+    val vRegion = ReferenceRegion(variant.getContigName, variant.getStart, variant.getEnd)
+    region.overlaps(vRegion)
+  }
 }
 
 /**
@@ -96,7 +106,8 @@ object GenotypeJson {
   }
 
   /**
-   * Makes genotype json without genotype sample names
+   * Makes genotype json without genotype sample names.
+   *
    * @param variant Variant
    * @return GenotypeJson
    */
@@ -112,7 +123,29 @@ object GenotypeJson {
  * @param start start of feature region
  * @param stop end of feature region
  */
-case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long, score: Int)
+case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long, score: Int) {
+
+  /**
+   * Checks whether this overlaps ReferenceRegion.
+   *
+   * @param region ReferenceRegion to query for overlap
+   * @return Boolean whther BedRowJson overlaps region
+   */
+  def overlaps(region: ReferenceRegion): Boolean = {
+    overlaps(this, region)
+  }
+
+  /**
+   * Checks whether this overlaps ReferenceRegion.
+   *
+   * @param t BedRowJson to query overlap for
+   * @param region ReferenceRegion to query for overlap
+   * @return Boolean whther BedRowJson overlaps region
+   */
+  def overlaps(t: BedRowJson, region: ReferenceRegion): Boolean = {
+    (t.contig == region.referenceName) && (t.start < region.end) && (t.stop > region.start)
+  }
+}
 
 /**
  * Class for covertering adam coverage to coverage format readable by pileup.js
@@ -120,5 +153,17 @@ case class BedRowJson(id: String, featureType: String, contig: String, start: Lo
  * @param end Base pair end chromosome
  * @param count Coverage at the specified base pair
  */
-case class PositionCount(start: Long, end: Long, count: Int)
+case class PositionCount(contig: String, start: Long, end: Long, count: Int) {
+
+  /**
+   * Checks whether this overlaps ReferenceRegion.
+   *
+   * @param region ReferenceRegion to query for overlap
+   * @return Boolean whther PositionCount overlaps region
+   */
+  def overlaps(region: ReferenceRegion): Boolean = {
+    val pRegion = ReferenceRegion(contig, start, end)
+    region.overlaps(pRegion)
+  }
+}
 
