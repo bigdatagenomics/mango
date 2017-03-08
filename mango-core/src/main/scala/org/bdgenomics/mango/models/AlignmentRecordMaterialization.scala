@@ -70,7 +70,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
     extends LazyMaterialization[AlignmentRecord, GAReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
-  def load = (file: String, regions: Iterable[ReferenceRegion]) => AlignmentRecordMaterialization.load(sc, file, regions).rdd
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => AlignmentRecordMaterialization.load(sc, file, regions).rdd
 
   /**
    * Extracts ReferenceRegion from AlignmentRecord
@@ -99,7 +99,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
    * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
    * cooresponding frequency.
    */
-  def getCoverage(region: ReferenceRegion): Map[String, String] = {
+  def getCoverage(region: ReferenceRegion): Map[String, Array[PositionCount]] = {
 
     AlignmentTimers.getCoverageData.time {
       val covCounts: RDD[(String, PositionCount)] =
@@ -111,18 +111,8 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
           }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
           .map(r => (r._1._2, PositionCount(r._1._1.referenceName, r._1._1.start, r._1._1.start + 1, r._2)))
 
-      covCounts.collect.groupBy(_._1) // group by sample Id
-        .map(r => (r._1, write(r._2.map(_._2))))
+      covCounts.collect.groupBy(_._1).mapValues(_.map(_._2)) // group by sample Id
     }
-  }
-
-  def toCoverage(arr: Array[GAReadAlignment], region: ReferenceRegion): Array[PositionCount] = {
-    arr.flatMap(r => {
-      val t: List[Long] = List.range(r.getAlignment.getPosition.getPosition, r.getAlignment.getPosition.getPosition + r.getAlignedSequence.length)
-      t.map(n => (ReferenceRegion(r.getAlignment.getPosition.getReferenceName, n, n + 1), 1))
-        .filter(_._1.overlaps(region)) // filter out read fragments not overlapping region
-    }).groupBy(_._1).map(r => (r._1, r._2.map(_._2).sum)) // reduce coverage by combining adjacent frequenct
-      .map(r => PositionCount(r._1.referenceName, r._1.start, r._1.end, r._2)).toArray
   }
 
   /**
@@ -155,10 +145,6 @@ object AlignmentRecordMaterialization extends Logging {
 
   val name = "AlignmentRecord"
 
-  def apply(sc: SparkContext, files: List[String], sd: SequenceDictionary, prefetchSize: Option[Int] = None): AlignmentRecordMaterialization = {
-    new AlignmentRecordMaterialization(sc, files, sd)
-  }
-
   /**
    * Loads alignment data from bam, sam and ADAM file formats
    * @param sc SparkContext
@@ -166,7 +152,7 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): AlignmentRecordRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
     if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
@@ -189,19 +175,16 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadFromBam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): AlignmentRecordRDD = {
+  def loadFromBam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
     AlignmentTimers.loadBAMData.time {
-      if (!regions.isEmpty) {
-        var alignments: AlignmentRecordRDD = null
+      if (regions.isDefined) {
         // hack to get around issue in hadoop_bam, which throws error if contigName is not found in bam file
         val path = new Path(fp)
         val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))
-        val predicateRegions: Iterable[ReferenceRegion] = regions
+        val predicateRegions: Iterable[ReferenceRegion] = regions.get
           .flatMap(r => {
-            val pred = LazyMaterialization.getContigPredicate(r)
-            List(pred._1, pred._2)
+            LazyMaterialization.getContigPredicate(r)
           }).filter(r => fileSd.containsRefName(r.referenceName))
-
         sc.loadIndexedBam(fp, predicateRegions)
       } else {
         sc.loadBam(fp)
@@ -216,10 +199,15 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): AlignmentRecordRDD = {
-    val prefixRegions: Iterable[ReferenceRegion] = regions.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
+    val pred =
+      if (regions.isDefined) {
+        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+        Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+      } else {
+        Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+      }
 
-    val pred = Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && IntColumn("mapq") > 0)
     val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
       AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
       AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,

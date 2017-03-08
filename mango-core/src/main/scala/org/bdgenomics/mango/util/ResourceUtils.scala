@@ -20,7 +20,7 @@ package org.bdgenomics.mango.core.util
 import java.io._
 
 import org.apache.hadoop.fs.{ FileSystem, Path }
-import org.apache.parquet.filter2.dsl.Dsl.{BinaryColumn, LongColumn}
+import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext

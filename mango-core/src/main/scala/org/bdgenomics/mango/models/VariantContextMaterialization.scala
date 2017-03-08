@@ -29,6 +29,7 @@ import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.{ VariantContextRDD }
 import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
+import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.GenotypeJson
 
 /*
@@ -57,8 +58,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return Generic RDD of data types from file
    */
-  def load = (file: String, region: Option[ReferenceRegion]) =>
-    VariantContextMaterialization.toGenotypeJsonRDD(VariantContextMaterialization.load(sc, file, region))
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) =>
+    VariantContextMaterialization.toGenotypeJsonRDD(VariantContextMaterialization.load(sc, file, regions))
 
   /**
    * Reset ReferenceName for Variant
@@ -146,15 +147,15 @@ object VariantContextMaterialization {
    *
    * @param sc SparkContext
    * @param fp filePath to load
-   * @param region Region to predicate load
+   * @param regions Iterable of ReferenceRegions to predicate load
    * @return VariantContextRDD
    */
-  def load(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantContextRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
     if (fp.endsWith(".adam")) {
-      loadAdam(sc, fp, region)
+      loadAdam(sc, fp, regions)
     } else {
       try {
-        loadVariantContext(sc, fp, region)
+        loadVariantContext(sc, fp, regions)
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -170,15 +171,16 @@ object VariantContextMaterialization {
    *
    * @param sc SparkContext
    * @param fp filePath to vcf file
-   * @param region Region to predicate load
+   * @param regions Iterable of ReferencesRegion to predicate load
    * @return VariantContextRDD
    */
-  def loadVariantContext(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantContextRDD = {
-    region match {
-      case Some(_) =>
-        val regions = LazyMaterialization.getContigPredicate(region.get)
-        sc.loadIndexedVcf(fp, Iterable(regions._1, regions._2))
-      case None => sc.loadVcf(fp)
+  def loadVariantContext(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+    if (regions.isDefined) {
+      val predicateRegions: Iterable[ReferenceRegion] = regions.get
+        .flatMap(r => LazyMaterialization.getContigPredicate(r))
+      sc.loadIndexedVcf(fp, predicateRegions)
+    } else {
+      sc.loadVcf(fp)
     }
   }
 
@@ -187,19 +189,18 @@ object VariantContextMaterialization {
    *
    * @param sc SparkContext
    * @param fp filePath to load variants from
-   * @param region Region to predicate load
+   * @param regions Iterable of  ReferenceRegions to predicate load
    * @return VariantContextRDD
    */
-  def loadAdam(sc: SparkContext, fp: String, region: Option[ReferenceRegion]): VariantContextRDD = {
-    val pred: Option[FilterPredicate] =
-      region match {
-        case Some(_) =>
-          val contigs = LazyMaterialization.getContigPredicate(region.get)
-          val contigPredicate = (BinaryColumn("variant.contig.contigName") === contigs._1.referenceName
-            || BinaryColumn("variant.contig.contigName") === contigs._2.referenceName)
-          Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && contigPredicate)
-        case None => None
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+    val pred =
+      if (regions.isDefined) {
+        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+        Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+      } else {
+        None
       }
+
     val proj = Projection(VariantField.contigName, VariantField.start, VariantField.referenceAllele, VariantField.alternateAllele, VariantField.end)
     sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).toVariantContextRDD
   }

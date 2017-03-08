@@ -76,10 +76,11 @@ echo "Using SPARK_SUBMIT=$SPARK_SUBMIT"
 
 # submit the job to Spark
 "$SPARK_SUBMIT" \
-  --class org.bdgenomics.mango.cli.MangoServletWrapper \
+  --class org.bdgenomics.mango.cli.VizReads \
   --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   --conf spark.dynamicAllocation.executorIdleTimeout=10d \
+  --conf spark.driver.memory=5g \
   $SPARK_ARGS \
   $MANGO_CLI_JAR \
   $MANGO_ARGS

@@ -46,7 +46,7 @@ class CoverageMaterialization(@transient sc: SparkContext,
     extends LazyMaterialization[Coverage, PositionCount](CoverageMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
-  def load = (file: String, regions: Iterable[ReferenceRegion]) => CoverageMaterialization.load(sc, file, regions).rdd
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => CoverageMaterialization.load(sc, file, regions).rdd
 
   /**
    * Extracts ReferenceRegion from CoverageRecord
@@ -105,7 +105,6 @@ class CoverageMaterialization(@transient sc: SparkContext,
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))
       .mapValues(r => r.map(f => PositionCount(f.contigName, f.start, f.end, f.count.toInt)))
-    //    flattened.mapValues(r => write(r))
   }
 
 }
@@ -114,10 +113,6 @@ object CoverageMaterialization {
 
   val name = "Coverage"
 
-  def apply(sc: SparkContext, files: List[String], sd: SequenceDictionary): CoverageMaterialization = {
-    new CoverageMaterialization(sc, files, sd)
-  }
-
   /**
    * Loads alignment data from ADAM file formats
    *
@@ -125,7 +120,7 @@ object CoverageMaterialization {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): CoverageRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): CoverageRDD = {
     if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
@@ -147,11 +142,15 @@ object CoverageMaterialization {
    * @param regions Iterable of  ReferenceRegions to load
    * @return CoverageRDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): CoverageRDD = {
-    val prefixRegions: Iterable[ReferenceRegion] = regions.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-    val pred = Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): CoverageRDD = {
+    val pred =
+      if (regions.isDefined) {
+        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+        Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+      } else {
+        None
+      }
     sc.loadParquetCoverage(fp, predicate = pred).flatten()
   }
-
 
 }

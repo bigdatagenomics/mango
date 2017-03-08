@@ -140,4 +140,15 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     assert(vAndg.length == 7)
   }
 
+  sparkTest("fetches multiple regions from load") {
+    val region1 = ReferenceRegion("chrM", 10L, 30L)
+    val region2 = ReferenceRegion("chrM", 50L, 60L)
+    val regions = Some(Iterable(region1, region2))
+    val data1 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region1)))
+    val data2 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region2)))
+    val data = VariantContextMaterialization.load(sc, vcfFile1, regions)
+
+    assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
+  }
+
 }

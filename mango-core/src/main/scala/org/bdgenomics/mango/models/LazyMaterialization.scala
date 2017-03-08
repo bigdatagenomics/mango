@@ -70,7 +70,13 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
   def getSizeInBytes: Long = {
     files.map(fp => {
       val path = new Path(fp)
-      path.getFileSystem(sc.hadoopConfiguration).getFileStatus(path).getLen
+      // list all files in case of directory
+      val iter = path.getFileSystem(sc.hadoopConfiguration).listFiles(path, false)
+      var len = 0L
+      while (iter.hasNext) {
+        len = len + iter.next().getLen
+      }
+      len
     }).reduce(_ + _)
   }
 
@@ -78,7 +84,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * Used to generically load data from all file types
    * @return Generic RDD of data types from file
    */
-  def load: (String, Iterable[ReferenceRegion]) => RDD[T]
+  def load: (String, Option[Iterable[ReferenceRegion]]) => RDD[T]
 
   /**
    * Extracts reference region from data type T
@@ -161,7 +167,10 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
           val seqRecord = sd(region.referenceName)
           seqRecord match {
             case Some(_) => {
-              put(bookkeep.getMissingRegions(region, files).toIterable)
+              val missing = bookkeep.getMissingRegions(region, files).toIterable
+              if (!missing.isEmpty) {
+                put(missing)
+              }
               intRDD.filterByInterval(region).toRDD.map(_._2)
             }
             case None => {
@@ -170,7 +179,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
           }
         }
         case None => {
-          val data = loadAllFiles(Iterable.empty)
+          val data = loadAllFiles(None)
 
           // tag entire sequence dictionary
           bookkeep.rememberValues(sd, files)
@@ -194,12 +203,13 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    */
   def put(regions: Iterable[ReferenceRegion]) = {
     checkMemory()
+
     LazyMaterializationTimers.put.time {
 
       // filter out regions that are not found in the sequence dictionary
       val filteredRegions = regions.filter(r => sd(r.referenceName).isDefined)
 
-      val data = loadAllFiles(regions)
+      val data = loadAllFiles(Some(regions))
 
       // tag regions as found, even if there is no data
       filteredRegions.foreach(r => bookkeep.rememberValues(r, files))
@@ -245,12 +255,11 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @param regions Optional region to fetch. If none, fetches all data
    * @return RDD of data. Primary index is ReferenceRegion and secondary index is filename.
    */
-  private def loadAllFiles(regions: Iterable[ReferenceRegion]): RDD[(ReferenceRegion, (String, T))] = {
+  private def loadAllFiles(regions: Option[Iterable[ReferenceRegion]]): RDD[(ReferenceRegion, (String, T))] = {
     // do we need to modify the chromosome prefix?
     val hasChrPrefix = sd.records.head.name.startsWith("chr")
 
     LazyMaterializationTimers.loadFiles.time {
-
       // get data for all files
       files.map(fp => {
         val k = LazyMaterialization.filterKeyFromFile(fp)
@@ -331,17 +340,27 @@ object LazyMaterialization {
    * should also search "20", and "20" should also trigger the search of "chr20".
    *
    * @param region ReferenceRegion to modify referenceName
-   * @return Tuple2 of ReferenceRegions, with and without the "chr" prefix
+   * @return Array of ReferenceRegions, with and without the "chr" prefix
    */
-  def getContigPredicate(region: ReferenceRegion): Tuple2[ReferenceRegion, ReferenceRegion] = {
-    if (region.referenceName.startsWith("chr")) {
-      val modifiedRegion = ReferenceRegion(region.referenceName.drop(3), region.start, region.end, region.strand)
-      Tuple2(region, modifiedRegion)
+  def getContigPredicate(region: ReferenceRegion): Array[ReferenceRegion] = {
+    getContigPredicate(region.referenceName).map(r => region.copy(referenceName = r))
+  }
+
+  /**
+   * Gets predicate reference name options for chromosome name based on searchable region. For example, "chr20"
+   * should also search "20", and "20" should also trigger the search of "chr20".
+   *
+   * @param referenceName referenceName
+   * @return Array of of referencenames, with and without the "chr" prefix
+   */
+  def getContigPredicate(referenceName: String): Array[String] = {
+    if (referenceName.startsWith("chr")) {
+      Array(referenceName, referenceName.drop(3))
     } else {
-      val modifiedRegion = ReferenceRegion(("chr").concat(region.referenceName), region.start, region.end, region.strand)
-      Tuple2(region, modifiedRegion)
+      Array(referenceName, ("chr").concat(referenceName))
     }
   }
+
 }
 
 case class UnsupportedFileException(message: String) extends Exception(message)

@@ -20,6 +20,14 @@ package org.bdgenomics.mango.core.util
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceRecord }
 
 /**
+ * Indicator used to determine whether current elements in cache match the region and resolution of the current cache
+ *
+ * @param region current ReferenceRegion
+ * @param resolution current Resolution
+ */
+case class VizCacheIndicator(region: ReferenceRegion, resolution: Int)
+
+/**
  * Grab bag of functions and constants used to interact with frontend
  */
 object VizUtils {

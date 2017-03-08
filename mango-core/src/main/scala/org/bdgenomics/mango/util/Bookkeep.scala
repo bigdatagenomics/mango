@@ -49,7 +49,7 @@ class Bookkeep(chunkSize: Long) extends Serializable with Logging {
   def rememberValues(region: ReferenceRegion, k: String): Unit = rememberValues(region, List(k))
 
   def rememberValues(sd: SequenceDictionary, ks: List[String]): Unit = {
-    sd.records.map(r => ReferenceRegion(r.name, 0, r.length))
+    sd.records.map(r => ReferenceRegion(r.name, 0, Bookkeep.roundDown(r.length + chunkSize - 1, chunkSize)))
       .foreach(r => rememberValues(r, ks))
   }
 
@@ -89,12 +89,16 @@ class Bookkeep(chunkSize: Long) extends Serializable with Logging {
    */
   def getMissingRegions(region: ReferenceRegion, ks: List[String]): List[ReferenceRegion] = {
     // get number of chunks in region
-    val chunkCount = (region.length() / chunkSize).toInt + 1
+    val roundedStart = Bookkeep.roundDown(region.start, chunkSize)
+    val roundedEnd = Bookkeep.roundDown(region.end + chunkSize - 1, chunkSize)
+
+    val chunkCount = Math.max(1, ((roundedEnd-roundedStart) / chunkSize).toInt)
+
     // get chunked reference regions
     val chunks = (0 until chunkCount)
       .map(c => {
-        val start = c * chunkSize + region.start
-        val end = Math.min(region.end, start + chunkSize)
+        val start = c * chunkSize + roundedStart
+        val end = start + chunkSize
         region.copy(start = start, end = end)
       })
 
@@ -105,6 +109,18 @@ class Bookkeep(chunkSize: Long) extends Serializable with Logging {
 
 }
 object Bookkeep {
+
+  /**
+   * Rounds numbers down to the neares 'rounded'
+   *
+   * @param number number to round
+   * @param rounded number rounded to
+   * @return new rounded number
+   */
+
+  def roundDown(number: Long, rounded: Long): Long = {
+    number - (number % rounded)
+  }
 
   /**
    * Merges together overlapping ReferenceRegions in a list of ReferenceRegions.
