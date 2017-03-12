@@ -213,7 +213,7 @@ abstract class LazyMaterialization[T: ClassTag](name: String,
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       } else {
         val t = intRDD
-        intRDD = intRDD.multiput(data)
+        intRDD = intRDD.multiputRDD(data)
         t.unpersist(true)
         intRDD.persist(StorageLevel.MEMORY_AND_DISK)
       }
