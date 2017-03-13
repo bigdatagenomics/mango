@@ -2,6 +2,8 @@
 
 A scalable genome browser built on top of the [ADAM](https://github.com/bigdatagenomics/adam) genomics processing engine. Apache 2 licensed.
 
+[![Coverage Status](https://coveralls.io/repos/github/bigdatagenomics/mango/badge.svg)](https://coveralls.io/github/bigdatagenomics/mango)
+
 mango visualizes reads, variants, and features using [Pileup.js](https://github.com/hammerlab/pileup.js).
 
 mango uses [IntervalRDDs](https://github.com/bigdatagenomics/utils/tree/master/utils-intervalrdd) to perform fast indexed lookups on interval-keyed data.
