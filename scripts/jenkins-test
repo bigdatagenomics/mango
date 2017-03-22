@@ -37,11 +37,60 @@ then
     exit 1
 fi
 
+
+# this next line is supposed to fail
+set +e
+
+echo "Rewriting POM.xml files to Scala 2.10 and Spark 1 should error..."
+./scripts/move_to_spark_1.sh
+if [[ $? == 0 ]];
+then
+    echo "Running move_to_spark_1.sh when POMs are set up for Spark 1 should fail, but error code was 0 (success)."
+    exit 1
+fi
+
+./scripts/move_to_scala_2.10.sh
+if [[ $? == 0 ]];
+then
+    echo "Running move_to_scala_2.10.sh when POMs are set up for Scala 2.10 should fail, but error code was 0 (success)."
+    exit 1
+fi
+
+set -e
+
 # are we testing for spark 2.0.0? if so, we need to rewrite our poms first
 if [ ${SPARK_VERSION} == 2.0.0 ];
 then
-        echo "Rewriting POM.xml files for Spark 2.0."
-        ./scripts/move_to_spark_2.sh
+
+    echo "Rewriting POM.xml files for Spark 2."
+    ./scripts/move_to_spark_2.sh
+
+    # shouldn't be able to move to spark 2 twice
+    set +e
+    ./scripts/move_to_spark_2.sh
+    if [[ $? == 0 ]];
+    then
+        echo "We have already moved to Spark 2, so running move_to_spark_2.sh a second time should fail, but error code was 0 (success)."
+        exit 1
+    fi
+    set -e
+fi
+
+# are we testing for scala 2.11? if so, we need to rewrite our poms to 2.11 first
+if [ ${SCALAVER} == 2.11 ];
+then
+    echo "Rewriting POM.xml files for Scala 2.11."
+    ./scripts/move_to_scala_2.11.sh
+
+    # shouldn't be able to move to scala 2.11 twice
+    set +e
+    ./scripts/move_to_scala_2.11.sh
+    if [[ $? == 0 ]];
+    then
+        echo "We have already moved to Scala 2.11, so running move_to_scala_2.11.sh a second time should fail, but error code was 0 (success)."
+        exit 1
+    fi
+    set -e
 fi
 
 # print versions
@@ -84,6 +133,18 @@ mvn clean package \
 find ${MANGO_MVN_TMP_DIR}
 rm -rf ${MANGO_MVN_TMP_DIR}
 
+# and move our poms back to their original values
+if [ ${SPARK_VERSION} == 2.0.0 ];
+then
+
+    echo "Rewriting POM.xml files back to Spark 1."
+    ./scripts/move_to_spark_1.sh
+fi
+if [ ${SCALAVER} == 2.11 ];
+then
+    echo "Rewriting POM.xml files back to Scala 2.10."
+    ./scripts/move_to_scala_2.10.sh
+fi
 echo
 echo "All the tests passed"
 echo
