@@ -215,6 +215,12 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-discover", usage = "This turns on discovery mode on start up.")
   var discoveryMode: Boolean = false
+
+  @Args4jOption(required = false, name = "-prefetchSize", usage = "Bp to prefetch in executors.")
+  var prefetchSize: Int = 10000
+
+  @Args4jOption(required = false, name = "-preload", usage = "Chromosomes to prefetch, separated by commas (,).")
+  var preload: String = null
 }
 
 class VizServlet extends ScalatraServlet {
@@ -540,22 +546,20 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
 
-    // choose prefetch size
-    val prefetch =
-      if (sc.isLocal) 10000
-      else 100000
-
     // initialize all datasets
-    initAnnotations
-    initAlignments
-    initCoverages
-    initVariantContext
-    initFeatures
+    initAnnotations(sc)
+    initAlignments(sc)
+    initCoverages(sc)
+    initVariantContext(sc)
+    initFeatures(sc)
+
+    val preload = Option(args.preload).getOrElse("").split(',')
 
     // run discovery mode if it is specified in the startup script
-    if (args.discoveryMode) {
-      VizReads.prefetchedRegions = discoverFrequencies()
-      preprocess(VizReads.prefetchedRegions)
+    if (!preload.isEmpty) {
+      val preloaded = VizReads.globalDict.records.filter(r => preload.contains(r.name))
+        .map(r => ReferenceRegion(r.name, 0, r.length))
+      preprocess(preloaded)
     }
 
     // check whether genePath was supplied
@@ -566,148 +570,148 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     // start server
     if (!args.testMode) startServer()
 
-    /*
+  }
+
+  /*
    * Initialize required reference file
    */
-    def initAnnotations() = {
-      val referencePath = Option(args.referencePath).getOrElse({
-        throw new FileNotFoundException("reference file not provided")
-      })
+  def initAnnotations(sc: SparkContext) = {
+    val referencePath = Option(args.referencePath).getOrElse({
+      throw new FileNotFoundException("reference file not provided")
+    })
 
-      VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath)
-      VizReads.globalDict = VizReads.annotationRDD.getSequenceDictionary
-    }
+    VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath)
+    VizReads.globalDict = VizReads.annotationRDD.getSequenceDictionary
+  }
 
-    /*
+  /*
    * Initialize loaded alignment files
    */
-    def initAlignments = {
-      if (Option(args.readsPaths).isDefined) {
-        val readsPaths = args.readsPaths.split(",").toList
+  def initAlignments(sc: SparkContext) = {
+    if (Option(args.readsPaths).isDefined) {
+      val readsPaths = args.readsPaths.split(",").toList
 
-        if (readsPaths.nonEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
-        }
+      if (readsPaths.nonEmpty) {
+        VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(args.prefetchSize)))
       }
     }
+  }
 
-    /*
+  /*
    * Initialize coverage files
    */
-    def initCoverages = {
-      if (Option(args.coveragePaths).isDefined) {
-        val coveragePaths = args.coveragePaths.split(",").toList
+  def initCoverages(sc: SparkContext) = {
+    if (Option(args.coveragePaths).isDefined) {
+      val coveragePaths = args.coveragePaths.split(",").toList
 
-        if (coveragePaths.nonEmpty) {
-          VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, Some(prefetch)))
-        }
+      if (coveragePaths.nonEmpty) {
+        VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, Some(args.prefetchSize)))
       }
     }
-
-    /**
-     * Initialize loaded variant files
-     */
-    def initVariantContext() = {
-      // set flag for visualizing genotypes
-      VizReads.showGenotypes = args.showGenotypes
-
-      if (Option(args.variantsPaths).isDefined) {
-        val variantsPaths = args.variantsPaths.split(",").toList
-
-        if (variantsPaths.nonEmpty) {
-          VizReads.variantContextData = Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
-        }
-      }
-    }
-
-    /**
-     * Initialize loaded feature files
-     */
-    def initFeatures() = {
-      val featurePaths = Option(args.featurePaths)
-      if (featurePaths.isDefined) {
-        val featurePaths = args.featurePaths.split(",").toList
-        if (featurePaths.nonEmpty) {
-          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, Some(prefetch)))
-        }
-      }
-    }
-
-    /**
-     * Runs total data scan over all feature, variant and coverage files, calculating the normalied frequency at all
-     * windows in the genome.
-     *
-     * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
-     */
-    def discoverFrequencies(): List[(ReferenceRegion, Double)] = {
-
-      val discovery = Discovery(VizReads.annotationRDD.getSequenceDictionary)
-      var regions: List[(ReferenceRegion, Double)] = List()
-
-      // get feature frequency
-      if (VizReads.featuresExist) {
-        val featureRegions = VizReads.featureData.get.getAll().map(ReferenceRegion.unstranded(_))
-        regions = regions ++ discovery.getFrequencies(featureRegions)
-      }
-
-      // get variant frequency
-      if (VizReads.variantsExist) {
-        val variantRegions = VizReads.variantContextData.get.getAll().map(r => ReferenceRegion(r.variant))
-        regions = regions ++ discovery.getFrequencies(variantRegions)
-      }
-
-      // get coverage frequency
-      // Note: calculating coverage frequency is an expensive operation. Only perform if sc is not local.
-      if (VizReads.coveragesExist && !sc.isLocal) {
-        val coverageRegions = VizReads.coverageData.get.getAll().map(ReferenceRegion(_))
-        regions = regions ++ discovery.getFrequencies(coverageRegions)
-      }
-
-      // group all regions together and reduce down for all data types
-      regions = regions.groupBy(_._1).map(r => (r._1, r._2.map(a => a._2).sum)).toList
-
-      // normalize and filter by regions with data
-      val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
-      regions.map(r => (r._1, r._2 / max))
-        .filter(_._2 > 0.0)
-    }
-
-    /**
-     * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
-     *
-     * @param regions Regions to be preprocessed
-     */
-    def preprocess(regions: List[(ReferenceRegion, Double)]) = {
-      // select two of the highest occupied regions to load
-      // The number of selected regions is low to reduce unnecessary loading while
-      // jump starting Thread setup for Spark on the specific data files
-      val selectedRegions = regions.sortBy(_._2).takeRight(2).map(_._1)
-
-      for (region <- selectedRegions) {
-        if (VizReads.featureData.isDefined)
-          VizReads.featureData.get.get(region)
-        if (VizReads.readsData.isDefined)
-          VizReads.readsData.get.get(region)
-        if (VizReads.coverageData.isDefined)
-          VizReads.coverageData.get.get(region)
-        if (VizReads.variantContextData.isDefined)
-          VizReads.variantContextData.get.get(region)
-      }
-    }
-
-    /**
-     * Starts server once on startup
-     */
-    def startServer() = {
-      VizReads.server = new org.eclipse.jetty.server.Server(args.port)
-      val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
-      VizReads.server.setHandler(handlers)
-      handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
-      VizReads.server.start()
-      println("View the visualization at: " + args.port)
-      println("Quit at: /quit")
-      VizReads.server.join()
-    }
-
   }
+
+  /**
+   * Initialize loaded variant files
+   */
+  def initVariantContext(sc: SparkContext) = {
+    // set flag for visualizing genotypes
+    VizReads.showGenotypes = args.showGenotypes
+
+    if (Option(args.variantsPaths).isDefined) {
+      val variantsPaths = args.variantsPaths.split(",").toList
+
+      if (variantsPaths.nonEmpty) {
+        VizReads.variantContextData = Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(args.prefetchSize)))
+      }
+    }
+  }
+
+  /**
+   * Initialize loaded feature files
+   */
+  def initFeatures(sc: SparkContext) = {
+    val featurePaths = Option(args.featurePaths)
+    if (featurePaths.isDefined) {
+      val featurePaths = args.featurePaths.split(",").toList
+      if (featurePaths.nonEmpty) {
+        VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, Some(args.prefetchSize)))
+      }
+    }
+  }
+
+  /**
+   * Runs total data scan over all feature, variant and coverage files, calculating the normalied frequency at all
+   * windows in the genome.
+   *
+   * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
+   */
+  def discoverFrequencies(sc: SparkContext): List[(ReferenceRegion, Double)] = {
+
+    val discovery = Discovery(VizReads.annotationRDD.getSequenceDictionary)
+    var regions: List[(ReferenceRegion, Double)] = List()
+
+    // get feature frequency
+    if (VizReads.featuresExist) {
+      val featureRegions = VizReads.featureData.get.getAll().map(ReferenceRegion.unstranded(_))
+      regions = regions ++ discovery.getFrequencies(featureRegions)
+    }
+
+    // get variant frequency
+    if (VizReads.variantsExist) {
+      val variantRegions = VizReads.variantContextData.get.getAll().map(r => ReferenceRegion(r.variant))
+      regions = regions ++ discovery.getFrequencies(variantRegions)
+    }
+
+    // get coverage frequency
+    // Note: calculating coverage frequency is an expensive operation. Only perform if sc is not local.
+    if (VizReads.coveragesExist && !sc.isLocal) {
+      val coverageRegions = VizReads.coverageData.get.getAll().map(ReferenceRegion(_))
+      regions = regions ++ discovery.getFrequencies(coverageRegions)
+    }
+
+    // group all regions together and reduce down for all data types
+    regions = regions.groupBy(_._1).map(r => (r._1, r._2.map(a => a._2).sum)).toList
+
+    // normalize and filter by regions with data
+    val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
+    regions.map(r => (r._1, r._2 / max))
+      .filter(_._2 > 0.0)
+  }
+
+  /**
+   * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
+   *
+   * @param regions Regions to be preprocessed
+   */
+  def preprocess(regions: Vector[ReferenceRegion]) = {
+    // select two of the highest occupied regions to load
+    // The number of selected regions is low to reduce unnecessary loading while
+    // jump starting Thread setup for Spark on the specific data files
+
+    for (region <- regions) {
+      if (VizReads.featureData.isDefined)
+        VizReads.featureData.get.get(region)
+      if (VizReads.readsData.isDefined)
+        VizReads.readsData.get.get(region)
+      if (VizReads.coverageData.isDefined)
+        VizReads.coverageData.get.get(region)
+      if (VizReads.variantContextData.isDefined)
+        VizReads.variantContextData.get.get(region)
+    }
+  }
+
+  /**
+   * Starts server once on startup
+   */
+  def startServer() = {
+    VizReads.server = new org.eclipse.jetty.server.Server(args.port)
+    val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
+    VizReads.server.setHandler(handlers)
+    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
+    VizReads.server.start()
+    println("View the visualization at: " + args.port)
+    println("Quit at: /quit")
+    VizReads.server.join()
+  }
+
 }

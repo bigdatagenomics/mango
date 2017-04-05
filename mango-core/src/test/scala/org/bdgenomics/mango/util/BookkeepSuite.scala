@@ -67,4 +67,13 @@ class BookkeepSuite extends FunSuite {
     assert(merged.length == 2)
   }
 
+  test("get and put region") {
+    val newRegion = ReferenceRegion("chr1", 10000, 20000)
+    val bookkeep = new Bookkeep(10000)
+    bookkeep.rememberValues(newRegion, sampleId)
+
+    val regions = bookkeep.getMissingRegions(newRegion, List(sampleId))
+    assert(regions.get.length == 0)
+  }
+
 }
