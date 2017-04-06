@@ -21,15 +21,18 @@ import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.mango.cli
 import org.bdgenomics.mango.core.util.{ VizUtils, VizCacheIndicator }
 import org.bdgenomics.mango.filters._
-import org.bdgenomics.mango.layout.{ VariantJson, GenotypeJson }
+import org.bdgenomics.mango.layout.{ PositionCount, BedRowJson, GenotypeJson }
 import org.bdgenomics.mango.models._
+import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
 import org.fusesource.scalate.TemplateEngine
+import org.ga4gh.GAReadAlignment
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
 
@@ -56,9 +59,69 @@ object VizTimers extends Metrics {
   val PrintReferenceTimer = timer("JSON get reference string")
 }
 
+case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
+
+  /**
+   * Access functions for materializer
+   */
+  def getReads(): Option[AlignmentRecordMaterialization] = {
+    val x = objects.flatMap(r =>
+      r match {
+        case m: AlignmentRecordMaterialization => Some(m)
+        case _                                 => None
+      })
+    if (x.isEmpty) None
+    else Some(x.head)
+  }
+
+  def getCoverage(): Option[CoverageMaterialization] = {
+    val x = objects.flatMap(r =>
+      r match {
+        case m: CoverageMaterialization => Some(m)
+        case _                          => None
+      })
+    if (x.isEmpty) None
+    else Some(x.head)
+  }
+
+  def getVariantContext(): Option[VariantContextMaterialization] = {
+    val x = objects.flatMap(r =>
+      r match {
+        case m: VariantContextMaterialization => Some(m)
+        case _                                => None
+      })
+    if (x.isEmpty) None
+    else Some(x.head)
+  }
+
+  def getFeatures(): Option[FeatureMaterialization] = {
+    val x = objects.flatMap(r =>
+      r match {
+        case m: FeatureMaterialization => Some(m)
+        case _                         => None
+      })
+    if (x.isEmpty) None
+    else Some(x.head)
+  }
+
+  /**
+   * definitions tracking whether optional datatypes were loaded
+   */
+  def readsExist: Boolean = getReads().isDefined
+
+  def coveragesExist: Boolean = getCoverage().isDefined
+
+  def variantContextExist: Boolean = getVariantContext().isDefined
+
+  def featuresExist: Boolean = getFeatures().isDefined
+}
+
+/**
+ * Contains caching, error and util function information for formatting and serving Json data
+ */
 object VizReads extends BDGCommandCompanion with Logging {
 
-  val commandName: String = "viz"
+  val commandName: String = "Mango"
   val commandDescription: String = "Genomic visualization for ADAM"
   implicit val formats = net.liftweb.json.DefaultFormats
 
@@ -66,63 +129,53 @@ object VizReads extends BDGCommandCompanion with Logging {
   var server: org.eclipse.jetty.server.Server = null
   var globalDict: SequenceDictionary = null
 
+  // Structures storing data types. All but reference is optional
+  var annotationRDD: AnnotationMaterialization = null
+  var materializer: Materializer = null
+
+  var cacheSize: Int = 1000
+
   // Gene URL
   var genes: Option[String] = None
 
-  // Structures storing data types. All but reference is optional
-  var annotationRDD: AnnotationMaterialization = null
-  var readsData: Option[AlignmentRecordMaterialization] = None
-
-  var coverageData: Option[CoverageMaterialization] = None
-
-  var variantContextData: Option[VariantContextMaterialization] = None
-
-  var featureData: Option[FeatureMaterialization] = None
-
-  // variables tracking whether optional datatypes were loaded
-  def readsExist: Boolean = readsData.isDefined
-  def coveragesExist: Boolean = coverageData.isDefined
-  def variantsExist: Boolean = variantContextData.isDefined
-  def featuresExist: Boolean = featureData.isDefined
+  /**
+   * Caching information for frontend
+   */
+  // stores synchonization objects
+  var syncObject: Map[String, Object] = Map.empty[String, Object]
 
   // placeholder for indicators
   val region = ReferenceRegion("N", 0, 1)
 
   // reads cache
   object readsWait
-  var readsCache: Map[String, String] = Map.empty[String, String]
+  var readsCache: Map[String, Array[GAReadAlignment]] = Map.empty[String, Array[GAReadAlignment]]
   var readsIndicator = VizCacheIndicator(region, 1)
 
   // coverage reads cache
   object readsCoverageWait
-  var readsCoverageCache: Map[String, String] = Map.empty[String, String]
+  var readsCoverageCache: Map[String, Array[PositionCount]] = Map.empty[String, Array[PositionCount]]
   var readsCoverageIndicator = VizCacheIndicator(region, 1)
 
   // coverage cache
   object coverageWait
-  var coverageCache: Map[String, String] = Map.empty[String, String]
+  var coverageCache: Map[String, Array[PositionCount]] = Map.empty[String, Array[PositionCount]]
   var coverageIndicator = VizCacheIndicator(region, 1)
 
   // variant cache
   object variantsWait
-  var variantsCache: Map[String, String] = Map.empty[String, String]
+  var variantsCache: Map[String, Array[GenotypeJson]] = Map.empty[String, Array[GenotypeJson]]
   var variantsIndicator = VizCacheIndicator(region, 1)
   var showGenotypes: Boolean = false
 
   // features cache
   object featuresWait
-  var featuresCache: Map[String, String] = Map.empty[String, String]
+  var featuresCache: Map[String, Array[BedRowJson]] = Map.empty[String, Array[BedRowJson]]
   var featuresIndicator = VizCacheIndicator(region, 1)
 
   // regions to prefetch during discovery. sent to front
   // end for visual processing
   var prefetchedRegions: List[(ReferenceRegion, Double)] = List()
-
-  // used to determine size of data tiles
-  var chunkSize: Int = 1000
-
-  // thresholds used for visualization binning and limits
-  var screenSize: Int = 1000
 
   // HTTP ERROR RESPONSES
   object errors {
@@ -160,6 +213,15 @@ object VizReads extends BDGCommandCompanion with Logging {
   def formatClickableRegions(regions: List[(ReferenceRegion, Double)]): String = {
     regions.map(r => s"${r._1.referenceName}:${r._1.start}-${r._1.end}" +
       s"-${BigDecimal(r._2).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble}").mkString(",")
+  }
+
+  def expand(region: ReferenceRegion, minLength: Long = VizReads.cacheSize): ReferenceRegion = {
+    require(minLength > 0, s"minimum length ${minLength} must be greater than 0")
+
+    val start = Bookkeep.roundDown(region.start, minLength)
+    val end = Bookkeep.roundDown(region.end + minLength - 1, minLength)
+
+    region.copy(start = start, end = end)
   }
 
   //Correctly shuts down the server
@@ -215,6 +277,16 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
   @Args4jOption(required = false, name = "-discover", usage = "This turns on discovery mode on start up.")
   var discoveryMode: Boolean = false
+
+  @Args4jOption(required = false, name = "-prefetchSize", usage = "Bp to prefetch in executors.")
+  var prefetchSize: Int = 10000
+
+  @Args4jOption(required = false, name = "-cacheSize", usage = "Bp to cache on driver.")
+  var cacheSize: Int = VizReads.cacheSize
+
+  @Args4jOption(required = false, name = "-preload", usage = "Chromosomes to prefetch, separated by commas (,).")
+  var preload: String = null
+
 }
 
 class VizServlet extends ScalatraServlet {
@@ -265,13 +337,13 @@ class VizServlet extends ScalatraServlet {
 
     // generate file keys for front end
     val readsSamples: Option[List[(String, Option[String])]] = try {
-      val reads = VizReads.readsData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r))
+      val reads = VizReads.materializer.getReads().get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r))
 
       // check if there are precomputed coverage files for reads. If so, send this information to the frontend
       // to avoid extra coverage computation
-      if (VizReads.coverageData.isDefined) {
+      if (VizReads.materializer.coveragesExist) {
         Some(reads.map(r => {
-          val coverage = VizReads.coverageData.get.getFiles.map(c => LazyMaterialization.filterKeyFromFile(c))
+          val coverage = VizReads.materializer.getCoverage().get.getFiles.map(c => LazyMaterialization.filterKeyFromFile(c))
             .find(c => {
               c.contains(r)
             })
@@ -284,7 +356,7 @@ class VizServlet extends ScalatraServlet {
     }
 
     val coverageSamples = try {
-      val coverage = VizReads.coverageData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r))
+      val coverage = VizReads.materializer.getCoverage().get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r))
 
       // filter out coverage samples that will be displayed with reads
       if (readsSamples.isDefined) {
@@ -297,14 +369,14 @@ class VizServlet extends ScalatraServlet {
 
     val variantSamples = try {
       if (VizReads.showGenotypes)
-        Some(VizReads.variantContextData.get.getGenotypeSamples().map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.mkString(","))))
-      else Some(VizReads.variantContextData.get.getFiles.map(r => (LazyMaterialization.filterKeyFromFile(r), "")))
+        Some(VizReads.materializer.getVariantContext().get.getGenotypeSamples().map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.mkString(","))))
+      else Some(VizReads.materializer.getVariantContext().get.getFiles.map(r => (LazyMaterialization.filterKeyFromFile(r), "")))
     } catch {
       case e: Exception => None
     }
 
     val featureSamples = try {
-      Some(VizReads.featureData.get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+      Some(VizReads.materializer.getFeatures().get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
     }
@@ -337,7 +409,7 @@ class VizServlet extends ScalatraServlet {
   get("/reads/:key/:ref") {
     VizTimers.ReadsRequest.time {
 
-      if (!VizReads.readsExist) {
+      if (!VizReads.materializer.readsExist) {
         VizReads.errors.notFound
       } else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -350,11 +422,17 @@ class VizServlet extends ScalatraServlet {
           var results: Option[String] = None
           VizReads.readsWait.synchronized {
             // region was already collected, grab from cache
-            if (viewRegion != VizReads.readsIndicator.region) {
-              VizReads.readsCache = VizReads.readsData.get.getJson(viewRegion)
-              VizReads.readsIndicator = VizCacheIndicator(viewRegion, 1)
+            if (!VizReads.readsIndicator.region.contains(viewRegion)) {
+              val expanded = VizReads.expand(viewRegion)
+
+              VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
+              VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
             }
-            results = VizReads.readsCache.get(key)
+            // filter data overlapping viewRegion and stringify
+            val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
+              ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
+            })
+            results = Some(VizReads.materializer.getReads().get.stringify(data))
           }
           if (results.isDefined) {
             Ok(results.get)
@@ -380,7 +458,7 @@ class VizServlet extends ScalatraServlet {
   get("/reads/coverage/:key/:ref") {
     VizTimers.ReadsRequest.time {
 
-      if (!VizReads.readsExist) {
+      if (!VizReads.materializer.readsExist) {
         VizReads.errors.notFound
       } else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -390,13 +468,12 @@ class VizServlet extends ScalatraServlet {
 
         // get all coverage files that have been loaded
         val coverageFiles =
-          if (VizReads.coverageData.isDefined) {
-            Some(VizReads.coverageData.get.getFiles.map(f => LazyMaterialization.filterKeyFromFile(f)))
+          if (VizReads.materializer.coveragesExist) {
+            Some(VizReads.materializer.getCoverage().get.getFiles.map(f => LazyMaterialization.filterKeyFromFile(f)))
           } else None
 
         // check if there is a precomputed coverage file for this reads file
         if (coverageFiles.isDefined && coverageFiles.get.contains(key)) {
-          // TODO: I dont know if this is correct for getting keys
           val binning: Int =
             try
               params("binning").toInt
@@ -412,11 +489,14 @@ class VizServlet extends ScalatraServlet {
             var results: Option[String] = None
             VizReads.readsCoverageWait.synchronized {
               // region was already collected, grab from cache
-              if (viewRegion != VizReads.readsCoverageIndicator.region) {
-                VizReads.readsCoverageCache = VizReads.readsData.get.getCoverage(viewRegion)
-                VizReads.readsIndicator = VizCacheIndicator(viewRegion, 1)
+              if (!VizReads.readsCoverageIndicator.region.contains(viewRegion)) {
+                val expanded = VizReads.expand(viewRegion)
+                VizReads.readsCoverageCache = VizReads.materializer.getReads().get.getCoverage(expanded)
+                VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
               }
-              results = VizReads.readsCoverageCache.get(key)
+              // filter data overlapping viewRegion and stringify
+              val data = VizReads.readsCoverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+              results = Some(write(data))
             }
             if (results.isDefined) {
               Ok(results.get)
@@ -429,7 +509,7 @@ class VizServlet extends ScalatraServlet {
 
   get("/variants/:key/:ref") {
     VizTimers.VarRequest.time {
-      if (!VizReads.variantsExist)
+      if (!VizReads.materializer.variantContextExist)
         VizReads.errors.notFound
       else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -449,13 +529,16 @@ class VizServlet extends ScalatraServlet {
             }
           VizReads.variantsWait.synchronized {
             // region was already collected, grab from cache
-            if (VizCacheIndicator(viewRegion, binning) != VizReads.variantsIndicator) {
-              VizReads.variantsCache = VizReads.variantContextData.get.getJson(viewRegion,
+            if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
+              val expanded = VizReads.expand(viewRegion)
+              VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJson(expanded,
                 VizReads.showGenotypes,
                 binning)
-              VizReads.variantsIndicator = VizCacheIndicator(viewRegion, binning)
+              VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
             }
-            results = VizReads.variantsCache.get(key)
+            // filter data overlapping viewRegion and stringify
+            val data = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
           }
           if (results.isDefined) {
             // extract variants only and parse to stringified json
@@ -468,7 +551,7 @@ class VizServlet extends ScalatraServlet {
 
   get("/features/:key/:ref") {
     VizTimers.FeatRequest.time {
-      if (!VizReads.featuresExist)
+      if (!VizReads.materializer.featuresExist)
         VizReads.errors.notFound
       else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
@@ -488,11 +571,14 @@ class VizServlet extends ScalatraServlet {
             }
           VizReads.featuresWait.synchronized {
             // region was already collected, grab from cache
-            if (VizCacheIndicator(viewRegion, binning) != VizReads.featuresIndicator) {
-              VizReads.featuresCache = VizReads.featureData.get.getJson(viewRegion, binning)
-              VizReads.featuresIndicator = VizCacheIndicator(viewRegion, binning)
+            if (!VizReads.featuresIndicator.region.contains(viewRegion) || binning != VizReads.featuresIndicator.resolution) {
+              val expanded = VizReads.expand(viewRegion)
+              VizReads.featuresCache = VizReads.materializer.getFeatures().get.getJson(expanded, binning)
+              VizReads.featuresIndicator = VizCacheIndicator(expanded, binning)
             }
-            results = VizReads.featuresCache.get(key)
+            // filter data overlapping viewRegion and stringify
+            val data = VizReads.featuresCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(VizReads.materializer.getFeatures().get.stringify(data))
           }
           if (results.isDefined) {
             Ok(results.get)
@@ -510,7 +596,7 @@ class VizServlet extends ScalatraServlet {
    */
   def getCoverage(viewRegion: ReferenceRegion, key: String, binning: Int = 1): ActionResult = {
     VizTimers.CoverageRequest.time {
-      if (!VizReads.coveragesExist) {
+      if (!VizReads.materializer.coveragesExist) {
         VizReads.errors.notFound
       } else {
         contentType = "json"
@@ -519,11 +605,14 @@ class VizServlet extends ScalatraServlet {
           var results: Option[String] = None
           VizReads.coverageWait.synchronized {
             // region was already collected, grab from cache
-            if (viewRegion != VizReads.coverageIndicator.region) {
-              VizReads.coverageCache = VizReads.coverageData.get.getCoverage(viewRegion, binning)
-              VizReads.coverageIndicator = VizCacheIndicator(viewRegion, 1)
+            if (!VizReads.coverageIndicator.region.contains(viewRegion) || binning != VizReads.coverageIndicator.resolution) {
+              val expanded = VizReads.expand(viewRegion)
+              VizReads.coverageCache = VizReads.materializer.getCoverage().get.getCoverage(expanded, binning)
+              VizReads.coverageIndicator = VizCacheIndicator(expanded, binning)
             }
-            results = VizReads.coverageCache.get(key)
+            // filter data overlapping viewRegion and stringify
+            val data = VizReads.coverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(write(data))
           }
           if (results.isDefined) {
             Ok(results.get)
@@ -540,22 +629,22 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
 
-    // choose prefetch size
-    val prefetch =
-      if (sc.isLocal) 10000
-      else 100000
-
     // initialize all datasets
-    initAnnotations
-    initAlignments
-    initCoverages
-    initVariantContext
-    initFeatures
+    initAnnotations(sc)
+
+    // set materializer
+    VizReads.materializer = Materializer(Seq(initAlignments(sc, args.prefetchSize),
+      initCoverages(sc, args.prefetchSize),
+      initVariantContext(sc, args.prefetchSize),
+      initFeatures(sc, args.prefetchSize)).flatten)
+
+    val preload = Option(args.preload).getOrElse("").split(',').flatMap(r => LazyMaterialization.getContigPredicate(r))
 
     // run discovery mode if it is specified in the startup script
-    if (args.discoveryMode) {
-      VizReads.prefetchedRegions = discoverFrequencies()
-      preprocess(VizReads.prefetchedRegions)
+    if (!preload.isEmpty) {
+      val preloaded = VizReads.globalDict.records.filter(r => preload.contains(r.name))
+        .map(r => ReferenceRegion(r.name, 0, r.length))
+      preprocess(preloaded)
     }
 
     // check whether genePath was supplied
@@ -566,148 +655,164 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     // start server
     if (!args.testMode) startServer()
 
-    /*
+  }
+
+  /*
    * Initialize required reference file
    */
-    def initAnnotations() = {
-      val referencePath = Option(args.referencePath).getOrElse({
-        throw new FileNotFoundException("reference file not provided")
+  def initAnnotations(sc: SparkContext) = {
+    val referencePath = Option(args.referencePath).getOrElse({
+      throw new FileNotFoundException("reference file not provided")
+    })
+
+    VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath)
+    VizReads.globalDict = VizReads.annotationRDD.getSequenceDictionary
+  }
+
+  /*
+ * Initialize loaded alignment files
+ */
+  def initAlignments(sc: SparkContext, prefetch: Int): Option[AlignmentRecordMaterialization] = {
+    if (Option(args.readsPaths).isDefined) {
+      val readsPaths = args.readsPaths.split(",").toList
+
+      if (readsPaths.nonEmpty) {
+        object readsWait
+        VizReads.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
+        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
+      } else None
+    } else None
+  }
+
+  /*
+ * Initialize coverage files
+ */
+  def initCoverages(sc: SparkContext, prefetch: Int): Option[CoverageMaterialization] = {
+    if (Option(args.coveragePaths).isDefined) {
+      val coveragePaths = args.coveragePaths.split(",").toList
+
+      if (coveragePaths.nonEmpty) {
+        object coverageWait
+        VizReads.syncObject += (CoverageMaterialization.name -> coverageWait)
+        Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, Some(prefetch)))
+      } else None
+    } else None
+  }
+
+  /**
+   * Initialize loaded variant files
+   */
+  def initVariantContext(sc: SparkContext, prefetch: Int): Option[VariantContextMaterialization] = {
+    // set flag for visualizing genotypes
+    VizReads.showGenotypes = args.showGenotypes
+
+    if (Option(args.variantsPaths).isDefined) {
+      val variantsPaths = args.variantsPaths.split(",").toList
+
+      if (variantsPaths.nonEmpty) {
+        object variantsWait
+        VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
+        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
+      } else None
+    } else None
+  }
+
+  /**
+   * Initialize loaded feature files
+   */
+  def initFeatures(sc: SparkContext, prefetch: Int): Option[FeatureMaterialization] = {
+    val featurePaths = Option(args.featurePaths)
+    if (featurePaths.isDefined) {
+      val featurePaths = args.featurePaths.split(",").toList
+      if (featurePaths.nonEmpty) {
+        object featuresWait
+        VizReads.syncObject += (FeatureMaterialization.name -> featuresWait)
+        Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, Some(prefetch)))
+      } else None
+    } else None
+  }
+
+  /**
+   * Runs total data scan over all feature, variant and coverage files, calculating the normalied frequency at all
+   * windows in the genome.
+   *
+   * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
+   */
+  def discoverFrequencies(sc: SparkContext): List[(ReferenceRegion, Double)] = {
+
+    val discovery = Discovery(VizReads.annotationRDD.getSequenceDictionary)
+    var regions: List[(ReferenceRegion, Double)] = List()
+
+    // parse all materialization structures to calculate region frequencies
+    VizReads.materializer.objects
+      .foreach(m => m match {
+        case vcm: VariantContextMaterialization => {
+          regions = regions ++ discovery.getFrequencies(vcm.get()
+            .map(r => ReferenceRegion(r._2.variant)))
+        }
+        case fm: FeatureMaterialization => {
+          regions = regions ++ discovery.getFrequencies(fm.get()
+            .map(r => ReferenceRegion.unstranded(r._2)))
+        }
+        case cm: CoverageMaterialization => {
+          if (!sc.isLocal) {
+            regions = regions ++ discovery.getFrequencies(cm.get()
+              .map(r => ReferenceRegion(r._2)))
+          }
+        }
+        case am: AlignmentRecordMaterialization => {
+          if (!sc.isLocal) {
+            am.get().count
+          }
+        }
+        case _ => {
+          // no op
+        }
       })
 
-      VizReads.annotationRDD = new AnnotationMaterialization(sc, referencePath)
-      VizReads.globalDict = VizReads.annotationRDD.getSequenceDictionary
-    }
+    // group all regions together and reduce down for all data types
+    regions = regions.groupBy(_._1).map(r => (r._1, r._2.map(a => a._2).sum)).toList
 
-    /*
-   * Initialize loaded alignment files
-   */
-    def initAlignments = {
-      if (Option(args.readsPaths).isDefined) {
-        val readsPaths = args.readsPaths.split(",").toList
-
-        if (readsPaths.nonEmpty) {
-          VizReads.readsData = Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
-        }
-      }
-    }
-
-    /*
-   * Initialize coverage files
-   */
-    def initCoverages = {
-      if (Option(args.coveragePaths).isDefined) {
-        val coveragePaths = args.coveragePaths.split(",").toList
-
-        if (coveragePaths.nonEmpty) {
-          VizReads.coverageData = Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, Some(prefetch)))
-        }
-      }
-    }
-
-    /**
-     * Initialize loaded variant files
-     */
-    def initVariantContext() = {
-      // set flag for visualizing genotypes
-      VizReads.showGenotypes = args.showGenotypes
-
-      if (Option(args.variantsPaths).isDefined) {
-        val variantsPaths = args.variantsPaths.split(",").toList
-
-        if (variantsPaths.nonEmpty) {
-          VizReads.variantContextData = Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
-        }
-      }
-    }
-
-    /**
-     * Initialize loaded feature files
-     */
-    def initFeatures() = {
-      val featurePaths = Option(args.featurePaths)
-      if (featurePaths.isDefined) {
-        val featurePaths = args.featurePaths.split(",").toList
-        if (featurePaths.nonEmpty) {
-          VizReads.featureData = Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, Some(prefetch)))
-        }
-      }
-    }
-
-    /**
-     * Runs total data scan over all feature, variant and coverage files, calculating the normalied frequency at all
-     * windows in the genome.
-     *
-     * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
-     */
-    def discoverFrequencies(): List[(ReferenceRegion, Double)] = {
-
-      val discovery = Discovery(VizReads.annotationRDD.getSequenceDictionary)
-      var regions: List[(ReferenceRegion, Double)] = List()
-
-      // get feature frequency
-      if (VizReads.featuresExist) {
-        val featureRegions = VizReads.featureData.get.getAll().map(ReferenceRegion.unstranded(_))
-        regions = regions ++ discovery.getFrequencies(featureRegions)
-      }
-
-      // get variant frequency
-      if (VizReads.variantsExist) {
-        val variantRegions = VizReads.variantContextData.get.getAll().map(r => ReferenceRegion(r.variant))
-        regions = regions ++ discovery.getFrequencies(variantRegions)
-      }
-
-      // get coverage frequency
-      // Note: calculating coverage frequency is an expensive operation. Only perform if sc is not local.
-      if (VizReads.coveragesExist && !sc.isLocal) {
-        val coverageRegions = VizReads.coverageData.get.getAll().map(ReferenceRegion(_))
-        regions = regions ++ discovery.getFrequencies(coverageRegions)
-      }
-
-      // group all regions together and reduce down for all data types
-      regions = regions.groupBy(_._1).map(r => (r._1, r._2.map(a => a._2).sum)).toList
-
-      // normalize and filter by regions with data
-      val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
-      regions.map(r => (r._1, r._2 / max))
-        .filter(_._2 > 0.0)
-    }
-
-    /**
-     * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
-     *
-     * @param regions Regions to be preprocessed
-     */
-    def preprocess(regions: List[(ReferenceRegion, Double)]) = {
-      // select two of the highest occupied regions to load
-      // The number of selected regions is low to reduce unnecessary loading while
-      // jump starting Thread setup for Spark on the specific data files
-      val selectedRegions = regions.sortBy(_._2).takeRight(2).map(_._1)
-
-      for (region <- selectedRegions) {
-        if (VizReads.featureData.isDefined)
-          VizReads.featureData.get.get(region)
-        if (VizReads.readsData.isDefined)
-          VizReads.readsData.get.get(region)
-        if (VizReads.coverageData.isDefined)
-          VizReads.coverageData.get.get(region)
-        if (VizReads.variantContextData.isDefined)
-          VizReads.variantContextData.get.get(region)
-      }
-    }
-
-    /**
-     * Starts server once on startup
-     */
-    def startServer() = {
-      VizReads.server = new org.eclipse.jetty.server.Server(args.port)
-      val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
-      VizReads.server.setHandler(handlers)
-      handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
-      VizReads.server.start()
-      println("View the visualization at: " + args.port)
-      println("Quit at: /quit")
-      VizReads.server.join()
-    }
-
+    // normalize and filter by regions with data
+    val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
+    regions.map(r => (r._1, r._2 / max))
+      .filter(_._2 > 0.0)
   }
+
+  /**
+   * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
+   *
+   * @param regions Regions to be preprocessed
+   */
+  def preprocess(regions: Vector[ReferenceRegion]) = {
+    // select two of the highest occupied regions to load
+    // The number of selected regions is low to reduce unnecessary loading while
+    // jump starting Thread setup for Spark on the specific data files
+
+    for (region <- regions) {
+      if (VizReads.materializer.featuresExist)
+        VizReads.materializer.getFeatures().get.get(Some(region)).count()
+      if (VizReads.materializer.readsExist)
+        VizReads.materializer.getReads().get.get(Some(region)).count()
+      if (VizReads.materializer.coveragesExist)
+        VizReads.materializer.getCoverage.get.get(Some(region)).count()
+      if (VizReads.materializer.variantContextExist)
+        VizReads.materializer.getVariantContext().get.get(Some(region)).count()
+    }
+  }
+
+  /**
+   * Starts server once on startup
+   */
+  def startServer() = {
+    VizReads.server = new org.eclipse.jetty.server.Server(args.port)
+    val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
+    VizReads.server.setHandler(handlers)
+    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
+    VizReads.server.start()
+    println("View the visualization at: " + args.port)
+    println("Quit at: /quit")
+    VizReads.server.join()
+  }
+
 }

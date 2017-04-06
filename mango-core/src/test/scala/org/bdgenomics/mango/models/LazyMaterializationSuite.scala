@@ -57,10 +57,10 @@ class LazyMaterializationSuite extends MangoFunSuite {
   sparkTest("Should check and clear memory") {
     val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
     lazyDummy.setMemoryFraction(0.0000001) // this is a very low test value
-    lazyDummy.get(ReferenceRegion("chrM", 0, 10L)).count
+    lazyDummy.get(Some(ReferenceRegion("chrM", 0, 10L))).count
     assert(lazyDummy.bookkeep.queue.contains("chrM"))
 
-    lazyDummy.get(ReferenceRegion("20", 0, 10L)).count
+    lazyDummy.get(Some(ReferenceRegion("20", 0, 10L))).count
 
     // these calls should have removed chrM from cache
     assert(!lazyDummy.bookkeep.queue.contains("chrM"))
@@ -76,27 +76,23 @@ class LazyMaterializationSuite extends MangoFunSuite {
  */
 class LazyDummy(@transient sc: SparkContext,
                 files: List[String],
-                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion]("TestRDD", sc, files, sd, Some(100)) with Serializable {
-  @transient implicit val formats = net.liftweb.json.DefaultFormats
+                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion, ReferenceRegion]("TestRDD", sc, files, sd, Some(100L)) with Serializable {
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 
-  def load = (file: String, region: Option[ReferenceRegion]) => {
-    sc.parallelize(Array.range(region.get.start.toInt, region.get.end.toInt)
-      .map(r => ReferenceRegion(region.get.referenceName, r, r + 1)))
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => {
+    val region = regions.get.head
+    sc.parallelize(Array.range(region.start.toInt, region.end.toInt)
+      .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
   }
 
   def setContigName = (r: ReferenceRegion, contig: String) => {
     ReferenceRegion(contig, r.start, r.end)
     r
   }
-
-  def stringify(data: RDD[(String, ReferenceRegion)]): Map[String, String] = {
-    data
-      .collect
-      .groupBy(_._1)
-      .map(r => (r._1, r._2.map(_._2)))
-      .mapValues(r => r.map(f => f.toString).mkString(","))
+  def toJson(data: RDD[(String, ReferenceRegion)]): Map[String, Array[ReferenceRegion]] = {
+    data.collect.groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
   }
+
 }
 

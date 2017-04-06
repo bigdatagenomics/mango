@@ -20,9 +20,21 @@ package org.bdgenomics.mango.core.util
 import java.io._
 
 import org.apache.hadoop.fs.{ FileSystem, Path }
+import org.apache.parquet.filter2.dsl.Dsl._
+import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
+import org.bdgenomics.adam.models.ReferenceRegion
 
 object ResourceUtils {
+
+  // TODO: move
+  def formReferenceRegionPredicate(regions: Iterable[ReferenceRegion]): FilterPredicate = {
+    regions.map(r => {
+      ((LongColumn("end") >= r.start) && (LongColumn("start") <= r.end) &&
+        (BinaryColumn("contigName") === Binary.fromString(r.referenceName)))
+    }).reduce(_ || _)
+  }
 
   /**
    * Prints java heap map availability and usage

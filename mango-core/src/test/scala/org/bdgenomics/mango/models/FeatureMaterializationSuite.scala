@@ -43,7 +43,7 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 1000L, 1200L)
 
     val json = data.getJson(region)
-    assert(json.contains(key))
+    assert(json.contains(key) && json(key).length == 2)
   }
 
   sparkTest("can fetch multiple files") {
@@ -53,7 +53,7 @@ class FeatureMaterializationSuite extends MangoFunSuite {
 
     assert(json.contains(key) && json.contains(key2))
 
-    val keyData = parse(json.get(key).get).extract[Array[BedRowJson]]
+    val keyData = parse(data.stringify(json.get(key).get)).extract[Array[BedRowJson]]
       .sortBy(_.start)
 
     assert(keyData.length == 2)
@@ -68,7 +68,8 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val json = data.getJson(region)
 
     assert(json.contains(key) && json.contains(key2))
-
+    assert(json(key).length == 2)
+    assert(json(key2).length == 2)
   }
 
   sparkTest("Bins features over large ranges") {
@@ -77,10 +78,19 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict)
     val region = new ReferenceRegion("M", 1000L, 1200L)
     val json = data.getJson(region, binning = 200)
-    val keyData = parse(json.get(key).get).extract[Array[BedRowJson]]
+    val keyData = parse(data.stringify(json.get(key).get)).extract[Array[BedRowJson]]
     assert(keyData.length == 1)
     assert(keyData.head.start == 1000)
     assert(keyData.head.stop == 1210) // should extend longest feature in bin
   }
 
+  sparkTest("fetches multiple regions from load") {
+    val region1 = ReferenceRegion("chrM", 100L, 200L)
+    val region2 = ReferenceRegion("chrM", 3000L, 3100L)
+    val regions = Some(Iterable(region1, region2))
+    val data1 = FeatureMaterialization.load(sc, bedFile, Some(Iterable(region1)))
+    val data2 = FeatureMaterialization.load(sc, bedFile, Some(Iterable(region1)))
+    val data = FeatureMaterialization.load(sc, bedFile, regions)
+    assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
+  }
 }

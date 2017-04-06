@@ -20,6 +20,7 @@ package org.bdgenomics.mango.layout
 
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.formats.avro.Variant
 
 /**
@@ -64,6 +65,16 @@ case class GenotypeJson(variant: Variant, sampleIds: Array[String]) {
     @transient implicit val formats = net.liftweb.json.DefaultFormats
 
     write(GenotypeString(VariantJson(variant), sampleIds))(formats)
+  }
+
+  /**
+   * Checks whethere this GenotypeJson overlaps ReferenceRegion r.
+   *
+   * @param r ReferenceRegion
+   * @return Boolean determining whether positions overlap
+   */
+  def overlaps(r: ReferenceRegion): Boolean = {
+    ReferenceRegion(variant).overlaps(r)
   }
 
 }
@@ -112,7 +123,18 @@ object GenotypeJson {
  * @param start start of feature region
  * @param stop end of feature region
  */
-case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long, score: Int)
+case class BedRowJson(id: String, featureType: String, contig: String, start: Long, stop: Long, score: Int) {
+
+  /**
+   * Checks whethere this BedRowJson overlaps ReferenceRegion r.
+   *
+   * @param r ReferenceRegion
+   * @return Boolean determining whether positions overlap
+   */
+  def overlaps(r: ReferenceRegion): Boolean = {
+    ReferenceRegion(contig, start, stop).overlaps(r)
+  }
+}
 
 /**
  * Class for covertering adam coverage to coverage format readable by pileup.js
@@ -120,5 +142,16 @@ case class BedRowJson(id: String, featureType: String, contig: String, start: Lo
  * @param end Base pair end chromosome
  * @param count Coverage at the specified base pair
  */
-case class PositionCount(start: Long, end: Long, count: Int)
+case class PositionCount(contig: String, start: Long, end: Long, count: Int) {
+
+  /**
+   * Checks whethere this PositionCount overlaps ReferenceRegion r.
+   *
+   * @param r ReferenceRegion
+   * @return Boolean determining whether positions overlap
+   */
+  def overlaps(r: ReferenceRegion): Boolean = {
+    ReferenceRegion(contig, start, end).overlaps(r)
+  }
+}
 
