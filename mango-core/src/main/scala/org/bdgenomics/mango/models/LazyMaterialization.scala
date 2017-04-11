@@ -328,15 +328,24 @@ object LazyMaterialization {
    * should also search "20", and "20" should also trigger the search of "chr20".
    *
    * @param region ReferenceRegion to modify referenceName
-   * @return Tuple2 of ReferenceRegions, with and without the "chr" prefix
+   * @return Array of ReferenceRegions, with and without the "chr" prefix
    */
   def getContigPredicate(region: ReferenceRegion): Array[ReferenceRegion] = {
-    if (region.referenceName.startsWith("chr")) {
-      val modifiedRegion = ReferenceRegion(region.referenceName.drop(3), region.start, region.end, region.strand)
-      Array(region, modifiedRegion)
+    getContigPredicate(region.referenceName).map(r => region.copy(referenceName = r))
+  }
+
+  /**
+   * Gets predicate reference name options for chromosome name based on searchable region. For example, "chr20"
+   * should also search "20", and "20" should also trigger the search of "chr20".
+   *
+   * @param referenceName referenceName
+   * @return Array of of referencenames, with and without the "chr" prefix
+   */
+  def getContigPredicate(referenceName: String): Array[String] = {
+    if (referenceName.startsWith("chr")) {
+      Array(referenceName, referenceName.drop(3))
     } else {
-      val modifiedRegion = ReferenceRegion(("chr").concat(region.referenceName), region.start, region.end, region.strand)
-      Array(region, modifiedRegion)
+      Array(referenceName, ("chr").concat(referenceName))
     }
   }
 }

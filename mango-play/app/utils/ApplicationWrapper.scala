@@ -86,8 +86,14 @@ class ServerArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-discover", usage = "This turns on discovery mode on start up.")
   var discoveryMode: Boolean = false
 
-  @Args4jOption(required = false, name = "-cacheSize", usage = "Determines cache size on driver.")
+  @Args4jOption(required = false, name = "-prefetchSize", usage = "Bp to prefetch in executors.")
+  var prefetchSize: Int = 10000
+
+  @Args4jOption(required = false, name = "-cacheSize", usage = "Bp to cache on driver.")
   var cacheSize: Int = MangoServletWrapper.cacheSize
+
+  @Args4jOption(required = false, name = "-preload", usage = "Chromosomes to prefetch, separated by commas (,).")
+  var preload: String = null
 }
 
 /**
@@ -101,6 +107,8 @@ object MangoServletWrapper extends BDGCommandCompanion with Logging {
   var sc: SparkContext = null
 
   var materializer: Materializer = null
+
+  var cacheSize: Int = 1000
 
   var metrics: Option[MetricsListener] = None
 
@@ -123,7 +131,6 @@ object MangoServletWrapper extends BDGCommandCompanion with Logging {
   // regions to prefetch during discovery. sent to front
   // end for visual processing
   var prefetchedRegions: List[(ReferenceRegion, Double)] = List()
-  var cacheSize: Int = 5000
 
   /**
    * Prints spark metrics to System.out
@@ -209,9 +216,6 @@ class MangoServletWrapper(val args: ServerArgs) extends BDGSparkCommand[ServerAr
     // Set SparkContext
     MangoServletWrapper.sc = sc
 
-    // choose prefetch size
-    def prefetch = (MangoServletWrapper.cacheSize * 2)
-
     // set driver cache size
     MangoServletWrapper.cacheSize = args.cacheSize
 
@@ -224,8 +228,17 @@ class MangoServletWrapper(val args: ServerArgs) extends BDGSparkCommand[ServerAr
     }
 
     // set materializer
-    MangoServletWrapper.materializer = Materializer(Seq(initAlignments(sc, prefetch), initCoverages(sc, prefetch),
-      initVariantContext(sc, prefetch), initFeatures(sc, prefetch)).flatten)
+    MangoServletWrapper.materializer = Materializer(Seq(initAlignments(sc, args.prefetchSize), initCoverages(sc, args.prefetchSize),
+      initVariantContext(sc, args.prefetchSize), initFeatures(sc, args.prefetchSize)).flatten)
+
+    val preload = Option(args.preload).getOrElse("").split(',').flatMap(r => LazyMaterialization.getContigPredicate(r))
+
+    // run discovery mode if it is specified in the startup script
+    if (!preload.isEmpty) {
+      val preloaded = MangoServletWrapper.globalDict.records.filter(r => preload.contains(r.name))
+        .map(r => ReferenceRegion(r.name, 0, r.length))
+      preprocess(preloaded)
+    }
 
     // run discovery mode if it is specified in the startup script
     if (args.discoveryMode) {
@@ -344,6 +357,28 @@ class MangoServletWrapper(val args: ServerArgs) extends BDGSparkCommand[ServerAr
     val max = regions.map(_._2).reduceOption(_ max _).getOrElse(1.0)
     regions.map(r => (r._1, r._2 / max))
       .filter(_._2 > 0.0)
+  }
+
+  /**
+   * preprocesses data by loading specified regions into memory for reads, coverage, variants and features
+   *
+   * @param regions Regions to be preprocessed
+   */
+  def preprocess(regions: Vector[ReferenceRegion]) = {
+    // select two of the highest occupied regions to load
+    // The number of selected regions is low to reduce unnecessary loading while
+    // jump starting Thread setup for Spark on the specific data files
+
+    for (region <- regions) {
+      if (MangoServletWrapper.materializer.featuresExist)
+        MangoServletWrapper.materializer.getFeatures().get.get(Some(region)).count()
+      if (MangoServletWrapper.materializer.readsExist)
+        MangoServletWrapper.materializer.getReads().get.get(Some(region)).count()
+      if (MangoServletWrapper.materializer.coveragesExist)
+        MangoServletWrapper.materializer.getCoverage.get.get(Some(region)).count()
+      if (MangoServletWrapper.materializer.variantContextExist)
+        MangoServletWrapper.materializer.getVariantContext().get.get(Some(region)).count()
+    }
   }
 
 }
