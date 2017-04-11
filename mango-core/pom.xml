@@ -163,15 +163,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.scalatra</groupId>
-      <artifactId>scalatra_${scala.version.prefix}</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.scalatra.scalate</groupId>
-      <artifactId>scalate-core_${scala.version.prefix}</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.seqdoop</groupId>
       <artifactId>hadoop-bam</artifactId>
       <scope>compile</scope>

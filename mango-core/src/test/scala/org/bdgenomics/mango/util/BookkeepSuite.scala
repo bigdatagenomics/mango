@@ -17,11 +17,11 @@
  */
 package org.bdgenomics.mango.util
 
-import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.adam.models.{ SequenceRecord, SequenceDictionary, ReferenceRegion }
 import org.scalatest.FunSuite
 
 class BookkeepSuite extends FunSuite {
-  val prefetchSize = 100
+  val prefetchSize = 100L
   val sampleId = "id"
 
   val region1 = ReferenceRegion("chr1", 0, 100)
@@ -31,8 +31,8 @@ class BookkeepSuite extends FunSuite {
     val bookkeep = new Bookkeep(prefetchSize)
     bookkeep.rememberValues(region1, sampleId)
     val regions = bookkeep.getMissingRegions(ReferenceRegion("chr1", 0, 850), List(sampleId))
-    assert(regions.get.length == 1)
-    assert(regions.get.head.end == 900)
+    assert(regions.length == 1)
+    assert(regions.head.end == 900)
 
   }
 
@@ -41,9 +41,9 @@ class BookkeepSuite extends FunSuite {
     bookkeep.rememberValues(region1, sampleId)
     bookkeep.rememberValues(region2, sampleId)
     val regions = bookkeep.getMissingRegions(ReferenceRegion("chr1", 0, 899), List(sampleId))
-    assert(regions.get.length == 1)
-    assert(regions.get.head.start == 100)
-    assert(regions.get.head.end == 500)
+    assert(regions.length == 1)
+    assert(regions.head.start == 100)
+    assert(regions.head.end == 500)
 
   }
 
@@ -54,9 +54,9 @@ class BookkeepSuite extends FunSuite {
     val newRegion = ReferenceRegion("chr2", 0, 100)
     bookkeep.rememberValues(newRegion, sampleId)
     val regions = bookkeep.getMissingRegions(ReferenceRegion("chr2", 0, 900), List(sampleId))
-    assert(regions.get.length == 1)
-    assert(regions.get.head.start == 100)
-    assert(regions.get.head.end == 1000)
+    assert(regions.length == 1)
+    assert(regions.head.start == 100)
+    assert(regions.head.end == 900)
   }
 
   test("merges regions") {
@@ -65,6 +65,27 @@ class BookkeepSuite extends FunSuite {
 
     val merged = Bookkeep.mergeRegions(regions)
     assert(merged.length == 2)
+  }
+
+  test("saves sequence dictionary") {
+    val samples = List("./workfiles/mouse_chrM.bam", "./workfiles/mouse_chrM_1.bam")
+    val sd = new SequenceDictionary(Vector(SequenceRecord("chrM", 16299L), SequenceRecord("chr1", 16299L)))
+
+    val bookkeep = new Bookkeep(10000L)
+
+    bookkeep.rememberValues(sd, samples)
+
+    val missing = bookkeep.getMissingRegions(ReferenceRegion("chrM", 0, 10000), samples)
+    assert(missing.length == 0)
+  }
+
+  test("get and put region where region equals chunk size") {
+    val newRegion = ReferenceRegion("chr1", 10000, 20000)
+    val bookkeep = new Bookkeep(10000)
+    bookkeep.rememberValues(newRegion, sampleId)
+
+    val regions = bookkeep.getMissingRegions(newRegion, List(sampleId))
+    assert(regions.length == 0)
   }
 
 }

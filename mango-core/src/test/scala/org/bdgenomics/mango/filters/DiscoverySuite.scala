@@ -30,7 +30,7 @@ class DiscoverySuite extends MangoFunSuite {
     val sd = new SequenceDictionary(Vector(SequenceRecord("chrM", 1000000))) // length to ensure 1000 size windows
     val discovery = new Discovery(sd)
 
-    val features = FeatureMaterialization.load(sc, None, bedFile).rdd.map(r => ReferenceRegion.unstranded(r))
+    val features = FeatureMaterialization.load(sc, bedFile, None).rdd.map(r => ReferenceRegion.unstranded(r))
 
     val mergedRegions = discovery.getFrequencies(features)
     assert(mergedRegions.length == 3)
@@ -41,7 +41,7 @@ class DiscoverySuite extends MangoFunSuite {
     val sd = new SequenceDictionary(Vector(SequenceRecord("chrN", 1000000))) // length to ensure 1000 size windows
     val discovery = new Discovery(sd)
 
-    val features = FeatureMaterialization.load(sc, None, bedFile).rdd.map(r => ReferenceRegion.unstranded(r))
+    val features = FeatureMaterialization.load(sc, bedFile, None).rdd.map(r => ReferenceRegion.unstranded(r))
 
     val mergedRegions = discovery.getFrequencies(features)
     assert(mergedRegions.length == 0)

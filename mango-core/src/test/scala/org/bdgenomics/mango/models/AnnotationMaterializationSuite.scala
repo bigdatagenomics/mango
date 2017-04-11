@@ -21,7 +21,6 @@ package org.bdgenomics.mango.models
 import net.liftweb.json._
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.mango.util.MangoFunSuite
-import net.liftweb.json.Serialization._
 
 class AnnotationMaterializationSuite extends MangoFunSuite {
 

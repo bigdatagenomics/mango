@@ -28,8 +28,8 @@ REPO="$SCRIPT_DIR/repo"
 
 # Fallback to source repo
 if [ ! -f $MANGO_CMD ]; then
-MANGO_CMD="$SCRIPT_DIR/mango-cli/target/appassembler/bin/mango"
-REPO="$SCRIPT_DIR/mango-cli/target/appassembler/repo"
+MANGO_CMD="$SCRIPT_DIR/mango-play/target/appassembler/bin/mango"
+REPO="$SCRIPT_DIR/mango-play/target/appassembler/repo"
 fi
 
 if [ ! -f "$MANGO_CMD" ]; then

@@ -1,4 +1,4 @@
-#mango
+# mango
 
 A scalable genome browser built on top of the [ADAM](https://github.com/bigdatagenomics/adam) genomics processing engine. Apache 2 licensed.
 
@@ -30,7 +30,9 @@ mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appas
 
 Running an example script:
 ```
-From the main folder of mango, run ./example-files/run-example.sh to see a demonstration of chromosome 17, region 7500000-7515000.
+From the main folder of mango, run ./scripts/run-example.sh to see a demonstration of chromosome 17, region 7500000-7515000.
+```
+**Note:** In local mode, relative paths are referenced from the mango-play submodule. To reference your own files, put in the absolute path.
 ```
 For help launching the script, run `bin/mango-submit -h`
 ````

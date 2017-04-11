@@ -1,3 +1,3 @@
-[submodule "mango-cli/src/main/webapp/resources/pileup.js"]
-	path = mango-cli/src/main/webapp/resources/pileup.js
+[submodule "mango-play/public/resources/pileup.js"]
+	path = mango-play/public/resources/pileup.js
 	url = https://github.com/akmorrow13/pileup.js.git
