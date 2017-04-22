@@ -116,9 +116,9 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   }
 
   /**
-   * Formats raw data from KLayeredTile to JSON. This is requied by KTiles
+   * Formats an RDD of keyed AlignmentRecords to a GAReadAlignments mapped by key
    * @param data RDD of (id, AlignmentRecord) tuples
-   * @return JSONified data
+   * @return GAReadAlignments mapped by key
    */
   override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
     AlignmentTimers.collect.time {
@@ -130,8 +130,8 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   }
 
   /**
-   * Formats raw data from KLayeredTile to JSON. This is requied by KTiles
-   * @param data RDD of (id, AlignmentRecord) tuples
+   * Formats raw data from GA4GH AlignmentRecords to JSON.
+   * @param data An array of GAReadAlignments
    * @return JSONified data
    */
   override def stringify(data: Array[GAReadAlignment]): String = {
@@ -200,18 +200,20 @@ object AlignmentRecordMaterialization extends Logging {
    * @return RDD of data from the file over specified ReferenceRegion
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
-    val pred =
-      if (regions.isDefined) {
-        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-        Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-      } else {
-        Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-      }
+    AlignmentTimers.loadADAMData.time {
+      val pred =
+        if (regions.isDefined) {
+          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+        } else {
+          Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+        }
 
-    val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
-      AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
-      AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
-      AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-    sc.loadParquetAlignments(fp, predicate = pred, projection = Some(proj))
+      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
+        AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
+        AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
+        AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+      sc.loadParquetAlignments(fp, predicate = pred, projection = Some(proj))
+    }
   }
 }

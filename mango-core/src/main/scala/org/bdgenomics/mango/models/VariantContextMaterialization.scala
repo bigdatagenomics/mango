@@ -80,10 +80,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    */
   def toJson(data: RDD[(String, GenotypeJson)]): Map[String, Array[GenotypeJson]] = {
     data.collect
-      .groupBy(_._1).map(r => (r._1, r._2.map(_._2))) //.map(r => (r._1, r._2.map(_._2.toString())))
-
-    // write variants to json
-    //    flattened.mapValues(write(_))
+      .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
   }
 
   override def stringify(data: Array[GenotypeJson]): String = {
@@ -95,7 +92,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @param region Region to obtain coverage for
    * @param binning Tells what granularity of coverage to return. Used for large regions
-   * @return JSONified data map;
+   * @return JSONified data map
    */
   def getJson(region: ReferenceRegion,
               showGenotypes: Boolean,
@@ -201,8 +198,7 @@ object VariantContextMaterialization {
         None
       }
 
-    val proj = Projection(VariantField.contigName, VariantField.start, VariantField.referenceAllele, VariantField.alternateAllele, VariantField.end)
-    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).toVariantContextRDD
+    sc.loadParquetGenotypes(fp, predicate = pred).toVariantContextRDD
   }
 
   /**

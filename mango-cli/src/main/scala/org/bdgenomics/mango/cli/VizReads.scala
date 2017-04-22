@@ -218,8 +218,8 @@ object VizReads extends BDGCommandCompanion with Logging {
   def expand(region: ReferenceRegion, minLength: Long = VizReads.cacheSize): ReferenceRegion = {
     require(minLength > 0, s"minimum length ${minLength} must be greater than 0")
 
-    val start = Bookkeep.roundDown(region.start, minLength)
-    val end = Bookkeep.roundDown(region.end + minLength - 1, minLength)
+    val start = Math.max(0, region.start - minLength / 2)
+    val end = region.end + minLength / 2
 
     region.copy(start = start, end = end)
   }
@@ -420,20 +420,19 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           var results: Option[String] = None
+          // region was already collected, grab from cache
           VizReads.readsWait.synchronized {
-            // region was already collected, grab from cache
             if (!VizReads.readsIndicator.region.contains(viewRegion)) {
               val expanded = VizReads.expand(viewRegion)
-
               VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
               VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
             }
-            // filter data overlapping viewRegion and stringify
-            val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
-              ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
-            })
-            results = Some(VizReads.materializer.getReads().get.stringify(data))
           }
+          // filter data overlapping viewRegion and stringify
+          val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
+            ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
+          })
+          results = Some(VizReads.materializer.getReads().get.stringify(data))
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.noContent(viewRegion)
@@ -487,17 +486,17 @@ class VizServlet extends ScalatraServlet {
           val dictOpt = VizReads.globalDict(viewRegion.referenceName)
           if (dictOpt.isDefined) {
             var results: Option[String] = None
+            // region was already collected, grab from cache
             VizReads.readsCoverageWait.synchronized {
-              // region was already collected, grab from cache
               if (!VizReads.readsCoverageIndicator.region.contains(viewRegion)) {
                 val expanded = VizReads.expand(viewRegion)
                 VizReads.readsCoverageCache = VizReads.materializer.getReads().get.getCoverage(expanded)
                 VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
               }
-              // filter data overlapping viewRegion and stringify
-              val data = VizReads.readsCoverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-              results = Some(write(data))
             }
+            // filter data overlapping viewRegion and stringify
+            val data = VizReads.readsCoverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(write(data))
             if (results.isDefined) {
               Ok(results.get)
             } else VizReads.errors.noContent(viewRegion)
@@ -527,8 +526,9 @@ class VizServlet extends ScalatraServlet {
             } catch {
               case e: Exception => 1
             }
+
+          // region was already collected, grab from cache
           VizReads.variantsWait.synchronized {
-            // region was already collected, grab from cache
             if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
               val expanded = VizReads.expand(viewRegion)
               VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJson(expanded,
@@ -536,10 +536,10 @@ class VizServlet extends ScalatraServlet {
                 binning)
               VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
             }
-            // filter data overlapping viewRegion and stringify
-            val data = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-            results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
           }
+          // filter data overlapping viewRegion and stringify
+          val data = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
           if (results.isDefined) {
             // extract variants only and parse to stringified json
             Ok(results.get)
@@ -576,10 +576,10 @@ class VizServlet extends ScalatraServlet {
               VizReads.featuresCache = VizReads.materializer.getFeatures().get.getJson(expanded, binning)
               VizReads.featuresIndicator = VizCacheIndicator(expanded, binning)
             }
-            // filter data overlapping viewRegion and stringify
-            val data = VizReads.featuresCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-            results = Some(VizReads.materializer.getFeatures().get.stringify(data))
           }
+          // filter data overlapping viewRegion and stringify
+          val data = VizReads.featuresCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          results = Some(VizReads.materializer.getFeatures().get.stringify(data))
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.noContent(viewRegion)
@@ -603,17 +603,17 @@ class VizServlet extends ScalatraServlet {
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
         if (dictOpt.isDefined) {
           var results: Option[String] = None
+          // region was already collected, grab from cache
           VizReads.coverageWait.synchronized {
-            // region was already collected, grab from cache
             if (!VizReads.coverageIndicator.region.contains(viewRegion) || binning != VizReads.coverageIndicator.resolution) {
               val expanded = VizReads.expand(viewRegion)
               VizReads.coverageCache = VizReads.materializer.getCoverage().get.getCoverage(expanded, binning)
               VizReads.coverageIndicator = VizCacheIndicator(expanded, binning)
             }
-            // filter data overlapping viewRegion and stringify
-            val data = VizReads.coverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-            results = Some(write(data))
           }
+          // filter data overlapping viewRegion and stringify
+          val data = VizReads.coverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          results = Some(write(data))
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.noContent(viewRegion)
