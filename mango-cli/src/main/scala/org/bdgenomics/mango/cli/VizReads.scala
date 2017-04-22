@@ -632,11 +632,18 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     // initialize all datasets
     initAnnotations(sc)
 
+    VizReads.cacheSize = args.cacheSize
+
     // set materializer
     VizReads.materializer = Materializer(Seq(initAlignments(sc, args.prefetchSize),
       initCoverages(sc, args.prefetchSize),
       initVariantContext(sc, args.prefetchSize),
       initFeatures(sc, args.prefetchSize)).flatten)
+
+    // discover regions
+    if (args.discoveryMode) {
+      VizReads.prefetchedRegions = discoverFrequencies(sc)
+    }
 
     val preload = Option(args.preload).getOrElse("").split(',').flatMap(r => LazyMaterialization.getContigPredicate(r))
 
@@ -753,17 +760,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         case fm: FeatureMaterialization => {
           regions = regions ++ discovery.getFrequencies(fm.get()
             .map(r => ReferenceRegion.unstranded(r._2)))
-        }
-        case cm: CoverageMaterialization => {
-          if (!sc.isLocal) {
-            regions = regions ++ discovery.getFrequencies(cm.get()
-              .map(r => ReferenceRegion(r._2)))
-          }
-        }
-        case am: AlignmentRecordMaterialization => {
-          if (!sc.isLocal) {
-            am.get().count
-          }
         }
         case _ => {
           // no op

@@ -92,7 +92,7 @@ class Bookkeep(chunkSize: Long) extends Serializable with Logging {
     val roundedStart = Bookkeep.roundDown(region.start, chunkSize)
     val roundedEnd = Bookkeep.roundDown(region.end + chunkSize - 1, chunkSize)
 
-    val chunkCount = Math.max(1, ((roundedEnd-roundedStart) / chunkSize).toInt)
+    val chunkCount = Math.max(1, ((roundedEnd - roundedStart) / chunkSize).toInt)
 
     // get chunked reference regions
     val chunks = (0 until chunkCount)
