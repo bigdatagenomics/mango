@@ -23,7 +23,7 @@
     <bdg-utils.version>0.2.12-SNAPSHOT</bdg-utils.version>
     <java.version>1.8</java.version>
     <jetty.version>9.2.17.v20160517</jetty.version>
-    <hadoop.version>2.6.0</hadoop.version>
+    <hadoop.version>2.7.3</hadoop.version>
     <hadoop-bam.version>7.6.0</hadoop-bam.version>
     <htsjdk.version>2.5.0</htsjdk.version>
     <parquet.version>1.8.1</parquet.version>
@@ -390,6 +390,7 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
         <version>${hadoop.version}</version>
+        <scope>provided</scope>
         <exclusions>
           <exclusion>
             <groupId>asm</groupId>
@@ -410,6 +411,10 @@
           <exclusion>
             <groupId>javax.servlet</groupId>
             <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

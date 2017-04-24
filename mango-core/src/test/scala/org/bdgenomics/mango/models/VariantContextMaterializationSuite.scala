@@ -47,7 +47,19 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val data = new VariantContextMaterialization(sc, List(vcfFile1), sd)
     val json = data.getJson(region).get(key).get
 
-    val vAndg = parse(json).extract[Array[String]].map(r => GenotypeJson(r))
+    val vAndg = json.sortBy(_.variant.getStart)
+
+    assert(vAndg.length == 3)
+    assert(vAndg.head.sampleIds.length == 2)
+
+  }
+
+  sparkTest("Can extract json") {
+    val region = new ReferenceRegion("chrM", 0, 999)
+    val data = new VariantContextMaterialization(sc, List(vcfFile1), sd)
+    val json = data.getJson(region).get(key).get
+
+    val vAndg = parse(data.stringify(json)).extract[Array[String]].map(r => GenotypeJson(r))
       .sortBy(_.variant.getStart)
 
     assert(vAndg.length == 3)
@@ -76,8 +88,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val data = new VariantContextMaterialization(sc, List(vcfFile2), sd)
     val json = data.getJson(region).get(key2).get
 
-    val vAndg = parse(json).extract[Array[String]].map(r => GenotypeJson(r))
-      .sortBy(_.variant.getStart)
+    val vAndg = json.sortBy(_.variant.getStart)
 
     assert(vAndg.length == 7)
     assert(vAndg.head.sampleIds.length == 0)
@@ -88,11 +99,11 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data = new VariantContextMaterialization(sc, vcfFiles, sd)
     val json = data.getJson(region)
-    var vAndg = parse(json.get(key).get).extract[Array[String]].map(r => GenotypeJson(r))
+    var vAndg = json.get(key).get
 
     assert(vAndg.length == 3)
 
-    vAndg = parse(json.get(key2).get).extract[Array[String]].map(r => GenotypeJson(r))
+    vAndg = json.get(key2).get
 
     assert(vAndg.length == 7)
   }
@@ -100,7 +111,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
   sparkTest("Should bin and not return genotypes at zoomed out regions") {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data = new VariantContextMaterialization(sc, List(vcfFile1), sd)
-    val json = data.getJson(region, true, binning = 20).get(key).get
+    val json = data.stringify(data.getJson(region, true, binning = 20).get(key).get)
 
     val vAndg = parse(json).extract[Array[String]].map(r => GenotypeJson(r))
       .sortBy(_.variant.getStart)
@@ -120,13 +131,24 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val region = new ReferenceRegion("M", 0, 999)
     val data = new VariantContextMaterialization(sc, vcfFiles, sd)
     val json = data.getJson(region)
-    var vAndg = parse(json.get(key).get).extract[Array[String]].map(r => GenotypeJson(r))
+    var vAndg = json.get(key).get
 
     assert(vAndg.length == 3)
 
-    vAndg = parse(json.get(key2).get).extract[Array[String]].map(r => GenotypeJson(r))
+    vAndg = json.get(key2).get
 
     assert(vAndg.length == 7)
+  }
+
+  sparkTest("fetches multiple regions from load") {
+    val region1 = ReferenceRegion("chrM", 10L, 30L)
+    val region2 = ReferenceRegion("chrM", 50L, 60L)
+    val regions = Some(Iterable(region1, region2))
+    val data1 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region1)))
+    val data2 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region2)))
+    val data = VariantContextMaterialization.load(sc, vcfFile1, regions)
+
+    assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
   }
 
 }
