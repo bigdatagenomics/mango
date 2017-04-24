@@ -19,6 +19,7 @@ package org.bdgenomics.mango.models
 
 import java.io.{ PrintWriter, StringWriter }
 
+import htsjdk.samtools.ValidationStringency
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -123,7 +124,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
     AlignmentTimers.collect.time {
       AlignmentTimers.getAlignmentData.time {
-        data.mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r)))
+        data.mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
           .reduceByKeyLocally(_ ++ _).toMap
       }
     }

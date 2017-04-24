@@ -17,14 +17,17 @@
  */
 package org.bdgenomics.mango.converters
 
-import htsjdk.samtools.{ CigarOperator, TextCigarCodec }
+import htsjdk.samtools.{ ValidationStringency, CigarOperator, TextCigarCodec }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.utils.misc.Logging
 import org.ga4gh._
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
-object GA4GHConverter extends Serializable {
+object GA4GHConverter extends Serializable with Logging {
+
+  private[converters] val placeholder = "N/A"
 
   private[converters] def convertCigar(cigarString: java.lang.String): List[GACigarUnit] = {
     if (cigarString == null) {
@@ -61,24 +64,36 @@ object GA4GHConverter extends Serializable {
     }
   }
 
-  def toGAReadAlignment(record: AlignmentRecord): GAReadAlignment = {
+  def toGAReadAlignment(record: AlignmentRecord, stringency: ValidationStringency = ValidationStringency.LENIENT): GAReadAlignment = {
 
     val builder = GAReadAlignment.newBuilder()
 
     // id needs to be nulled out
     builder.setId(null)
 
-    // read must have a read group
+    // read group
     val rgName = Option(record.getRecordGroupName)
-    require(rgName.isDefined,
-      "Read %s does not have a read group attached.".format(record))
-    rgName.foreach(builder.setReadGroupId)
+    stringency match {
+      case ValidationStringency.STRICT =>
+        require(rgName.isDefined,
+          "Read %s does not have a read group attached.".format(record))
+      case ValidationStringency.LENIENT =>
+        log.warn("Read %s does not have a read group attached.".format(record))
+      case _ => // no op
+    }
+    builder.setReadGroupId(rgName.getOrElse(placeholder))
 
     // read must have a name
     val readName = Option(record.getReadName)
-    require(readName.isDefined,
-      "Read %s does not have a read name attached.".format(record))
-    readName.foreach(builder.setFragmentName)
+    stringency match {
+      case ValidationStringency.STRICT =>
+        require(readName.isDefined,
+          "Read %s does not have a read name attached.".format(record))
+      case ValidationStringency.LENIENT =>
+        log.warn("Read %s does not have a read name attached.".format(record))
+      case _ => // no op
+    }
+    builder.setFragmentName(readName.getOrElse(placeholder))
 
     // set alignment flags
     builder.setProperPlacement(record.getProperPair)

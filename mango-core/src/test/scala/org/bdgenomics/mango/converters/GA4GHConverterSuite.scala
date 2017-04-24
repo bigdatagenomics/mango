@@ -17,6 +17,7 @@
  */
 package org.bdgenomics.mango.converters
 
+import htsjdk.samtools.ValidationStringency
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.ga4gh.GACigarOperation
 import org.scalatest.FunSuite
@@ -76,20 +77,34 @@ class GA4GHConverterSuite extends FunSuite {
     builder
   }
 
-  test("converting a read without a read group fails") {
+  test("converting a read without a read group fails with ValidationStringency STRICT") {
     intercept[IllegalArgumentException] {
       GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
         .setRecordGroupName(null)
-        .build())
+        .build(), stringency = ValidationStringency.STRICT)
     }
   }
 
-  test("converting a read without a name fails") {
+  test("converting a read without a read group passes with ValidationStringency LENIENT") {
+    val gaRead = GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      .setRecordGroupName(null)
+      .build())
+    assert(gaRead.getReadGroupId == GA4GHConverter.placeholder)
+  }
+
+  test("converting a read without a name fails with ValidationStringency STRICT") {
     intercept[IllegalArgumentException] {
       GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
         .setReadName(null)
-        .build())
+        .build(), stringency = ValidationStringency.STRICT)
     }
+  }
+
+  test("converting a read without a name passes with ValidationStringency LENIENT") {
+    val gaRead = GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      .setReadName(null)
+      .build())
+    assert(gaRead.getFragmentName == GA4GHConverter.placeholder)
   }
 
   test("converting a read without a start fails") {
