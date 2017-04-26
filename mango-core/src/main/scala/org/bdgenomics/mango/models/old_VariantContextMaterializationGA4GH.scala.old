@@ -42,10 +42,10 @@ import scala.collection.JavaConverters._
  * Handles loading and tracking of data from persistent storage into memory for Variant data.
  * @see LazyMaterialization.scala
  */
-class VariantContextMaterialization(@transient sc: SparkContext,
-                                    files: List[String],
-                                    sd: SequenceDictionary,
-                                    prefetchSize: Option[Long] = None)
+class VariantContextMaterializationGA4GH(@transient sc: SparkContext,
+                                         files: List[String],
+                                         sd: SequenceDictionary,
+                                         prefetchSize: Option[Long] = None)
     extends LazyMaterialization[VariantContext, VariantContext]("VariantContextRDD", sc, files, sd, prefetchSize)
     with Serializable {
 
@@ -68,7 +68,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
   //def load = (file: String, region: Option[ReferenceRegion]) =>
   //  VariantContextMaterialization.toGenotypeJsonRDD(VariantContextMaterialization.load(sc, file, region))
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) =>
-    VariantContextMaterialization.load(sc, file, regions).rdd
+    VariantContextMaterializationGA4GH.load(sc, file, regions).rdd
 
   /**
    * Reset ReferenceName for Variant
@@ -94,9 +94,9 @@ class VariantContextMaterialization(@transient sc: SparkContext,
       .collect
       .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
 
-    val variants: Map[String, List[ga4gh.Variants.Variant]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHVariant(r)).toList)
+    val variantsGA4GH: Map[String, List[ga4gh.Variants.Variant]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHVariant(r)).toList)
 
-    val result: Map[String, SearchVariantsResponse] = variants.mapValues(v => {
+    val result: Map[String, SearchVariantsResponse] = variantsGA4GH.mapValues(v => {
       ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
         .addAllVariants(v.asJava).build()
     })
@@ -291,9 +291,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
  * VariantContextMaterialization object, used to load VariantContext data into a VariantContextRDD. Supported file
  * formats are vcf and adam.
  */
-object VariantContextMaterialization {
+object VariantContextMaterializationGA4GH {
 
-  val name = "VariantContext"
   /**
    * Loads variant data from adam and vcf files into a VariantContextRDD
    *

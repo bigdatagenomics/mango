@@ -18,14 +18,15 @@
 package org.bdgenomics.mango.cli
 
 import java.io.FileNotFoundException
+
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.cli
-import org.bdgenomics.mango.core.util.{ VizUtils, VizCacheIndicator }
+import org.bdgenomics.mango.core.util.{ SearchVariantsRequestGA4GH, VizCacheIndicator, VizUtils }
 import org.bdgenomics.mango.filters._
-import org.bdgenomics.mango.layout.{ PositionCount, BedRowJson, GenotypeJson }
+import org.bdgenomics.mango.layout.{ BedRowJson, GenotypeJson, PositionCount }
 import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
@@ -35,6 +36,7 @@ import org.fusesource.scalate.TemplateEngine
 import org.ga4gh.GAReadAlignment
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
+import org.bdgenomics.adam.models.VariantContext
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -164,7 +166,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   // variant cache
   object variantsWait
-  var variantsCache: Map[String, Array[GenotypeJson]] = Map.empty[String, Array[GenotypeJson]]
+  var variantsCache: Map[String, Array[VariantContext]] = Map.empty[String, Array[VariantContext]]
   var variantsIndicator = VizCacheIndicator(region, 1)
   var showGenotypes: Boolean = false
 
@@ -506,6 +508,7 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  /*
   get("/variants/:key/:ref") {
     VizTimers.VarRequest.time {
       if (!VizReads.materializer.variantContextExist)
@@ -548,6 +551,155 @@ class VizServlet extends ScalatraServlet {
       }
     }
   }
+*/
+
+  post("/ga4gh/variants/search") {
+
+    val jsonPostString = request.body
+
+    val searchVariantsRequest: SearchVariantsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
+      .extract[SearchVariantsRequestGA4GH]
+
+    if (!VizReads.materializer.variantContextExist)
+      VizReads.errors.notFound
+    else {
+
+      val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName,
+        searchVariantsRequest.start.toLong,
+        VizUtils.getEnd(searchVariantsRequest.end.toLong,
+          VizReads.globalDict(searchVariantsRequest.referenceName)))
+
+      println("#INn vizReads: " + viewRegion)
+
+      //todo: remove this hard-coded key
+      val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
+      contentType = "json"
+
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+
+      if (dictOpt.isDefined) {
+        var results: Option[String] = None
+
+        val binning: Int = 1
+
+        VizReads.variantsWait.synchronized {
+          if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
+            val expanded = VizReads.expand(viewRegion)
+            VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJson(expanded,
+              VizReads.showGenotypes,
+              binning)
+            VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
+          }
+        }
+        // filter data overlapping viewRegion and stringify
+        val x: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
+        println("#In vizreads count test x : " + x.length)
+
+        //val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+        val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
+          .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
+        println("#In vizreads count data: " + data.length)
+        results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+        if (results.isDefined) {
+          // extract variants only and parse to stringified json
+          Ok(results.get)
+        } else VizReads.errors.noContent(viewRegion)
+      } else VizReads.errors.outOfBounds
+    }
+  }
+
+  /*
+        VizReads.variantsWait.synchronized {
+          // region was already collected, grab from cache
+          if (VizCacheIndicator(viewRegion, binning) != VizReads.variantsIndicator) {
+            println("\n### About to call getJson in the cache thing\n")
+            VizReads.variantsCache = VizReads.variantContextDataGA4GH.get.getJson(viewRegion,
+              true,
+              binning)
+            println("### Done calling Json cache thing")
+            VizReads.variantsIndicator = VizCacheIndicator(viewRegion, binning)
+          }
+          println("#### about to call results")
+          results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+          //results = VizReads.variantsCache.get(key)
+        }
+
+        if (results.isDefined) {
+
+          Ok(results.get)
+
+        } else VizReads.errors.noContent(viewRegion)
+      } else VizReads.errors.outOfBounds
+
+    }
+
+  }
+  */
+
+  /*
+
+  post("/ga4gh/variants/search/old") {
+
+    val jsonPostString = request.body
+
+    val searchVariantsRequest: SearchVariantsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
+      .extract[SearchVariantsRequestGA4GH]
+
+    if (!VizReads.materializer.variantContextExist)
+      VizReads.errors.notFound
+    else {
+
+      val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName,
+        searchVariantsRequest.start.toLong,
+        VizUtils.getEnd(searchVariantsRequest.end.toLong,
+          VizReads.globalDict(searchVariantsRequest.referenceName)))
+
+      val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
+      contentType = "json"
+
+      val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+
+      if (dictOpt.isDefined) {
+        var results: Option[String] = None
+
+        /*
+        val binning: Int =
+          try {
+            //params("binning").toInt
+            searchVariantsRequest.binning.toInt
+          } catch {
+            case e: Exception => 1
+          }
+        */
+
+        val binning: Int = 1
+
+        VizReads.variantsWait.synchronized {
+          // region was already collected, grab from cache
+          if (VizCacheIndicator(viewRegion, binning) != VizReads.variantsIndicator) {
+            println("\n### About to call getJson in the cache thing\n")
+            VizReads.variantsCache = VizReads.variantContextDataGA4GH.get.getJson(viewRegion,
+              true,
+              binning)
+            println("### Done calling Json cache thing")
+            VizReads.variantsIndicator = VizCacheIndicator(viewRegion, binning)
+          }
+          println("#### about to call results")
+          results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+          //results = VizReads.variantsCache.get(key)
+        }
+
+        if (results.isDefined) {
+
+          Ok(results.get)
+
+        } else VizReads.errors.noContent(viewRegion)
+      } else VizReads.errors.outOfBounds
+
+    }
+
+  }
+*/
 
   get("/features/:key/:ref") {
     VizTimers.FeatRequest.time {
@@ -709,20 +861,22 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   /**
    * Initialize loaded variant files
    */
-  def initVariantContext(sc: SparkContext, prefetch: Int): Option[VariantContextMaterialization] = {
-    // set flag for visualizing genotypes
-    VizReads.showGenotypes = args.showGenotypes
+  def initVariantContext(sc: SparkContext, prefetch: Int): Option[VariantContextMaterialization] =
 
-    if (Option(args.variantsPaths).isDefined) {
-      val variantsPaths = args.variantsPaths.split(",").toList
+    {
+      // set flag for visualizing genotypes
+      VizReads.showGenotypes = args.showGenotypes
 
-      if (variantsPaths.nonEmpty) {
-        object variantsWait
-        VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
-        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
+      if (Option(args.variantsPaths).isDefined) {
+        val variantsPaths = args.variantsPaths.split(",").toList
+
+        if (variantsPaths.nonEmpty) {
+          object variantsWait
+          VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
+          Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
+        } else None
       } else None
-    } else None
-  }
+    }
 
   /**
    * Initialize loaded feature files
@@ -755,7 +909,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       .foreach(m => m match {
         case vcm: VariantContextMaterialization => {
           regions = regions ++ discovery.getFrequencies(vcm.get()
-            .map(r => ReferenceRegion(r._2.variant)))
+            .map(r => ReferenceRegion(r._2.variant.variant)))
         }
         case fm: FeatureMaterialization => {
           regions = regions ++ discovery.getFrequencies(fm.get()
