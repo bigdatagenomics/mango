@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-#build pileup
+# build pileup
 pwd
 echo "building pileup.js ..."
 cd mango-cli/src/main/webapp/resources/pileup.js

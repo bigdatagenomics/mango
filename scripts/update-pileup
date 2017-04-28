@@ -13,7 +13,7 @@ npm run build
 # install pileup
 pwd
 echo "installing pileup.js ..."
-cd ../node_modules/pileup
-npm install ../../pileup.js
+cd ../node_modules
+npm install ../pileup.js
 
 
