@@ -1,19 +1,16 @@
 #!/bin/bash -x
 
+SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
 # pull pileup submodule
 echo "Fetching pileup.js submodule..."
-git submodule update --remote mango-cli/src/main/webapp/resources/pileup.js
+git submodule update --remote "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/pileup.js
 
 # build pileup
-pwd
 echo "building pileup.js ..."
-cd mango-cli/src/main/webapp/resources/pileup.js
+cd "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/pileup.js
 npm run build
 
 # install pileup
-pwd
 echo "installing pileup.js ..."
-cd ../node_modules/pileup
-npm install ../../pileup.js
-
-
+cd "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/node_modules
+npm install "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/pileup.js
