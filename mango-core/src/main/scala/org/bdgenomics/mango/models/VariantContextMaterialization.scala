@@ -191,6 +191,32 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   }
 
+  def stringifyFeatureGA4GH(data: collection.Seq[SequenceAnnotations.Feature]): String = {
+    val result: SearchFeaturesResponse = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse.newBuilder()
+      .addAllFeatures(data.toList.asJava).build()
+
+    val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)
+    resultJSON
+
+    /*
+    val flattened = data
+      .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
+
+    val featureGA4GH: Map[String, List[SequenceAnnotations.Feature]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHFeature(r)).toList)
+
+    val result: Map[String, SearchFeaturesResponse] = featureGA4GH.mapValues(v => {
+      ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse.newBuilder()
+        .addAllFeatures(v.asJava).build()
+    })
+
+    val resultJson: Map[String, String] = result.mapValues(v => {
+      com.google.protobuf.util.JsonFormat.printer().print(v)
+    })
+
+    resultJson
+*/
+  }
+
   def binRegionVars(r: ReferenceRegion, binning: Int): ReferenceRegion = {
     val start = r.start - (r.start % binning)
     r.copy(start = start, end = (start + binning))
@@ -252,7 +278,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
       .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
 
   }
-
+  /*
   def getJsonBinning(region: ReferenceRegion,
                      showGenotypes: Boolean,
                      binning: Int = 1): Map[String, Array[Feature]] = {
@@ -262,6 +288,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
     val featuresBinsStep1: collection.Map[(String, ReferenceRegion), Long] = binVars(data, binning)
     println("### count featureBinsStep1:" + featuresBinsStep1.size)
 
+    /*
     val featureBins: Seq[(String, Feature)] = featuresBinsStep1.toSeq
       .map(r => {
         val binned = new Feature()
@@ -271,6 +298,111 @@ class VariantContextMaterialization(@transient sc: SparkContext,
         binned.setScore(r._2.toDouble)
         (r._1._1, binned)
       })
+      */
+/*
+    val featureBins2: Map[String, Feature] = featuresBinsStep1
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1, binned)
+      }).toMap
+    */
+
+    val featureBins3: Map[(String, ReferenceRegion), Feature] = featuresBinsStep1
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1, binned)
+      }).toMap
+
+    val myFeatures = featureBins3.values.toArray
+
+    val x: Map[String, Array[Feature]] = featureBins2.groupBy(_._1).map(r => (r._1, r._2.map(_._2).toArray))
+
+    x
+
+  }
+  */
+
+  def getJsonBinning2(region: ReferenceRegion,
+                      showGenotypes: Boolean,
+                      binning: Int = 1): Array[Feature] = {
+
+    val data: RDD[(String, VariantContext)] = get(Some(region))
+    println("## Here in binning > 1")
+    val featuresBinsStep1: collection.Map[(String, ReferenceRegion), Long] = binVars(data, binning)
+    println("### count featureBinsStep1:" + featuresBinsStep1.size + " " + featuresBinsStep1.toString())
+
+    /*
+    val featureBins: Seq[(String, Feature)] = featuresBinsStep1.toSeq
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1._1, binned)
+      })
+      */
+
+    /*
+    val featureBins2: Map[String, Feature] = featuresBinsStep1
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1._, binned)
+      }).toMap
+*/
+    val featureBins3: Map[(String, ReferenceRegion), Feature] = featuresBinsStep1
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1, binned)
+      }).toMap
+
+    val myFeatures: Array[Feature] = featureBins3.values.toArray
+    println("### Thsi is sizeof myFeatures: " + myFeatures.size + " " + myFeatures.toString)
+
+    myFeatures
+    //val x: Map[String, Array[Feature]] = featureBins2.groupBy(_._1).map(r => (r._1, r._2.map(_._2).toArray))
+
+    //x
+
+  }
+
+  /*
+  def getJsonBinning2(region: ReferenceRegion,
+                     showGenotypes: Boolean,
+                     binning: Int = 1): Map[String, Array[Feature]] = {
+
+    val data: RDD[(String, VariantContext)] = get(Some(region))
+    println("## Here in binning > 1")
+    val featuresBinsStep1: collection.Map[(String, ReferenceRegion), Long] = binVars(data, binning)
+    println("### count featureBinsStep1:" + featuresBinsStep1.size)
+
+    /*
+    val featureBins: Seq[(String, Feature)] = featuresBinsStep1.toSeq
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1._1, binned)
+      })
+      */
 
     val featureBins2: Map[String, Feature] = featuresBinsStep1
       .map(r => {
@@ -279,7 +411,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
         binned.setStart(r._1._2.start)
         binned.setEnd(r._1._2.end)
         binned.setScore(r._2.toDouble)
-        (r._1._1, binned)
+        (rbinned)
       }).toMap
 
     val x: Map[String, Array[Feature]] = featureBins2.groupBy(_._1).map(r => (r._1, r._2.map(_._2).toArray))
@@ -287,6 +419,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
     x
 
   }
+  */
   //println("### count featureBins:" + featureBins.size)
 
   //stringifyFeature(featureBins)

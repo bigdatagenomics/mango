@@ -9,6 +9,8 @@ import ga4gh.Variants.Variant
 import scala.collection.JavaConverters._
 import com.google.protobuf.util.JsonFormat.Printer
 
+/*
+
 case class SearchVariantsRequestGA4GH(variantSetId: String,
                                       start: String,
                                       end: String,
@@ -17,6 +19,37 @@ case class SearchVariantsRequestGA4GH(variantSetId: String,
                                       referenceName: String,
                                       callSetIds: Array[String] = new Array[String](0)) {
 
+}
+
+
+*/
+
+case class SearchVariantsRequestGA4GH(variantSetId: String,
+                                      start: String,
+                                      end: String,
+                                      pageSize: String,
+                                      pageToken: String,
+                                      referenceName: String,
+                                      callSetIds: Array[String] = new Array[String](0),
+                                      binning: String = "1",
+                                      outFormat: String = "GA4GH") {
+  def this(variantSetId: String,
+           start: String,
+           end: String,
+           pageSize: String,
+           pageToken: String,
+           referenceName: String,
+           callSetIds: Array[String]) = {
+    this(variantSetId: String,
+      start: String,
+      end: String,
+      pageSize: String,
+      pageToken: String,
+      referenceName: String,
+      callSetIds: Array[String],
+      "1",
+      "GA4GH")
+  }
 }
 
 case class SearchVariantsRequestGA4GHBinning(variantSetId: String,

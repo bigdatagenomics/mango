@@ -559,9 +559,9 @@ class VizServlet extends ScalatraServlet {
         val z: Option[VariantContextMaterialization] = Some(VizReads.materializer.getVariantContext().get)
         //val y = Some(VizReads.materializer.getVariantContext().get.stringify(data))
 
-        val legacyFormat = true
+        val outFormat = "GA4GH"
 
-        if (legacyFormat) {
+        if (outFormat == "Legacy") {
           results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data))
         } else {
           results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
@@ -575,8 +575,6 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
-  // disable for now - not working
-  /*
   post("/ga4gh/variants/search/bin") {
 
     val jsonPostString = request.body
@@ -623,27 +621,35 @@ class VizServlet extends ScalatraServlet {
           }
         } */
 
-        val expanded = VizReads.expand(viewRegion)
+        val expanded: ReferenceRegion = VizReads.expand(viewRegion)
+        /*
         val tempResult: Map[String, Array[Feature]] = VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
           VizReads.showGenotypes,
-          binning)
+          binning) */
+
+        val tempResult2: Array[Feature] = VizReads.materializer.getVariantContext().get.getJsonBinning2(expanded,
+          VizReads.showGenotypes, binning).filter(z => { ReferenceRegion.unstranded(z).overlaps(viewRegion) })
 
         // filter data overlapping viewRegion and stringify
-        val x: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
-        println("#In vizreads count test x : " + x.length)
+        //val x: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
+        //println("#In vizreads count test x : " + x.length)
 
         /*
         val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
           .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
          */
 
-        val data: Array[Feature] = tempResult.get(key).getOrElse(Array.empty).filter(z => { ReferenceRegion.unstranded(z).overlaps(viewRegion) })
+        //val data: Array[Feature] = tempResult.get(key).getOrElse(Array.empty).filter(z => { ReferenceRegion.unstranded(z).overlaps(viewRegion) })
 
-        val featureGA4GH: Seq[SequenceAnnotations.Feature] = data.map(l => GA4GHConverter.toGA4GHFeature(l)).toList
+        val featureGA4GH: Seq[SequenceAnnotations.Feature] = tempResult2.map(l => GA4GHConverter.toGA4GHFeature(l)).toList
 
-        results = featureGA4GH.head
+        //val featureGA4GHString =  stringifyFeatureGA4GH(featureGA4GH)
 
-        println("#In vizreads count data: " + data.length)
+        results = Some(VizReads.materializer.getVariantContext().get.stringifyFeatureGA4GH(featureGA4GH))
+
+        //re = featureGA4GH.head
+
+        println("#In vizreads count data: " + tempResult2.length)
         //val p = Some(VizReads.materializer.getFeatures().get.stringify(data))
 
         //results = Some(VizReads.materializer.getFeatures().get.stringifyFeature(data))
@@ -655,7 +661,6 @@ class VizServlet extends ScalatraServlet {
       } else VizReads.errors.outOfBounds
     }
   }
-  */
 
   get("/features/:key/:ref") {
     VizTimers.FeatRequest.time {
