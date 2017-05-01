@@ -17,26 +17,28 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ PrintWriter, StringWriter }
+import java.io.{PrintWriter, StringWriter}
 
 import ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
+import ga4gh.SequenceAnnotations
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.adam.projections.{ Projection, VariantField }
+import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
+import org.bdgenomics.adam.projections.{Projection, VariantField}
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.VariantContextRDD
-import org.bdgenomics.formats.avro.{ Feature, GenotypeAllele, Variant }
+import org.bdgenomics.formats.avro.{Feature, GenotypeAllele, Variant}
 import org.bdgenomics.mango.layout.GenotypeJson
 import org.bdgenomics.adam.models.VariantContext
-import ga4gh.VariantServiceOuterClass.{ SearchCallSetsResponse, SearchVariantsResponse }
+import ga4gh.VariantServiceOuterClass.{SearchCallSetsResponse, SearchVariantsResponse}
 import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.mango.core.util.ResourceUtils
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable
 
 /*
  * Handles loading and tracking of data from persistent storage into memory for Variant data.
@@ -117,7 +119,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
     val flattened = data
       .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
 
-    val featureGA4GH = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHFeature(r)).toList)
+    val featureGA4GH: Map[String, List[SequenceAnnotations.Feature]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHFeature(r)).toList)
 
     val result: Map[String, SearchFeaturesResponse] = featureGA4GH.mapValues(v => {
       ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse.newBuilder()
@@ -194,26 +196,43 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   }
 
-  /*
-    else {
-      println("## Here in binning > 1")
-      val featuresBinsStep1: collection.Map[(String, ReferenceRegion), Long] = binVars(data, binning)
-      println("### count featureBinsStep1:" + featuresBinsStep1.size)
+  def getJsonBinning(region: ReferenceRegion,
+                     showGenotypes: Boolean,
+                     binning: Int = 1): Map[String, Array[Feature]] = {
 
-      val featureBins: Seq[(String, Feature)] = featuresBinsStep1.toSeq
-        .map(r => {
-          val binned = new Feature()
-          binned.setContigName(r._1._2.referenceName)
-          binned.setStart(r._1._2.start)
-          binned.setEnd(r._1._2.end)
-          binned.setScore(r._2.toDouble)
-          (r._1._1, binned)
-        })
+    val data: RDD[(String, VariantContext)] = get(Some(region))
+    println("## Here in binning > 1")
+    val featuresBinsStep1: collection.Map[(String, ReferenceRegion), Long] = binVars(data, binning)
+    println("### count featureBinsStep1:" + featuresBinsStep1.size)
 
-      println("### count featureBins:" + featureBins.size)
+    val featureBins: Seq[(String, Feature)] = featuresBinsStep1.toSeq
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1._1, binned)
+      })
 
-      stringifyFeature(featureBins)
-        */
+    val featureBins2: Map[String, Feature] = featuresBinsStep1
+      .map(r => {
+        val binned = new Feature()
+        binned.setContigName(r._1._2.referenceName)
+        binned.setStart(r._1._2.start)
+        binned.setEnd(r._1._2.end)
+        binned.setScore(r._2.toDouble)
+        (r._1._1, binned)
+      }).toMap
+
+    val x: Map[String, Array[Feature]] = featureBins2.groupBy(_._1).map(r => (r._1, r._2.map(_._2).toArray))
+
+    x
+
+  }
+  //println("### count featureBins:" + featureBins.size)
+
+  //stringifyFeature(featureBins)
 
   /*
       println("### count featureBins:" + featureBins.size)
