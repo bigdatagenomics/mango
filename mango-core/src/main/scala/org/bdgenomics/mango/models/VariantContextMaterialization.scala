@@ -100,6 +100,17 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   }
 
+  def stringifyLegacy(data: Array[VariantContext]): String = {
+
+    val variants: Array[GenotypeJson] = data.map(l => {
+      val genotypes = l.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)
+      new GenotypeJson(l.variant.variant, genotypes.map(_.getSampleId).toArray)
+    })
+
+    write(variants)
+
+  }
+
   /*
   /**
    * Stringifies data from variants to lists of variants over the requested regions

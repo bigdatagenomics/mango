@@ -558,7 +558,15 @@ class VizServlet extends ScalatraServlet {
         println("#In vizreads count data: " + data.length)
         val z: Option[VariantContextMaterialization] = Some(VizReads.materializer.getVariantContext().get)
         //val y = Some(VizReads.materializer.getVariantContext().get.stringify(data))
-        results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
+
+        val legacyFormat = true
+
+        if (legacyFormat) {
+          results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data))
+        } else {
+          results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
+        }
+
         if (results.isDefined) {
           // extract variants only and parse to stringified json
           Ok(results.get)
