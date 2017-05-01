@@ -22,11 +22,11 @@ import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ReferencePosition, ReferenceRegion, SequenceDictionary}
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.cli
-import org.bdgenomics.mango.core.util.{SearchVariantsRequestGA4GH, SearchVariantsRequestGA4GHBinning, VizCacheIndicator, VizUtils}
+import org.bdgenomics.mango.core.util.{ SearchVariantsRequestGA4GH, SearchVariantsRequestGA4GHBinning, VizCacheIndicator, VizUtils }
 import org.bdgenomics.mango.filters._
-import org.bdgenomics.mango.layout.{BedRowJson, GenotypeJson, PositionCount}
+import org.bdgenomics.mango.layout.{ BedRowJson, GenotypeJson, PositionCount }
 import org.bdgenomics.mango.models._
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
@@ -34,7 +34,7 @@ import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
 import org.fusesource.scalate.TemplateEngine
 import org.ga4gh.GAReadAlignment
-import org.kohsuke.args4j.{Argument, Option => Args4jOption}
+import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.formats.avro.Feature
@@ -551,15 +551,14 @@ class VizServlet extends ScalatraServlet {
           }
         }
         // filter data overlapping viewRegion and stringify
-        val x: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
-        println("#In vizreads count test x : " + x.length)
 
-        //val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
         val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
           .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
+
         println("#In vizreads count data: " + data.length)
+        val z: Option[VariantContextMaterialization] = Some(VizReads.materializer.getVariantContext().get)
         //val y = Some(VizReads.materializer.getVariantContext().get.stringify(data))
-        results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+        results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
         if (results.isDefined) {
           // extract variants only and parse to stringified json
           Ok(results.get)
@@ -568,6 +567,8 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  // disable for now - not working
+  /*
   post("/ga4gh/variants/search/bin") {
 
     val jsonPostString = request.body
@@ -614,12 +615,10 @@ class VizServlet extends ScalatraServlet {
           }
         } */
 
-
         val expanded = VizReads.expand(viewRegion)
-        val tempResult: Map[String, Array[Feature]] =  VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
+        val tempResult: Map[String, Array[Feature]] = VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
           VizReads.showGenotypes,
           binning)
-
 
         // filter data overlapping viewRegion and stringify
         val x: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
@@ -636,13 +635,10 @@ class VizServlet extends ScalatraServlet {
 
         results = featureGA4GH.head
 
-
         println("#In vizreads count data: " + data.length)
         //val p = Some(VizReads.materializer.getFeatures().get.stringify(data))
 
         //results = Some(VizReads.materializer.getFeatures().get.stringifyFeature(data))
-
-
 
         if (results.isDefined) {
           // extract variants only and parse to stringified json
@@ -651,6 +647,7 @@ class VizServlet extends ScalatraServlet {
       } else VizReads.errors.outOfBounds
     }
   }
+  */
 
   get("/features/:key/:ref") {
     VizTimers.FeatRequest.time {

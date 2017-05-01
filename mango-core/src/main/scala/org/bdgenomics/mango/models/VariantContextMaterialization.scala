@@ -17,23 +17,23 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{PrintWriter, StringWriter}
+import java.io.{ PrintWriter, StringWriter }
 
 import ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
-import ga4gh.SequenceAnnotations
+import ga4gh.{ SequenceAnnotations, Variants }
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
-import org.bdgenomics.adam.projections.{Projection, VariantField}
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.VariantContextRDD
-import org.bdgenomics.formats.avro.{Feature, GenotypeAllele, Variant}
+import org.bdgenomics.formats.avro.{ Feature, GenotypeAllele, Variant }
 import org.bdgenomics.mango.layout.GenotypeJson
 import org.bdgenomics.adam.models.VariantContext
-import ga4gh.VariantServiceOuterClass.{SearchCallSetsResponse, SearchVariantsResponse}
+import ga4gh.VariantServiceOuterClass.{ SearchCallSetsResponse, SearchVariantsResponse }
 import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.mango.core.util.ResourceUtils
 
@@ -83,6 +83,24 @@ class VariantContextMaterialization(@transient sc: SparkContext,
     //g.copy()
   }
 
+  def stringifyGA4GH(data: Array[VariantContext]): String = {
+    val variants: Seq[Variants.Variant] = data.map(l => GA4GHConverter.toGA4GHVariant(l)).toList
+    println("### Here I am in stringifyGA$GH")
+
+    /*
+    val result: Seq[SearchVariantsResponse] = variants.map(v => {
+      ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
+        .addAllVariants(List(v).asJava).build() }) */
+
+    val result: SearchVariantsResponse = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
+      .addAllVariants(variants.toList.asJava).build()
+
+    val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)
+    resultJSON
+
+  }
+
+  /*
   /**
    * Stringifies data from variants to lists of variants over the requested regions
    *
@@ -109,6 +127,34 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
     resultJson
   }
+  */
+
+  /*
+
+  def stringifyLegacy(data: RDD[(String, VariantContext)]): Map[String, String] = {
+
+    def ga4ghToLegacyJSON(record: ga4gh.Variants.Variant): Map[String, ]
+
+    val flattened: Map[String, Array[VariantContext]] = data
+      .collect
+      .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
+
+    val variants: Map[String, List[ga4gh.Variants.Variant]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHVariant(r)).toList)
+
+    val variantsLegacyJSON = variants.mapValues(l => l.map(r => ga4ghToLegacyJSON(r)))
+
+    val result: Map[String, SearchVariantsResponse] = variants.mapValues(v => {
+      ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
+        .addAllVariants(v.asJava).build()
+    })
+
+    val resultJson: Map[String, String] = result.mapValues(v => {
+      com.google.protobuf.util.JsonFormat.printer().print(v)
+    })
+
+    resultJson
+  }
+  */
 
   def toJson(rdd: RDD[(String, VariantContext)]): Map[String, Array[VariantContext]] = {
     rdd.collect

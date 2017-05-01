@@ -220,7 +220,7 @@
     <dependency>
       <groupId>org.ga4gh</groupId>
       <artifactId>ga4gh-schemas</artifactId>
-      <version>0.6.0j10-SNAPSHOT</version>
+      <version>0.6.0jp1-SNAPSHOT</version>
     </dependency>
 
   </dependencies>
