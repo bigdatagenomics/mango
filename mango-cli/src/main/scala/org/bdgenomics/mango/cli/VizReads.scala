@@ -546,7 +546,6 @@ class VizServlet extends ScalatraServlet {
             }
           }
           // filter data overlapping viewRegion and stringify
-          //val data = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
           val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
             .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
 
