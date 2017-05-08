@@ -520,14 +520,6 @@ class VizServlet extends ScalatraServlet {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
         val key: String = params("key")
-        /*
-        val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName,
-          searchVariantsRequest.start.toLong,
-          VizUtils.getEnd(searchVariantsRequest.end.toLong,
-            VizReads.globalDict(searchVariantsRequest.referenceName)))
-         */
-
-        //val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
 
         contentType = "json"
 
@@ -557,11 +549,7 @@ class VizServlet extends ScalatraServlet {
           val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
             .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
 
-          println("## About to print leacy from get")
-
           results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data, binning))
-
-          //results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
 
           if (results.isDefined) {
             // extract variants only and parse to stringified json
@@ -660,12 +648,13 @@ class VizServlet extends ScalatraServlet {
 
         val binning: Int =
           try {
-            //params("binning").toInt
             searchVariantsRequest.binning.toInt
           } catch {
             case e: Exception => 1
           }
 
+        // binning ga4gh endpoint is not current cached
+        // but something like below should be added back later
         /*
         VizReads.variantsWait.synchronized {
           if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
@@ -678,37 +667,13 @@ class VizServlet extends ScalatraServlet {
         } */
 
         val expanded: ReferenceRegion = VizReads.expand(viewRegion)
-        /*
-        val tempResult: Map[String, Array[Feature]] = VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
-          VizReads.showGenotypes,
-          binning) */
 
-        val tempResult2: Array[Feature] = VizReads.materializer.getVariantContext().get.getJsonBinning2(expanded,
+        val features: Array[Feature] = VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
           VizReads.showGenotypes, binning).filter(z => { ReferenceRegion.unstranded(z).overlaps(viewRegion) })
 
-        // filter data overlapping viewRegion and stringify
-        //val x: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
-        //println("#In vizreads count test x : " + x.length)
-
-        /*
-        val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
-          .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
-         */
-
-        //val data: Array[Feature] = tempResult.get(key).getOrElse(Array.empty).filter(z => { ReferenceRegion.unstranded(z).overlaps(viewRegion) })
-
-        val featureGA4GH: Seq[SequenceAnnotations.Feature] = tempResult2.map(l => GA4GHConverter.toGA4GHFeature(l)).toList
-
-        //val featureGA4GHString =  stringifyFeatureGA4GH(featureGA4GH)
+        val featureGA4GH: Seq[SequenceAnnotations.Feature] = features.map(l => GA4GHConverter.toGA4GHFeature(l)).toList
 
         results = Some(VizReads.materializer.getVariantContext().get.stringifyFeatureGA4GH(featureGA4GH))
-
-        //re = featureGA4GH.head
-
-        println("#In vizreads count data: " + tempResult2.length)
-        //val p = Some(VizReads.materializer.getFeatures().get.stringify(data))
-
-        //results = Some(VizReads.materializer.getFeatures().get.stringifyFeature(data))
 
         if (results.isDefined) {
           // extract variants only and parse to stringified json
