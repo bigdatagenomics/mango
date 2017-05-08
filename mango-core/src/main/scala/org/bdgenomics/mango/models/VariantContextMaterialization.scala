@@ -297,14 +297,7 @@ object VariantContextMaterialization {
     } else {
       sc.loadVcf(fp)
     }
-  } /*
-    region match {
-      case Some(_) =>
-        val regions = LazyMaterialization.getContigPredicate(region.get)
-        sc.loadIndexedVcf(fp, Iterable(regions._1, regions._2))
-      case None => sc.loadVcf(fp)
-    }
-  */
+  }
 
   /**
    * Loads adam variant files
@@ -324,19 +317,6 @@ object VariantContextMaterialization {
       }
 
     sc.loadParquetGenotypes(fp, predicate = pred).toVariantContextRDD
-    /*
-    val pred: Option[FilterPredicate] =
-      region match {
-        case Some(_) =>
-          val contigs = LazyMaterialization.getContigPredicate(region.get)
-          val contigPredicate = (BinaryColumn("variant.contig.contigName") === contigs._1.referenceName
-            || BinaryColumn("variant.contig.contigName") === contigs._2.referenceName)
-          Some((LongColumn("variant.end") >= region.get.start) && (LongColumn("variant.start") <= region.get.end) && contigPredicate)
-        case None => None
-      }
-    val proj = Projection(VariantField.contigName, VariantField.start, VariantField.referenceAllele, VariantField.alternateAllele, VariantField.end)
-    sc.loadParquetGenotypes(fp, predicate = pred, projection = Some(proj)).toVariantContextRDD
-    */
 
   }
 

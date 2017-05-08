@@ -512,6 +512,7 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  // legacy - non-GA4GH variant endpoint
   get("/variants/:key/:ref") {
     VizTimers.VarRequest.time {
       if (!VizReads.materializer.variantContextExist)
