@@ -512,23 +512,79 @@ class VizServlet extends ScalatraServlet {
     }
   }
 
+  get("/variants/:key/:ref") {
+    VizTimers.VarRequest.time {
+      if (!VizReads.materializer.variantContextExist)
+        VizReads.errors.notFound
+      else {
+        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+        val key: String = params("key")
+        /*
+        val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName,
+          searchVariantsRequest.start.toLong,
+          VizUtils.getEnd(searchVariantsRequest.end.toLong,
+            VizReads.globalDict(searchVariantsRequest.referenceName)))
+         */
+
+        //val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
+
+        contentType = "json"
+
+        // if region is in bounds of reference, return data
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          var results: Option[String] = None
+          val binning: Int =
+            try {
+              params("binning").toInt
+            } catch {
+              case e: Exception => 1
+            }
+
+          // region was already collected, grab from cache
+          VizReads.variantsWait.synchronized {
+            if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
+              val expanded = VizReads.expand(viewRegion)
+              VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJson(expanded,
+                VizReads.showGenotypes,
+                binning)
+              VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
+            }
+          }
+          // filter data overlapping viewRegion and stringify
+          //val data = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
+            .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
+
+          println("## About to print leacy from get")
+
+          results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data, binning))
+
+          //results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+
+          if (results.isDefined) {
+            // extract variants only and parse to stringified json
+            Ok(results.get)
+          } else VizReads.errors.noContent(viewRegion)
+        } else VizReads.errors.outOfBounds
+      }
+    }
+  }
+
   post("/ga4gh/variants/search") {
 
     val jsonPostString = request.body
-
     val searchVariantsRequest: SearchVariantsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
       .extract[SearchVariantsRequestGA4GH]
 
     if (!VizReads.materializer.variantContextExist)
       VizReads.errors.notFound
     else {
-
       val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName,
         searchVariantsRequest.start.toLong,
         VizUtils.getEnd(searchVariantsRequest.end.toLong,
           VizReads.globalDict(searchVariantsRequest.referenceName)))
-
-      println("#INn vizReads: " + viewRegion)
 
       //todo: remove this hard-coded key
       val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
@@ -550,20 +606,20 @@ class VizServlet extends ScalatraServlet {
             VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
           }
         }
-        // filter data overlapping viewRegion and stringify
 
+        // filter data overlapping viewRegion and stringify
         val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
           .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
 
         println("#In vizreads count data: " + data.length)
-        val z: Option[VariantContextMaterialization] = Some(VizReads.materializer.getVariantContext().get)
-        //val y = Some(VizReads.materializer.getVariantContext().get.stringify(data))
 
-        val outFormat = "GA4GH"
+        val outFormat = "Legacy"
 
         if (outFormat == "Legacy") {
+          println("### Priting legacy")
           results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data))
         } else {
+          println("### Printing GA4GH")
           results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
         }
 

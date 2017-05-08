@@ -30,7 +30,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.VariantContextRDD
-import org.bdgenomics.formats.avro.{ Feature, GenotypeAllele, Variant }
+import org.bdgenomics.formats.avro.{ Feature, Genotype, GenotypeAllele, Variant }
 import org.bdgenomics.mango.layout.GenotypeJson
 import org.bdgenomics.adam.models.VariantContext
 import ga4gh.VariantServiceOuterClass.{ SearchCallSetsResponse, SearchVariantsResponse }
@@ -100,14 +100,25 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   }
 
-  def stringifyLegacy(data: Array[VariantContext]): String = {
+  def stringifyLegacy(data: Array[VariantContext], binning: Int = 1): String = {
 
-    val variants: Array[GenotypeJson] = data.map(l => {
-      val genotypes = l.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)
-      new GenotypeJson(l.variant.variant, genotypes.map(_.getSampleId).toArray)
-    })
+    val variants: Array[GenotypeJson] =
+      if (binning <= 1) {
+        data.map(l => {
+          val genotypes = l.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)
+          new GenotypeJson(l.variant.variant, genotypes.map(_.getSampleId).toArray)
+        })
+      } else {
+        data.map(l => {
+          val genotypes = l.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)
+          new GenotypeJson(l.variant.variant, Array.empty[String])
+        })
+      }
 
-    write(variants)
+    println("Here is in stringify: " + write(variants.map(_.toString)))
+
+    //write(variants)
+    write(variants.map(_.toString))
 
   }
 
@@ -251,8 +262,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
         //data.map(r => (r._1, GenotypeJson(r._2.variant, null)))
         else data
       } else {
-
-        bin(data, binning)
+        println("### In the binning else of getJSON")
+        val x: RDD[(String, VariantContext)] = bin(data, binning)
           .map(r => {
             // Reset variant to match binned region
             //r._1
@@ -268,6 +279,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
             (r._1._1, binned)
 
           })
+        x
 
         //data
 
