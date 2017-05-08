@@ -85,13 +85,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   def stringifyGA4GH(data: Array[VariantContext]): String = {
     val variants: Seq[Variants.Variant] = data.map(l => GA4GHConverter.toGA4GHVariant(l)).toList
-    println("### Here I am in stringifyGA$GH")
-
-    /*
-    val result: Seq[SearchVariantsResponse] = variants.map(v => {
-      ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
-        .addAllVariants(List(v).asJava).build() }) */
-
+    
     val result: SearchVariantsResponse = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
       .addAllVariants(variants.toList.asJava).build()
 
