@@ -1,14 +1,12 @@
 #!/bin/bash -x
 
-#build pileup
-pwd
+SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
+# build pileup
 echo "building pileup.js ..."
-cd mango-cli/src/main/webapp/resources/pileup.js
+cd "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/pileup.js
 npm run build
 
 # install pileup
-pwd
 echo "installing pileup.js ..."
-cd ../node_modules
-pwd
-npm install ../pileup.js
+cd "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/node_modules
+npm install "$SCRIPT_DIR"/mango-cli/src/main/webapp/resources/pileup.js
