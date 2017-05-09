@@ -574,8 +574,8 @@ class VizServlet extends ScalatraServlet {
         VizUtils.getEnd(searchVariantsRequest.end.toLong,
           VizReads.globalDict(searchVariantsRequest.referenceName)))
 
-      //todo: remove this hard-coded key
-      val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
+      //currently only supporting a single call set id in the query, while API supports a list of call set ids
+      val key = searchVariantsRequest.callSetIds.head
       contentType = "json"
 
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
@@ -598,19 +598,6 @@ class VizServlet extends ScalatraServlet {
         // filter data overlapping viewRegion and stringify
         val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
           .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
-
-        /*
-        println("#In vizreads count data: " + data.length)
-
-        val outFormat = "Not Legacy"
-
-        if (outFormat == "Legacy") {
-          println("### Priting legacy")
-          results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data))
-        } else {
-          println("### Printing GA4GH")
-          results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
-        } */
 
         results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
 
@@ -638,10 +625,9 @@ class VizServlet extends ScalatraServlet {
         VizUtils.getEnd(searchVariantsRequest.end.toLong,
           VizReads.globalDict(searchVariantsRequest.referenceName)))
 
-      println("#INn vizReads: " + viewRegion)
+      //currently only supporting a single call set id in the query, while API supports a list of call set ids
+      val key = searchVariantsRequest.callSetIds.head
 
-      //todo: remove this hard-coded key
-      val key: String = "ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf"
       contentType = "json"
 
       val dictOpt = VizReads.globalDict(viewRegion.referenceName)
