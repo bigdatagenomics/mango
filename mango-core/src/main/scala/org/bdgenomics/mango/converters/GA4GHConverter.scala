@@ -37,7 +37,6 @@ import org.bdgenomics.adam.models.VariantContext
 
 import scala.collection.JavaConverters._
 
-//protobuf ga4gh-defined classes
 import ga4gh.Variants.Variant
 import ga4gh.Common.Position
 

@@ -642,18 +642,7 @@ class VizServlet extends ScalatraServlet {
             case e: Exception => 1
           }
 
-        // binning ga4gh endpoint is not current cached
-        // but something like below should be added back later
-        /*
-        VizReads.variantsWait.synchronized {
-          if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
-            val expanded = VizReads.expand(viewRegion)
-            VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
-              VizReads.showGenotypes,
-              binning)
-            VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
-          }
-        } */
+        // todo: binning ga4gh endpoint is not current cached
 
         val expanded: ReferenceRegion = VizReads.expand(viewRegion)
 

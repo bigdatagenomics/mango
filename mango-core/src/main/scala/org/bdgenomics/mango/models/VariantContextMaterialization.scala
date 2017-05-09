@@ -78,20 +78,18 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    * @return Variant with new ReferenceRegion
    */
   def setContigName = (g: VariantContext, contig: String) => {
+
     g.variant.variant.setContigName(contig)
     g
-    //g.copy()
   }
 
   def stringifyGA4GH(data: Array[VariantContext]): String = {
-    val variants: Seq[Variants.Variant] = data.map(l => GA4GHConverter.toGA4GHVariant(l)).toList
 
+    val variants: Seq[Variants.Variant] = data.map(l => GA4GHConverter.toGA4GHVariant(l)).toList
     val result: SearchVariantsResponse = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
       .addAllVariants(variants.toList.asJava).build()
-
     val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)
     resultJSON
-
   }
 
   def stringifyLegacy(data: Array[VariantContext], binning: Int = 1): String = {
@@ -108,34 +106,13 @@ class VariantContextMaterialization(@transient sc: SparkContext,
           new GenotypeJson(l.variant.variant, Array.empty[String])
         })
       }
-
-    //write(variants)
     write(variants.map(_.toString))
-
   }
 
   def toJson(rdd: RDD[(String, VariantContext)]): Map[String, Array[VariantContext]] = {
+
     rdd.collect
       .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
-  }
-
-  def stringifyFeature(data: collection.Seq[(String, Feature)]): Map[String, String] = {
-    val flattened = data
-      .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
-
-    val featureGA4GH: Map[String, List[SequenceAnnotations.Feature]] = flattened.mapValues(l => l.map(r => GA4GHConverter.toGA4GHFeature(r)).toList)
-
-    val result: Map[String, SearchFeaturesResponse] = featureGA4GH.mapValues(v => {
-      ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse.newBuilder()
-        .addAllFeatures(v.asJava).build()
-    })
-
-    val resultJson: Map[String, String] = result.mapValues(v => {
-      com.google.protobuf.util.JsonFormat.printer().print(v)
-    })
-
-    resultJson
-
   }
 
   def stringifyFeatureGA4GH(data: collection.Seq[SequenceAnnotations.Feature]): String = {
@@ -172,34 +149,22 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
     val data: RDD[(String, VariantContext)] = get(Some(region))
 
-    //if (binning <= 1) {
-
     val binnedData: RDD[(String, VariantContext)] =
       if (binning <= 1) {
         if (!showGenotypes)
-          data
-        //data.map(r => (r._1, GenotypeJson(r._2.variant, null)))
+          data.map(r => (r._1, VariantContext(r._2.variant.variant)))
         else data
       } else {
         bin(data, binning)
           .map(r => {
-            // Reset variant to match binned region
-            //r._1
             val start = r._1._2.start
-
             val binned: VariantContext = r.copy()._2
-            //binned.position.start = start
             binned.variant.variant.setStart(start)
             binned.variant.variant.setEnd(Math.max(r._2.variant.variant.getEnd, start + binning))
             binned.variant.variant.setReferenceAllele(variantPlaceholder)
             binned.variant.variant.setAlternateAllele(variantPlaceholder)
-
             (r._1._1, binned)
-
           })
-
-        //data
-
       }
 
     //stringify(binnedData)
@@ -213,11 +178,9 @@ class VariantContextMaterialization(@transient sc: SparkContext,
                      binning: Int = 1): Array[Feature] = {
 
     val data: RDD[(String, VariantContext)] = get(Some(region))
-    println("## Here in binning > 1")
     val featuresBinsStep1: collection.Map[(String, ReferenceRegion), Long] = binVars(data, binning)
-    println("### count featureBinsStep1:" + featuresBinsStep1.size + " " + featuresBinsStep1.toString())
 
-    val featureBins3: Map[(String, ReferenceRegion), Feature] = featuresBinsStep1
+    val featureBins: Map[(String, ReferenceRegion), Feature] = featuresBinsStep1
       .map(r => {
         val binned = new Feature()
         binned.setContigName(r._1._2.referenceName)
@@ -227,11 +190,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
         (r._1, binned)
       }).toMap
 
-    val myFeatures: Array[Feature] = featureBins3.values.toArray
-    println("### This is sizeof myFeatures: " + myFeatures.size + " " + myFeatures.toString)
-
+    val myFeatures: Array[Feature] = featureBins.values.toArray
     myFeatures
-
   }
 
   /**
@@ -309,7 +269,6 @@ object VariantContextMaterialization {
       } else {
         None
       }
-
     sc.loadParquetGenotypes(fp, predicate = pred).toVariantContextRDD
 
   }
