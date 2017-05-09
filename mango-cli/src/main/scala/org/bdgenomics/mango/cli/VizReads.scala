@@ -599,9 +599,10 @@ class VizServlet extends ScalatraServlet {
         val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
           .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
 
+        /*
         println("#In vizreads count data: " + data.length)
 
-        val outFormat = "Legacy"
+        val outFormat = "Not Legacy"
 
         if (outFormat == "Legacy") {
           println("### Priting legacy")
@@ -609,7 +610,9 @@ class VizServlet extends ScalatraServlet {
         } else {
           println("### Printing GA4GH")
           results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
-        }
+        } */
+
+        results = Some(VizReads.materializer.getVariantContext().get.stringifyGA4GH(data))
 
         if (results.isDefined) {
           // extract variants only and parse to stringified json
