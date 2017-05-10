@@ -48,7 +48,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
                                     files: List[String],
                                     sd: SequenceDictionary,
                                     prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[VariantContext, VariantContext]("VariantContextRDD", sc, files, sd, prefetchSize)
+    extends LazyMaterialization[VariantContext, VariantContext]("VariantContext", sc, files, sd, prefetchSize)
     with Serializable {
 
   //@transient implicit val formats = net.liftweb.json.DefaultFormats
@@ -270,7 +270,6 @@ object VariantContextMaterialization {
         None
       }
     sc.loadParquetGenotypes(fp, predicate = pred).toVariantContextRDD
-
   }
 
   /**

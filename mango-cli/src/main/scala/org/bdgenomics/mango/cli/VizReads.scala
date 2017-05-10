@@ -19,7 +19,6 @@ package org.bdgenomics.mango.cli
 
 import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
-import net.liftweb.json.
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.cli

@@ -68,7 +68,6 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -90,11 +89,6 @@
           </execution>
         </executions>
       </plugin>
-
-
-
-
-
     </plugins>
   </build>
 
@@ -255,6 +249,5 @@
       <artifactId>ga4gh-schemas</artifactId>
       <version>0.6.0jp1-SNAPSHOT</version>
     </dependency>
-
   </dependencies>
 </project>

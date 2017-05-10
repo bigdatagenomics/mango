@@ -21,24 +21,18 @@ import java.lang.Boolean
 import java.util
 
 import com.google.protobuf.ListValue
-import ga4gh.Common.Position
-import ga4gh.Common.Position.Builder
-import ga4gh.Variants.Call
-import ga4gh.{ Common, Variants }
+
 import htsjdk.samtools.{ ValidationStringency, CigarOperator, TextCigarCodec }
+import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Genotype, GenotypeAllele, Feature }
 import org.bdgenomics.utils.misc.Logging
+
 import org.ga4gh._
-
+import ga4gh.Variants.Call
+import ga4gh.{ Common, Variants }
+import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
-import org.bdgenomics.adam.models.VariantContext
-
-import scala.collection.JavaConverters._
-
-import ga4gh.Variants.Variant
-import ga4gh.Common.Position
 
 object GA4GHConverter extends Serializable with Logging {
 
@@ -155,7 +149,6 @@ object GA4GHConverter extends Serializable with Logging {
     if (record.getMateContigName != null)
       builder.setNextMatePosition(new GAPosition(record.getMateContigName, record.getMateAlignmentStart, record.getMateNegativeStrand))
     // we don't store the number of reads in a fragment; assume 2 if paired, 1 if not
-
     val paired: Boolean = Option(record.getReadPaired)
       .map(b => b: Boolean)
       .getOrElse(false)
