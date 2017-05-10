@@ -66,29 +66,12 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
   sparkTest("Can extract json") {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data: VariantContextMaterialization = new VariantContextMaterialization(sc, List(vcfFile1), sd)
-    val x: Map[String, Array[VariantContext]] = data.getJson(region, true, 1)
+    val step1: Map[String, Array[VariantContext]] = data.getJson(region, true, 1)
+    val step2: Array[VariantContext] = step1.values.head
+    val resultsJson: Option[String] = Some(data.stringifyLegacy(step2))
+    val parsedJson: Array[GenotypeJson] = parse(resultsJson.get).extract[Array[String]].map(r => GenotypeJson(r))
 
-    //data.getJson(region)
-    val x2: Array[VariantContext] = x.values.head
-    val results: Option[String] = Some(data.stringifyLegacy(x2))
-    org.bdgenomics.mango.models.PrintUtiltity.print("results: " + results.get)
-
-    val x3: Array[GenotypeJson] = parse(results.get).extract[Array[String]].map(r => GenotypeJson(r))
-
-    //x3.
-    //val json: Array[VariantContext] = data.getJson(region).get(key).get
-    /*
-    val result: Array[VariantContext] = variantsCache.get(key).getOrElse(Array.empty)
-      .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
-*/
-
-    //val vAndg = parse(data.stringify(json)).extract[Array[String]].map(r => GenotypeJson(r))
-    //   .sortBy(_.variant.getStart)
-
-    assert(x3.length == 3)
-    //    assert(vAndg.length == 3)
-    //  assert(vAndg.head.sampleIds.length == 2)
-
+    assert(parsedJson.length == 3)
   }
 
   sparkTest("correctly reassigns contigName") {

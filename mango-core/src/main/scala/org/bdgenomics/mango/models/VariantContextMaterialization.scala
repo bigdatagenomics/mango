@@ -67,8 +67,6 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return Generic RDD of data types from file
    */
-  //def load = (file: String, region: Option[ReferenceRegion]) =>
-  //  VariantContextMaterialization.toGenotypeJsonRDD(VariantContextMaterialization.load(sc, file, region))
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) =>
     VariantContextMaterialization.load(sc, file, regions).rdd
 
