@@ -18,9 +18,8 @@
 package org.bdgenomics.mango.cli
 
 import java.io.FileNotFoundException
-
 import net.liftweb.json.Serialization.write
-import net.liftweb.json._
+import net.liftweb.json.
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.cli
@@ -521,7 +520,6 @@ class VizServlet extends ScalatraServlet {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
         val key: String = params("key")
-
         contentType = "json"
 
         // if region is in bounds of reference, return data
@@ -548,9 +546,7 @@ class VizServlet extends ScalatraServlet {
           // filter data overlapping viewRegion and stringify
           val data: Array[VariantContext] = VizReads.variantsCache.get(key).getOrElse(Array.empty)
             .filter(z => { ReferenceRegion(z.variant.variant).overlaps(viewRegion) })
-
           results = Some(VizReads.materializer.getVariantContext().get.stringifyLegacy(data, binning))
-
           if (results.isDefined) {
             // extract variants only and parse to stringified json
             Ok(results.get)
@@ -561,7 +557,6 @@ class VizServlet extends ScalatraServlet {
   }
 
   post("/ga4gh/variants/search") {
-
     val jsonPostString = request.body
     val searchVariantsRequest: SearchVariantsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
       .extract[SearchVariantsRequestGA4GH]
@@ -690,7 +685,6 @@ class VizServlet extends ScalatraServlet {
             }
           }
           // filter data overlapping viewRegion and stringify
-
           val data = VizReads.featuresCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
           results = Some(VizReads.materializer.getFeatures().get.stringify(data))
           if (results.isDefined) {
@@ -822,22 +816,20 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   /**
    * Initialize loaded variant files
    */
-  def initVariantContext(sc: SparkContext, prefetch: Int): Option[VariantContextMaterialization] =
+  def initVariantContext(sc: SparkContext, prefetch: Int): Option[VariantContextMaterialization] = {
+    // set flag for visualizing genotypes
+    VizReads.showGenotypes = args.showGenotypes
 
-    {
-      // set flag for visualizing genotypes
-      VizReads.showGenotypes = args.showGenotypes
+    if (Option(args.variantsPaths).isDefined) {
+      val variantsPaths = args.variantsPaths.split(",").toList
 
-      if (Option(args.variantsPaths).isDefined) {
-        val variantsPaths = args.variantsPaths.split(",").toList
-
-        if (variantsPaths.nonEmpty) {
-          object variantsWait
-          VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
-          Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
-        } else None
+      if (variantsPaths.nonEmpty) {
+        object variantsWait
+        VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
+        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
       } else None
-    }
+    } else None
+  }
 
   /**
    * Initialize loaded feature files
