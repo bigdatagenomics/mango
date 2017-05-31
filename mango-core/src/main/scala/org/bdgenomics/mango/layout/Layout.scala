@@ -46,7 +46,7 @@ case class VariantJson(contig: String, position: Long, end: Long, ref: String, a
 
 object VariantJson {
   def apply(variant: Variant): VariantJson = {
-    VariantJson(variant.getContigName, variant.getStart, variant.getEnd, variant.getReferenceAllele, variant.getAlternateAllele)
+    VariantJson(variant.getContigName, variant.getStart + 1, variant.getEnd + 1, variant.getReferenceAllele, variant.getAlternateAllele)
   }
 }
 
