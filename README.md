@@ -37,7 +37,11 @@ For help launching the script, run `bin/mango-submit -h`
 $ bin/mango-submit -h
 Using SPARK_SUBMIT=/Applications/spark-1.6.1-bin-hadoop2.4/bin/spark-submit
  reference                                                       : The reference file to view, required
- -feat_file VAL                                                  : The feature file to view
+ -cacheSize N                                                    : Bp to cache on driver.
+ -coverage VAL                                                   : A list of coverage files to view, separated by commas (,)
+ -discover                                                       : This turns on discovery mode on start up.
+ -features VAL                                                   : The feature files to view, separated by commas (,)
+ -genes VAL                                                      : Gene URL.
  -h (-help, --help, -?)                                          : Print help
  -parquet_block_size N                                           : Parquet block size (default = 128mb)
  -parquet_compression_codec [UNCOMPRESSED | SNAPPY | GZIP | LZO] : Parquet compression codec
@@ -45,11 +49,14 @@ Using SPARK_SUBMIT=/Applications/spark-1.6.1-bin-hadoop2.4/bin/spark-submit
  -parquet_logging_level VAL                                      : Parquet logging level (default = severe)
  -parquet_page_size N                                            : Parquet page size (default = 1mb)
  -port N                                                         : The port to bind to for visualization. The default is 8080.
- -preprocess_path VAL                                            : Path to file containing reference regions to be preprocessed
+ -prefetchSize N                                                 : Bp to prefetch in executors.
+ -preload VAL                                                    : Chromosomes to prefetch, separated by commas (,).
  -print_metrics                                                  : Print metrics to the log on completion
- -read_files VAL                                                 : A list of reads files to view, separated by commas (,)
- -repartition N                                                  : The number of partitions
- -var_files VAL                                                  : A list of variants files to view, separated by commas (,)
+ -reads VAL                                                      : A list of reads files to view, separated by commas (,)
+ -show_genotypes                                                 : Shows genotypes if available in variant files.
+ -test                                                           : For debugging purposes.
+ -variants VAL                                                   : A list of variants files to view, separated by commas (,). Vcf files require a
+                                                                   corresponding tbi index.
  ````
  Now view the mango genomics browser at `localhost:8080` or the port specified:
 ```
