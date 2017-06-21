@@ -312,18 +312,19 @@ object GA4GHConverter extends Serializable with Logging {
   }
 
   //update for protobuf GA4GH
-  def toGA4GHVariant(record: VariantContext): ga4gh.Variants.Variant = {
+  def toGA4GHVariant(record: VariantContext, variantID: String = "", variantSetID: String = ""): ga4gh.Variants.Variant = {
 
     val ga4ghCalls: Iterable[Call] = record.genotypes.map(g => toGA4GHCall(g))
 
     ga4gh.Variants.Variant.newBuilder()
-      .setId("stub variant id")
+      .setId(variantID)
+      .setVariantSetId(variantSetID)
       .addAllNames(record.variant.variant.getNames())
       .setReferenceName(record.variant.variant.getContigName)
       .setStart(record.variant.variant.getStart)
       .setEnd(record.variant.variant.getEnd)
       .setReferenceBases(record.variant.variant.getReferenceAllele)
-      .addAllAlternateBases(List(record.variant.variant.getAlternateAllele))
+      .addAllAlternateBases(List(record.variant.variant.getAlternateAllele)) // note: VariantContext is defined only to have one altallele
       .addAllCalls(ga4ghCalls.asJava)
       .build()
   }

@@ -37,7 +37,7 @@ import scala.collection.JavaConversions._
 /**
  * Created by paschalj on 6/20/17.
  */
-object AlignmentRecordGA4GHConverter extends Serializable with Logging {
+object AlignmentRecordConverterGA4GH extends Serializable with Logging {
 
   private[converters] val placeholder = "N/A"
 
