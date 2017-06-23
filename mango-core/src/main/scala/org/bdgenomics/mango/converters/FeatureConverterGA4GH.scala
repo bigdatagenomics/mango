@@ -49,14 +49,22 @@ object FeatureConverterGA4GH extends Serializable with Logging {
       else ga4gh.Common.Strand.STRAND_UNSPECIFIED
     }
 
+    def bdgFeatureTypeTermToGA4GH(featureType: String): ga4gh.Common.OntologyTerm = {
+      ga4gh.Common.OntologyTerm.newBuilder().setTermId(featureType).build()
+    }
+
+    //val x: util.List[OntologyTerm] = record.getOntologyTerms
+
     ga4gh.SequenceAnnotations.Feature.newBuilder()
       .setStart(record.getStart)
       .setEnd(record.getEnd)
       .setStrand(bdgStrandtoGA4GH(record.getStrand))
       .setReferenceName(record.getContigName)
+      .setFeatureType(bdgFeatureTypeTermToGA4GH(record.getFeatureType))
       .setAttributes(Common.Attributes.newBuilder()
         .putAttr("Score", Common.AttributeValueList.newBuilder()
-          .addValues(0, Common.AttributeValue.newBuilder().setInt64Value(record.getScore.toLong)).build())).build()
+          .addValues(0, Common.AttributeValue.newBuilder().setInt64Value(record.getScore.toLong)).build()))
+      .build()
 
   }
 
