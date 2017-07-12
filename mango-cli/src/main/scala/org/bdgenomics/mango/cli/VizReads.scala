@@ -447,7 +447,7 @@ class VizServlet extends ScalatraServlet {
     }
   } */
 
-  post("/ga4gh/reads/search") {
+  post("/ga4gh/:datasetKey/reads/search") {
 
     val jsonPostString = request.body
     val searchReadsRequest: SearchReadsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
@@ -468,7 +468,8 @@ class VizServlet extends ScalatraServlet {
         //val key: String = params("key")
 
         //currently only process the first readgroup
-        val key = searchReadsRequest.read_groups_id.head
+        //val key = searchReadsRequest.read_groups_id.head
+        val key = params("datasetKey")
         contentType = "json"
 
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
@@ -483,7 +484,7 @@ class VizServlet extends ScalatraServlet {
               println("readCache: " + VizReads.readsCache)
 
               //test
-              println("readchache size: " + VizReads.readsCache.get("chr17_7500000-7515000_bam_adam").get.length)
+              //println("readchache size: " + VizReads.readsCache.get("chr17_7500000-7515000_bam_adam").get.length)
 
               VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
             }
@@ -492,8 +493,13 @@ class VizServlet extends ScalatraServlet {
           // filter data overlapping viewRegion and stringify
           //val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => { r.getc
           //ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion) && r.getReadGroupId == "477d3155-8170-4238-9c89-eb4571a1430e"
+
+          // val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
+          // ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion) && r.getRecordGroupName == "477d3155-8170-4238-9c89-eb4571a1430e"
+
           val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
-            ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion) && r.getRecordGroupName == "477d3155-8170-4238-9c89-eb4571a1430e"
+            ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion) && (if (searchReadsRequest.read_groups_id.nonEmpty) { searchReadsRequest.read_groups_id.contains(r.getRecordGroupName) } else true)
+
             //ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion)
           })
           println("this is key: " + key)
