@@ -81,7 +81,7 @@ object AlignmentRecordConverterGA4GH extends Serializable with Logging {
     val builder = ga4gh.Reads.ReadAlignment.newBuilder()
 
     // id needs to be nulled out
-    builder.setId(null)
+    //builder.setId(null)
 
     // read must have a read group
     val rgName = Option(record.getRecordGroupName)

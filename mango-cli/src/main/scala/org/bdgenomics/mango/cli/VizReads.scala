@@ -18,11 +18,13 @@
 package org.bdgenomics.mango.cli
 
 import java.io.FileNotFoundException
+
+import ga4gh.ReadServiceOuterClass.SearchReadsRequest
 import net.liftweb.json.Serialization.write
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.cli
-import org.bdgenomics.mango.core.util.{ SearchVariantsRequestGA4GH, SearchVariantsRequestGA4GHBinning, VizCacheIndicator, VizUtils }
+import org.bdgenomics.mango.core.util._
 import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.layout.{ BedRowJson, GenotypeJson, PositionCount }
 import org.bdgenomics.mango.models._
@@ -37,7 +39,6 @@ import org.scalatra._
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.converters.GA4GHConverter
-
 import ga4gh.SequenceAnnotations
 
 object VizTimers extends Metrics {
@@ -68,11 +69,11 @@ case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
   /**
    * Access functions for materializer
    */
-  def getReads(): Option[AlignmentRecordMaterialization] = {
+  def getReads(): Option[AlignmentRecordMaterializationGA4GH] = {
     val x = objects.flatMap(r =>
       r match {
-        case m: AlignmentRecordMaterialization => Some(m)
-        case _                                 => None
+        case m: AlignmentRecordMaterializationGA4GH => Some(m)
+        case _                                      => None
       })
     if (x.isEmpty) None
     else Some(x.head)
@@ -153,7 +154,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   // reads cache
   object readsWait
-  var readsCache: Map[String, Array[GAReadAlignment]] = Map.empty[String, Array[GAReadAlignment]]
+  var readsCache: Map[String, Array[ga4gh.Reads.ReadAlignment]] = Map.empty[String, Array[ga4gh.Reads.ReadAlignment]]
   var readsIndicator = VizCacheIndicator(region, 1)
 
   // coverage reads cache
@@ -410,6 +411,7 @@ class VizServlet extends ScalatraServlet {
     Ok(write(VizReads.annotationRDD.getSequenceDictionary.records))
   }
 
+  /*
   get("/reads/:key/:ref") {
     VizTimers.ReadsRequest.time {
 
@@ -436,6 +438,59 @@ class VizServlet extends ScalatraServlet {
           val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
             ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
           })
+          results = Some(VizReads.materializer.getReads().get.stringify(data))
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.noContent(viewRegion)
+        } else VizReads.errors.outOfBounds
+      }
+    }
+  }
+*/
+
+  post("/ga4gh/reads/search") {
+
+    val jsonPostString = request.body
+    val searchReadsRequest: SearchReadsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
+      .extract[SearchReadsRequestGA4GH]
+
+    println("######Here in reads/search")
+    //log.info("")
+
+    VizTimers.ReadsRequest.time {
+
+      if (!VizReads.materializer.readsExist) {
+        VizReads.errors.notFound
+      } else {
+        // val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
+        //   VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
+
+        val viewRegion = ReferenceRegion(searchReadsRequest.reference_id, searchReadsRequest.start.toLong, VizUtils.getEnd(searchReadsRequest.end.toLong, VizReads.globalDict(searchReadsRequest.reference_id)))
+        //val key: String = params("key")
+
+        //currently only process the first readgroup
+        val key = searchReadsRequest.read_groups_id.head
+        contentType = "json"
+
+        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+        if (dictOpt.isDefined) {
+          var results: Option[String] = None
+          // region was already collected, grab from cache
+          VizReads.readsWait.synchronized {
+            if (!VizReads.readsIndicator.region.contains(viewRegion)) {
+              val expanded = VizReads.expand(viewRegion)
+              VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
+              VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
+            }
+          }
+
+          // filter data overlapping viewRegion and stringify
+          val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
+            ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion) && r.getReadGroupId == "477d3155-8170-4238-9c89-eb4571a1430e"
+          })
+
+          println("Here is data in ga4gh/reads: " + data)
+
           results = Some(VizReads.materializer.getReads().get.stringify(data))
           if (results.isDefined) {
             Ok(results.get)
@@ -785,14 +840,14 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   /*
  * Initialize loaded alignment files
  */
-  def initAlignments(sc: SparkContext, prefetch: Int): Option[AlignmentRecordMaterialization] = {
+  def initAlignments(sc: SparkContext, prefetch: Int): Option[AlignmentRecordMaterializationGA4GH] = {
     if (Option(args.readsPaths).isDefined) {
       val readsPaths = args.readsPaths.split(",").toList
 
       if (readsPaths.nonEmpty) {
         object readsWait
-        VizReads.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
-        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
+        VizReads.syncObject += (AlignmentRecordMaterializationGA4GH.name -> readsWait)
+        Some(new AlignmentRecordMaterializationGA4GH(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
       } else None
     } else None
   }

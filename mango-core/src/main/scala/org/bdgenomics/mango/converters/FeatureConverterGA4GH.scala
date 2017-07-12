@@ -52,7 +52,7 @@ object FeatureConverterGA4GH extends Serializable with Logging {
     def bdgFeatureTypeTermToGA4GH(featureType: String): ga4gh.Common.OntologyTerm = {
       ga4gh.Common.OntologyTerm.newBuilder().setTermId(featureType).build()
     }
-    
+
     ga4gh.SequenceAnnotations.Feature.newBuilder()
       .setStart(record.getStart)
       .setEnd(record.getEnd)

@@ -51,3 +51,9 @@ case class SearchVariantsRequestGA4GHBinning(variantSetId: String,
   }
 }
 
+// see proto defintiion: https://github.com/ga4gh/ga4gh-schemas/blob/master/src/main/proto/ga4gh/read_service.proto#L117
+case class SearchReadsRequestGA4GH(read_groups_id: Array[String] = new Array[String](0),
+                                   reference_id: String,
+                                   start: String,
+                                   end: String)
+
