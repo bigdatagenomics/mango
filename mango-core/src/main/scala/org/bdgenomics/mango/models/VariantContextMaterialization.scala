@@ -34,7 +34,10 @@ import org.bdgenomics.formats.avro.{ Feature, Genotype, GenotypeAllele, Variant 
 import org.bdgenomics.mango.layout.GenotypeJson
 import org.bdgenomics.adam.models.VariantContext
 import ga4gh.VariantServiceOuterClass.{ SearchCallSetsResponse, SearchVariantsResponse }
+import org.bdgenomics.adam.converters.VariantContextConverter
 import org.bdgenomics.mango.converters.GA4GHConverter
+import org.bdgenomics.mango.converters.VariantContextCoverterGA4GH
+
 import org.bdgenomics.mango.core.util.ResourceUtils
 
 import scala.collection.JavaConverters._
@@ -83,7 +86,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   def stringifyGA4GH(data: Array[VariantContext]): String = {
 
-    val variants: Seq[Variants.Variant] = data.map(l => GA4GHConverter.toGA4GHVariant(l)).toList
+    val variants: Seq[Variants.Variant] = data.map(l => VariantContextCoverterGA4GH.toGA4GHVariant(l)).toList
     val result: SearchVariantsResponse = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
       .addAllVariants(variants.toList.asJava).build()
     val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)

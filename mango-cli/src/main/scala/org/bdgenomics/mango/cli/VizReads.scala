@@ -37,7 +37,7 @@ import org.ga4gh.GAReadAlignment
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
 import org.bdgenomics.adam.models.VariantContext
-import org.bdgenomics.formats.avro.Feature
+import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature }
 import org.bdgenomics.mango.converters.GA4GHConverter
 import ga4gh.SequenceAnnotations
 
@@ -154,7 +154,7 @@ object VizReads extends BDGCommandCompanion with Logging {
 
   // reads cache
   object readsWait
-  var readsCache: Map[String, Array[ga4gh.Reads.ReadAlignment]] = Map.empty[String, Array[ga4gh.Reads.ReadAlignment]]
+  var readsCache: Map[String, Array[AlignmentRecord]] = Map.empty[String, Array[AlignmentRecord]]
   var readsIndicator = VizCacheIndicator(region, 1)
 
   // coverage reads cache
@@ -445,8 +445,7 @@ class VizServlet extends ScalatraServlet {
         } else VizReads.errors.outOfBounds
       }
     }
-  }
-*/
+  } */
 
   post("/ga4gh/reads/search") {
 
@@ -480,18 +479,31 @@ class VizServlet extends ScalatraServlet {
             if (!VizReads.readsIndicator.region.contains(viewRegion)) {
               val expanded = VizReads.expand(viewRegion)
               VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
+              println("In read load, expanded: " + expanded)
+              println("readCache: " + VizReads.readsCache)
+
+              //test
+              println("readchache size: " + VizReads.readsCache.get("chr17_7500000-7515000_bam_adam").get.length)
+
               VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
             }
           }
 
           // filter data overlapping viewRegion and stringify
-          val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
-            ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion) && r.getReadGroupId == "477d3155-8170-4238-9c89-eb4571a1430e"
+          //val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => { r.getc
+          //ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion) && r.getReadGroupId == "477d3155-8170-4238-9c89-eb4571a1430e"
+          val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
+            ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion) && r.getRecordGroupName == "477d3155-8170-4238-9c89-eb4571a1430e"
+            //ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion)
           })
+          println("this is key: " + key)
 
-          println("Here is data in ga4gh/reads: " + data)
+          //val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty)
+          // #val data: Array[AlignmentRecord] = VizReads.readsCache.get("chr17_7500000-7515000_bam_adam").getOrElse(Array.empty)
 
-          results = Some(VizReads.materializer.getReads().get.stringify(data))
+          println("Here is data in ga4gh/reads, about to call stringfy" + data + " length: " + data.length)
+
+          results = Some(VizReads.materializer.getReads().get.stringifyGA4GH(data))
           if (results.isDefined) {
             Ok(results.get)
           } else VizReads.errors.noContent(viewRegion)

@@ -39,6 +39,7 @@ import org.bdgenomics.utils.instrumentation.Metrics
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
+import org.bdgenomics.mango.converters.AlignmentRecordConverterGA4GH
 
 import scala.collection.JavaConversions._
 import scala.reflect._
@@ -68,7 +69,7 @@ class AlignmentRecordMaterializationGA4GH(@transient sc: SparkContext,
                                           files: List[String],
                                           sd: SequenceDictionary,
                                           prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[AlignmentRecord, ga4gh.Reads.ReadAlignment](AlignmentRecordMaterializationGA4GH.name, sc, files, sd, prefetchSize)
+    extends LazyMaterialization[AlignmentRecord, AlignmentRecord](AlignmentRecordMaterializationGA4GH.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => AlignmentRecordMaterializationGA4GH.load(sc, file, regions).rdd
@@ -121,13 +122,16 @@ class AlignmentRecordMaterializationGA4GH(@transient sc: SparkContext,
    * @param data RDD of (id, AlignmentRecord) tuples
    * @return GAReadAlignments mapped by key
    */
-  override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[ga4gh.Reads.ReadAlignment]] = {
-    AlignmentTimersGA4GH.collect.time {
+  override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[AlignmentRecord]] = {
+    /*AlignmentTimersGA4GH.collect.time {
       AlignmentTimersGA4GH.getAlignmentData.time {
         data.mapValues(r => Array(AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(r)))
           .reduceByKeyLocally(_ ++ _).toMap
       }
-    }
+    }*/
+    data.collect
+      .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
+
   }
 
   /**
@@ -135,11 +139,12 @@ class AlignmentRecordMaterializationGA4GH(@transient sc: SparkContext,
    * @param data An array of GAReadAlignments
    * @return JSONified data
    */
-  override def stringify(data: Array[ga4gh.Reads.ReadAlignment]): String = {
+  def stringifyGA4GH(data: Array[AlignmentRecord]): String = {
     println("### Here is AlignmentRecordMaterialiationGA4GH stringify()")
     println("### Here is data element one" + data.head)
 
-    val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder().addAllAlignments(data.toList.asJava).build()
+    val reads: Seq[ga4gh.Reads.ReadAlignment] = data.map(l => AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(l)).toList
+    val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder().addAllAlignments(reads.toList.asJava).build()
     val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)
     resultJSON
 
