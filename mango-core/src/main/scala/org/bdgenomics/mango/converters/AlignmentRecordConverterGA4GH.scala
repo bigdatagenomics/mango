@@ -31,6 +31,8 @@ import org.bdgenomics.utils.misc.Logging
 import org.ga4gh._
 import ga4gh.Variants.Call
 import ga4gh.{ Common, Variants }
+import ga4gh.Reads
+
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
 

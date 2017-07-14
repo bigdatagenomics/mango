@@ -35,7 +35,7 @@ import org.bdgenomics.mango.layout.GenotypeJson
 import org.bdgenomics.adam.models.VariantContext
 import ga4gh.VariantServiceOuterClass.{ SearchCallSetsResponse, SearchVariantsResponse }
 import org.bdgenomics.adam.converters.VariantContextConverter
-import org.bdgenomics.mango.converters.GA4GHConverter
+//import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.mango.converters.VariantContextCoverterGA4GH
 
 import org.bdgenomics.mango.core.util.ResourceUtils

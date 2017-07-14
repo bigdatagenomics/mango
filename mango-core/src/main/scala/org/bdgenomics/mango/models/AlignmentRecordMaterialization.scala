@@ -17,6 +17,11 @@
  */
 package org.bdgenomics.mango.models
 
+/*
+
+ */
+
+/*
 import java.io.{ PrintWriter, StringWriter }
 
 import htsjdk.samtools.ValidationStringency
@@ -218,3 +223,5 @@ object AlignmentRecordMaterialization extends Logging {
     }
   }
 }
+
+*/ 

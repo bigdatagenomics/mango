@@ -33,6 +33,7 @@ import ga4gh.Variants.Call
 import ga4gh.{ Common, Variants }
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
+/*
 
 object GA4GHConverter extends Serializable with Logging {
 
@@ -372,4 +373,6 @@ object GA4GHConverter extends Serializable with Logging {
   }
 
 }
+
+*/
 

@@ -29,7 +29,7 @@ import org.bdgenomics.utils.misc.Logging
 import org.ga4gh._
 import ga4gh.Variants.Call
 import ga4gh.{ Common, Variants }
-import org.bdgenomics.mango.converters.GA4GHConverter.toGA4GHCall
+//import org.bdgenomics.mango.converters.GA4GHConverter.toGA4GHCall
 import java.lang.Double
 
 import scala.collection.JavaConverters._
@@ -84,13 +84,20 @@ object VariantContextCoverterGA4GH extends Serializable with Logging {
     // There has gotta be a better way, but compiler was not happy
     val gl: List[java.lang.Double] = record.getGenotypeLikelihoods.map((x) => { val y: java.lang.Double = x.toDouble; y }).toList
 
-    ga4gh.Variants.Call.newBuilder()
+    var builder = ga4gh.Variants.Call.newBuilder()
       .setCallSetName(record.getSampleId)
       .setCallSetId(callsetID)
-      .setPhaseset(record.getPhaseSetId.toString)
-      .addAllGenotypeLikelihood(gl)
       .setGenotype(calls)
-      .build()
+
+    if (record.getPhased) {
+      builder = builder.setPhaseset(record.getPhaseSetId.toString)
+    }
+
+    if (!gl.isEmpty) {
+      builder = builder.addAllGenotypeLikelihood(gl)
+    }
+
+    builder.build()
 
   }
 

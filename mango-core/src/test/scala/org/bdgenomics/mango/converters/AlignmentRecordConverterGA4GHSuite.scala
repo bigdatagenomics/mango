@@ -17,44 +17,42 @@
  */
 package org.bdgenomics.mango.converters
 
-import java.util
-
+import ga4gh.Reads
+import org.ga4gh._
 import htsjdk.samtools.ValidationStringency
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.ga4gh.{ GACigarOperation, GACigarUnit }
+import org.ga4gh.GACigarOperation
 import org.scalatest.FunSuite
 
-/*
-
-class GA4GHConverterSuite extends FunSuite {
+class AlignmentRecordCoverterGA4GHSuite extends FunSuite {
 
   test("converting an empty cigar should yield an empty cigar") {
-    assert(GA4GHConverter.convertCigar(null).length === 0)
+    assert(AlignmentRecordConverterGA4GH.convertCigar(null).length === 0)
   }
 
   test("converting a pure match cigar should work") {
-    val cigarList = GA4GHConverter.convertCigar("100M")
+    val cigarList: Seq[Reads.CigarUnit] = AlignmentRecordConverterGA4GH.convertCigar("100M")
     assert(cigarList.length === 1)
 
-    val headElem: GACigarUnit = cigarList.head
-    assert(headElem.getOperation === GACigarOperation.ALIGNMENT_MATCH)
+    val headElem = cigarList.head
+    assert(headElem.getOperation === ga4gh.Reads.CigarUnit.Operation.ALIGNMENT_MATCH)
     assert(headElem.getOperationLength === 100)
   }
 
   test("convert a more complex cigar") {
-    val cigarList = GA4GHConverter.convertCigar("50M10D3I47M")
+    val cigarList = AlignmentRecordConverterGA4GH.convertCigar("50M10D3I47M")
     assert(cigarList.length === 4)
 
-    def checkElem(idx: Int, op: GACigarOperation, len: Int) {
+    def checkElem(idx: Int, op: ga4gh.Reads.CigarUnit.Operation, len: Int) {
       val elem = cigarList(idx)
       assert(elem.getOperation === op)
       assert(elem.getOperationLength === len)
     }
 
-    checkElem(0, GACigarOperation.ALIGNMENT_MATCH, 50)
-    checkElem(1, GACigarOperation.DELETE, 10)
-    checkElem(2, GACigarOperation.INSERT, 3)
-    checkElem(3, GACigarOperation.ALIGNMENT_MATCH, 47)
+    checkElem(0, ga4gh.Reads.CigarUnit.Operation.ALIGNMENT_MATCH, 50)
+    checkElem(1, ga4gh.Reads.CigarUnit.Operation.DELETE, 10)
+    checkElem(2, ga4gh.Reads.CigarUnit.Operation.INSERT, 3)
+    checkElem(3, ga4gh.Reads.CigarUnit.Operation.ALIGNMENT_MATCH, 47)
   }
 
   def makeRead(start: Long, cigar: String, mdtag: String, length: Int, id: Int = 0, nullQuality: Boolean = false): AlignmentRecord.Builder = {
@@ -81,39 +79,47 @@ class GA4GHConverterSuite extends FunSuite {
     builder
   }
 
+  /*
   test("converting a read without a read group fails with ValidationStringency STRICT") {
     intercept[IllegalArgumentException] {
-      GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(makeRead(10L, "10M", "10", 10)
         .setRecordGroupName(null)
-        .build(), stringency = ValidationStringency.STRICT)
+        .build())
     }
   }
+  */
 
+  /*
   test("converting a read without a read group passes with ValidationStringency LENIENT") {
-    val gaRead = GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+    val gaRead = AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(makeRead(10L, "10M", "10", 10)
       .setRecordGroupName(null)
       .build())
-    assert(gaRead.getReadGroupId == GA4GHConverter.placeholder)
+    assert(gaRead.getReadGroupId == AlignmentRecordConverterGA4GH.placeholder)
   }
+  */
 
+  /*
   test("converting a read without a name fails with ValidationStringency STRICT") {
     intercept[IllegalArgumentException] {
-      GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      AlignmentRecordConverterGA4GH.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
         .setReadName(null)
         .build(), stringency = ValidationStringency.STRICT)
     }
   }
+  */
 
+  /*
   test("converting a read without a name passes with ValidationStringency LENIENT") {
-    val gaRead = GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+    val gaRead = AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(makeRead(10L, "10M", "10", 10)
       .setReadName(null)
       .build())
-    assert(gaRead.getFragmentName == GA4GHConverter.placeholder)
+    assert(gaRead.getFragmentName == AlignmentRecordConverterGA4GH.placeholder)
   }
+  */
 
   test("converting a read without a start fails") {
     intercept[IllegalArgumentException] {
-      GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(makeRead(10L, "10M", "10", 10)
         .setStart(null)
         .build())
     }
@@ -121,7 +127,7 @@ class GA4GHConverterSuite extends FunSuite {
 
   test("converting a read without a contig fails") {
     intercept[IllegalArgumentException] {
-      GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(makeRead(10L, "10M", "10", 10)
         .setContigName(null)
         .build())
     }
@@ -129,7 +135,7 @@ class GA4GHConverterSuite extends FunSuite {
 
   test("converting a read without a strand fails") {
     intercept[IllegalArgumentException] {
-      GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
+      AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(makeRead(10L, "10M", "10", 10)
         .setReadNegativeStrand(null)
         .build())
     }
@@ -137,7 +143,7 @@ class GA4GHConverterSuite extends FunSuite {
 
   test("converting a properly formatted read succeeds") {
     val adamRead = makeRead(10L, "10M", "10", 10).build()
-    val gaRead = GA4GHConverter.toGAReadAlignment(adamRead)
+    val gaRead = AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead)
 
     // check name
     assert(gaRead.getReadGroupId === "rg")
@@ -145,16 +151,16 @@ class GA4GHConverterSuite extends FunSuite {
 
     // check alignment status
     assert(gaRead.getAlignment != null)
-    assert(gaRead.getAlignment.getCigar.size === 1)
+    assert(gaRead.getAlignment.getCigarList.size === 1)
     assert(gaRead.getAlignment.getMappingQuality === 60)
     assert(gaRead.getAlignment.getPosition != null)
     assert(gaRead.getAlignment.getPosition.getReferenceName === "myCtg")
     assert(gaRead.getAlignment.getPosition.getPosition === 10)
-    assert(!gaRead.getAlignment.getPosition.getReverseStrand)
+    //assert(!gaRead.getAlignment.getPosition.getReverseStrand)
 
     // check sequence and qual
     assert(gaRead.getAlignedSequence === "AAAAAAAAAA")
-    val qual: util.List[Integer] = gaRead.getAlignedQuality
+    val qual = gaRead.getAlignedQualityList
     assert(qual.size === 10)
     (0 until 10).foreach(i => {
       assert(qual.get(i) === 9)
@@ -162,4 +168,3 @@ class GA4GHConverterSuite extends FunSuite {
   }
 }
 
-*/

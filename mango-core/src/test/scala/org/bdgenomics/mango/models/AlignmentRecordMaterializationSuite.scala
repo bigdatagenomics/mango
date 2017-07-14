@@ -45,19 +45,19 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   val files = List(bamFile)
 
   sparkTest("create new AlignmentRecordMaterialization") {
-    val lazyMat = new AlignmentRecordMaterialization(sc, files, dict)
+    val lazyMat = new AlignmentRecordMaterializationGA4GH(sc, files, dict)
   }
 
   sparkTest("return raw data from AlignmentRecordMaterialization") {
 
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val data = new AlignmentRecordMaterializationGA4GH(sc, files, dict)
 
     val region = new ReferenceRegion("chrM", 0L, 900L)
     val results = data.getJson(region).get(key).get
   }
 
   sparkTest("return coverage from AlignmentRecordMaterialization") {
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val data = new AlignmentRecordMaterializationGA4GH(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 20L)
     val freq = write(data.getCoverage(region).get(key).get)
     val coverage = parse(freq).extract[Array[PositionCount]]
@@ -66,7 +66,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   }
 
   sparkTest("return coverage overlapping multiple materialized nodes") {
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val data = new AlignmentRecordMaterializationGA4GH(sc, files, dict)
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val freq = write(data.getCoverage(region).get(key).get)
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
@@ -75,16 +75,16 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   sparkTest("fetches multiple regions from load") {
     val regions = Some(Iterable(ReferenceRegion("chrM", 90L, 110L), ReferenceRegion("chrM", 10100L, 10300L)))
-    val data1 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 90L, 110L))))
-    val data2 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 10100L, 10300L))))
-    val data = AlignmentRecordMaterialization.load(sc, bamFile, regions)
+    val data1 = AlignmentRecordMaterializationGA4GH.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 90L, 110L))))
+    val data2 = AlignmentRecordMaterializationGA4GH.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 10100L, 10300L))))
+    val data = AlignmentRecordMaterializationGA4GH.load(sc, bamFile, regions)
     assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
   }
 
   sparkTest("Should handle chromosomes with different prefixes") {
     val dict = new SequenceDictionary(Vector(SequenceRecord("M", 16699L)))
 
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val data = new AlignmentRecordMaterializationGA4GH(sc, files, dict)
     val region = new ReferenceRegion("M", 90L, 110L)
     val freq = write(data.getCoverage(region).get(key).get)
     val coverage = parse(freq).extract[Array[PositionCount]].sortBy(_.start)
@@ -92,3 +92,4 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   }
 
 }
+

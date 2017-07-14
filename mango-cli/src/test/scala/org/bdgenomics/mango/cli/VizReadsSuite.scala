@@ -71,12 +71,16 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  /*
   sparkTest("/reads/:key/:ref") {
     implicit val VizReads = runVizReads(args)
     get(s"/reads/${bamKey}/chrM?start=0&end=100") {
       assert(status == Ok("").status.code)
     }
   }
+  */
+
+  //todo: need to add back test for POST GA4GH reads endpoint
 
   sparkTest("/reads/coverage/:key/:ref") {
     implicit val VizReads = runVizReads(args)

@@ -37,8 +37,11 @@ import org.ga4gh.GAReadAlignment
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
 import org.bdgenomics.adam.models.VariantContext
+import org.bdgenomics.adam.models.ReferenceRegion
+
 import org.bdgenomics.formats.avro.{ AlignmentRecord, Feature }
-import org.bdgenomics.mango.converters.GA4GHConverter
+import org.bdgenomics.mango.converters.FeatureConverterGA4GH
+//import org.bdgenomics.mango.converters.GA4GHConverter
 import ga4gh.SequenceAnnotations
 
 object VizTimers extends Metrics {
@@ -411,64 +414,20 @@ class VizServlet extends ScalatraServlet {
     Ok(write(VizReads.annotationRDD.getSequenceDictionary.records))
   }
 
-  /*
-  get("/reads/:key/:ref") {
-    VizTimers.ReadsRequest.time {
-
-      if (!VizReads.materializer.readsExist) {
-        VizReads.errors.notFound
-      } else {
-        val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-          VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
-        val key: String = params("key")
-        contentType = "json"
-
-        val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-        if (dictOpt.isDefined) {
-          var results: Option[String] = None
-          // region was already collected, grab from cache
-          VizReads.readsWait.synchronized {
-            if (!VizReads.readsIndicator.region.contains(viewRegion)) {
-              val expanded = VizReads.expand(viewRegion)
-              VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
-              VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
-            }
-          }
-          // filter data overlapping viewRegion and stringify
-          val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
-            ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
-          })
-          results = Some(VizReads.materializer.getReads().get.stringify(data))
-          if (results.isDefined) {
-            Ok(results.get)
-          } else VizReads.errors.noContent(viewRegion)
-        } else VizReads.errors.outOfBounds
-      }
-    }
-  } */
-
   post("/ga4gh/:datasetKey/reads/search") {
 
     val jsonPostString = request.body
     val searchReadsRequest: SearchReadsRequestGA4GH = net.liftweb.json.parse(jsonPostString)
       .extract[SearchReadsRequestGA4GH]
 
-    println("######Here in reads/search")
-    //log.info("")
-
     VizTimers.ReadsRequest.time {
 
       if (!VizReads.materializer.readsExist) {
         VizReads.errors.notFound
       } else {
-        // val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
-        //   VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
 
         val viewRegion = ReferenceRegion(searchReadsRequest.reference_id, searchReadsRequest.start.toLong, VizUtils.getEnd(searchReadsRequest.end.toLong, VizReads.globalDict(searchReadsRequest.reference_id)))
-        //val key: String = params("key")
 
-        //currently only process the first readgroup
-        //val key = searchReadsRequest.read_groups_id.head
         val key = params("datasetKey")
         contentType = "json"
 
@@ -483,31 +442,14 @@ class VizServlet extends ScalatraServlet {
               println("In read load, expanded: " + expanded)
               println("readCache: " + VizReads.readsCache)
 
-              //test
-              //println("readchache size: " + VizReads.readsCache.get("chr17_7500000-7515000_bam_adam").get.length)
-
               VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
             }
           }
 
-          // filter data overlapping viewRegion and stringify
-          //val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => { r.getc
-          //ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion) && r.getReadGroupId == "477d3155-8170-4238-9c89-eb4571a1430e"
-
-          // val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
-          // ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion) && r.getRecordGroupName == "477d3155-8170-4238-9c89-eb4571a1430e"
-
           val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
             ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion) && (if (searchReadsRequest.read_groups_id.nonEmpty) { searchReadsRequest.read_groups_id.contains(r.getRecordGroupName) } else true)
 
-            //ReferencePosition(r.getContigName, r.getStart).overlaps(viewRegion)
           })
-          println("this is key: " + key)
-
-          //val data: Array[AlignmentRecord] = VizReads.readsCache.get(key).getOrElse(Array.empty)
-          // #val data: Array[AlignmentRecord] = VizReads.readsCache.get("chr17_7500000-7515000_bam_adam").getOrElse(Array.empty)
-
-          println("Here is data in ga4gh/reads, about to call stringfy" + data + " length: " + data.length)
 
           results = Some(VizReads.materializer.getReads().get.stringifyGA4GH(data))
           if (results.isDefined) {
@@ -716,7 +658,7 @@ class VizServlet extends ScalatraServlet {
         val features: Array[Feature] = VizReads.materializer.getVariantContext().get.getJsonBinning(expanded,
           VizReads.showGenotypes, binning).filter(z => { ReferenceRegion.unstranded(z).overlaps(viewRegion) })
 
-        val featureGA4GH: Seq[SequenceAnnotations.Feature] = features.map(l => GA4GHConverter.toGA4GHFeature(l)).toList
+        val featureGA4GH: Seq[SequenceAnnotations.Feature] = features.map(l => FeatureConverterGA4GH.toGA4GHFeature(l)).toList
 
         results = Some(VizReads.materializer.getVariantContext().get.stringifyFeatureGA4GH(featureGA4GH))
 
@@ -991,3 +933,4 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   }
 
 }
+
