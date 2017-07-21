@@ -25,7 +25,7 @@ class VariantContextConverterGA4GHSuite extends FunSuite {
       .setEnd(17409573L)
       .setReferenceAllele("T")
       .setAlternateAllele("C")
-      .setNames(ImmutableList.of("rs3131972", "rs201888535"))
+      .setNames(ImmutableList.of("rs3131972"))
       .setFiltersApplied(true)
       .setFiltersPassed(true)
       .build
@@ -40,7 +40,11 @@ class VariantContextConverterGA4GHSuite extends FunSuite {
     val x: Variants.Variant = VariantContextCoverterGA4GH.toGA4GHVariant(vctx0)
 
     assert(x.getReferenceName === "chr11")
+    assert(x.getStart === 17409572L)
+    assert(x.getEnd === 17409573L)
+    assert(x.getReferenceBases === "T")
+    assert(x.getAlternateBases(0) === "C")
 
-    }
+  }
 
 }
