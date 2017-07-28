@@ -135,11 +135,16 @@ class AlignmentRecordCoverterGA4GHSuite extends FunSuite {
     val adamRead1 = makeRead(10L, "10M", "10", 10).build()
     val adamRead2 = makeRead(11L, "10M", "10", 10).build()
 
+    val data = List(AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead1), AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead2))
+    val resultJSON = AlignmentRecordConverterGA4GH.listGApbToJson(data)
+
+    println("resultJSON: " + resultJSON)
+
+    /*
     val gaReads: Seq[Reads.ReadAlignment] = List(AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead1), AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead2))
     val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder().addAllAlignments(gaReads.toList.asJava).build()
     val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)
-
-    println("resultJSON: " + resultJSON)
+    */
 
     // resulting json, need to figure out how to deal with new lines/white space which checking String, maybe strip out whitespace
     /*
@@ -184,7 +189,6 @@ class AlignmentRecordCoverterGA4GHSuite extends FunSuite {
       "alignedQuality": [9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
     }]
   } */
-
 
   }
 

@@ -179,4 +179,9 @@ object AlignmentRecordConverterGA4GH extends Serializable with Logging {
     builder.build()
   }
 
+  def listGApbToJson(gaReads: Seq[ga4gh.Reads.ReadAlignment]): String = {
+    val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder().addAllAlignments(gaReads.toList.asJava).build()
+    com.google.protobuf.util.JsonFormat.printer().print(result)
+  }
+
 }

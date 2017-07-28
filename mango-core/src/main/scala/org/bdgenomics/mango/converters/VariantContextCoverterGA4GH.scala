@@ -32,6 +32,8 @@ import ga4gh.{ Common, Variants }
 //import org.bdgenomics.mango.converters.GA4GHConverter.toGA4GHCall
 import java.lang.Double
 
+import ga4gh.VariantServiceOuterClass.{ SearchCallSetsResponse, SearchVariantsResponse }
+
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
 
@@ -98,6 +100,13 @@ object VariantContextCoverterGA4GH extends Serializable with Logging {
     }
 
     builder.build()
+
+  }
+
+  def listGApbToJson(data: Seq[ga4gh.Variants.Variant]): String = {
+    val result: SearchVariantsResponse = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
+      .addAllVariants(data.asJava).build()
+    com.google.protobuf.util.JsonFormat.printer().print(result)
 
   }
 
