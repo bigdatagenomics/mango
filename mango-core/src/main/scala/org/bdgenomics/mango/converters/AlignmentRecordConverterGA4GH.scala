@@ -84,9 +84,17 @@ object AlignmentRecordConverterGA4GH extends Serializable with Logging {
 
     // read must have a read group
     val rgName = Option(record.getRecordGroupName)
-    require(rgName.isDefined,
-      "Read %s does not have a read group attached.".format(record))
-    rgName.foreach(builder.setReadGroupId)
+
+    // note: removed this check for nwo and added default "1" readGroup as below
+    // this was done for testing, may want to revert to requring rgName to be defined
+
+    //require(rgName.isDefined,
+    //  "Read %s does not have a read group attached.".format(record))
+
+    if (rgName.isDefined)
+      rgName.foreach(builder.setReadGroupId)
+    else
+      builder.setReadGroupId("1")
 
     // read must have a name
     val readName = Option(record.getReadName)

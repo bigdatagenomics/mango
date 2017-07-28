@@ -23,6 +23,7 @@ import htsjdk.samtools.ValidationStringency
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.ga4gh.GACigarOperation
 import org.scalatest.FunSuite
+import scala.collection.JavaConverters._
 
 class AlignmentRecordCoverterGA4GHSuite extends FunSuite {
 
@@ -128,5 +129,64 @@ class AlignmentRecordCoverterGA4GHSuite extends FunSuite {
       assert(qual.get(i) === 9)
     })
   }
+
+  test("convert to json") {
+
+    val adamRead1 = makeRead(10L, "10M", "10", 10).build()
+    val adamRead2 = makeRead(11L, "10M", "10", 10).build()
+
+    val gaReads: Seq[Reads.ReadAlignment] = List(AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead1), AlignmentRecordConverterGA4GH.toGAReadAlignmentPB(adamRead2))
+    val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder().addAllAlignments(gaReads.toList.asJava).build()
+    val resultJSON: String = com.google.protobuf.util.JsonFormat.printer().print(result)
+
+    println("resultJSON: " + resultJSON)
+
+    // resulting json, need to figure out how to deal with new lines/white space which checking String, maybe strip out whitespace
+    /*
+    {
+    "alignments": [{
+      "readGroupId": "rg",
+      "fragmentName": "read0",
+      "improperPlacement": true,
+      "numberReads": 1,
+      "alignment": {
+        "position": {
+        "referenceName": "myCtg",
+        "position": "10",
+        "strand": "POS_STRAND"
+      },
+        "mappingQuality": 60,
+        "cigar": [{
+        "operation": "ALIGNMENT_MATCH",
+        "operationLength": "10"
+      }]
+      },
+      "alignedSequence": "AAAAAAAAAA",
+      "alignedQuality": [9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
+    }, {
+      "readGroupId": "rg",
+      "fragmentName": "read0",
+      "improperPlacement": true,
+      "numberReads": 1,
+      "alignment": {
+        "position": {
+        "referenceName": "myCtg",
+        "position": "11",
+        "strand": "POS_STRAND"
+      },
+        "mappingQuality": 60,
+        "cigar": [{
+        "operation": "ALIGNMENT_MATCH",
+        "operationLength": "10"
+      }]
+      },
+      "alignedSequence": "AAAAAAAAAA",
+      "alignedQuality": [9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
+    }]
+  } */
+
+
+  }
+
 }
 
