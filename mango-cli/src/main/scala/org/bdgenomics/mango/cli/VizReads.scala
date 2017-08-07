@@ -328,12 +328,6 @@ class VizServlet extends ScalatraServlet {
     }
 
     val templateEngine = new TemplateEngine
-    // set initial referenceRegion so it is defined
-    val region = session("referenceRegion").asInstanceOf[ReferenceRegion]
-    val indicator = VizCacheIndicator(region, 1)
-    VizReads.readsIndicator = indicator
-    VizReads.variantsIndicator = indicator
-    VizReads.featuresIndicator = indicator
 
     // generate file keys for front end
     val readsSamples: Option[List[(String, Option[String])]] = try {
@@ -629,7 +623,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
 
-    // initialize all datasets
+    // initialize reference
     initAnnotations(sc)
 
     VizReads.cacheSize = args.cacheSize
