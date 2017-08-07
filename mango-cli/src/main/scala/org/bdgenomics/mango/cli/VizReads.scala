@@ -182,7 +182,7 @@ object VizReads extends BDGCommandCompanion with Logging {
     var outOfBounds = NotFound("Region not found in Reference Sequence Dictionary")
     var largeRegion = RequestEntityTooLarge("Region too large")
     var unprocessableFile = UnprocessableEntity("File type not supported")
-    var notFound = NotFound("File not found")
+    def notFound(name: String) = NotFound(s"$name not found")
     def noContent(region: ReferenceRegion): ActionResult = {
       val msg = s"No content available at ${region.toString}"
       NoContent(Map.empty, msg)
@@ -404,7 +404,7 @@ class VizServlet extends ScalatraServlet {
     VizTimers.ReadsRequest.time {
 
       if (!VizReads.materializer.readsExist) {
-        VizReads.errors.notFound
+        VizReads.errors.notFound("ReadsMaterialization")
       } else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
@@ -423,13 +423,18 @@ class VizServlet extends ScalatraServlet {
             }
           }
           // filter data overlapping viewRegion and stringify
-          val data = VizReads.readsCache.get(key).getOrElse(Array.empty).filter(r => {
-            ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
-          })
-          results = Some(VizReads.materializer.getReads().get.stringify(data))
-          if (results.isDefined) {
-            Ok(results.get)
-          } else VizReads.errors.noContent(viewRegion)
+          val dataForKey = VizReads.readsCache.get(key)
+          if (!dataForKey.isDefined) {
+            VizReads.errors.notFound(key)
+          } else {
+            val data = dataForKey.getOrElse(Array.empty).filter(r => {
+              ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
+            })
+            results = Some(VizReads.materializer.getReads().get.stringify(data))
+            if (results.isDefined) {
+              Ok(results.get)
+            } else VizReads.errors.noContent(viewRegion)
+          }
         } else VizReads.errors.outOfBounds
       }
     }
@@ -452,7 +457,7 @@ class VizServlet extends ScalatraServlet {
     VizTimers.ReadsRequest.time {
 
       if (!VizReads.materializer.readsExist) {
-        VizReads.errors.notFound
+        VizReads.errors.notFound("ReadsMaterialization")
       } else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
@@ -503,7 +508,7 @@ class VizServlet extends ScalatraServlet {
   get("/variants/:key/:ref") {
     VizTimers.VarRequest.time {
       if (!VizReads.materializer.variantContextExist)
-        VizReads.errors.notFound
+        VizReads.errors.notFound("VariantContextMaterialization")
       else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
@@ -532,12 +537,17 @@ class VizServlet extends ScalatraServlet {
             }
           }
           // filter data overlapping viewRegion and stringify
-          val data = VizReads.variantsCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-          results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
-          if (results.isDefined) {
-            // extract variants only and parse to stringified json
-            Ok(results.get)
-          } else VizReads.errors.noContent(viewRegion)
+          val dataForKey = VizReads.variantsCache.get(key)
+          if (!dataForKey.isDefined) {
+            VizReads.errors.notFound(key)
+          } else {
+            val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+            if (results.isDefined) {
+              // extract variants only and parse to stringified json
+              Ok(results.get)
+            } else VizReads.errors.noContent(viewRegion)
+          }
         } else VizReads.errors.outOfBounds
       }
     }
@@ -546,7 +556,7 @@ class VizServlet extends ScalatraServlet {
   get("/features/:key/:ref") {
     VizTimers.FeatRequest.time {
       if (!VizReads.materializer.featuresExist)
-        VizReads.errors.notFound
+        VizReads.errors.notFound("FeaturesMaterialization")
       else {
         val viewRegion = ReferenceRegion(params("ref"), params("start").toLong,
           VizUtils.getEnd(params("end").toLong, VizReads.globalDict(params("ref"))))
@@ -572,11 +582,16 @@ class VizServlet extends ScalatraServlet {
             }
           }
           // filter data overlapping viewRegion and stringify
-          val data = VizReads.featuresCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-          results = Some(VizReads.materializer.getFeatures().get.stringify(data))
-          if (results.isDefined) {
-            Ok(results.get)
-          } else VizReads.errors.noContent(viewRegion)
+          val dataForKey = VizReads.featuresCache.get(key)
+          if (!dataForKey.isDefined) {
+            VizReads.errors.notFound(key)
+          } else {
+            val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(VizReads.materializer.getFeatures().get.stringify(data))
+            if (results.isDefined) {
+              Ok(results.get)
+            } else VizReads.errors.noContent(viewRegion)
+          }
         } else VizReads.errors.outOfBounds
       }
     }
@@ -591,7 +606,7 @@ class VizServlet extends ScalatraServlet {
   def getCoverage(viewRegion: ReferenceRegion, key: String, binning: Int = 1): ActionResult = {
     VizTimers.CoverageRequest.time {
       if (!VizReads.materializer.coveragesExist) {
-        VizReads.errors.notFound
+        VizReads.errors.notFound("CoverageMaterialization")
       } else {
         contentType = "json"
         val dictOpt = VizReads.globalDict(viewRegion.referenceName)
@@ -606,11 +621,16 @@ class VizServlet extends ScalatraServlet {
             }
           }
           // filter data overlapping viewRegion and stringify
-          val data = VizReads.coverageCache.get(key).getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-          results = Some(write(data))
-          if (results.isDefined) {
-            Ok(results.get)
-          } else VizReads.errors.noContent(viewRegion)
+          val dataForKey = VizReads.coverageCache.get(key)
+          if (!dataForKey.isDefined) {
+            VizReads.errors.notFound(key)
+          } else {
+            val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+            results = Some(write(data))
+            if (results.isDefined) {
+              Ok(results.get)
+            } else VizReads.errors.noContent(viewRegion)
+          }
         } else VizReads.errors.outOfBounds
       }
     }

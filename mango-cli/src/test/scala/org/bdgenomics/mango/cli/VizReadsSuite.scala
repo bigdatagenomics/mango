@@ -21,7 +21,7 @@ import net.liftweb.json._
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
-import org.scalatra.{ RequestEntityTooLarge, Ok }
+import org.scalatra.{ NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
@@ -136,6 +136,34 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == Ok("").status.code)
       val json = parse(response.getContent()).extract[Array[PositionCount]]
       assert(json.map(_.start).distinct.length == 1200)
+    }
+  }
+
+  sparkTest("should not return reads with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/reads/invalidKey/chrM?start=0&end=100") {
+      assert(status == NotFound("").status.code)
+    }
+  }
+
+  sparkTest("should not return variants with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/variants/invalidKey/chrM?start=0&end=100") {
+      assert(status == NotFound("").status.code)
+    }
+  }
+
+  sparkTest("should not return features with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/features/invalidKey/chrM?start=0&end=100") {
+      assert(status == NotFound("").status.code)
+    }
+  }
+
+  sparkTest("should not return coverage with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/coverage/invalidKey/chrM?start=0&end=100") {
+      assert(status == NotFound("").status.code)
     }
   }
 
