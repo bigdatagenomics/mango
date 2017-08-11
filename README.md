@@ -1,4 +1,4 @@
-#mango
+# mango
 
 A scalable genome browser built on top of the [ADAM](https://github.com/bigdatagenomics/adam) genomics processing engine. Apache 2 licensed.
 
