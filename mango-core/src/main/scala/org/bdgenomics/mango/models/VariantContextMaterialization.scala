@@ -198,7 +198,7 @@ object VariantContextMaterialization {
         None
       }
 
-    sc.loadParquetGenotypes(fp, predicate = pred).toVariantContextRDD
+    sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContextRDD
   }
 
   /**

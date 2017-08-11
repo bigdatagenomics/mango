@@ -38,7 +38,6 @@ class MangoKryoRegistrator extends ADAMKryoRegistrator {
     kryo.register(classOf[Variant], new AvroSerializer[Variant]())
     kryo.register(classOf[NucleotideContigFragment], new AvroSerializer[NucleotideContigFragment]())
     kryo.register(classOf[Contig], new AvroSerializer[Contig]())
-    kryo.register(classOf[RecordGroupMetadata], new AvroSerializer[RecordGroupMetadata]())
     kryo.register(classOf[Dbxref], new AvroSerializer[Dbxref]())
     kryo.register(classOf[Feature], new AvroSerializer[Feature]())
     kryo.register(classOf[ReferencePosition], new ReferencePositionSerializer)

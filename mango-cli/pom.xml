@@ -11,38 +11,38 @@
   </parent>
   <artifactId>mango-cli</artifactId>
   <packaging>jar</packaging>
-  <name>mango-cli: an ADAM-based genomics visualization toolkit</name>
+  <name>mango: CLI</name>
   <build>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>add-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>src/main/scala</source>
-              </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>add-test-source</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>add-test-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>src/test/scala</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
+        <!--<executions>-->
+          <!--<execution>-->
+            <!--<id>add-source</id>-->
+            <!--<phase>generate-sources</phase>-->
+            <!--<goals>-->
+              <!--<goal>add-source</goal>-->
+            <!--</goals>-->
+            <!--<configuration>-->
+              <!--<sources>-->
+                <!--<source>src/main/scala</source>-->
+              <!--</sources>-->
+            <!--</configuration>-->
+          <!--</execution>-->
+          <!--<execution>-->
+            <!--<id>add-test-source</id>-->
+            <!--<phase>generate-test-sources</phase>-->
+            <!--<goals>-->
+              <!--<goal>add-test-source</goal>-->
+            <!--</goals>-->
+            <!--<configuration>-->
+              <!--<sources>-->
+                <!--<source>src/test/scala</source>-->
+              <!--</sources>-->
+            <!--</configuration>-->
+          <!--</execution>-->
+        <!--</executions>-->
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

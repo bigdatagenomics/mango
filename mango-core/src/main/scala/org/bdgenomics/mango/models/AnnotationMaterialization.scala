@@ -33,11 +33,7 @@ class AnnotationMaterialization(@transient sc: SparkContext,
 
   // set and name interval rdd
   val reference: ReferenceFile =
-    if (referencePath.endsWith(".2bit")) {
-      sc.loadReferenceFile(referencePath, 10000)
-    } else {
-      sc.loadSequences(referencePath, fragmentLength = 10000)
-    }
+    sc.loadReferenceFile(referencePath, fragmentLength)
 
   def getSequenceDictionary: SequenceDictionary = reference.sequences
 
