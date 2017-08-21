@@ -57,5 +57,7 @@ if [ -z "$PYSPARK" ]; then
   exit 1
 fi
 
+export PYSPARK_DRIVER_PYTHON=jupyter
+export PYSPARK_DRIVER_PYTHON_OPTS='notebook'
 
-IPYTHON_OPTS="notebook" ${PYSPARK} --jars ${MANGO_CLI_JAR} --driver-class-path ${MANGO_CLI_JAR}
+${PYSPARK} --jars ${MANGO_CLI_JAR} --driver-class-path ${MANGO_CLI_JAR}

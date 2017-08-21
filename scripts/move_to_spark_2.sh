@@ -12,12 +12,9 @@ then
 fi
 
 svp="\${scala.version.prefix}"
-substitution_cmd="s/_$svp/-spark2_$svp/g"
+#substitution_cmd="s/_$svp/-spark2_$svp/g"
 
 find . -name "pom.xml" -exec sed \
-    -e "/utils-/ s/_2\.1/-spark2_2.1/g" \
-    -e "/adam-/ s/_2\.1/-spark2_2.1/g" \
-    -e "/utils-/ $substitution_cmd" \
-    -e "/adam-/ $substitution_cmd" \
     -e "/spark.version/ s/1.6.3/2.1.0/g" \
+    -e "/spark.version.prefix/ s/_/-spark2_/g" \
     -i.spark2.bak '{}' \;

@@ -17,32 +17,32 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <!--<executions>-->
-          <!--<execution>-->
-            <!--<id>add-source</id>-->
-            <!--<phase>generate-sources</phase>-->
-            <!--<goals>-->
-              <!--<goal>add-source</goal>-->
-            <!--</goals>-->
-            <!--<configuration>-->
-              <!--<sources>-->
-                <!--<source>src/main/scala</source>-->
-              <!--</sources>-->
-            <!--</configuration>-->
-          <!--</execution>-->
-          <!--<execution>-->
-            <!--<id>add-test-source</id>-->
-            <!--<phase>generate-test-sources</phase>-->
-            <!--<goals>-->
-              <!--<goal>add-test-source</goal>-->
-            <!--</goals>-->
-            <!--<configuration>-->
-              <!--<sources>-->
-                <!--<source>src/test/scala</source>-->
-              <!--</sources>-->
-            <!--</configuration>-->
-          <!--</execution>-->
-        <!--</executions>-->
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/main/scala</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-test-source</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/test/scala</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -119,6 +119,11 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${scala.version.prefix}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-scala_2.10</artifactId>
       <scope>compile</scope>
@@ -151,27 +156,27 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-cli_${scala.version.prefix}</artifactId>
+      <artifactId>utils-cli${spark.version.prefix}${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-intervalrdd_${scala.version.prefix}</artifactId>
+      <artifactId>utils-intervalrdd${spark.version.prefix}${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-io_${scala.version.prefix}</artifactId>
+      <artifactId>utils-io${spark.version.prefix}${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-metrics_${scala.version.prefix}</artifactId>
+      <artifactId>utils-metrics${spark.version.prefix}${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-misc_${scala.version.prefix}</artifactId>
+      <artifactId>utils-misc${spark.version.prefix}${scala.version.prefix}</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>

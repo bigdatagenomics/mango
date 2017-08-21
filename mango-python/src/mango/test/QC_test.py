@@ -37,13 +37,13 @@ class QCTest(SparkTestCase):
         reads = ac.loadAlignments(testFile)
 
         # convert to coverage
-        # coverage = reads.toCoverage()
-        coverage = CoverageRDD(reads._jvmRdd.toCoverage(), self.sc) # TODO change once API is fixed
+        coverage = reads.toCoverage()
+        # coverage = CoverageRDD(reads._jvmRdd.toCoverage(), self.sc) # TODO change once API is fixed
 
+        qc = QC()
 
-        qc = QC(self.sc)
+        cd = qc.CoverageDistribution(coverage, False)
 
-        cc = qc.CoverageDistribution(coverage)
-
-        assert(cc == 1500)
+        assert(len(cd) == 1)
+        assert(cd.pop() == (1.0, 1500))
 

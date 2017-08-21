@@ -12,6 +12,6 @@ then
 fi
 
 find . -name "pom.xml" -exec sed \
-    -e "s/-spark2//g" \
     -e "/spark.version/ s/2.1.0/1.6.3/g" \
+    -e "/spark.version.prefix/ s/-spark2_/_/g" \
     -i.spark1.bak '{}' \;

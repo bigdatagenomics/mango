@@ -16,14 +16,8 @@
 # limitations under the License.
 #
 
-# from bdgenomics.adam.rdd import AlignmentRecordRDD, \
-#     CoverageRDD, \
-#     FeatureRDD, \
-#     FragmentRDD, \
-#     GenotypeRDD, \
-#     NucleotideContigFragmentRDD, \
-#     VariantRDD
-
+import matplotlib.pyplot as plt; plt.rcdefaults()
+import matplotlib.pyplot as plt
 
 class QC(object):
     """
@@ -32,19 +26,33 @@ class QC(object):
     """
 
 
-    def __init__(self, sc):
+    def __init__(self):
         """
-        Initializes an ADAMContext using a SparkContext.
-
-        :param pyspark.context.SparkContext sc: The currently active
-        SparkContext.
+        Initializes a Quality Control class.
         """
 
-        self._sc = sc
-        self._jvm = sc._jvm
+    def CoverageDistribution(self, coverageRDD, showPlot = True):
 
+        # make sure coverageRDD is flattened
+        flattened = coverageRDD.flatten()
 
-    def CoverageDistribution(self, coverageRDD):
+        # compute coverage distribution
+        coverageDistribution = flattened.toDF().rdd \
+            .map(lambda r: (r["count"], 1)) \
+            .reduceByKey(lambda x,y: x + y) \
+            .collect()
 
-        # TODO: convert to PDF
-        return coverageRDD.toDF().count()
+        coverageDistribution.sort()
+
+        # if showPlot is True, plot the coverage distribution
+        if (showPlot):
+            coverage = map(lambda (x,y):x, coverageDistribution)
+            counts = map(lambda (x,y):y, coverageDistribution)
+
+            plt.bar(coverage, counts, align='center', alpha=0.5)
+            plt.ylabel('Counts')
+            plt.title('Target Region Coverage')
+
+            plt.show()
+
+        return coverageDistribution
