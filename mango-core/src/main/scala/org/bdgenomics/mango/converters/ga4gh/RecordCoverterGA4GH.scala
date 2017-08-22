@@ -41,7 +41,7 @@ import scala.reflect.ClassTag
 abstract class RecordConverterGA4GH[T: ClassTag, S: ClassTag] extends Serializable with Logging {
 
   def bdgToGA4GH(record: T): S
-  
+
   def ga4ghSeqtoJSON(gaReads: Seq[S]): String
 
 }

@@ -21,6 +21,7 @@ import java.lang.Boolean
 import java.util
 
 import com.google.protobuf.ListValue
+import ga4gh.SequenceAnnotationServiceOuterClass.SearchFeatureSetsResponse
 import htsjdk.samtools.{ CigarOperator, TextCigarCodec, ValidationStringency }
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -36,9 +37,9 @@ import scala.collection.JavaConversions._
 /**
  * Created by paschalj on 6/20/17.
  */
-object FeatureConverterGA4GH extends Serializable with Logging {
+object FeatureConverterGA4GH extends RecordConverterGA4GH[Feature, ga4gh.SequenceAnnotations.Feature] {
 
-  def toGA4GHFeature(record: Feature): ga4gh.SequenceAnnotations.Feature = {
+  override def bdgToGA4GH(record: Feature): ga4gh.SequenceAnnotations.Feature = {
 
     val x: Strand = record.getStrand
 
@@ -64,6 +65,11 @@ object FeatureConverterGA4GH extends Serializable with Logging {
           .addValues(0, Common.AttributeValue.newBuilder().setInt64Value(record.getScore.toLong)).build()))
       .build()
 
+  }
+
+  def ga4ghSeqtoJSON(data: Seq[ga4gh.SequenceAnnotations.Feature]): String = {
+    val result: ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse.newBuilder().addAllFeatures(data.toList.asJava).build()
+    com.google.protobuf.util.JsonFormat.printer().print(result)
   }
 
 }
