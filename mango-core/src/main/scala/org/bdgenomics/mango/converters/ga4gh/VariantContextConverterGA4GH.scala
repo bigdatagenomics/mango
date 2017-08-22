@@ -40,8 +40,15 @@ import scala.collection.JavaConversions._
 /**
  * Created by paschalj on 6/20/17.
  */
-object VariantContextCoverterGA4GH extends RecordConverterGA4GH[VariantContext, ga4gh.Variants.Variant] {
+object VariantContextConverterGA4GH extends RecordConverterGA4GH[VariantContext, ga4gh.Variants.Variant] {
 
+  /**
+   * Converts a BDG org.bdgenomics.adam.models.VariantContext
+   * to a GA4GH ga4gh.Variants.Variant
+   *
+   * * @param record
+   * @return
+   */
   override def bdgToGA4GH(record: VariantContext): ga4gh.Variants.Variant = {
     bdgToGA4GH(record: VariantContext, variantSetID = "")
   }
@@ -107,6 +114,11 @@ object VariantContextCoverterGA4GH extends RecordConverterGA4GH[VariantContext, 
 
   }
 
+  /**
+   * Utility function to convert a Seq of ga4gh.Variants.Variant to a JSON string
+   * @param data
+   * @return
+   */
   override def ga4ghSeqtoJSON(data: Seq[ga4gh.Variants.Variant]): String = {
     val result: SearchVariantsResponse = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
       .addAllVariants(data.asJava).build()

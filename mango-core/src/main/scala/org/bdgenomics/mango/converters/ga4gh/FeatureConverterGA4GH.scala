@@ -39,6 +39,13 @@ import scala.collection.JavaConversions._
  */
 object FeatureConverterGA4GH extends RecordConverterGA4GH[Feature, ga4gh.SequenceAnnotations.Feature] {
 
+  /**
+   * Converts a BDG rg.bdgenomics.formats.avro.Feature
+   * to a GA4GH ga4gh.SequenceAnnotations.Feature
+   *
+   * * @param record
+   * @return
+   */
   override def bdgToGA4GH(record: Feature): ga4gh.SequenceAnnotations.Feature = {
 
     val x: Strand = record.getStrand
@@ -67,6 +74,11 @@ object FeatureConverterGA4GH extends RecordConverterGA4GH[Feature, ga4gh.Sequenc
 
   }
 
+  /**
+   * Utility function to convert a Seq of ga4gh.SequenceAnnotations.Feature to a JSON string
+   * @param data
+   * @return
+   */
   def ga4ghSeqtoJSON(data: Seq[ga4gh.SequenceAnnotations.Feature]): String = {
     val result: ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse.newBuilder().addAllFeatures(data.toList.asJava).build()
     com.google.protobuf.util.JsonFormat.printer().print(result)

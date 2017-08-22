@@ -78,6 +78,13 @@ object AlignmentRecordConverterGA4GH extends RecordConverterGA4GH[AlignmentRecor
     }
   }
 
+  /**
+   * Converts a BDG org.bdgenomics.formats.avro.AlignmentRecord
+   * to a GA4GH ga4gh.Reads.ReadAlignment
+   *
+   * * @param record
+   * @return
+   */
   override def bdgToGA4GH(record: AlignmentRecord): ga4gh.Reads.ReadAlignment = {
 
     val builder = ga4gh.Reads.ReadAlignment.newBuilder()
@@ -179,6 +186,11 @@ object AlignmentRecordConverterGA4GH extends RecordConverterGA4GH[AlignmentRecor
     builder.build()
   }
 
+  /**
+   * Utility function to convert a Seq of ga4gh.Reads.ReadAlignment to a JSON string
+   * @param gaReads
+   * @return
+   */
   override def ga4ghSeqtoJSON(gaReads: Seq[ga4gh.Reads.ReadAlignment]): String = {
     val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder().addAllAlignments(gaReads.toList.asJava).build()
     com.google.protobuf.util.JsonFormat.printer().print(result)
