@@ -379,7 +379,7 @@
       <dependency>
         <groupId>net.liftweb</groupId>
         <artifactId>lift-json_${scala.version.prefix}</artifactId>
-        <version>2.6.2</version>
+        <version>2.6.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
@@ -410,7 +410,7 @@
           </exclusion>
           <exclusion>
             <groupId>javax.servlet</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>servlet-api</artifactId>
           </exclusion>
           <exclusion>
             <groupId>com.google.guava</groupId>
