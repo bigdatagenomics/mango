@@ -58,8 +58,8 @@ fi
 
 set -e
 
-# are we testing for spark 2.0.0? if so, we need to rewrite our poms first
-if [ ${SPARK_VERSION} == 2.0.0 ];
+# are we testing for spark 2.1.0? if so, we need to rewrite our poms first
+if [ ${SPARK_VERSION} == 2.1.0 ];
 then
 
     echo "Rewriting POM.xml files for Spark 2."
@@ -134,7 +134,7 @@ find ${MANGO_MVN_TMP_DIR}
 rm -rf ${MANGO_MVN_TMP_DIR}
 
 # and move our poms back to their original values
-if [ ${SPARK_VERSION} == 2.0.0 ];
+if [ ${SPARK_VERSION} == 2.1.0 ];
 then
 
     echo "Rewriting POM.xml files back to Spark 1."
