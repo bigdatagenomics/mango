@@ -22,6 +22,21 @@ parquettest.sh
 .idea/
 workfiles/
 chr20/
+
+
+# venvs
+venv/*
+metastore_db/*
+mango-python/adam/*
+mango-viz/metastore_db/*
+mango-viz/venv/*
+*.bak
+
+mango-viz/mangoviz/static/*
+*.pyc
+
+example-files/metastore_db/*
+
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/lib/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/main/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/test/

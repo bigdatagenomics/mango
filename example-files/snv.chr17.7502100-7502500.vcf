@@ -1,0 +1,11 @@
+##fileformat=VCFv4.1
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+17	7512444	.	G	T	.	PASS	WGT=3
+17	7512454	.	C	A	.	PASS	WGT=3
+17	7512544	.	C	T	.	PASS	WGT=3
+17	7512644	.	G	T	.	PASS	WGT=3
+17	7512244	.	G	A	.	PASS	WGT=3
+17	7512194	.	G	A	.	PASS	WGT=3
+17	7502194	.	G	A	.	PASS	WGT=3
