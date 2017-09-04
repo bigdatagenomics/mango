@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 
+import matplotlib.pyplot as plt;
+plt.rcdefaults()
+
 class QC(object):
     """
     QC provides preprocessing functions for visualization
@@ -28,31 +31,52 @@ class QC(object):
         Initializes a Quality Control class.
         """
 
-    def CoverageDistribution(self, coverageRDD, showPlot = True):
+    def CoverageDistribution(self, coverageRDDs, showPlot=True, normalize = False, cummulative = False,):
+        """
+        Computes the coverage distribution of a coverageRDD.
+        :param bdgenomics.adam.rdd.CoverageRDD coverageRDDs: A list of coverageRDDs
+        :param bool showPlot: whether to plot the coverage distribution.
+        :param bool normalize: whether to normalize the distribution.
+        :param bool cummulative: whether to plot the cummulative distribution.
+        :return: list of coverage distributions per input coverageRDD.
+        :rtype: list of list of (string, string) tuples
+        """
+        coverageDistributions = []
+        if (not isinstance(coverageRDDs, list)):
+            coverageRDDs = [coverageRDDs]
+        for coverageRDD in coverageRDDs:
+            coverageDistribution = coverageRDD.flatten().toDF().rdd \
+                .map(lambda r: (r["count"], 1)) \
+                .reduceByKey(lambda x, y: x + y) \
+                .sortByKey() \
+                .collect()
 
-        # make sure coverageRDD is flattened
-        flattened = coverageRDD.flatten()
+            if normalize:
+                total = float(sum([d[1] for d in coverageDistribution]))
+                coverageDistribution = map(lambda(x, y): (int(x),y/total), coverageDistribution)
 
-        # compute coverage distribution
-        coverageDistribution = flattened.toDF().rdd \
-            .map(lambda r: (r["count"], 1)) \
-            .reduceByKey(lambda x,y: x + y) \
-            .collect()
+            if cummulative:
+                def incrementTotal(i):
+                    self.cummulativeSum += i
+                    return self.cummulativeSum
+                self.cummulativeSum = 0.0
+                coverageDistribution = map(lambda(x, y): (x, incrementTotal(y)), coverageDistribution)
 
-        coverageDistribution.sort()
 
-        # if showPlot is True, plot the coverage distribution
-        if (showPlot):
-            import matplotlib.pyplot as plt; plt.rcdefaults()
-            import matplotlib.pyplot as plt
-
-            coverage = map(lambda (x,y):x, coverageDistribution)
-            counts = map(lambda (x,y):y, coverageDistribution)
-
-            plt.bar(coverage, counts, align='center', alpha=0.5)
+        if showPlot:
+            title =  'Target Region Coverage'
+            if cummulative:
+                title = 'Cummulative ' + title
+            if normalize:
+                title = 'Normalized ' + title
             plt.ylabel('Counts')
-            plt.title('Target Region Coverage')
-
+            plt.xlabel('Coverage')
+            plt.title(title)
+            for count, coverageDistribution in enumerate(coverageDistributions):
+                coverage = map(lambda(x, y): x, coverageDistribution)
+                counts = map(lambda(x, y): y, coverageDistribution)
+                plt.plot(coverage, counts, marker = 'o', label = "Coverage " + str(count + 1))
+            plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
             plt.show()
 
-        return coverageDistribution
+        return coverageDistributions

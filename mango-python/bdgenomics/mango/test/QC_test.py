@@ -28,7 +28,6 @@ class QCTest(SparkTestCase):
 
 
     def test_coverage_distribution(self):
-
         # load file
         ac = ADAMContext(self.sc)
         testFile = self.resourceFile("small.sam")
@@ -38,12 +37,47 @@ class QCTest(SparkTestCase):
 
         # convert to coverage
         coverage = reads.toCoverage()
-        # coverage = CoverageRDD(reads._jvmRdd.toCoverage(), self.sc) # TODO change once API is fixed
 
         qc = QC()
 
-        cd = qc.CoverageDistribution(coverage, False)
+        cd = qc.CoverageDistribution(coverage, showPlot = False)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == (1.0, 1500))
+        assert(cd.pop() == [(1, 1500.0)])
+
+    def test_normalized_coverage_distribution(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.resourceFile("small.sam")
+        # read alignments
+
+        reads = ac.loadAlignments(testFile)
+
+        # convert to coverage
+        coverage = reads.toCoverage()
+
+        qc = QC()
+
+        cd = qc.CoverageDistribution(coverage, showPlot = False, normalize = True)
+
+        assert(len(cd) == 1)
+        assert(cd.pop() == [(1, 1.0)])
+
+    def test_cummulative_coverage_distribution(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.resourceFile("small.sam")
+        # read alignments
+
+        reads = ac.loadAlignments(testFile)
+
+        # convert to coverage
+        coverage = reads.toCoverage()
+
+        qc = QC()
+
+        cd = qc.CoverageDistribution(coverage, showPlot = False, cummulative = True)
+
+        assert(len(cd) == 1)
+        assert(cd.pop() == [(1, 1500.0)])
 
