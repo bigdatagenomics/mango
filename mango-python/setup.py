@@ -20,13 +20,11 @@ from setuptools import find_packages, setup
 from version import version as mango_version
 
 setup(
-    name='mango',
+    name='bdgenomics.mango',
     version=mango_version,
     description='A scalable genomic visualization tool',
     author='Alyssa Morrow',
     author_email='akmorrow@berkeley.edu',
     url="https://github.com/bdgenomics/mango",
     install_requires=[],
-    package_dir={'': 'src'},
-    packages=find_packages(where='src',
-                           exclude=['*.test.*']))
+    packages=find_packages(exclude=['*.test.*']))

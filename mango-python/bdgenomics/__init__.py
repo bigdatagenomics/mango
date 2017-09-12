@@ -15,35 +15,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-import sys
-from mango.QC import QC
-from mango.test import SparkTestCase
-
-from bdgenomics.adam.adamContext import ADAMContext
-from bdgenomics.adam.rdd import CoverageRDD
-
-
-class QCTest(SparkTestCase):
-
-
-    def test_coverage_distribution(self):
-
-        # load file
-        ac = ADAMContext(self.sc)
-        testFile = self.resourceFile("small.sam")
-        # read alignments
-
-        reads = ac.loadAlignments(testFile)
-
-        # convert to coverage
-        coverage = reads.toCoverage()
-        # coverage = CoverageRDD(reads._jvmRdd.toCoverage(), self.sc) # TODO change once API is fixed
-
-        qc = QC()
-
-        cd = qc.CoverageDistribution(coverage, False)
-
-        assert(len(cd) == 1)
-        assert(cd.pop() == (1.0, 1500))
-
+__path__ = __import__('pkgutil').extend_path(__path__,__name__)

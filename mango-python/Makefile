@@ -46,7 +46,7 @@ help:
 SHELL=bash
 python=python2.7
 pip=pip
-tests=src
+tests=bdgenomics
 extras=
 adam_version:=$(shell $(python) version.py)
 sdist_name:=mango-$(adam_version).tar.gz

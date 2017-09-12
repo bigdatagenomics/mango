@@ -16,9 +16,6 @@
 # limitations under the License.
 #
 
-import matplotlib.pyplot as plt; plt.rcdefaults()
-import matplotlib.pyplot as plt
-
 class QC(object):
     """
     QC provides preprocessing functions for visualization
@@ -46,6 +43,9 @@ class QC(object):
 
         # if showPlot is True, plot the coverage distribution
         if (showPlot):
+            import matplotlib.pyplot as plt; plt.rcdefaults()
+            import matplotlib.pyplot as plt
+
             coverage = map(lambda (x,y):x, coverageDistribution)
             counts = map(lambda (x,y):y, coverageDistribution)
 
