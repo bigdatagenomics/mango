@@ -19,6 +19,7 @@
 import sys
 from bdgenomics.mango.QC import QC
 from bdgenomics.mango.test import SparkTestCase
+from collections import Counter
 
 from bdgenomics.adam.adamContext import ADAMContext
 from bdgenomics.adam.rdd import CoverageRDD
@@ -38,12 +39,12 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = QC()
+        qc = QC(self.sc)
 
         cd = qc.CoverageDistribution(coverage, showPlot = False)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == [(1, 1500.0)])
+        assert(cd.pop() == Counter({1:1500.0}))
 
     def test_normalized_coverage_distribution(self):
         # load file
@@ -56,12 +57,12 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = QC()
+        qc = QC(self.sc)
 
         cd = qc.CoverageDistribution(coverage, showPlot = False, normalize = True)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == [(1, 1.0)])
+        assert(cd.pop() == Counter({1:1.0}))
 
     def test_cummulative_coverage_distribution(self):
         # load file
@@ -74,10 +75,10 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = QC()
+        qc = QC(self.sc)
 
         cd = qc.CoverageDistribution(coverage, showPlot = False, cummulative = True)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == [(1, 1500.0)])
+        assert(cd.pop() == Counter({1:1500.0}))
 

@@ -16,7 +16,8 @@
 # limitations under the License.
 #
 
-import matplotlib.pyplot as plt;
+import matplotlib.pyplot as plt
+from collections import Counter
 plt.rcdefaults()
 
 class QC(object):
@@ -25,11 +26,11 @@ class QC(object):
     of various quality control.
     """
 
-
-    def __init__(self):
+    def __init__(self, sc):
         """
         Initializes a Quality Control class.
         """
+        self.sc = sc
 
     def CoverageDistribution(self, coverageRDDs, showPlot=True, normalize = False, cummulative = False,):
         """
@@ -39,29 +40,32 @@ class QC(object):
         :param bool normalize: whether to normalize the distribution.
         :param bool cummulative: whether to plot the cummulative distribution.
         :return: list of coverage distributions per input coverageRDD.
-        :rtype: list of list of (string, string) tuples
+        :rtype: list of Counter objects
         """
         coverageDistributions = []
         if (not isinstance(coverageRDDs, list)):
             coverageRDDs = [coverageRDDs]
-        for coverageRDD in coverageRDDs:
-            coverageDistribution = coverageRDD.flatten().toDF().rdd \
-                .map(lambda r: (r["count"], 1)) \
-                .reduceByKey(lambda x, y: x + y) \
-                .sortByKey() \
-                .collect()
 
+        mappedDistributions = [c.flatten().toDF().rdd.map(lambda r: ((i, int(r["count"])), 1)).reduceByKey(lambda x,y: x+y) for i,c in enumerate(coverageRDDs)]
+        unionRDD = self.sc.union(mappedDistributions)
+        collectedCoverage = unionRDD.map(lambda r: (r[0][0], Counter({r[0][1]:r[1]}))) \
+            .reduceByKey(lambda x,y:x+y) \
+            .sortByKey() \
+            .map(lambda r: r[1]).collect()
+
+        for coverageDistribution in collectedCoverage:
             if normalize:
-                total = float(sum([d[1] for d in coverageDistribution]))
-                coverageDistribution = map(lambda(x, y): (int(x),y/total), coverageDistribution)
+                total = float(sum(coverageDistribution.itervalues()))
+                for key in coverageDistribution:
+                    coverageDistribution[key] /= total
 
             if cummulative:
-                def incrementTotal(i):
-                    self.cummulativeSum += i
-                    return self.cummulativeSum
-                self.cummulativeSum = 0.0
-                coverageDistribution = map(lambda(x, y): (x, incrementTotal(y)), coverageDistribution)
-
+                cummulativeSum = 0.0
+                keys = coverageDistribution.keys()
+                keys.sort()
+                for key in keys:
+                    cummulativeSum += coverageDistribution[key]
+                    coverageDistribution[key] = cummulativeSum
 
         if showPlot:
             title =  'Target Region Coverage'
@@ -73,8 +77,8 @@ class QC(object):
             plt.xlabel('Coverage')
             plt.title(title)
             for count, coverageDistribution in enumerate(coverageDistributions):
-                coverage = map(lambda(x, y): x, coverageDistribution)
-                counts = map(lambda(x, y): y, coverageDistribution)
+                coverage = coverageDistribution.keys()
+                counts = coverageDistribution.values()
                 plt.plot(coverage, counts, marker = 'o', label = "Coverage " + str(count + 1))
             plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
             plt.show()
