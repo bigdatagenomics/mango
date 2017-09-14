@@ -17,16 +17,14 @@
 #
 
 import sys
-from bdgenomics.mango.QC import QC
+from bdgenomics.mango.QC import CoverageDistribution
 from bdgenomics.mango.test import SparkTestCase
 from collections import Counter
 
 from bdgenomics.adam.adamContext import ADAMContext
-from bdgenomics.adam.rdd import CoverageRDD
 
 
 class QCTest(SparkTestCase):
-
 
     def test_coverage_distribution(self):
         # load file
@@ -39,9 +37,9 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = QC(self.sc)
+        qc = CoverageDistribution(self.sc, coverage)
 
-        cd = qc.CoverageDistribution(coverage, showPlot = False)
+        cd = qc.plot(testMode = True)
 
         assert(len(cd) == 1)
         assert(cd.pop() == Counter({1:1500.0}))
@@ -57,14 +55,14 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = QC(self.sc)
+        qc = CoverageDistribution(self.sc, coverage)
 
-        cd = qc.CoverageDistribution(coverage, showPlot = False, normalize = True)
+        cd = qc.plot(testMode = True, normalize = True)
 
         assert(len(cd) == 1)
         assert(cd.pop() == Counter({1:1.0}))
 
-    def test_cummulative_coverage_distribution(self):
+    def test_cumulative_coverage_distribution(self):
         # load file
         ac = ADAMContext(self.sc)
         testFile = self.resourceFile("small.sam")
@@ -75,10 +73,57 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = QC(self.sc)
+        qc = CoverageDistribution(self.sc, coverage)
 
-        cd = qc.CoverageDistribution(coverage, showPlot = False, cummulative = True)
+        cd = qc.plot(testMode = True, cumulative = True)
 
         assert(len(cd) == 1)
         assert(cd.pop() == Counter({1:1500.0}))
+
+
+    def test_example_alignments(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.exampleFile("chr17.7500000-7515000.bam.adam")
+        # read alignments
+
+        reads = ac.loadAlignments(testFile)
+
+        # convert to coverage
+        coverage = reads.toCoverage()
+
+        qc = CoverageDistribution(self.sc, coverage)
+
+        cd = qc.plot(testMode = True, cumulative = True)
+
+        assert(len(cd) == 1)
+        assert(cd.pop()[1] == 6.0)
+
+
+
+    def test_example_coverage(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
+        # read alignments
+
+        coverage = ac.loadCoverage(testFile)
+
+        qc = CoverageDistribution(self.sc, coverage)
+
+        cd = qc.plot(testMode = True, cumulative = True)
+
+        assert(len(cd) == 1)
+        assert(cd.pop()[1] == 6.0)
+
+
+    def test_example(self):
+        # these variables are read into mango-python.py
+        sc = self.sc
+        testMode = True
+        coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
+
+        testFile = self.exampleFile("mango-python.py")
+        execfile(testFile)
+
 

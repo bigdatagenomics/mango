@@ -218,28 +218,6 @@ then
     ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
     export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
 
-    # hack to get adam python APIs
-    ## TODO: once on pip, you can remove this
-    git clone https://github.com/bigdatagenomics/adam.git
-    pushd adam
-    if [[${SPARK_VERSION} == 2.1.0]];
-    then
-        ./scripts/move_to_spark_2.sh
-    fi
-
-    if [[${SCALAVER} == 2.11]];
-    then
-        ./scripts/move_to_scala_2.11.sh
-    fi
-
-    mvn package install -DskipTests
-
-    pushd adam-python
-    pip install -e .
-    popd
-    popd
-
-
     # we can run the python build, now that we have a spark executable
 	  mvn -U \
             -P python \

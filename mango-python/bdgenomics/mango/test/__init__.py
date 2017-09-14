@@ -34,6 +34,12 @@ class SparkTestCase(unittest.TestCase):
         return os.path.join(os.path.join(mangoRoot, "mango-core/src/test/resources"), file)
 
 
+    def exampleFile(self, file):
+
+        mangoRoot = os.path.dirname(os.getcwd())
+        return os.path.join(os.path.join(mangoRoot, "example-files"), file)
+
+
     def tmpFile(self):
 
         tempFile = tempfile.NamedTemporaryFile(delete=True)

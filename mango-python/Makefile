@@ -79,8 +79,13 @@ clean_sdist:
 
 
 test: check_build_reqs
+	pushd ../example-files \
+		&& ipython nbconvert --to python mango-python.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
+	pushd ../example-files \
+		&& rm mango-python.py
+	exit
 
 
 pypi: check_clean_working_copy
@@ -105,7 +110,9 @@ check_build_reqs:
 
 prepare:
 	$(pip) install pytest==2.8.3
-	$(pip) install bdgenomics.adam
+	$(pip) install jupyter_contrib_nbextensions
+	$(pip) install matplotlib
+	easy_install dist/bdgenomics.adam-0.23.0_SNAPSHOT-py2.7.egg # TODO
 
 
 check_clean_working_copy:

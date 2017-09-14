@@ -16,70 +16,81 @@
 # limitations under the License.
 #
 
-import matplotlib.pyplot as plt
 from collections import Counter
+import matplotlib.pyplot as plt
 plt.rcdefaults()
 
-class QC(object):
+class CoverageDistribution(object):
     """
     QC provides preprocessing functions for visualization
     of various quality control.
     """
 
-    def __init__(self, sc):
+    def __init__(self, sc, coverageRDDs):
         """
-        Initializes a Quality Control class.
+        Initializes a CoverageDistribution class.
+        Computes the coverage distribution of multiple coverageRDDs.
+        :param SparkContext
+        :param bdgenomics.adam.rdd.CoverageRDD coverageRDDs: A list of coverageRDDs
         """
         self.sc = sc
 
-    def CoverageDistribution(self, coverageRDDs, showPlot=True, normalize = False, cummulative = False,):
-        """
-        Computes the coverage distribution of a coverageRDD.
-        :param bdgenomics.adam.rdd.CoverageRDD coverageRDDs: A list of coverageRDDs
-        :param bool showPlot: whether to plot the coverage distribution.
-        :param bool normalize: whether to normalize the distribution.
-        :param bool cummulative: whether to plot the cummulative distribution.
-        :return: list of coverage distributions per input coverageRDD.
-        :rtype: list of Counter objects
-        """
-        coverageDistributions = []
+        # If single RDD, convert to list
         if (not isinstance(coverageRDDs, list)):
             coverageRDDs = [coverageRDDs]
 
+        # Assign each RDD with counter. Reduce and collect.
         mappedDistributions = [c.flatten().toDF().rdd.map(lambda r: ((i, int(r["count"])), 1)).reduceByKey(lambda x,y: x+y) for i,c in enumerate(coverageRDDs)]
         unionRDD = self.sc.union(mappedDistributions)
-        collectedCoverage = unionRDD.map(lambda r: (r[0][0], Counter({r[0][1]:r[1]}))) \
+        self.collectedCoverage = unionRDD.map(lambda r: (r[0][0], Counter({r[0][1]:r[1]}))) \
             .reduceByKey(lambda x,y:x+y) \
             .sortByKey() \
             .map(lambda r: r[1]).collect()
 
-        for coverageDistribution in collectedCoverage:
+
+    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
+
+        coverageDistributions = []
+
+        for coverageDistribution in self.collectedCoverage:
             if normalize:
                 total = float(sum(coverageDistribution.itervalues()))
                 for key in coverageDistribution:
                     coverageDistribution[key] /= total
 
-            if cummulative:
-                cummulativeSum = 0.0
+            if cumulative:
+                cumulativeSum = 0.0
                 keys = coverageDistribution.keys()
                 keys.sort()
                 for key in keys:
-                    cummulativeSum += coverageDistribution[key]
-                    coverageDistribution[key] = cummulativeSum
+                    cumulativeSum += coverageDistribution[key]
+                    coverageDistribution[key] = cumulativeSum
 
-        if showPlot:
+            coverageDistributions.append(coverageDistribution)
+
+        if (not testMode): # For testing: do not run plots if testMode
+
             title =  'Target Region Coverage'
-            if cummulative:
-                title = 'Cummulative ' + title
+            if cumulative:
+                title = 'Cumulative ' + title
             if normalize:
                 title = 'Normalized ' + title
-            plt.ylabel('Counts')
-            plt.xlabel('Coverage')
+            plt.ylabel('Fraction' if normalize else 'Counts')
+            plt.xlabel('Coverage Depth')
+
+            # log scales, if applicable
+            if (xScaleLog):
+                plt.xscale('log')
+            if (yScaleLog):
+                plt.yscale('log')
+
             plt.title(title)
+
+
             for count, coverageDistribution in enumerate(coverageDistributions):
                 coverage = coverageDistribution.keys()
                 counts = coverageDistribution.values()
-                plt.plot(coverage, counts, marker = 'o', label = "Coverage " + str(count + 1))
+                plt.plot(coverage, counts, label = "Coverage " + str(count + 1))
             plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
             plt.show()
 

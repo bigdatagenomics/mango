@@ -25,7 +25,7 @@ $ git clone https://github.com/bigdatagenomics/mango.git
 $ cd mango
 $ mvn clean package -DskipTests
 ```
-## Running mango
+## Running mango browser
 mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appassembler-maven-plugin/) and includes all necessary dependencies.
 
 Running an example script:
@@ -64,3 +64,13 @@ View the visualization at: 8080
 Quit at: /quit
 ```
 Note that for logging, you must use the /quit url for the log to be produced.
+
+## Running mango notebook
+
+Mango can also be run through the notebook form. Note: scala 2.11 and Spark 2.X.X are required.
+
+./bin/mango-notebook
+
+In the jupyter UI, navigate to example-files/mango-python.ipynb.
+
+

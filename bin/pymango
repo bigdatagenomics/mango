@@ -23,7 +23,6 @@ set -ex
 SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
 
 # Find Mango cli assembly jar
-MANGO_CLI_JAR=
 if [ -d "$SCRIPT_DIR/repo" ]; then
   ASSEMBLY_DIR="$SCRIPT_DIR/repo"
 else
