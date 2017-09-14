@@ -19,6 +19,29 @@
 
 set -ex
 
+# Split args into Spark args
+DD=False  # DD is "double dash"
+PRE_DD=()
+POST_DD=()
+for ARG in "$@"; do
+  shift
+  if [[ $ARG == "--" ]]; then
+    DD=True
+    POST_DD=( "$@" )
+    break
+  fi
+  PRE_DD+=("$ARG")
+done
+
+if [[ $DD == True ]]; then
+  SPARK_ARGS="${PRE_DD[@]}"
+  MANGO_ARGS="${POST_DD[@]}"
+else
+  SPARK_ARGS=()
+  MANGO_ARGS="${PRE_DD[@]}"
+fi
+
+
 # Figure out where Mango is installed
 SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
 
@@ -60,4 +83,5 @@ fi
 export PYSPARK_DRIVER_PYTHON=jupyter
 export PYSPARK_DRIVER_PYTHON_OPTS='notebook'
 
-${PYSPARK} --jars ${MANGO_CLI_JAR} --driver-class-path ${MANGO_CLI_JAR}
+${PYSPARK} --jars ${MANGO_CLI_JAR} --driver-class-path ${MANGO_CLI_JAR} \
+  $SPARK_ARGS \
