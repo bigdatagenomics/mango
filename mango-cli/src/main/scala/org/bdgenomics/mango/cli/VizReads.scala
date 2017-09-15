@@ -424,17 +424,13 @@ class VizServlet extends ScalatraServlet {
           }
           // filter data overlapping viewRegion and stringify
           val dataForKey = VizReads.readsCache.get(key)
-          if (!dataForKey.isDefined) {
-            VizReads.errors.notFound(key)
-          } else {
-            val data = dataForKey.getOrElse(Array.empty).filter(r => {
-              ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
-            })
-            results = Some(VizReads.materializer.getReads().get.stringify(data))
-            if (results.isDefined) {
-              Ok(results.get)
-            } else VizReads.errors.noContent(viewRegion)
-          }
+          val data = dataForKey.getOrElse(Array.empty).filter(r => {
+            ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
+          })
+          results = Some(VizReads.materializer.getReads().get.stringify(data))
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -538,16 +534,12 @@ class VizServlet extends ScalatraServlet {
           }
           // filter data overlapping viewRegion and stringify
           val dataForKey = VizReads.variantsCache.get(key)
-          if (!dataForKey.isDefined) {
-            VizReads.errors.notFound(key)
-          } else {
-            val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-            results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
-            if (results.isDefined) {
-              // extract variants only and parse to stringified json
-              Ok(results.get)
-            } else VizReads.errors.noContent(viewRegion)
-          }
+          val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+          if (results.isDefined) {
+            // extract variants only and parse to stringified json
+            Ok(results.get)
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -583,15 +575,11 @@ class VizServlet extends ScalatraServlet {
           }
           // filter data overlapping viewRegion and stringify
           val dataForKey = VizReads.featuresCache.get(key)
-          if (!dataForKey.isDefined) {
-            VizReads.errors.notFound(key)
-          } else {
-            val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-            results = Some(VizReads.materializer.getFeatures().get.stringify(data))
-            if (results.isDefined) {
-              Ok(results.get)
-            } else VizReads.errors.noContent(viewRegion)
-          }
+          val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          results = Some(VizReads.materializer.getFeatures().get.stringify(data))
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }
@@ -622,15 +610,11 @@ class VizServlet extends ScalatraServlet {
           }
           // filter data overlapping viewRegion and stringify
           val dataForKey = VizReads.coverageCache.get(key)
-          if (!dataForKey.isDefined) {
-            VizReads.errors.notFound(key)
-          } else {
-            val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
-            results = Some(write(data))
-            if (results.isDefined) {
-              Ok(results.get)
-            } else VizReads.errors.noContent(viewRegion)
-          }
+          val data = dataForKey.getOrElse(Array.empty).filter(_.overlaps(viewRegion))
+          results = Some(write(data))
+          if (results.isDefined) {
+            Ok(results.get)
+          } else VizReads.errors.noContent(viewRegion)
         } else VizReads.errors.outOfBounds
       }
     }

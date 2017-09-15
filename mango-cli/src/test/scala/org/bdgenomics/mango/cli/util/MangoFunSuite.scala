@@ -35,6 +35,11 @@ trait MangoFunSuite extends SparkFunSuite {
 
   def resourcePath(path: String) = ClassLoader.getSystemClassLoader.getResource(path).getFile
 
+  def examplePath(path: String): String = {
+    val currentDirectory = new java.io.File(".").getCanonicalPath
+    currentDirectory + "/../example-files/" + path
+  }
+
   def runVizReads(args: VizReadsArgs): VizReads = {
     val vizReads = new VizReads(args)
     vizReads.run(sc)

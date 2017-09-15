@@ -29,11 +29,16 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   implicit val formats = DefaultFormats
   addServlet(classOf[VizServlet], "/*")
 
-  val bamFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.bam").getFile
-  val referenceFile = ClassLoader.getSystemClassLoader.getResource("mm10_chrM.fa").getFile
-  val vcfFile = ClassLoader.getSystemClassLoader.getResource("truetest.genotypes.vcf").getFile
-  val featureFile = ClassLoader.getSystemClassLoader.getResource("smalltest.bed").getFile
-  val coverageFile = ClassLoader.getSystemClassLoader.getResource("mouse_chrM.coverage.adam").getFile
+  val bamFile = resourcePath("mouse_chrM.bam")
+  val referenceFile = resourcePath("mm10_chrM.fa")
+  val vcfFile = resourcePath("truetest.genotypes.vcf")
+  val featureFile = resourcePath("smalltest.bed")
+  val coverageFile = resourcePath("mouse_chrM.coverage.adam")
+
+  // exampleFiles
+  val chr17bam = examplePath("chr17.7500000-7515000.sam.adam")
+  val chr17Reference = examplePath("hg19.17.2bit")
+  val chr17Vcf = examplePath("ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf")
 
   val bamKey = LazyMaterialization.filterKeyFromFile(bamFile)
   val featureKey = LazyMaterialization.filterKeyFromFile(featureFile)
@@ -45,6 +50,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   args.referencePath = referenceFile
   args.variantsPaths = vcfFile
   args.featurePaths = featureFile
+  args.coveragePaths = coverageFile
   args.testMode = true
 
   sparkTest("Should pass for discovery mode") {
@@ -142,28 +148,76 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   sparkTest("should not return reads with invalid key") {
     implicit val VizReads = runVizReads(args)
     get(s"/reads/invalidKey/chrM?start=0&end=100") {
-      assert(status == NotFound("").status.code)
+      assert(status == Ok("").status.code)
     }
   }
 
   sparkTest("should not return variants with invalid key") {
     implicit val VizReads = runVizReads(args)
     get(s"/variants/invalidKey/chrM?start=0&end=100") {
-      assert(status == NotFound("").status.code)
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
+      assert(json.length == 0)
+
     }
   }
 
   sparkTest("should not return features with invalid key") {
     implicit val VizReads = runVizReads(args)
     get(s"/features/invalidKey/chrM?start=0&end=100") {
-      assert(status == NotFound("").status.code)
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[BedRowJson]]
+      assert(json.length == 0)
     }
   }
 
   sparkTest("should not return coverage with invalid key") {
     implicit val VizReads = runVizReads(args)
     get(s"/coverage/invalidKey/chrM?start=0&end=100") {
-      assert(status == NotFound("").status.code)
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[PositionCount]]
+      assert(json.map(_.start).distinct.length == 0)
+    }
+  }
+
+  sparkTest("should run example files") {
+
+    val args = new VizReadsArgs()
+    args.readsPaths = chr17bam
+    args.referencePath = chr17Reference
+    args.variantsPaths = chr17Vcf
+    args.testMode = true
+
+    implicit val VizReads = runVizReads(args)
+    val exBamKey = LazyMaterialization.filterKeyFromFile(chr17bam)
+    val exVcfKey = LazyMaterialization.filterKeyFromFile(chr17Vcf)
+
+    // get regions not in data bounds
+    get(s"/reads/${exBamKey}/chr17?start=1&end=100") {
+      assert(status == Ok("").status.code)
+    }
+
+    get(s"/variants/${exVcfKey}/chr17?start=1&end=100") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
+        .sortBy(_.variant.getStart)
+      assert(status == Ok("").status.code)
+      assert(json.length == 0)
+
+    }
+
+    // get regions in data bounds
+    get(s"/reads/${exBamKey}/chr17?start=7500000&end=7510100") {
+      assert(status == Ok("").status.code)
+    }
+
+    get(s"/variants/${exVcfKey}/chr17?start=7500000&end=7510100") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
+        .sortBy(_.variant.getStart)
+      assert(status == Ok("").status.code)
+      assert(json.length == 289)
+
     }
   }
 

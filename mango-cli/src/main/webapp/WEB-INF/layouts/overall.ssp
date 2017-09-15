@@ -83,7 +83,7 @@ function home(dictionary, regions) {
 	var barHeight = 22;
 	var chartHeight = barHeight * dictionary.length;
 
-  var color = d3.scale.category20b();
+  var color = d3.scale.category20c();
 
 	var svg = d3.select(".chrChart")
 		.append('svg')
