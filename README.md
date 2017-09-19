@@ -30,7 +30,7 @@ mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appas
 
 Running an example script locally:
 ```
-From the main folder of mango, run ./example-files/run-example.sh to see a demonstration of chromosome 17, region 7500000-7515000.
+From the main folder of mango, run ./example-files/run-local.sh to see a demonstration of chromosome 17, region 7500000-7515000.
 ```
 For help launching the script, run `bin/mango-submit -h`
 ````
@@ -63,4 +63,10 @@ Using SPARK_SUBMIT=/Applications/spark-1.6.1-bin-hadoop2.4/bin/spark-submit
 View the visualization at: 8080
 Quit at: /quit
 ```
+
+Running an example script on hdfs:
+```
+From the main folder of mango, run ./example-files/run-hdfs.sh to see a demonstration of chromosome 17, region 7500000-7515000.
+```
+
 Note that for logging, you must use the /quit url for the log to be produced.
