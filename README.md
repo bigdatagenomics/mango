@@ -28,7 +28,7 @@ $ mvn clean package -DskipTests
 ## Running mango
 mango is packaged via [appassembler](http://mojo.codehaus.org/appassembler/appassembler-maven-plugin/) and includes all necessary dependencies.
 
-Running an example script:
+Running an example script locally:
 ```
 From the main folder of mango, run ./example-files/run-example.sh to see a demonstration of chromosome 17, region 7500000-7515000.
 ```
