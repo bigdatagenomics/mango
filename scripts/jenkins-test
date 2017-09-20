@@ -154,7 +154,7 @@ find . -name "*.bak" -exec rm -f {} \;
 
 # run integration tests
 # prebuilt spark distributions are scala 2.10 for spark 1.x, scala 2.11 for spark 2.x
-if [[ ( ${SPARK_VERSION} != 2.1.0 && ${SCALAVER} == 2.10 ) || ( ${SPARK_VERSION} == 2.1.0 && ${SCALAVER} == 2.11 ) ]];
+if [[ ${SPARK_VERSION} == 2.1.0 && ${SCALAVER} == 2.11 ]];
 then
 
     # we moved away from spark 2/scala 2.11 in our poms earlier,
@@ -217,6 +217,12 @@ then
     ASSEMBLY_DIR="${MANGO_TMP_DIR}/mango-assembly/target"
     ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
     export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
+
+
+    # prepare python
+    pushd mango-python
+    make prepare
+    popd
 
     # we can run the python build, now that we have a spark executable
 	  mvn -U \

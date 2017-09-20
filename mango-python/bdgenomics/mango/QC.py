@@ -16,10 +16,12 @@
 # limitations under the License.
 #
 
-from collections import Counter
+from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
+
+## Plots distribution for CoverageRDD
 class CoverageDistribution(object):
     """
     QC provides preprocessing functions for visualization
@@ -42,31 +44,48 @@ class CoverageDistribution(object):
         # Assign each RDD with counter. Reduce and collect.
         mappedDistributions = [c.flatten().toDF().rdd.map(lambda r: ((i, int(r["count"])), 1)).reduceByKey(lambda x,y: x+y) for i,c in enumerate(coverageRDDs)]
         unionRDD = self.sc.union(mappedDistributions)
-        self.collectedCoverage = unionRDD.map(lambda r: (r[0][0], Counter({r[0][1]:r[1]}))) \
+        collectedCoverage = unionRDD.map(lambda r: (r[0][0], Counter({r[0][1]:r[1]}))) \
             .reduceByKey(lambda x,y:x+y) \
             .sortByKey() \
             .map(lambda r: r[1]).collect()
 
+        # we have to run a local sort. Creates a list of OrderedDict
+        f = lambda x: OrderedDict(sorted(x.items()))
+        self.collectedCoverage = [f(x) for x in collectedCoverage]
+
 
     def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
+        """
+        Plots final distribution values
+        :param normalize: normalizes readcounts to sum to 1
+        :param cumulative: plots CDF of reads
+        :param xScaleLog: rescales xaxis to log
+        :param yScaleLog: rescales yaxis to log
+        :param testMode: if true, does not generate plot. Used for testing.
+        """
 
         coverageDistributions = []
 
         for coverageDistribution in self.collectedCoverage:
+
+            copiedDistribution = coverageDistribution.copy()
+
             if normalize:
-                total = float(sum(coverageDistribution.itervalues()))
-                for key in coverageDistribution:
-                    coverageDistribution[key] /= total
+                total = float(sum(copiedDistribution.values()))
+
+                # replace coverage distribution counts with normalized values
+                for key in copiedDistribution:
+                    copiedDistribution[key] /= total
 
             if cumulative:
                 cumulativeSum = 0.0
-                keys = coverageDistribution.keys()
-                keys.sort()
-                for key in keys:
-                    cumulativeSum += coverageDistribution[key]
-                    coverageDistribution[key] = cumulativeSum
 
-            coverageDistributions.append(coverageDistribution)
+                # Keep adding up reads for cumulative
+                for key in copiedDistribution.keys():
+                    cumulativeSum += copiedDistribution[key]
+                    copiedDistribution[key] = cumulativeSum
+
+            coverageDistributions.append(copiedDistribution)
 
         if (not testMode): # For testing: do not run plots if testMode
 

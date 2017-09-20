@@ -19,6 +19,15 @@
 
 set -ex
 
+# Split args into Spark args
+ARGS=()
+for ARG in "$@"; do
+  shift
+  ARGS+=("$ARG")
+done
+
+SPARK_ARGS="${ARGS[@]}"
+
 # Figure out where Mango is installed
 SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
 
@@ -58,10 +67,13 @@ fi
 echo "Using PYSPARK=$PYSPARK"
 echo ${MANGO_CLI_JAR}
 
+PY4J_ZIP = "$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
+export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
+
 # submit the job to Spark
 "$PYSPARK" \
     --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
     --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
     --jars ${MANGO_CLI_JAR} \
     --driver-class-path ${MANGO_CLI_JAR} \
-    "$@"
+    ${SPARK_ARGS}

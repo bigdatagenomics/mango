@@ -42,7 +42,8 @@ class QCTest(SparkTestCase):
         cd = qc.plot(testMode = True)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == Counter({1:1500.0}))
+        assert(cd.pop()[1] == 1500)
+
 
     def test_normalized_coverage_distribution(self):
         # load file
@@ -60,7 +61,8 @@ class QCTest(SparkTestCase):
         cd = qc.plot(testMode = True, normalize = True)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == Counter({1:1.0}))
+        assert(cd.pop()[1] == 1)
+
 
     def test_cumulative_coverage_distribution(self):
         # load file
@@ -78,13 +80,13 @@ class QCTest(SparkTestCase):
         cd = qc.plot(testMode = True, cumulative = True)
 
         assert(len(cd) == 1)
-        assert(cd.pop() == Counter({1:1500.0}))
+        assert(cd.pop()[1] == 1500)
 
 
     def test_example_alignments(self):
         # load file
         ac = ADAMContext(self.sc)
-        testFile = self.exampleFile("chr17.7500000-7515000.bam.adam")
+        testFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
         # read alignments
 
         reads = ac.loadAlignments(testFile)
@@ -100,7 +102,6 @@ class QCTest(SparkTestCase):
         assert(cd.pop()[1] == 6.0)
 
 
-
     def test_example_coverage(self):
         # load file
         ac = ADAMContext(self.sc)
@@ -111,10 +112,34 @@ class QCTest(SparkTestCase):
 
         qc = CoverageDistribution(self.sc, coverage)
 
-        cd = qc.plot(testMode = True, cumulative = True)
+        cd1 = qc.plot(testMode = True, cumulative = True)
 
-        assert(len(cd) == 1)
-        assert(cd.pop()[1] == 6.0)
+        assert(len(cd1) == 1)
+        x = cd1.pop()
+        assert(x[1] == 6)
+        assert(x[2] == 38)
+
+        cd2 = qc.plot(testMode = True, cumulative = False)
+
+        assert(len(cd2) == 1)
+        x = cd2.pop()
+        assert(x[1] == 6)
+        assert(x[2] == 32)
+
+        cd3 = qc.plot(testMode = True, cumulative = True, normalize = True)
+        total = float(sum(qc.collectedCoverage[0].values()))
+
+        assert(len(cd3) == 1)
+        x = cd3.pop()
+        assert(x[1] == 6.0/total)
+        assert(x[2] == 38.0/total)
+
+        cd4 = qc.plot(testMode = True, normalize = True)
+
+        assert(len(cd4) == 1)
+        x = cd4.pop()
+        assert(x[1] == 6.0/total)
+        assert(x[2] == 32.0/total)
 
 
     def test_example(self):
@@ -125,5 +150,4 @@ class QCTest(SparkTestCase):
 
         testFile = self.exampleFile("mango-python.py")
         execfile(testFile)
-
 

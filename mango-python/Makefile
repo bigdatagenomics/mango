@@ -80,7 +80,7 @@ clean_sdist:
 
 test: check_build_reqs
 	pushd ../example-files \
-		&& ipython nbconvert --to python mango-python.ipynb
+		&& jupyter nbconvert --to python mango-python.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	pushd ../example-files \
@@ -112,7 +112,11 @@ prepare:
 	$(pip) install pytest==2.8.3
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install matplotlib
-	easy_install dist/bdgenomics.adam-0.23.0_SNAPSHOT-py2.7.egg # TODO
+	@git clone https://github.com/bigdatagenomics/adam
+	pushd adam \
+		&& pushd adam-python \
+		&& $(pip) install -e .
+
 
 
 check_clean_working_copy:

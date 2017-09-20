@@ -68,7 +68,10 @@ fi
 export PYSPARK_DRIVER_PYTHON=jupyter
 export PYSPARK_DRIVER_PYTHON_OPTS='notebook'
 
-${PYSPARK}
+PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
+export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
+
+${PYSPARK} \
   --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   --jars ${MANGO_CLI_JAR} \

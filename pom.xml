@@ -26,7 +26,7 @@
     <hadoop.version>2.7.3</hadoop.version>
     <hadoop-bam.version>7.8.0</hadoop-bam.version>
     <htsjdk.version>2.9.1</htsjdk.version>
-    <parquet.version>1.8.1</parquet.version>
+    <parquet.version>1.8.2</parquet.version>
     <scala.version>2.10.6</scala.version>
     <scala.version.prefix>2.10</scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
