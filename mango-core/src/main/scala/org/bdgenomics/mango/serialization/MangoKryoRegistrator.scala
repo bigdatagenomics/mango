@@ -24,6 +24,8 @@ import org.bdgenomics.adam.rdd.read.realignment._
 import org.bdgenomics.adam.serialization._
 import org.bdgenomics.adam.util.{ TwoBitFile, TwoBitFileSerializer }
 import org.bdgenomics.formats.avro._
+//import ga4gh.Reads.ReadAlignment
+//import ga4gh.Variants.Variant
 
 import scala.collection.mutable.{ ArrayBuffer, ListBuffer }
 
@@ -42,5 +44,10 @@ class MangoKryoRegistrator extends ADAMKryoRegistrator {
     kryo.register(classOf[Feature], new AvroSerializer[Feature]())
     kryo.register(classOf[ReferencePosition], new ReferencePositionSerializer)
     kryo.register(classOf[TwoBitFile], new TwoBitFileSerializer)
+
+    // attempt to register GA4GH classes with Kryo fails
+    //kryo.register(classOf[ReadAlignment], new ReadAlignment)
+    //kryo.register(classOf[ga4gh.Variants.Variant], new ga4gh.Variants.Variant)
+
   }
 }
