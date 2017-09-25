@@ -17,20 +17,23 @@
  */
 package org.bdgenomics.mango.cli
 
+import java.net.URI
 import java.io.FileNotFoundException
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.mango.cli
 import org.bdgenomics.mango.core.util.{ VizUtils, VizCacheIndicator }
 import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.layout.{ PositionCount, BedRowJson, GenotypeJson }
 import org.bdgenomics.mango.models._
-import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.webapp.WebAppContext
+import org.eclipse.jetty.server.handler.ContextHandlerCollection
+import org.eclipse.jetty.util.resource.Resource
 import org.fusesource.scalate.TemplateEngine
 import org.ga4gh.GAReadAlignment
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
@@ -306,7 +309,7 @@ class VizServlet extends ScalatraServlet {
     // set initial referenceRegion so it is defined. pick first chromosome to view
     val firstChr = VizReads.globalDict.records.head.name
     session("referenceRegion") = ReferenceRegion(firstChr, 1, 100)
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/overall.ssp",
+    templateEngine.layout("/WEB-INF/layouts/overall.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
         "regions" -> VizReads.formatClickableRegions(VizReads.prefetchedRegions)))
   }
@@ -375,7 +378,7 @@ class VizServlet extends ScalatraServlet {
       case e: Exception => None
     }
 
-    templateEngine.layout("mango-cli/src/main/webapp/WEB-INF/layouts/browser.ssp",
+    templateEngine.layout("/WEB-INF/layouts/browser.ssp",
       Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
         "genes" -> VizReads.genes,
         "reads" -> readsSamples,
@@ -799,10 +802,23 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
    * Starts server once on startup
    */
   def startServer() = {
-    VizReads.server = new org.eclipse.jetty.server.Server(args.port)
-    val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
+    VizReads.server = new Server(args.port)
+
+    val webRootLocation = this.getClass().getResource("/index.html")
+
+    if (webRootLocation == null) {
+      throw new IllegalStateException("Unable to determine webroot URL location")
+    }
+
+    val webRootUri = URI.create(webRootLocation.toURI().toASCIIString().replaceFirst("/index.html$", "/"))
+
+    val context = new WebAppContext()
+    context.setContextPath("/")
+    context.setBaseResource(Resource.newResource(webRootUri))
+
+    val handlers = new ContextHandlerCollection()
     VizReads.server.setHandler(handlers)
-    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
+    handlers.addHandler(context)
     VizReads.server.start()
     println("View the visualization at: " + args.port)
     println("Quit at: /quit")
