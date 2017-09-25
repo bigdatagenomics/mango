@@ -105,9 +105,9 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(status == Ok("").status.code)
       val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
         .sortBy(_.variant.getStart)
-      assert(json.length == 3)
-      assert(json.head.variant.getStart == 19)
-      assert(json.head.sampleIds.length == 2)
+      assert(json.length == 7)
+      assert(json.head.variant.getStart == 9)
+      assert(json.head.sampleIds.length == 3)
     }
   }
 

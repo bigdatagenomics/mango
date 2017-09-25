@@ -150,7 +150,7 @@ object CoverageMaterialization {
       } else {
         None
       }
-    sc.loadParquetCoverage(fp, predicate = pred).flatten()
+    sc.loadParquetCoverage(fp, optPredicate = pred).flatten()
   }
 
 }

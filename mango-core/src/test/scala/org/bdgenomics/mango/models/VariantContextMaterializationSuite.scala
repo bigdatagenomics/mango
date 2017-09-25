@@ -49,8 +49,8 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
 
     val vAndg = json.sortBy(_.variant.getStart)
 
-    assert(vAndg.length == 3)
-    assert(vAndg.head.sampleIds.length == 2)
+    assert(vAndg.length == 7)
+    assert(vAndg.head.sampleIds.length == 3)
 
   }
 
@@ -62,8 +62,8 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val vAndg = parse(data.stringify(json)).extract[Array[String]].map(r => GenotypeJson(r))
       .sortBy(_.variant.getStart)
 
-    assert(vAndg.length == 3)
-    assert(vAndg.head.sampleIds.length == 2)
+    assert(vAndg.length == 7)
+    assert(vAndg.head.sampleIds.length == 3)
 
   }
 
@@ -101,7 +101,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val json = data.getJson(region)
     var vAndg = json.get(key).get
 
-    assert(vAndg.length == 3)
+    assert(vAndg.length == 7)
 
     vAndg = json.get(key2).get
 
@@ -133,7 +133,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val json = data.getJson(region)
     var vAndg = json.get(key).get
 
-    assert(vAndg.length == 3)
+    assert(vAndg.length == 7)
 
     vAndg = json.get(key2).get
 

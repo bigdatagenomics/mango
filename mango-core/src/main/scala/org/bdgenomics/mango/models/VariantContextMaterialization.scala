@@ -198,7 +198,7 @@ object VariantContextMaterialization {
         None
       }
 
-    sc.loadParquetGenotypes(fp, predicate = pred).toVariantContextRDD
+    sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
   }
 
   /**
@@ -209,7 +209,7 @@ object VariantContextMaterialization {
    */
   private def toGenotypeJsonRDD(v: VariantContextRDD): RDD[GenotypeJson] = {
     v.rdd.map(r => {
-      // filter out genotypes with only reference alleles
+      // filter out genotypes with only some alt alleles
       val genotypes = r.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)
       new GenotypeJson(r.variant.variant, genotypes.map(_.getSampleId).toArray)
     })

@@ -185,6 +185,6 @@ object FeatureMaterialization {
 
     val proj = Projection(FeatureField.featureId, FeatureField.contigName, FeatureField.start, FeatureField.end,
       FeatureField.score, FeatureField.featureType)
-    sc.loadParquetFeatures(fp, predicate = pred, projection = Some(proj))
+    sc.loadParquetFeatures(fp, optPredicate = pred, optProjection = Some(proj))
   }
 }

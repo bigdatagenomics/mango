@@ -214,7 +214,7 @@ object AlignmentRecordMaterialization extends Logging {
         AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
         AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
         AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-      sc.loadParquetAlignments(fp, predicate = pred, projection = Some(proj))
+      sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
     }
   }
 }
