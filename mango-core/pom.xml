@@ -48,6 +48,27 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <relocations>
+                <relocation>
+                  <pattern>com.google.protobuf</pattern>
+                  <shadedPattern>shaded.ga4gh.com.google.protobuf</shadedPattern>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -180,6 +201,25 @@
       <groupId>org.seqdoop</groupId>
       <artifactId>hadoop-bam</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ga4gh</groupId>
+      <artifactId>ga4gh-schemas</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>3.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java-util</artifactId>
+      <version>3.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.ga4gh</groupId>
+      <artifactId>ga4gh-schemas</artifactId>
+      <version>0.6.0jp1-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>
