@@ -11,6 +11,7 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD }
 import org.bdgenomics.adam.models.VariantContext
+import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.convert.ga4gh.Ga4ghModule
 import org.bdgenomics.convert.{ ConversionStringency, Converter }
 import org.bdgenomics.formats.avro.AlignmentRecord
@@ -38,10 +39,13 @@ object GA4GHutil {
   val genotypeConverter: Converter[org.bdgenomics.formats.avro.Genotype, ga4gh.Variants.Call] = injector
     .getInstance(Key.get(new TypeLiteral[Converter[org.bdgenomics.formats.avro.Genotype, ga4gh.Variants.Call]]() {}))
 
+  val featureConverter: Converter[org.bdgenomics.formats.avro.Feature, ga4gh.SequenceAnnotations.Feature] = injector
+    .getInstance(Key.get(new TypeLiteral[Converter[org.bdgenomics.formats.avro.Feature, ga4gh.SequenceAnnotations.Feature]]() {}))
+
   def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD): String = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
 
-    val gaReads = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
+    val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
     // We would prefer to run the convert as a map on the RDD, however fails currently because GA4GH type
     // is not registered in kryo
@@ -85,4 +89,21 @@ object GA4GHutil {
   def genotypeRDDtoJSON(genotypeRDD: GenotypeRDD): String = {
     variantContextRDDtoJSON(genotypeRDD.toVariantContextRDD)
   }
+
+  def featureRDDtoJSON(featureRDD: FeatureRDD): String = {
+    val logger = LoggerFactory.getLogger("GA4GHutil")
+    val gaFeatures: Array[ga4gh.SequenceAnnotations.Feature] = featureRDD.rdd.collect.map(a =>
+      {
+        ga4gh.SequenceAnnotations.Feature
+          .newBuilder(featureConverter.convert(a, ConversionStringency.LENIENT, logger)).build()
+      })
+
+    val result: ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
+      .newBuilder().addAllFeatures(gaFeatures.toList.asJava).build()
+
+    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(result)
+
+  }
+
 }
+
