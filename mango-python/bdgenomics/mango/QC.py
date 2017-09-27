@@ -17,6 +17,7 @@
 #
 
 from collections import Counter, OrderedDict
+from cigar import Cigar
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
@@ -114,3 +115,84 @@ class CoverageDistribution(object):
             plt.show()
 
         return coverageDistributions
+
+## Plots alignment distribution for AlignmentRDD using the cigar string
+class AlignmentDistribution(object):
+    """
+    QC provides preprocessing functions for visualization
+    of various quality control.
+    """
+
+    def __init__(self, alignmentRDD):
+        """
+        Initializes a AlignmentDistribution class.
+        Computes the coverage distribution of multiple coverageRDDs.
+        :param bdgenomics.adam.rdd.AlignmentRDD alignmentRDD: A single alignment RDD
+        """
+        cigars = alignmentRDD.toDF().rdd.map(lambda r: r["cigar"])
+        self.alignments = cigars.flatMap(lambda r: Cigar(r).items()) \
+                    .map(lambda a: ((a[1],a[0]),1)) \
+                    .filter(lambda a: a[0][0] is not None) \
+                    .reduceByKey(lambda x,y:x+y) \
+                    .map(lambda r:(r[0][0], Counter({r[0][1]:r[1]}))) \
+                    .reduceByKey(lambda x,y:x+y) \
+                    .collect()
+
+    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
+        """
+        Plots final distribution values
+        :param normalize: normalizes readcounts to sum to 1
+        :param cumulative: plots CDF of reads
+        :param xScaleLog: rescales xaxis to log
+        :param yScaleLog: rescales yaxis to log
+        :param testMode: if true, does not generate plot. Used for testing.
+        """
+        alignmentDistributions = []
+
+        for cigarString, alignmentDistribution in self.alignments:
+
+            copiedDistribution = alignmentDistribution.copy()
+
+            if normalize:
+                total = float(sum(copiedDistribution.values()))
+
+                # replace coverage distribution counts with normalized values
+                for key in copiedDistribution:
+                    copiedDistribution[key] /= total
+
+            if cumulative:
+                cumulativeSum = 0.0
+
+                # Keep adding up reads for cumulative
+                for key in copiedDistribution.keys():
+                    cumulativeSum += copiedDistribution[key]
+                    copiedDistribution[key] = cumulativeSum
+
+            alignmentDistributions.append((cigarString, copiedDistribution))
+
+        if (not testMode): # For testing: do not run plots if testMode
+
+            title =  'Target Region Alignment'
+            if cumulative:
+                title = 'Cumulative ' + title
+            if normalize:
+                title = 'Normalized ' + title
+            plt.ylabel('Fraction' if normalize else 'Counts')
+            plt.xlabel('Length per cigar')
+
+            # log scales, if applicable
+            if (xScaleLog):
+                plt.xscale('log')
+            if (yScaleLog):
+                plt.yscale('log')
+
+            plt.title(title)
+
+            for cigarString, alignmentDistribution in alignmentDistributions:
+                coverage = alignmentDistribution.keys()
+                counts = alignmentDistribution.values()
+                plt.plot(coverage, counts, label = cigarString)
+            plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
+            plt.show()
+
+        return alignmentDistributions
