@@ -9,7 +9,7 @@ import net.codingwell.scalaguice.ScalaModule
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
-import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD }
+import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD, VariantRDD }
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.convert.ga4gh.Ga4ghModule
@@ -105,5 +105,17 @@ object GA4GHutil {
 
   }
 
+  def variantRDDtoJSON(variantRDD: VariantRDD): String = {
+    val logger = LoggerFactory.getLogger("GA4GHutil")
+    val gaVariants: Array[ga4gh.Variants.Variant] = variantRDD.rdd.collect.map(a => {
+      ga4gh.Variants.Variant.newBuilder(variantConverter.convert(a, ConversionStringency.LENIENT, logger))
+        .build()
+    })
+    val result: ga4gh.VariantServiceOuterClass.SearchVariantsResponse = ga4gh.VariantServiceOuterClass
+      .SearchVariantsResponse.newBuilder().addAllVariants(gaVariants.toList.asJava).build()
+
+    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(result)
+
+  }
 }
 
