@@ -112,6 +112,7 @@ prepare:
 	$(pip) install pytest==2.8.3
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install matplotlib
+	$(pip) install cigar
 	@git clone https://github.com/bigdatagenomics/adam
 	pushd adam \
 		&& pushd adam-python \
