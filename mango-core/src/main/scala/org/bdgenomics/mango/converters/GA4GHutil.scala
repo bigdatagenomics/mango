@@ -1,3 +1,20 @@
+/**
+ * Licensed to Big Data Genomics (BDG) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The BDG licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.bdgenomics.mango.converters
 
 import javax.inject.Inject
@@ -23,10 +40,6 @@ import scala.collection.JavaConversions._
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/**
- * Created by paschalj on 9/8/17.
- */
-
 object GA4GHutil {
   val injector: Injector = Guice.createInjector(new Ga4ghModule())
 
@@ -47,14 +60,6 @@ object GA4GHutil {
 
     val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
-    // We would prefer to run the convert as a map on the RDD, however fails currently because GA4GH type
-    // is not registered in kryo
-    /*
-    val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.map(a => alignmentConverter
-      .convert(a, ConversionStringency.LENIENT, logger))
-      .collect()
-    */
-
     val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
       .addAllAlignments(gaReads.toList.asJava).build()
 
@@ -70,16 +75,6 @@ object GA4GHutil {
         .build()
     })
 
-    // We would prefer to run the convert as a map on the RDD, however fails currently because GA4GH type
-    // is not registered in kryo
-    /*
-    val gaVariants: Array[ga4gh.Variants.Variant] = variantContextRDD.rdd.map(a => {
-       ga4gh.Variants.Variant.newBuilder(variantConverter.convert(a.variant.variant, ConversionStringency.LENIENT, logger))
-       .addAllCalls(a.genotypes.map((g) => genotypeConverter.convert(g, ConversionStringency.LENIENT, logger)).asJava)
-       .build()
-       }).collect()
-     */
-
     val result: ga4gh.VariantServiceOuterClass.SearchVariantsResponse = ga4gh.VariantServiceOuterClass
       .SearchVariantsResponse.newBuilder().addAllVariants(gaVariants.toList.asJava).build()
 
@@ -87,7 +82,7 @@ object GA4GHutil {
   }
 
   def genotypeRDDtoJSON(genotypeRDD: GenotypeRDD): String = {
-    variantContextRDDtoJSON(genotypeRDD.toVariantContextRDD)
+    variantContextRDDtoJSON(genotypeRDD.toVariantContexts)
   }
 
   def featureRDDtoJSON(featureRDD: FeatureRDD): String = {
@@ -118,4 +113,3 @@ object GA4GHutil {
 
   }
 }
-
