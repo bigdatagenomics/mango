@@ -115,16 +115,16 @@ then
 fi
 
 # if those pass, build the distribution package and the integration tests
-mvn -U \
-    test \
-    -P coverage,coveralls  scoverage:report coveralls:report \
-    -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
+#mvn -U \
+#    test \
+#    -P coverage,coveralls  scoverage:report coveralls:report \
+#    -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
 
 # make verbose again
 set -x -v
 
 # first, build the sources, run the unit tests
-mvn clean package \
+mvn clean package -DskipTests \
     -Dhadoop.version=${HADOOP_VERSION} \
     -Dspark.version=${SPARK_VERSION} \
     -DargLine=${MANGO_MVN_TMP_DIR}
@@ -191,6 +191,9 @@ then
     conda create -y -q -n mango-build-${uuid} python=2.7 anaconda
     source activate mango-build-${uuid}
 
+    # install npm and node in the venv for mango-viz
+    conda install nodejs
+
     # what hadoop version are we on? format string for downloading spark assembly
     if [[ $HADOOP_VERSION =~ ^2\.6 ]]; then
         HADOOP=hadoop2.6
@@ -219,8 +222,13 @@ then
     export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
 
 
-    # prepare python
+    # prepare mango python
     pushd mango-python
+    make prepare
+    popd
+
+    # prepare mango viz
+    pushd mango-viz
     make prepare
     popd
 

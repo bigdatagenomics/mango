@@ -15,4 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__path__ = __import__('pkgutil').extend_path(__path__, __name__)
+
+from ._version import version_info, __version__
+
+from .reads import *
+from .features import *
+from .variants import *
+
+def _jupyter_nbextension_paths():
+    return [{
+        'section': 'notebook',
+        'src': 'static',
+        'dest': 'pileup',
+        'require': 'pileup/extension'
+    }]

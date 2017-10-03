@@ -15,4 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__path__ = __import__('pkgutil').extend_path(__path__, __name__)
+
+version_info = (0, 1, 0)
+__version__ = '.'.join(map(str, version_info))
