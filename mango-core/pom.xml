@@ -197,9 +197,5 @@
     <groupId>org.bdgenomics.convert</groupId>
     <artifactId>convert-ga4gh</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.convert</groupId>
-      <artifactId>convert</artifactId>
-    </dependency>
   </dependencies>
 </project>

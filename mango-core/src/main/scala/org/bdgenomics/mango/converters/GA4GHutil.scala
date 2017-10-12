@@ -21,25 +21,21 @@ import javax.inject.Inject
 
 import com.google.inject._
 import ga4gh.Reads.ReadAlignment
-import ga4gh.Variants.Variant
 import net.codingwell.scalaguice.ScalaModule
-import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD, VariantRDD }
-import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.convert.ga4gh.Ga4ghModule
 import org.bdgenomics.convert.{ ConversionStringency, Converter }
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.formats.avro.Variant
-import org.bdgenomics.mango.converters
 
 import scala.collection.JavaConverters._
-import scala.collection.JavaConversions._
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+/*
+ * Converts ADAM RDDs to json strings in GA4GH format.
+ * See https://github.com/ga4gh/ga4gh-schemas.
+ */
 object GA4GHutil {
   val injector: Injector = Guice.createInjector(new Ga4ghModule())
 
@@ -55,6 +51,12 @@ object GA4GHutil {
   val featureConverter: Converter[org.bdgenomics.formats.avro.Feature, ga4gh.SequenceAnnotations.Feature] = injector
     .getInstance(Key.get(new TypeLiteral[Converter[org.bdgenomics.formats.avro.Feature, ga4gh.SequenceAnnotations.Feature]]() {}))
 
+  /**
+   * Converts alignmentRecordRDD to GA4GHReadsResponse string
+   *
+   * @param alignmentRecordRDD rdd to convert
+   * @return GA4GHReadsResponse json string
+   */
   def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD): String = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
 
@@ -66,6 +68,12 @@ object GA4GHutil {
     com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(result)
   }
 
+  /**
+   * Converts variantContextRDD to GA4GHVariantResponse
+   *
+   * @param variantContextRDD rdd to convert
+   * @return GA4GHVariantResponse json string
+   */
   def variantContextRDDtoJSON(variantContextRDD: VariantContextRDD): String = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
 
@@ -81,6 +89,12 @@ object GA4GHutil {
     com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(result)
   }
 
+  /**
+   * Converts genotypeRDD to GA4GHVariantResponse
+   *
+   * @param genotypeRDD rdd to convert
+   * @return GA4GHVariantResponse json string
+   */
   def genotypeRDDtoJSON(genotypeRDD: GenotypeRDD): String = {
     variantContextRDDtoJSON(genotypeRDD.toVariantContexts)
   }
@@ -100,6 +114,12 @@ object GA4GHutil {
 
   }
 
+  /**
+   * Converts variantRDD to GA4GHVariantResponse
+   *
+   * @param variantRDD rdd to convert
+   * @return GA4GHVariantResponse json string
+   */
   def variantRDDtoJSON(variantRDD: VariantRDD): String = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
     val gaVariants: Array[ga4gh.Variants.Variant] = variantRDD.rdd.collect.map(a => {
