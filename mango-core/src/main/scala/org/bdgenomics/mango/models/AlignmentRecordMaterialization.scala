@@ -202,6 +202,7 @@ object AlignmentRecordMaterialization extends Logging {
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
     AlignmentTimers.loadADAMData.time {
+    /*
       val pred =
         if (regions.isDefined) {
           val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
@@ -214,7 +215,14 @@ object AlignmentRecordMaterialization extends Logging {
         AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
         AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
         AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+
       sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
+      */
+      val z = sc.loadPartitionedParquetAlignments(fp, regions)
+      //println("Count in z: " + z.dataset.count)
+      z
+
+
     }
   }
 }
