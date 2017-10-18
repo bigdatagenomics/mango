@@ -43,6 +43,7 @@ red=\033[0;31m
 
 develop:
 	- $(pip) install -e .$(extras)
+	- $(pip) install jupyter==1.0.0
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
