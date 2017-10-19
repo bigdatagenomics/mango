@@ -116,83 +116,78 @@ class CoverageDistribution(object):
 
         return coverageDistributions
 
+
 ## Plots alignment distribution for AlignmentRDD using the cigar string
-class AlignmentDistribution(object):
+class AlignmentDistributionByRegion(object):
     """
     QC provides preprocessing functions for visualization
     of various quality control.
     """
 
-    def __init__(self, alignmentRDD):
+    def __init__(self, alignmentRDDs, bin_size=10000000):
         """
         Initializes a AlignmentDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
         :param bdgenomics.adam.rdd.AlignmentRDD alignmentRDD: A single alignment RDD
+        :param int bin_size: Division size per bin
         """
-        cigars = alignmentRDD.toDF().rdd.map(lambda r: r["cigar"])
-        self.alignments = cigars.flatMap(lambda r: Cigar(r).items()) \
-                    .map(lambda a: ((a[1],a[0]),1)) \
-                    .filter(lambda a: a[0][0] is not None) \
-                    .reduceByKey(lambda x,y:x+y) \
-                    .map(lambda r:(r[0][0], Counter({r[0][1]:r[1]}))) \
-                    .reduceByKey(lambda x,y:x+y) \
-                    .collect()
+        bin_size = int(bin_size)
+        self.bin_size = bin_size
+        self.sc = sc
+        # If single RDD, convert to list
+        if (not isinstance(alignmentRDDs, list)):
+            alignmentRDDs = [alignmentRDDs]
 
-    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
+        self.plots = len(alignmentRDDs)
+        # Assign each RDD with counter. Reduce and collect.
+        mappedDistributions = [a.toDF().rdd.map(lambda r: ((i, r["start"]/bin_size), Counter(dict([(y,x) for x,y in Cigar(r["cigar"]).items()])))).reduceByKey(lambda x,y: x+y) for i,a in enumerate(alignmentRDDs)]
+        unionRDD = self.sc.union(mappedDistributions)
+        self.alignments = unionRDD.reduceByKey(lambda x,y: x+y).collect()
+
+    def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plot_type="I"):
         """
         Plots final distribution values
-        :param normalize: normalizes readcounts to sum to 1
-        :param cumulative: plots CDF of reads
         :param xScaleLog: rescales xaxis to log
         :param yScaleLog: rescales yaxis to log
         :param testMode: if true, does not generate plot. Used for testing.
+        :param plot_type: Cigar type to plot [I, H, D, M, S]
         """
-        alignmentDistributions = []
+        alignmentDistributions = Counter()
 
-        for cigarString, alignmentDistribution in self.alignments:
-
-            copiedDistribution = alignmentDistribution.copy()
-
-            if normalize:
-                total = float(sum(copiedDistribution.values()))
-
-                # replace coverage distribution counts with normalized values
-                for key in copiedDistribution:
-                    copiedDistribution[key] /= total
-
-            if cumulative:
-                cumulativeSum = 0.0
-
-                # Keep adding up reads for cumulative
-                for key in copiedDistribution.keys():
-                    cumulativeSum += copiedDistribution[key]
-                    copiedDistribution[key] = cumulativeSum
-
-            alignmentDistributions.append((cigarString, copiedDistribution))
+        for index, counts in self.alignments:
+            alignmentDistributions[index] += counts[plot_type]
 
         if (not testMode): # For testing: do not run plots if testMode
-
-            title =  'Target Region Alignment'
-            if cumulative:
-                title = 'Cumulative ' + title
-            if normalize:
-                title = 'Normalized ' + title
-            plt.ylabel('Fraction' if normalize else 'Counts')
-            plt.xlabel('Length per cigar')
+            title =  'Target Region Alignment for Type %s with bin size %d' % (plot_type, self.bin_size)
+            plt.ylabel('Counts')
+            plt.xlabel('Chromosome number')
 
             # log scales, if applicable
             if (xScaleLog):
                 plt.xscale('log')
             if (yScaleLog):
                 plt.yscale('log')
-
             plt.title(title)
 
-            for cigarString, alignmentDistribution in alignmentDistributions:
-                coverage = alignmentDistribution.keys()
-                counts = alignmentDistribution.values()
-                plt.plot(coverage, counts, label = cigarString)
-            plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
+            keys = sorted(alignmentDistributions.keys())
+            xvalues = np.arange(len(keys))
+            yvalues = [alignmentDistributions[key] for key in keys]
+            divisions = []
+            lastSample = None
+            lastIndex = None
+            for i, xvalue in enumerate(keys):
+                sampleNumber = xvalue[0]
+                if sampleNumber != lastSample:
+                    if lastIndex is not None:
+                        divisions.append((lastIndex,i))
+                    lastIndex = i
+                    lastSample = sampleNumber
+            divisions.append((lastIndex, len(keys)))
+            for start,end in divisions:
+                plt.plot(xvalues[start:end], yvalues[start:end], "o")
+
+            avgs = [(x[0] + x[1]) / 2.0 for x in divisions]
+            plt.xticks(avgs, np.arange(start = 1, stop = len(avgs)+1))
             plt.show()
 
         return alignmentDistributions
