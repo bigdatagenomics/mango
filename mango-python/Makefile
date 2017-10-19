@@ -20,12 +20,12 @@ define help
 
 Supported targets: prepare, develop, sdist, clean, test, and pypi.
 
-Please note that all build targets require a virtualenv to be active. 
+Please note that all build targets require a virtualenv to be active.
 
 The 'prepare' target installs Mango's build requirements into the current virtualenv.
 
 The 'develop' target creates an editable install of Mango and its runtime requirements in the
-current virtualenv. The install is called 'editable' because changes to the source code 
+current virtualenv. The install is called 'editable' because changes to the source code
 immediately affect the virtualenv.
 
 The 'clean' target undoes the effect of 'develop'.
@@ -111,8 +111,8 @@ check_build_reqs:
 prepare:
 	$(pip) install pytest==2.8.3
 	$(pip) install jupyter_contrib_nbextensions
-	$(pip) install matplotlib
-	$(pip) install cigar
+	$(pip) install cigar=0.1.3
+	$(pip) install matplotlib==2.0.2
 	@git clone https://github.com/bigdatagenomics/adam
 	pushd adam \
 		&& pushd adam-python \

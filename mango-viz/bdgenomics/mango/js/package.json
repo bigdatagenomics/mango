@@ -1,0 +1,39 @@
+{
+  "name": "bdgenomics.mango.pileup",
+  "version": "0.1.0",
+  "description": "pileup",
+  "author": "Alyssa Morrow",
+  "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bdgenomics/mango.git"
+  },
+  "keywords": [
+    "jupyter",
+    "widgets",
+    "ipython",
+    "ipywidgets"
+  ],
+  "scripts": {
+    "clean": "rimraf dist/",
+    "prepublish": "webpack",
+    "test": "./scripts/test.sh",
+    "lint": "./scripts/lint.sh",
+    "flow": "flow status",
+    "flow-check": "flow check"
+  },
+  "devDependencies": {
+    "rimraf": "^2.6.1",
+    "json-loader": "^0.5.4",
+    "style-loader": "^0.13.1",
+    "webpack": "^1.12.14",
+    "css-loader": "^0.23.1",
+    "flow-bin": "^0.21.0",
+    "jsxhint": "git://github.com/strml/JSXHint.git"
+  },
+  "dependencies": {
+    "@jupyter-widgets/base": "^1.0.0",
+    "pileup": "file:///Users/akmorrow/ADAM/mango/mango-viz/pileup.js",
+    "underscore": "^1.8.3"
+  }
+}

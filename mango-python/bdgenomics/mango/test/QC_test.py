@@ -148,6 +148,7 @@ class QCTest(SparkTestCase):
         testMode = True
         coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
 
+        # this file is converted from ipynb in make test
         testFile = self.exampleFile("mango-python.py")
         execfile(testFile)
 

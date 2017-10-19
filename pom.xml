@@ -19,10 +19,12 @@
   <properties>
     <adam.version>0.23.0-SNAPSHOT</adam.version>
     <avro.version>1.8.1</avro.version>
-    <bdg-formats.version>0.11.1</bdg-formats.version>
+    <bdg-formats.version>0.11.3</bdg-formats.version>
     <bdg-utils.version>0.2.13</bdg-utils.version>
+    <convert.version>0.3.0-SNAPSHOT</convert.version>
     <java.version>1.8</java.version>
     <jetty.version>9.2.17.v20160517</jetty.version>
+    <ga4gh.version>0.6.0a10</ga4gh.version>
     <hadoop.version>2.7.3</hadoop.version>
     <hadoop-bam.version>7.8.0</hadoop-bam.version>
     <htsjdk.version>2.9.1</htsjdk.version>
@@ -34,6 +36,7 @@
     <spark.version.prefix>_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
+    <protobuf.version>3.0.0-beta-3</protobuf.version>
   </properties>
 
   <modules>
@@ -425,7 +428,22 @@
       <dependency>
         <groupId>org.apache.parquet</groupId>
         <artifactId>parquet-avro</artifactId>
-        <version>${parquet.version}</version>
+        <!--
+            IMPORTANT NOTE
+            ==============
+            Spark 2.2.0 bumps to Parquet 1.8.2, but keeps Avro at 1.7.3. This
+            causes an issue when using parquet-avro 1.8.2, which relies on a
+            method that is new in Avro 1.8.x. The recommended workaround is to
+            pin parquet-avro to 1.8.1, instead of 1.8.2, as described in the
+            Spark 2.2.0 release notes.
+        -->
+        <version>1.8.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.parquet</groupId>
@@ -619,6 +637,32 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${protobuf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java-util</artifactId>
+        <version>${protobuf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ga4gh</groupId>
+        <artifactId>ga4gh-schemas</artifactId>
+        <version>${ga4gh.version}</version>
+      </dependency>
+      <dependency>
+      <groupId>org.bdgenomics.convert</groupId>
+      <artifactId>convert-ga4gh</artifactId>
+      <version>${convert.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.bdgenomics.bdg-formats</groupId>
+            <artifactId>bdg-formats</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -627,6 +671,7 @@
       <id>python</id>
       <modules>
         <module>mango-core</module>
+        <module>mango-viz</module>
         <module>mango-python</module>
         <module>mango-cli</module>
         <module>mango-assembly</module>
