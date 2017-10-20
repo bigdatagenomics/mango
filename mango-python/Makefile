@@ -105,11 +105,14 @@ clean: clean_develop clean_pypi
 
 check_build_reqs:
 	@$(python) -c 'import pytest' \
-		|| ( printf "$(red)Build requirements are missing. Run 'make prepare' to install them.$(normal)" ; false )
+		|| ( printf "$(redpip)Build requirements are missing. Run 'make prepare' to install them.$(normal)" ; false )
 
 
 prepare:
 	$(pip) install pytest==2.8.3
+	# ipython version required for python 2.7
+	$(pip) install ipython==5.5.0
+	$(pip) install jupyter==1.0.0
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install matplotlib==2.0.2
 	@git clone https://github.com/bigdatagenomics/adam
