@@ -202,7 +202,29 @@ object AlignmentRecordMaterialization extends Logging {
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
     AlignmentTimers.loadADAMData.time {
-    /*
+
+      if (sc.checkPartitionedParquetFlag(fp)) {
+        println("###### Found partitioned input files")
+        return sc.loadPartitionedParquetAlignments(fp, regions)
+      } else {
+        val pred =
+          if (regions.isDefined) {
+            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+          } else {
+            Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+          }
+
+        val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
+          AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
+          AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
+          AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+
+        sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
+
+      }
+
+      /*
       val pred =
         if (regions.isDefined) {
           val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
@@ -217,12 +239,7 @@ object AlignmentRecordMaterialization extends Logging {
         AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
 
       sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
-      */
-      val z = sc.loadPartitionedParquetAlignments(fp, regions)
-      //println("Count in z: " + z.dataset.count)
-      z
-
-
+*/
     }
   }
 }
