@@ -195,18 +195,6 @@ object AlignmentRecordMaterialization extends Logging {
     }
   }
 
-  def referenceRegionsToDatasetQueryString(x: Iterable[ReferenceRegion], partitionSize: Int = 1000000): String = {
-    var regionQueryString = "(contigName=" + "\'" + x.head.referenceName.replaceAll("chr", "") + "\' and posBin >= \'" +
-      scala.math.floor(x.head.start / partitionSize).toInt + "\' and posBin < \'" + (scala.math.floor(x.head.end / partitionSize).toInt + 1) + "\' and start >= " + x.head.start + " and end <= " + x.head.end + ")"
-    if (x.size > 1) {
-      x.foreach((i) => {
-        regionQueryString = regionQueryString + " or " + "(contigName=" + "\'" +
-          i.referenceName.replaceAll("chr", "") + "\' and posBin >= \'" + scala.math.floor(i.start / partitionSize).toInt + "\' and posBin < \'" + (scala.math.floor(i.end / partitionSize).toInt + 1) + "\' and  start >= " + i.start + " and end <= " + i.end + ")"
-      })
-    }
-    regionQueryString
-  }
-
   /**
    * Loads ADAM data using predicate pushdowns
    * @param sc SparkContext
