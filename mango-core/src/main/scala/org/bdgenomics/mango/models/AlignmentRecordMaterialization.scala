@@ -145,7 +145,6 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
 object AlignmentRecordMaterialization extends Logging {
 
   val name = "AlignmentRecord"
-
   val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordRDD]
 
   /**
@@ -208,14 +207,14 @@ object AlignmentRecordMaterialization extends Logging {
     if (sc.checkPartitionedParquetFlag(fp)) {
       val x: AlignmentRecordRDD = datasetCache.get(fp) match {
         case Some(x) => x.transformDataset(d => regions match {
-          case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+          case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
           case _             => d
         })
         case _ => {
           val loadedDataset = sc.loadPartitionedParquetAlignments(fp)
           datasetCache(fp) = loadedDataset
           loadedDataset.transformDataset(d => regions match {
-            case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+            case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
             case _             => d
           })
         }
@@ -239,45 +238,6 @@ object AlignmentRecordMaterialization extends Logging {
       sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
 
     }
-    /*
-      if (sc.checkPartitionedParquetFlag(fp)) {
-        println("###### Found partitioned input files")
-        return sc.loadPartitionedParquetAlignments(fp, regions)
-      } else {
-        val pred =
-          if (regions.isDefined) {
-            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-          } else {
-            Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-          }
 
-        val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
-          AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
-          AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
-          AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-
-        sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
-
-      }
-      */
-
-    /*
-      val pred =
-        if (regions.isDefined) {
-          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-        } else {
-          Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-        }
-
-      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
-        AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
-        AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
-        AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-
-      sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
-*/
-    //}
   }
 }

@@ -138,7 +138,6 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 object VariantContextMaterialization {
 
   val name = "VariantContext"
-
   val datasetCache = new collection.mutable.HashMap[String, GenotypeRDD]
 
   /**
@@ -193,32 +192,33 @@ object VariantContextMaterialization {
    */
 
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
-    val x: GenotypeRDD = datasetCache.get(fp) match {
-      case Some(x) => x.transformDataset(d => regions match {
-        case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
-        case _             => d
-      })
-      case _ => {
-        val loadedDataset = sc.loadPartitionedParquetGenotypes(fp)
-        datasetCache(fp) = loadedDataset
-        loadedDataset.transformDataset(d => regions match {
-          case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+    if (sc.checkPartitionedParquetFlag(fp)) {
+      val x: GenotypeRDD = datasetCache.get(fp) match {
+        case Some(x) => x.transformDataset(d => regions match {
+          case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
           case _             => d
         })
+        case _ => {
+          val loadedDataset = sc.loadPartitionedParquetGenotypes(fp)
+          datasetCache(fp) = loadedDataset
+          loadedDataset.transformDataset(d => regions match {
+            case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
+            case _             => d
+          })
+        }
       }
-    }
-    x.toVariantContexts()
-    /*
-    val pred =
-      if (regions.isDefined) {
-        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-        Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
-      } else {
-        None
-      }
+      return x.toVariantContexts()
 
-    sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
-    */
+    } else {
+      val pred =
+        if (regions.isDefined) {
+          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+        } else {
+          None
+        }
+      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
+    }
   }
 
   /**
