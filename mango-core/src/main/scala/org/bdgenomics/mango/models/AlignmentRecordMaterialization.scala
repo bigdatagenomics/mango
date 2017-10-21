@@ -26,7 +26,7 @@ import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
@@ -39,10 +39,10 @@ import org.bdgenomics.utils.instrumentation.Metrics
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
+
 import scala.collection.JavaConversions._
 import scala.reflect._
 import scala.collection.JavaConverters._
-
 import scala.reflect.ClassTag
 
 // metric variables
@@ -146,6 +146,8 @@ object AlignmentRecordMaterialization extends Logging {
 
   val name = "AlignmentRecord"
 
+  val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordRDD]
+
   /**
    * Loads alignment data from bam, sam and ADAM file formats
    * @param sc SparkContext
@@ -193,6 +195,18 @@ object AlignmentRecordMaterialization extends Logging {
     }
   }
 
+  def referenceRegionsToDatasetQueryString(x: Iterable[ReferenceRegion], partitionSize: Int = 1000000): String = {
+    var regionQueryString = "(contigName=" + "\'" + x.head.referenceName.replaceAll("chr", "") + "\' and posBin >= \'" +
+      scala.math.floor(x.head.start / partitionSize).toInt + "\' and posBin < \'" + (scala.math.floor(x.head.end / partitionSize).toInt + 1) + "\' and start >= " + x.head.start + " and end <= " + x.head.end + ")"
+    if (x.size > 1) {
+      x.foreach((i) => {
+        regionQueryString = regionQueryString + " or " + "(contigName=" + "\'" +
+          i.referenceName.replaceAll("chr", "") + "\' and posBin >= \'" + scala.math.floor(i.start / partitionSize).toInt + "\' and posBin < \'" + (scala.math.floor(i.end / partitionSize).toInt + 1) + "\' and  start >= " + i.start + " and end <= " + i.end + ")"
+      })
+    }
+    regionQueryString
+  }
+
   /**
    * Loads ADAM data using predicate pushdowns
    * @param sc SparkContext
@@ -200,9 +214,28 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
-    AlignmentTimers.loadADAMData.time {
 
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
+    //AlignmentTimers.loadADAMData.time {
+
+    val x: AlignmentRecordRDD = datasetCache.get(fp) match {
+      case Some(x) => x.transformDataset(d => regions match {
+        case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+        case _             => d
+      })
+      case _ => {
+        val loadedDataset = sc.loadPartitionedParquetAlignments(fp)
+        datasetCache(fp) = loadedDataset
+        loadedDataset.transformDataset(d => regions match {
+          case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+          case _             => d
+        })
+      }
+    }
+
+    x
+
+    /*
       if (sc.checkPartitionedParquetFlag(fp)) {
         println("###### Found partitioned input files")
         return sc.loadPartitionedParquetAlignments(fp, regions)
@@ -223,8 +256,9 @@ object AlignmentRecordMaterialization extends Logging {
         sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
 
       }
+      */
 
-      /*
+    /*
       val pred =
         if (regions.isDefined) {
           val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
@@ -240,6 +274,6 @@ object AlignmentRecordMaterialization extends Logging {
 
       sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
 */
-    }
+    //}
   }
 }
