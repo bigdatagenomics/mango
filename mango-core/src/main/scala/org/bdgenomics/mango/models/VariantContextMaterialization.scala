@@ -27,8 +27,8 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variant.{ VariantContextRDD }
-import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
+import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD }
+import org.bdgenomics.formats.avro.{ GenotypeAllele, Variant }
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.GenotypeJson
 
@@ -139,6 +139,8 @@ object VariantContextMaterialization {
 
   val name = "VariantContext"
 
+  val datasetCache = new collection.mutable.HashMap[String, GenotypeRDD]
+
   /**
    * Loads variant data from adam and vcf files into a VariantContextRDD
    *
@@ -181,6 +183,18 @@ object VariantContextMaterialization {
     }
   }
 
+  def referenceRegionsToDatasetQueryString(x: Iterable[ReferenceRegion], partitionSize: Int = 1000000): String = {
+    var regionQueryString = "(contigName=" + "\'" + x.head.referenceName.replaceAll("chr", "") + "\' and posBin >= \'" +
+      scala.math.floor(x.head.start / partitionSize).toInt + "\' and posBin < \'" + (scala.math.floor(x.head.end / partitionSize).toInt + 1) + "\' and start >= " + x.head.start + " and end <= " + x.head.end + ")"
+    if (x.size > 1) {
+      x.foreach((i) => {
+        regionQueryString = regionQueryString + " or " + "(contigName=" + "\'" +
+          i.referenceName.replaceAll("chr", "") + "\' and posBin >= \'" + scala.math.floor(i.start / partitionSize).toInt + "\' and posBin < \'" + (scala.math.floor(i.end / partitionSize).toInt + 1) + "\' and  start >= " + i.start + " and end <= " + i.end + ")"
+      })
+    }
+    regionQueryString
+  }
+
   /**
    * Loads adam variant files
    *
@@ -189,7 +203,24 @@ object VariantContextMaterialization {
    * @param regions Iterable of  ReferenceRegions to predicate load
    * @return VariantContextRDD
    */
+
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+    val x: GenotypeRDD = datasetCache.get(fp) match {
+      case Some(x) => x.transformDataset(d => regions match {
+        case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+        case _             => d
+      })
+      case _ => {
+        val loadedDataset = sc.loadPartitionedParquetGenotypes(fp)
+        datasetCache(fp) = loadedDataset
+        loadedDataset.transformDataset(d => regions match {
+          case Some(regions) => d.filter(referenceRegionsToDatasetQueryString(regions))
+          case _             => d
+        })
+      }
+    }
+    x.toVariantContexts()
+    /*
     val pred =
       if (regions.isDefined) {
         val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
@@ -199,6 +230,7 @@ object VariantContextMaterialization {
       }
 
     sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
+    */
   }
 
   /**
