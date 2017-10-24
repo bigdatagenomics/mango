@@ -57,7 +57,7 @@ class CoverageDistribution(object):
 
     def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
         """
-        Plots final distribution values
+        Plots final distribution values and returns the plotted distribution as a Counter object.
         :param normalize: normalizes readcounts to sum to 1
         :param cumulative: plots CDF of reads
         :param xScaleLog: rescales xaxis to log
@@ -118,16 +118,17 @@ class CoverageDistribution(object):
 
 
 ## Plots alignment distribution for AlignmentRDD using the cigar string
-class AlignmentDistributionByRegion(object):
+class AlignmentDistribution(object):
     """
     QC provides preprocessing functions for visualization
     of various quality control.
     """
 
-    def __init__(self, alignmentRDDs, bin_size=10000000):
+    def __init__(self, sc, alignmentRDDs, bin_size=10000000):
         """
         Initializes a AlignmentDistribution class.
-        Computes the coverage distribution of multiple coverageRDDs.
+        Computes the alignment distribution of multiple coverageRDDs.
+        :param SparkContext
         :param bdgenomics.adam.rdd.AlignmentRDD alignmentRDD: A single alignment RDD
         :param int bin_size: Division size per bin
         """
@@ -146,7 +147,7 @@ class AlignmentDistributionByRegion(object):
 
     def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plot_type="I"):
         """
-        Plots final distribution values
+        Plots final distribution values and returns the plotted distribution as a counter object.
         :param xScaleLog: rescales xaxis to log
         :param yScaleLog: rescales yaxis to log
         :param testMode: if true, does not generate plot. Used for testing.
@@ -170,7 +171,7 @@ class AlignmentDistributionByRegion(object):
             plt.title(title)
 
             keys = sorted(alignmentDistributions.keys())
-            xvalues = np.arange(len(keys))
+            xvalues = range(len(keys))
             yvalues = [alignmentDistributions[key] for key in keys]
             divisions = []
             lastSample = None
@@ -187,7 +188,7 @@ class AlignmentDistributionByRegion(object):
                 plt.plot(xvalues[start:end], yvalues[start:end], "o")
 
             avgs = [(x[0] + x[1]) / 2.0 for x in divisions]
-            plt.xticks(avgs, np.arange(start = 1, stop = len(avgs)+1))
+            plt.xticks(avgs, range(start = 1, stop = len(avgs)+1))
             plt.show()
 
         return alignmentDistributions

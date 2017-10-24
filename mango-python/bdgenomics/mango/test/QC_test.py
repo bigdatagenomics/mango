@@ -17,7 +17,7 @@
 #
 
 import sys
-from bdgenomics.mango.QC import CoverageDistribution
+from bdgenomics.mango.QC import CoverageDistribution, AlignmentDistribution
 from bdgenomics.mango.test import SparkTestCase
 from collections import Counter
 
@@ -25,6 +25,49 @@ from bdgenomics.adam.adamContext import ADAMContext
 
 
 class QCTest(SparkTestCase):
+
+    def test_alignment_distribution(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.resourceFile("small.sam")
+        # read alignments
+        reads = ac.loadAlignments(testFile)
+
+        qc = AlignmentDistribution(self.sc, reads, bin_size=10000000)
+
+        mDistribution = qc.plot(testMode = True, plot_type="M")
+        expectedM =  Counter({(0, 16): 225, (0, 24): 150, (0, 18): 150, (0, 2): 150, (0, 23): 150, (0, 1): 75, (0, 0): 75, (0, 15): 75, (0, 20): 75, (0, 19): 75, (0, 5): 75, (0, 10): 75, (0, 3): 75, (0, 8): 75})
+        assert(mDistribution == expectedM)
+
+        iDistribution = qc.plot(testMode = True, plot_type="I")
+        expectedI =  Counter({(0, 1): 0, (0, 0): 0, (0, 15): 0, (0, 20): 0, (0, 19): 0, (0, 24): 0, (0, 18): 0, (0, 16): 0, (0, 5): 0, (0, 10): 0, (0, 3): 0, (0, 8): 0, (0, 2): 0, (0, 23): 0})
+        assert(iDistribution == expectedI)
+
+    def test_alignment_distribution_maximal_bin_size(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.resourceFile("small.sam")
+        # read alignments
+        reads = ac.loadAlignments(testFile)
+
+        qc = AlignmentDistribution(self.sc, reads, bin_size=1000000000)
+
+        mDistribution = qc.plot(testMode = True, plot_type="M")
+        expectedM =  Counter({(0, 0): 1500})
+        assert(mDistribution == expectedM)
+
+    def test_multiple_alignment_distribution(self):
+        # load file
+        ac = ADAMContext(self.sc)
+        testFile = self.resourceFile("small.sam")
+        # read alignments
+        reads = ac.loadAlignments(testFile)
+
+        qc = AlignmentDistribution(self.sc, [reads,reads], bin_size=100000000)
+
+        mDistribution = qc.plot(testMode = True, plot_type="M")
+        expectedM =  Counter({(0, 1): 600, (1, 1): 600, (0, 0): 525, (1, 0): 525, (1, 2): 375, (0, 2): 375})
+        assert(mDistribution == expectedM)
 
     def test_coverage_distribution(self):
         # load file

@@ -111,7 +111,7 @@ check_build_reqs:
 prepare:
 	$(pip) install pytest==2.8.3
 	$(pip) install jupyter_contrib_nbextensions
-	$(pip) install cigar=0.1.3
+	$(pip) install cigar==0.1.3
 	$(pip) install matplotlib==2.0.2
 	@git clone https://github.com/bigdatagenomics/adam
 	pushd adam \
