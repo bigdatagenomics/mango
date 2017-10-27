@@ -188,7 +188,7 @@ class AlignmentDistribution(object):
                 plt.plot(xvalues[start:end], yvalues[start:end], "o")
 
             avgs = [(x[0] + x[1]) / 2.0 for x in divisions]
-            plt.xticks(avgs, range(start = 1, stop = len(avgs)+1))
+            plt.xticks(avgs, range(1, len(avgs)+1))
             plt.show()
 
         return alignmentDistributions
