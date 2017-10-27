@@ -18,6 +18,9 @@
 
 from collections import Counter, OrderedDict
 from cigar import Cigar
+import matplotlib
+# Disable x-forwarding
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
