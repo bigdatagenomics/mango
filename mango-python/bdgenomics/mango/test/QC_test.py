@@ -195,5 +195,3 @@ class QCTest(SparkTestCase):
         # this file is converted from ipynb in make test
         testFile = self.exampleFile("mango-python.py")
         execfile(testFile)
-
-
