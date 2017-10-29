@@ -192,6 +192,10 @@ class QCTest(SparkTestCase):
         coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
         alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
 
-        # this file is converted from ipynb in make test
-        testFile = self.exampleFile("mango-python.py")
-        execfile(testFile)
+        # this file is converted from ipynb in the Makefile
+        testCoverageFile = self.exampleFile("mango-python-coverage.py")
+        execfile(testCoverageFile)
+
+
+        testAlignmentFile = self.exampleFile("mango-python-alignment.py")
+        execfile(testAlignmentFile)

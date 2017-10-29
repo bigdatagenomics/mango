@@ -80,7 +80,8 @@ clean_sdist:
 
 test: check_build_reqs
 	pushd ../example-files \
-		&& jupyter nbconvert --to python mango-python.ipynb
+		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
+		&& jupyter nbconvert --to python mango-python-alignment.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	pushd ../example-files \
