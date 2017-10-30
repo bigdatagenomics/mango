@@ -85,7 +85,9 @@ test: check_build_reqs
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	pushd ../example-files \
-		&& rm mango-python.py
+		&& rm mango-python-coverage.py \
+		&& rm mango-python-alignment.py \
+
 	exit
 
 
