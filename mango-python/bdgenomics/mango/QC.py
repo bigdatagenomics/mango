@@ -34,7 +34,7 @@ class CoverageDistribution(object):
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
         :param SparkContext
-        :param bdgenomics.adam.rdd.CoverageRDD coverageRDDs: A list of coverageRDDs
+        :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
         """
         self.sc = sc
 
@@ -128,8 +128,8 @@ class AlignmentDistribution(object):
         """
         Initializes a AlignmentDistribution class.
         Computes the alignment distribution of multiple coverageRDDs.
-        :param SparkContext
-        :param bdgenomics.adam.rdd.AlignmentRDD alignmentRDD: A single alignment RDD
+        :param SparkContext: the global SparkContext
+        :param alignmentRDDs: A list of bdgenomics.adam.rdd.AlignmentRDD objects
         :param int bin_size: Division size per bin
         """
         bin_size = int(bin_size)
@@ -151,7 +151,7 @@ class AlignmentDistribution(object):
         :param xScaleLog: rescales xaxis to log
         :param yScaleLog: rescales yaxis to log
         :param testMode: if true, does not generate plot. Used for testing.
-        :param plot_type: Cigar type to plot [I, H, D, M, S]
+        :param plot_type: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
         """
         alignmentDistributions = Counter()
 

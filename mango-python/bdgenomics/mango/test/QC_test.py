@@ -184,18 +184,22 @@ class QCTest(SparkTestCase):
         assert(x[1] == 6.0/total)
         assert(x[2] == 32.0/total)
 
-
-    def test_example(self):
+    def test_coverage_example(self):
         # these variables are read into mango-python.py
         sc = self.sc
         testMode = True
         coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
-        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
 
-        # this file is converted from ipynb in the Makefile
+        # this file is converted from mango-python.coverage.ipynb in the Makefile
         testCoverageFile = self.exampleFile("mango-python-coverage.py")
         execfile(testCoverageFile)
 
+    def test_alignment_example(self):
+        # these variables are read into mango-python.py
+        sc = self.sc
+        testMode = True
+        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
 
+        # this file is converted from mango-python-alignment.ipynb in the Makefile
         testAlignmentFile = self.exampleFile("mango-python-alignment.py")
         execfile(testAlignmentFile)
