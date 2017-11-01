@@ -145,21 +145,21 @@ class AlignmentDistribution(object):
         unionRDD = self.sc.union(mappedDistributions)
         self.alignments = unionRDD.reduceByKey(lambda x,y: x+y).collect()
 
-    def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plot_type="I"):
+    def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plotType="I"):
         """
         Plots final distribution values and returns the plotted distribution as a counter object.
         :param xScaleLog: rescales xaxis to log
         :param yScaleLog: rescales yaxis to log
         :param testMode: if true, does not generate plot. Used for testing.
-        :param plot_type: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
+        :param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
         """
         alignmentDistributions = Counter()
 
         for index, counts in self.alignments:
-            alignmentDistributions[index] += counts[plot_type]
+            alignmentDistributions[index] += counts[plotType]
 
         if (not testMode): # For testing: do not run plots if testMode
-            title =  'Target Region Alignment for Type %s with bin size %d' % (plot_type, self.bin_size)
+            title =  'Target Region Alignment for Type %s with bin size %d' % (plotType, self.bin_size)
             plt.ylabel('Counts')
             plt.xlabel('Chromosome number')
 

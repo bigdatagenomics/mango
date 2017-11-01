@@ -35,11 +35,11 @@ class QCTest(SparkTestCase):
 
         qc = AlignmentDistribution(self.sc, reads, bin_size=10000000)
 
-        mDistribution = qc.plot(testMode = True, plot_type="M")
+        mDistribution = qc.plot(testMode = True, plotType="M")
         expectedM =  Counter({(0, 16): 225, (0, 24): 150, (0, 18): 150, (0, 2): 150, (0, 23): 150, (0, 1): 75, (0, 0): 75, (0, 15): 75, (0, 20): 75, (0, 19): 75, (0, 5): 75, (0, 10): 75, (0, 3): 75, (0, 8): 75})
         assert(mDistribution == expectedM)
 
-        iDistribution = qc.plot(testMode = True, plot_type="I")
+        iDistribution = qc.plot(testMode = True, plotType="I")
         expectedI =  Counter({(0, 1): 0, (0, 0): 0, (0, 15): 0, (0, 20): 0, (0, 19): 0, (0, 24): 0, (0, 18): 0, (0, 16): 0, (0, 5): 0, (0, 10): 0, (0, 3): 0, (0, 8): 0, (0, 2): 0, (0, 23): 0})
         assert(iDistribution == expectedI)
 
@@ -52,7 +52,7 @@ class QCTest(SparkTestCase):
 
         qc = AlignmentDistribution(self.sc, reads, bin_size=1000000000)
 
-        mDistribution = qc.plot(testMode = True, plot_type="M")
+        mDistribution = qc.plot(testMode = True, plotType="M")
         expectedM =  Counter({(0, 0): 1500})
         assert(mDistribution == expectedM)
 
@@ -65,7 +65,7 @@ class QCTest(SparkTestCase):
 
         qc = AlignmentDistribution(self.sc, [reads,reads], bin_size=100000000)
 
-        mDistribution = qc.plot(testMode = True, plot_type="M")
+        mDistribution = qc.plot(testMode = True, plotType="M")
         expectedM =  Counter({(0, 1): 600, (1, 1): 600, (0, 0): 525, (1, 0): 525, (1, 2): 375, (0, 2): 375})
         assert(mDistribution == expectedM)
 
