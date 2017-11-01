@@ -80,11 +80,14 @@ clean_sdist:
 
 test: check_build_reqs
 	pushd ../example-files \
-		&& jupyter nbconvert --to python mango-python.ipynb
+		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
+		&& jupyter nbconvert --to python mango-python-alignment.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	pushd ../example-files \
-		&& rm mango-python.py
+		&& rm mango-python-coverage.py \
+		&& rm mango-python-alignment.py \
+
 	exit
 
 
@@ -114,6 +117,7 @@ prepare:
 	$(pip) install ipython==5.5.0
 	$(pip) install jupyter==1.0.0
 	$(pip) install jupyter_contrib_nbextensions
+	$(pip) install cigar==0.1.3
 	$(pip) install matplotlib==2.0.2
 	@git clone https://github.com/bigdatagenomics/adam
 	pushd adam \

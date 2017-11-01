@@ -17,6 +17,7 @@
 #
 
 from collections import Counter, OrderedDict
+from cigar import Cigar
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
@@ -33,7 +34,7 @@ class CoverageDistribution(object):
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
         :param SparkContext
-        :param bdgenomics.adam.rdd.CoverageRDD coverageRDDs: A list of coverageRDDs
+        :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
         """
         self.sc = sc
 
@@ -56,7 +57,7 @@ class CoverageDistribution(object):
 
     def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
         """
-        Plots final distribution values
+        Plots final distribution values and returns the plotted distribution as a Counter object.
         :param normalize: normalizes readcounts to sum to 1
         :param cumulative: plots CDF of reads
         :param xScaleLog: rescales xaxis to log
@@ -114,3 +115,80 @@ class CoverageDistribution(object):
             plt.show()
 
         return coverageDistributions
+
+
+## Plots alignment distribution for AlignmentRDD using the cigar string
+class AlignmentDistribution(object):
+    """
+    QC provides preprocessing functions for visualization
+    of various quality control.
+    """
+
+    def __init__(self, sc, alignmentRDDs, bin_size=10000000):
+        """
+        Initializes a AlignmentDistribution class.
+        Computes the alignment distribution of multiple coverageRDDs.
+        :param SparkContext: the global SparkContext
+        :param alignmentRDDs: A list of bdgenomics.adam.rdd.AlignmentRDD objects
+        :param int bin_size: Division size per bin
+        """
+        bin_size = int(bin_size)
+        self.bin_size = bin_size
+        self.sc = sc
+        # If single RDD, convert to list
+        if (not isinstance(alignmentRDDs, list)):
+            alignmentRDDs = [alignmentRDDs]
+
+        self.plots = len(alignmentRDDs)
+        # Assign each RDD with counter. Reduce and collect.
+        mappedDistributions = [a.toDF().rdd.map(lambda r: ((i, r["start"]/bin_size), Counter(dict([(y,x) for x,y in Cigar(r["cigar"]).items()])))).reduceByKey(lambda x,y: x+y) for i,a in enumerate(alignmentRDDs)]
+        unionRDD = self.sc.union(mappedDistributions)
+        self.alignments = unionRDD.reduceByKey(lambda x,y: x+y).collect()
+
+    def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plotType="I"):
+        """
+        Plots final distribution values and returns the plotted distribution as a counter object.
+        :param xScaleLog: rescales xaxis to log
+        :param yScaleLog: rescales yaxis to log
+        :param testMode: if true, does not generate plot. Used for testing.
+        :param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
+        """
+        alignmentDistributions = Counter()
+
+        for index, counts in self.alignments:
+            alignmentDistributions[index] += counts[plotType]
+
+        if (not testMode): # For testing: do not run plots if testMode
+            title =  'Target Region Alignment for Type %s with bin size %d' % (plotType, self.bin_size)
+            plt.ylabel('Counts')
+            plt.xlabel('Chromosome number')
+
+            # log scales, if applicable
+            if (xScaleLog):
+                plt.xscale('log')
+            if (yScaleLog):
+                plt.yscale('log')
+            plt.title(title)
+
+            keys = sorted(alignmentDistributions.keys())
+            xvalues = range(len(keys))
+            yvalues = [alignmentDistributions[key] for key in keys]
+            divisions = []
+            lastSample = None
+            lastIndex = None
+            for i, xvalue in enumerate(keys):
+                sampleNumber = xvalue[0]
+                if sampleNumber != lastSample:
+                    if lastIndex is not None:
+                        divisions.append((lastIndex,i))
+                    lastIndex = i
+                    lastSample = sampleNumber
+            divisions.append((lastIndex, len(keys)))
+            for start,end in divisions:
+                plt.plot(xvalues[start:end], yvalues[start:end], "o")
+
+            avgs = [(x[0] + x[1]) / 2.0 for x in divisions]
+            plt.xticks(avgs, range(1, len(avgs)+1))
+            plt.show()
+
+        return alignmentDistributions
