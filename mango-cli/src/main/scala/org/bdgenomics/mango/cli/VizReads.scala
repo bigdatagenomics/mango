@@ -804,13 +804,13 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   def startServer() = {
     VizReads.server = new Server(args.port)
 
-    val webRootLocation = this.getClass().getResource("/index.html")
+    val webRootLocation = this.getClass().getResource("/mango-index.html")
 
     if (webRootLocation == null) {
       throw new IllegalStateException("Unable to determine webroot URL location")
     }
 
-    val webRootUri = URI.create(webRootLocation.toURI().toASCIIString().replaceFirst("/index.html$", "/"))
+    val webRootUri = URI.create(webRootLocation.toURI().toASCIIString().replaceFirst("/mango-index.html$", "/"))
 
     val context = new WebAppContext()
     context.setContextPath("/")
