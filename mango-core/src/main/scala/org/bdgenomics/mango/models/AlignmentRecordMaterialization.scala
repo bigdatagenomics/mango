@@ -26,7 +26,7 @@ import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
@@ -39,10 +39,10 @@ import org.bdgenomics.utils.instrumentation.Metrics
 import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
 import net.liftweb.json.Serialization._
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
+
 import scala.collection.JavaConversions._
 import scala.reflect._
 import scala.collection.JavaConverters._
-
 import scala.reflect.ClassTag
 
 // metric variables
@@ -145,6 +145,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
 object AlignmentRecordMaterialization extends Logging {
 
   val name = "AlignmentRecord"
+  val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordRDD]
 
   /**
    * Loads alignment data from bam, sam and ADAM file formats
@@ -200,21 +201,43 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return RDD of data from the file over specified ReferenceRegion
    */
+
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
     AlignmentTimers.loadADAMData.time {
-      val pred =
-        if (regions.isDefined) {
-          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
-        } else {
-          Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+      if (sc.checkPartitionedParquetFlag(fp)) {
+        val x: AlignmentRecordRDD = datasetCache.get(fp) match {
+          case Some(x) => x.transformDataset(d => regions match {
+            case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
+            case _             => d
+          })
+          case _ => {
+            val loadedDataset = sc.loadPartitionedParquetAlignments(fp)
+            datasetCache(fp) = loadedDataset
+            loadedDataset.transformDataset(d => regions match {
+              case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
+              case _             => d
+            })
+          }
         }
 
-      val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
-        AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
-        AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
-        AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
-      sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
+        return x
+      } else {
+        val pred =
+          if (regions.isDefined) {
+            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+          } else {
+            Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+          }
+
+        val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
+          AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
+          AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
+          AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+
+        sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
+
+      }
     }
   }
 }

@@ -27,8 +27,8 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variant.{ VariantContextRDD }
-import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
+import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD }
+import org.bdgenomics.formats.avro.{ GenotypeAllele, Variant }
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.GenotypeJson
 
@@ -138,6 +138,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 object VariantContextMaterialization {
 
   val name = "VariantContext"
+  val datasetCache = new collection.mutable.HashMap[String, GenotypeRDD]
 
   /**
    * Loads variant data from adam and vcf files into a VariantContextRDD
@@ -189,16 +190,35 @@ object VariantContextMaterialization {
    * @param regions Iterable of  ReferenceRegions to predicate load
    * @return VariantContextRDD
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
-    val pred =
-      if (regions.isDefined) {
-        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-        Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
-      } else {
-        None
-      }
 
-    sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+    if (sc.checkPartitionedParquetFlag(fp)) {
+      val x: GenotypeRDD = datasetCache.get(fp) match {
+        case Some(x) => x.transformDataset(d => regions match {
+          case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
+          case _             => d
+        })
+        case _ => {
+          val loadedDataset = sc.loadPartitionedParquetGenotypes(fp)
+          datasetCache(fp) = loadedDataset
+          loadedDataset.transformDataset(d => regions match {
+            case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
+            case _             => d
+          })
+        }
+      }
+      return x.toVariantContexts()
+
+    } else {
+      val pred =
+        if (regions.isDefined) {
+          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+        } else {
+          None
+        }
+      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
+    }
   }
 
   /**
