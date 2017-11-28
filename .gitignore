@@ -37,6 +37,13 @@ mango-viz/mangoviz/static/*
 
 example-files/metastore_db/*
 
+
+
+
+# resources for browser
+mango-cli/src/main/webapp/resources/node_modules/*
+!mango-cli/src/main/webapp/resources/node_modules/pileup/
+
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/lib/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/main/
 mango-cli/src/main/webapp/resources/node_modules/pileup/dist/test/
