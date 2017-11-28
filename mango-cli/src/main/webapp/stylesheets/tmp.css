@@ -123,16 +123,6 @@ input[type="text"] {
   width: 80px;
   z-index: 999999; }
 
-/*
-.main {
-  position: relative;
-  margin-right: 320px;
-  margin-left: 10px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  border-radius:5px;
-  padding: 20px;
-}*/
 h2.panel {
   text-align: center;
   color: #180E3A;
