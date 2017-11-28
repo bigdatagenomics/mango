@@ -1,0 +1,42 @@
+.variants, .genotypes, .coverage, .features, .pileup {
+    border-bottom: 1px solid grey;
+}
+
+/* remove flex */
+.pileup-root {
+	height: inherit;
+}
+
+/* remove absolute positioning */
+.track-content > div {
+	position: relative;
+}
+
+/* make border height same as content */
+.pileup-root > .track {
+    height: inherit;
+}
+
+/* remove odd sizing for genotypes */
+.pileup-root > .pileup, .pileup-root > .genotypes {
+    flex: none;
+}
+
+root > .genotypes {
+    max-height: 200px;
+}
+
+/* this is is to float Zoom in message for genotypes to match other messages with track label */
+#pileup > div > div.track.genotypes > div.track-content > div > div > .center {
+    margin-left: 100px;
+}
+
+root > .pileup {
+    max-height: 400px;
+}
+
+/* TODO: this should be fixed in pileup, where genotype height is set to 100% */
+#pileup > div > div.track.genotypes > div.track-content > div > div > div {
+    height: inherit !important;
+}
+

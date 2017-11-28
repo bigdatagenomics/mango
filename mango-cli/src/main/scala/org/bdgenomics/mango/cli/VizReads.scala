@@ -278,6 +278,10 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-test", usage = "For debugging purposes.")
   var testMode: Boolean = false
 
+  @Args4jOption(required = false, name = "-debugFrontend", usage = "For debugging purposes. Sets front end in source code to " +
+    "avoid recompilation.")
+  var debugFrontend: Boolean = false
+
   @Args4jOption(required = false, name = "-discover", usage = "This turns on discovery mode on start up.")
   var discoveryMode: Boolean = false
 
@@ -661,7 +665,12 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     }
 
     // start server
-    if (!args.testMode) startServer()
+    if (!args.testMode) {
+      if (args.debugFrontend)
+        startTestServer()
+      else
+        startServer()
+    }
 
   }
 
@@ -796,6 +805,17 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (VizReads.materializer.variantContextExist)
         VizReads.materializer.getVariantContext().get.get(Some(region)).count()
     }
+  }
+
+  def startTestServer() = {
+    VizReads.server = new org.eclipse.jetty.server.Server(args.port)
+    val handlers = new org.eclipse.jetty.server.handler.ContextHandlerCollection()
+    VizReads.server.setHandler(handlers)
+    handlers.addHandler(new org.eclipse.jetty.webapp.WebAppContext("mango-cli/src/main/webapp", "/"))
+    VizReads.server.start()
+    println("View the visualization at: " + args.port)
+    println("Quit at: /quit")
+    VizReads.server.join()
   }
 
   /**
