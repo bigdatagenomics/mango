@@ -53,8 +53,16 @@
     max-height: 400px;
 }
 
+.track.features {
+    height: 35px;
+}
+
 /* TODO: this should be fixed in pileup, where genotype height is set to 100% */
 #pileup > div > div.track.genotypes > div.track-content > div > div > div {
     height: inherit !important;
 }
 
+/* Make loading sign for reads stick to top of container */
+.network-status {
+    height: inherit;
+}
