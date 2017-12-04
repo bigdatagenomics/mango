@@ -205,7 +205,7 @@ object AlignmentRecordMaterialization extends Logging {
       val pred =
         if (regions.isDefined) {
           val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true))
         } else {
           Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
         }
