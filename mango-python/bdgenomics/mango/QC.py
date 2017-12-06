@@ -55,7 +55,7 @@ class CoverageDistribution(object):
         self.collectedCoverage = [f(x) for x in collectedCoverage]
 
 
-    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False):
+    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False, labels = []):
         """
         Plots final distribution values and returns the plotted distribution as a Counter object.
         :param normalize: normalizes readcounts to sum to 1
@@ -64,6 +64,17 @@ class CoverageDistribution(object):
         :param yScaleLog: rescales yaxis to log
         :param testMode: if true, does not generate plot. Used for testing.
         """
+
+
+        # If single RDD, convert to list
+        if (not isinstance(labels, list)):
+            labels = [labels]
+
+        # Make sure there are enough labels for the RDDs.
+        # If not, add them
+        if (len(labels) != len(self.collectedCoverage)):
+            print("No labels set. Assigning labels to dataset...")
+            labels = map(lambda count: "Coverage " + str(count + 1), range(len(self.collectedCoverage)))
 
         coverageDistributions = []
 
@@ -110,7 +121,7 @@ class CoverageDistribution(object):
             for count, coverageDistribution in enumerate(coverageDistributions):
                 coverage = coverageDistribution.keys()
                 counts = coverageDistribution.values()
-                plt.plot(coverage, counts, label = "Coverage " + str(count + 1))
+                plt.plot(coverage, counts, label = labels[count])
             plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
             plt.show()
 
@@ -124,7 +135,7 @@ class AlignmentDistribution(object):
     of various quality control.
     """
 
-    def __init__(self, sc, alignmentRDDs, bin_size=10000000):
+    def __init__(self, sc, alignmentRDD, sample=1.0, bin_size=10000000):
         """
         Initializes a AlignmentDistribution class.
         Computes the alignment distribution of multiple coverageRDDs.
@@ -135,15 +146,18 @@ class AlignmentDistribution(object):
         bin_size = int(bin_size)
         self.bin_size = bin_size
         self.sc = sc
-        # If single RDD, convert to list
-        if (not isinstance(alignmentRDDs, list)):
-            alignmentRDDs = [alignmentRDDs]
 
-        self.plots = len(alignmentRDDs)
-        # Assign each RDD with counter. Reduce and collect.
-        mappedDistributions = [a.toDF().rdd.map(lambda r: ((i, r["start"]/bin_size), Counter(dict([(y,x) for x,y in Cigar(r["cigar"]).items()])))).reduceByKey(lambda x,y: x+y) for i,a in enumerate(alignmentRDDs)]
-        unionRDD = self.sc.union(mappedDistributions)
-        self.alignments = unionRDD.reduceByKey(lambda x,y: x+y).collect()
+        # filter alignments without a position
+        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, 1.0)) \
+            .toDF().rdd.filter(lambda r: r["start"] != None)
+
+        # Assign alignments with counter for contigs. Reduce and collect.
+        mappedDistributions = filteredAlignments \
+            .map(lambda r: ((r["contigName"], r["start"] - r["start"]%bin_size), \
+                            Counter(dict([(y,x) for x,y in Cigar(r["cigar"]).items()])))) \
+            .reduceByKey(lambda x,y: x+y)
+
+        self.alignments = mappedDistributions.collect()
 
     def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plotType="I"):
         """
@@ -153,10 +167,12 @@ class AlignmentDistribution(object):
         :param testMode: if true, does not generate plot. Used for testing.
         :param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
         """
-        alignmentDistributions = Counter()
+        chromosomes = Counter()
 
+
+        # count contig type at each location
         for index, counts in self.alignments:
-            alignmentDistributions[index] += counts[plotType]
+            chromosomes[index] += counts[plotType]
 
         if (not testMode): # For testing: do not run plots if testMode
             title =  'Target Region Alignment for Type %s with bin size %d' % (plotType, self.bin_size)
@@ -170,25 +186,36 @@ class AlignmentDistribution(object):
                 plt.yscale('log')
             plt.title(title)
 
-            keys = sorted(alignmentDistributions.keys())
-            xvalues = range(len(keys))
-            yvalues = [alignmentDistributions[key] for key in keys]
-            divisions = []
-            lastSample = None
-            lastIndex = None
-            for i, xvalue in enumerate(keys):
-                sampleNumber = xvalue[0]
-                if sampleNumber != lastSample:
-                    if lastIndex is not None:
-                        divisions.append((lastIndex,i))
-                    lastIndex = i
-                    lastSample = sampleNumber
-            divisions.append((lastIndex, len(keys)))
-            for start,end in divisions:
-                plt.plot(xvalues[start:end], yvalues[start:end], "o")
+            # get distinct chromosome names for plot
+            keys = sorted(list(set(map(lambda x: x[0][0], self.alignments))))
 
-            avgs = [(x[0] + x[1]) / 2.0 for x in divisions]
-            plt.xticks(avgs, range(1, len(avgs)+1))
+            # offset for max chr
+            offset = 0
+
+            # holds xtick information
+            midPoints = []
+
+            # for all chromosomes
+            for key in keys:
+
+                # filter by chromosome key
+                values = [x for x in chromosomes.items() if x[0][0] == key]
+
+                # get positions
+                positions = map(lambda x: x[0][1] + offset, values)
+
+                # get counts
+                counts = map(lambda x: x[1], values)
+
+                plt.plot(positions, counts, ls='', marker='.')
+
+                # set label for chromosome
+                midPoint = min(positions) + (max(positions) - min(positions))/2
+                midPoints.append(midPoint)
+
+                offset = max(positions)
+
+            plt.xticks(midPoints,  keys, rotation=-90, size=8.5)
             plt.show()
 
-        return alignmentDistributions
+        return chromosomes

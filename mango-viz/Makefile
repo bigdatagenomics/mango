@@ -85,6 +85,10 @@ prepare:
 
 	# setup pileup
 	# TODO: once pileup is updated on npm, you can change this
+	if [ -d "pileup.js" ]; then \
+			echo "pileup.js exists. Removing and rebuilding.."; \
+			rm -rf pileup.js; \
+	fi
 	git clone https://github.com/hammerlab/pileup.js.git
 
 	cd pileup.js; \

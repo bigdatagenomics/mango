@@ -119,6 +119,11 @@ prepare:
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install cigar==0.1.3
 	$(pip) install matplotlib==2.0.2
+
+	if [ -d "adam" ]; then \
+			echo "ADAM exists. Removing and rebuilding.."; \
+			rm -rf adam; \
+	fi
 	@git clone https://github.com/bigdatagenomics/adam
 	pushd adam \
 		&& pushd adam-python \
