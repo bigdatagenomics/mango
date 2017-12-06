@@ -124,7 +124,8 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
     AlignmentTimers.collect.time {
       AlignmentTimers.getAlignmentData.time {
-        data.mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
+        data.filter(r => Option(r._2.mapq).getOrElse(1).asInstanceOf[Int] > 0) // filter mapq 0 reads out 
+          .mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
           .reduceByKeyLocally(_ ++ _).toMap
       }
     }
@@ -207,7 +208,7 @@ object AlignmentRecordMaterialization extends Logging {
           val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
           Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
         } else {
-          Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+          Some((BooleanColumn("readMapped") === true))
         }
 
       val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,

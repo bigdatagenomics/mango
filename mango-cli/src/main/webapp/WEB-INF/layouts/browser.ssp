@@ -144,7 +144,7 @@
                     readGroupId: '${s._1}',
                     killChr: false
                     }),
-                    name: 'Alignment'
+                    name: '${s._1}'
                     });
                 #end
             #end

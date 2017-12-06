@@ -438,12 +438,6 @@
             Spark 2.2.0 release notes.
         -->
         <version>1.8.1</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.parquet</groupId>
