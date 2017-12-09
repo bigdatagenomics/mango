@@ -187,9 +187,17 @@ object AlignmentRecordMaterialization extends Logging {
           .flatMap(r => {
             LazyMaterialization.getContigPredicate(r)
           }).filter(r => fileSd.containsRefName(r.referenceName))
-        sc.loadIndexedBam(fp, predicateRegions)
+        try {
+          sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
+        } catch {
+          case e: java.lang.IllegalArgumentException => {
+            log.warn(e.getMessage)
+            log.warn("No bam index detected. File loading will be slow...")
+            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(regions.get)
+          }
+        }
       } else {
-        sc.loadBam(fp)
+        sc.loadBam(fp, stringency = ValidationStringency.SILENT)
       }
     }
   }
