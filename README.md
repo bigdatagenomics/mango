@@ -11,6 +11,11 @@ mango uses [IntervalRDDs](https://github.com/bigdatagenomics/utils/tree/master/u
 ![Homepage](https://raw.github.com/bigdatagenomics/mango/master/images/overall.png)
 
 ![Reads](https://raw.github.com/bigdatagenomics/mango/master/images/browser.png)
+
+# Documentation
+
+Mango documentation is hosted at [readthedocs](http://bdg-mango.readthedocs.io/en/latest/).
+
 # Getting Started
 
 ## Installation
