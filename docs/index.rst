@@ -31,6 +31,12 @@ variety of platforms.
 
    docker/docker-examples
 
+.. toctree::
+   :caption: Cloud
+   :maxdepth: 2
+
+   cloud/google-cloud
+
 * :ref:`genindex`
 * :ref:`search`
 
