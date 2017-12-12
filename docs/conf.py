@@ -160,7 +160,7 @@ autodoc_member_order = 'bysource'
 html_theme = 'alabaster'
 html_theme_options = {
     "github_banner": True,
-    "github_user": "bdgenomics",
+    "github_user": "bigdatagenomics",
     "github_repo": "workflows",
     "caption_font_size": "24px"
 }
