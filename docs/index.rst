@@ -1,5 +1,5 @@
 Mango User Guide
-===============
+================
 
 Introduction
 ============
@@ -9,7 +9,7 @@ Spark <https://spark.apache.org>`__.
 
 
 The Mango/Big Data Genomics Ecosystem
-------------------------------------
+-------------------------------------
 
 ADAM builds upon the open source `Apache
 Spark <https://spark.apache.org>`__, `Apache
