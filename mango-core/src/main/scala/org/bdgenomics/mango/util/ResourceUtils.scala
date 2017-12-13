@@ -62,6 +62,16 @@ object ResourceUtils {
   }
 
   /**
+   * Determines if file is in s3
+   *
+   * @param filePath filepath
+   * @return Boolean whether file is s3 format
+   */
+  def isS3(filePath: String): Boolean = {
+    filePath.startsWith("s3")
+  }
+
+  /**
    * Returns whether a file is local or remote, and throws an exception if it can't find the file
    */
   def isLocal(filePath: String, sc: SparkContext): Boolean = {
