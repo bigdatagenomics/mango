@@ -11,7 +11,7 @@ Download the necessary initialization scripts:
 
 .. code:: bash
 
-    wget https://gist.githubusercontent.com/Georgehe4/6bb1c142a9f68f30f38d80cd9407120a/raw/9b903e3b8746ee8f25911fe98925b53e9777002f/mango_install.sh
+    wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/scripts/google_cloud_mango_install.sh
 
 Initialize a Google Cloud Storage Bucket
 
@@ -23,8 +23,7 @@ Copy the installation scripts to be used by cloud dataproc
 
 .. code:: bash
 
-    gsutil cp mango_install.sh gs://mango-initialization-bucket
-
+    gsutil cp google_cloud_mango_install.sh gs://mango-initialization-bucket
 
 
 Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the loaded installation script
@@ -40,13 +39,33 @@ Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the lo
         --master-boot-disk-size=100GB \
         --worker-boot-disk-size=50GB \
         --initialization-actions \
-            gs://mango-initialization-bucket/mango_install.sh
+            gs://mango-initialization-bucket/google_cloud_mango_install.sh
 
 
-Once the above steps are completed, simply ssh into the master node to run Mango.
+After the above steps are completed, ssh into the master node.
 
 .. code:: bash
     
     gcloud compute ssh <cluster-name>-m
 
+Running Mango on a Dataproc Cluster
+-----------------------------------
 
+Before mango can run, it is recommended to stage datasets into hdfs if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
+
+.. code:: bash
+
+    hdfs dfs -put /<local machime path> /<hdfs path>
+
+An example docker startup script is available in the Mango `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/scripts/google_cloud_docker_run.sh>`__ for running mango notebook.
+
+Once the notebook is running, connect to Mango by setting up a tunnel to your local computer via the exposed port in the master node:
+
+.. code:: bash
+    
+    gcloud compute ssh <cluster-name>-m -- -N -L localhost:<local_port>:localhost:8888
+
+Once in the notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS.
+
+
+More information on using the dataproc cluster's Spark interface is available through `Google Cloud documentation <https://cloud.google.com/dataproc/docs/concepts/accessing/cluster-web-interfaces>`__

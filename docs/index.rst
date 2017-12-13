@@ -32,7 +32,7 @@ variety of platforms.
    docker/docker-examples
 
 .. toctree::
-   :caption: Cloud
+   :caption: Google Cloud
    :maxdepth: 2
 
    cloud/google-cloud
