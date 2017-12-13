@@ -188,9 +188,16 @@ object AlignmentRecordMaterialization extends Logging {
             LazyMaterialization.getContigPredicate(r)
           }).filter(r => fileSd.containsRefName(r.referenceName))
         try {
-          sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
+          val rdd = sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
+
+          // hack for s3, where exception will not be thrown if index file does not exist
+          // Trigger the job so that we can catch an exception and loadBam if needed
+          if (ResourceUtils.isS3(fp))
+            rdd.rdd.first
+
+          rdd
         } catch {
-          case e: java.lang.IllegalArgumentException => {
+          case e: Exception => {
             log.warn(e.getMessage)
             log.warn("No bam index detected. File loading will be slow...")
             sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(regions.get)
