@@ -18,6 +18,7 @@
 package org.bdgenomics.mango.core.util
 
 import java.io._
+import java.net.HttpURLConnection
 
 import org.apache.hadoop.fs.{ FileSystem, Path }
 import org.apache.parquet.filter2.dsl.Dsl._
@@ -59,6 +60,19 @@ object ResourceUtils {
 
     //Print Maximum available memory
     println("Max Memory:" + runtime.maxMemory() / mb);
+  }
+
+  /**
+   * Checks URL to see if file exists
+   * @param urlString http or ftp URL
+   * @return status code whether file exists. 200 -> OK, 404 -> missing
+   */
+  def getResponseCode(urlString: String): Int = {
+    val u = new java.net.URL(urlString)
+    val huc = u.openConnection().asInstanceOf[HttpURLConnection]
+    huc.setRequestMethod("GET")
+    huc.connect()
+    return huc.getResponseCode()
   }
 
   /**

@@ -67,8 +67,9 @@ object AlignmentTimers extends Metrics {
 class AlignmentRecordMaterialization(@transient sc: SparkContext,
                                      files: List[String],
                                      sd: SequenceDictionary,
+                                     repartition: Boolean = false,
                                      prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[AlignmentRecord, GAReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, prefetchSize)
+    extends LazyMaterialization[AlignmentRecord, GAReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable with Logging {
 
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => AlignmentRecordMaterialization.load(sc, file, regions).rdd

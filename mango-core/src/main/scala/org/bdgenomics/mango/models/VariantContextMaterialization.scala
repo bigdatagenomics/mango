@@ -39,8 +39,9 @@ import org.bdgenomics.mango.layout.GenotypeJson
 class VariantContextMaterialization(@transient sc: SparkContext,
                                     files: List[String],
                                     sd: SequenceDictionary,
+                                    repartition: Boolean = false,
                                     prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[GenotypeJson, GenotypeJson](VariantContextMaterialization.name, sc, files, sd, prefetchSize)
+    extends LazyMaterialization[GenotypeJson, GenotypeJson](VariantContextMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable {
 
   // placeholder used for ref/alt positions to display in browser

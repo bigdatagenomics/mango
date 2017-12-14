@@ -76,7 +76,7 @@ class LazyMaterializationSuite extends MangoFunSuite {
  */
 class LazyDummy(@transient sc: SparkContext,
                 files: List[String],
-                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion, ReferenceRegion]("TestRDD", sc, files, sd, Some(100L)) with Serializable {
+                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion, ReferenceRegion]("TestRDD", sc, files, sd, false, Some(100L)) with Serializable {
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 

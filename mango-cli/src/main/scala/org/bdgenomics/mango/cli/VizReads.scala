@@ -269,6 +269,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-show_genotypes", usage = "Shows genotypes if available in variant files.")
   var showGenotypes: Boolean = false
 
+  @Args4jOption(required = false, name = "-repartition", usage = "Repartitions data to default number of partitions.")
+  var repartition: Boolean = false
+
   @Args4jOption(required = false, name = "-features", usage = "The feature files to view, separated by commas (,)")
   var featurePaths: String = null
 
@@ -696,7 +699,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (readsPaths.nonEmpty) {
         object readsWait
         VizReads.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
-        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, Some(prefetch)))
+        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, args.repartition, Some(prefetch)))
       } else None
     } else None
   }
@@ -711,7 +714,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (coveragePaths.nonEmpty) {
         object coverageWait
         VizReads.syncObject += (CoverageMaterialization.name -> coverageWait)
-        Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, Some(prefetch)))
+        Some(new CoverageMaterialization(sc, coveragePaths, VizReads.globalDict, args.repartition, Some(prefetch)))
       } else None
     } else None
   }
@@ -729,7 +732,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (variantsPaths.nonEmpty) {
         object variantsWait
         VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
-        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, Some(prefetch)))
+        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, args.repartition, Some(prefetch)))
       } else None
     } else None
   }
@@ -744,7 +747,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (featurePaths.nonEmpty) {
         object featuresWait
         VizReads.syncObject += (FeatureMaterialization.name -> featuresWait)
-        Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, Some(prefetch)))
+        Some(new FeatureMaterialization(sc, featurePaths, VizReads.globalDict, args.repartition, Some(prefetch)))
       } else None
     } else None
   }

@@ -11,7 +11,7 @@ Spark <https://spark.apache.org>`__.
 The Mango/Big Data Genomics Ecosystem
 -------------------------------------
 
-ADAM builds upon the open source `Apache
+Mango builds upon the open source `Apache
 Spark <https://spark.apache.org>`__, `Apache
 Avro <https://avro.apache.org>`__, and `Apache
 Parquet <https://parquet.apache.org>`__ projects. Additionally, Mango can
@@ -31,12 +31,18 @@ variety of platforms.
 
    docker/docker-examples
 
+.. toctree::
+   :caption: Supported File Types
+   :maxdepth: 2
+
+   files/file-support
+
 * :ref:`genindex`
 * :ref:`search`
 
 References
 ==========
-  
+
 .. raw:: html
 
    <div id="references" class="references">
@@ -149,4 +155,4 @@ Association.
 
 .. raw:: html
 
-   <div id="ref-zimmermann80">
+   </div>
