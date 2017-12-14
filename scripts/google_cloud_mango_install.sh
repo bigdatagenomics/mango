@@ -38,6 +38,8 @@ if [[ "${ROLE}" == 'Master' ]]; then
     fi
     ./dataproc-initialization-actions/jupyter/internal/setup-jupyter-kernel.sh
     ./dataproc-initialization-actions/jupyter/internal/launch-jupyter-kernel.sh
+    # Install docker
+    wget -O - -q 'https://github.com/bigdatagenomics/mango/blob/master/scripts/google_cloud_docker_install.sh' | sudo bash
 fi
 echo "Completed installing Jupyter!"
 

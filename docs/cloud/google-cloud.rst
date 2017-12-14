@@ -57,7 +57,7 @@ Before mango can run, it is recommended to stage datasets into hdfs if you are t
 
     hdfs dfs -put /<local machime path> /<hdfs path>
 
-An example docker startup script is available in the Mango `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/scripts/google_cloud_docker_run.sh>`__ for running mango notebook.
+An example docker startup script is available in the Mango `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/scripts/google_cloud_docker_run.sh>`__ for running mango notebook [run with root permissions to work with docker].
 
 Once the notebook is running, connect to Mango by setting up a tunnel to your local computer via the exposed port in the master node:
 
