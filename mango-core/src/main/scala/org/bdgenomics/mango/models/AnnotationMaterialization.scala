@@ -24,6 +24,12 @@ import org.bdgenomics.adam.util.ReferenceFile
 import org.bdgenomics.mango.core.util.VizUtils
 import org.bdgenomics.utils.misc.Logging
 
+/**
+ * Handles loading and tracking of data from persistent storage into memory for reference data.
+ *
+ * @param sc SparkContext
+ * @param referencePath the file which contains the reference file
+ */
 class AnnotationMaterialization(@transient sc: SparkContext,
                                 referencePath: String) extends Serializable with Logging {
 
@@ -37,6 +43,12 @@ class AnnotationMaterialization(@transient sc: SparkContext,
 
   def getSequenceDictionary: SequenceDictionary = reference.sequences
 
+  /**
+   * Extracts the Reference String from ReferenceRegion
+   *
+   * @param region ReferenceRegion
+   * @return extracted Reference String
+   */
   def getReferenceString(region: ReferenceRegion): String = {
     try {
       val parsedRegion = ReferenceRegion(region.referenceName, region.start,
