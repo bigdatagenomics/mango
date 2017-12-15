@@ -35,8 +35,9 @@ import java.io.{ StringWriter, PrintWriter }
 class FeatureMaterialization(@transient sc: SparkContext,
                              files: List[String],
                              sd: SequenceDictionary,
+                             repartition: Boolean = false,
                              prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[Feature, BedRowJson](FeatureMaterialization.name, sc, files, sd, prefetchSize)
+    extends LazyMaterialization[Feature, BedRowJson](FeatureMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable with Logging {
 
   /**

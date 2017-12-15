@@ -42,8 +42,9 @@ import org.bdgenomics.utils.misc.Logging
 class CoverageMaterialization(@transient sc: SparkContext,
                               files: List[String],
                               sd: SequenceDictionary,
+                              repartition: Boolean = false,
                               prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[Coverage, PositionCount](CoverageMaterialization.name, sc, files, sd, prefetchSize)
+    extends LazyMaterialization[Coverage, PositionCount](CoverageMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable with Logging {
 
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => CoverageMaterialization.load(sc, file, regions).rdd

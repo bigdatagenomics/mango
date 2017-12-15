@@ -161,7 +161,7 @@ html_theme = 'alabaster'
 html_theme_options = {
     "github_banner": True,
     "github_user": "bigdatagenomics",
-    "github_repo": "workflows",
+    "github_repo": "mango",
     "caption_font_size": "24px"
 }
 
