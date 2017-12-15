@@ -28,7 +28,7 @@ import org.bdgenomics.utils.misc.Logging
  * Handles loading and tracking of data from persistent storage into memory for reference data.
  *
  * @param sc SparkContext
- * @param referencePath the file which contains the reference file
+ * @param referencePath the file which contains the reference data
  */
 class AnnotationMaterialization(@transient sc: SparkContext,
                                 referencePath: String) extends Serializable with Logging {
