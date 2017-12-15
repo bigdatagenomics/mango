@@ -34,3 +34,4 @@ docker run \
        quay.io/ucsc_cgl/mango:latest \
        --master yarn\
        -- --ip=0.0.0.0 --allow-root
+
