@@ -32,6 +32,16 @@ import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
 import java.io.{ StringWriter, PrintWriter }
 
+/**
+ * Handles loading and tracking of data from persistent storage into memory for Feature data.
+ *
+ * @param sc SparkContext
+ * @param files list files to materialize
+ * @param sd the sequence dictionary associated with the file records
+ * @param repartition whether to repartition data to the default number of partitions
+ * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
+ * @see LazyMaterialization.scala
+ */
 class FeatureMaterialization(@transient sc: SparkContext,
                              files: List[String],
                              sd: SequenceDictionary,
@@ -62,7 +72,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
     f
   }
   /**
-   * Strinifies tuples of (sampleId, feature) to json
+   * Stringifies tuples of (sampleId, feature) to json
    *
    * @param data RDD (sampleId, Feature)
    * @return Map of (key, json) for the ReferenceRegion specified

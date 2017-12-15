@@ -48,19 +48,21 @@ object LazyMaterializationTimers extends Metrics {
  * Tracks regions of data already in memory and loads regions as needed.
  *
  * @param name Name of Materialization structure. Used for Spark UI.
- * @param prefetch prefetch size to lazily grab data. Defaults to 1000000
+ * @param sc SparkContext
+ * @param files list files to materialize
+ * @param sd the sequence dictionary associated with the file records
+ * @param repartition whether to repartition data to default number of partitions
+ * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
  */
 abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
                                                              @transient sc: SparkContext,
                                                              files: List[String],
                                                              sd: SequenceDictionary,
                                                              repartition: Boolean,
-                                                             prefetch: Option[Long] = None) extends Serializable with Logging {
+                                                             prefetchSize: Option[Long] = None) extends Serializable with Logging {
   @transient implicit val formats = net.liftweb.json.DefaultFormats
 
-  val prefetchSize = prefetch.getOrElse(sd.records.map(_.length).max)
-
-  val bookkeep = new Bookkeep(prefetchSize)
+  val bookkeep = new Bookkeep(prefetchSize.getOrElse(sd.records.map(_.length).max))
   var memoryFraction = 0.85 // default caching fraction
 
   def setMemoryFraction(fraction: Double) =

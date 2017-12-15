@@ -57,12 +57,14 @@ object AlignmentTimers extends Metrics {
 }
 
 /**
+ * Handles loading and tracking of data from persistent storage into memory for AlignmentRecord data.
  *
  * @param sc SparkContext
- * @param sd Sequence Dictionay calculated from reference
- * extends LazyMaterialization and KTiles
- * @see LazyMaterialization
- * @see KTiles
+ * @param files list files to materialize
+ * @param sd the sequence dictionary associated with the file records
+ * @param repartition whether to repartition data to the default number of partitions
+ * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
+ * @see LazyMaterialization.scala
  */
 class AlignmentRecordMaterialization(@transient sc: SparkContext,
                                      files: List[String],

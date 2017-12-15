@@ -32,12 +32,14 @@ import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
 
 /**
+ * Handles loading and tracking of data from persistent storage into memory for Coverage data.
  *
  * @param sc SparkContext
- * @param sd Sequence Dictionay calculated from reference
- * extends LazyMaterialization and KTiles
- * @see LazyMaterialization
- * @see KTiles
+ * @param files list files to materialize
+ * @param sd the sequence dictionary associated with the file records
+ * @param repartition whether to repartition data to the default number of partitions
+ * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
+ * @see LazyMaterialization.scala
  */
 class CoverageMaterialization(@transient sc: SparkContext,
                               files: List[String],
