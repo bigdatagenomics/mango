@@ -843,6 +843,10 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     VizReads.server.setHandler(handlers)
     handlers.addHandler(context)
     VizReads.server.start()
+
+    // warm up reads data by doing small query to force one-time dataset partition discovery scan
+    VizReads.readsCache = VizReads.materializer.getReads().get.getJson(ReferenceRegion("chr1", 20000000L, 20000100L))
+
     println("View the visualization at: " + args.port)
     println("Quit at: /quit")
     VizReads.server.join()
