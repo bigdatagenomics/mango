@@ -51,6 +51,7 @@
 
 .track.pileup {
     max-height: 400px;
+    min-height: 65px !important; /* leave room for label and gear icon */
 }
 
 .track.features {
