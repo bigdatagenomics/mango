@@ -297,6 +297,9 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Args4jOption(required = false, name = "-preload", usage = "Chromosomes to prefetch, separated by commas (,).")
   var preload: String = null
 
+  @Args4jOption(required = false, name = "-parquetIsBinned", usage = "This turns on binned parquet pre-fetch warmup step")
+  var parquetIsBinned: Boolean = false
+
 }
 
 class VizServlet extends ScalatraServlet {
@@ -667,6 +670,11 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       VizReads.genes = Some(args.genePath)
     }
 
+    // initialize binned parquet by doing a small query to force warm-up
+    if (args.parquetIsBinned) {
+      VizReads.readsCache = VizReads.materializer.getReads().get.getJson(ReferenceRegion(VizReads.materializer.getReads().get.getDictionary.records.head.name, 2L, 100L))
+    }
+
     // start server
     if (!args.testMode) {
       if (args.debugFrontend)
@@ -843,9 +851,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     VizReads.server.setHandler(handlers)
     handlers.addHandler(context)
     VizReads.server.start()
-
-    // warm up reads data by doing small query to force one-time dataset partition discovery scan
-    VizReads.readsCache = VizReads.materializer.getReads().get.getJson(ReferenceRegion("chr1", 20000000L, 20000100L))
 
     println("View the visualization at: " + args.port)
     println("Quit at: /quit")
