@@ -147,6 +147,9 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
 object AlignmentRecordMaterialization extends Logging {
 
   val name = "AlignmentRecord"
+
+  // caches the first steps of loading binned dataset from files to avoid repeating the
+  // several minutes long initalization of these binned dataset
   val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordRDD]
 
   /**
