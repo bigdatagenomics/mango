@@ -81,6 +81,7 @@ fi
 
 export PYSPARK_DRIVER_PYTHON=jupyter
 export PYSPARK_DRIVER_PYTHON_OPTS="notebook $NOTEBOOK_ARGS"
+export GOOGLE_CLOUD_NIO_JAR="${SCRIPT_DIR}/bin/google-cloud-nio-0.22.0-alpha-shaded.jar"
 
 PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
 export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
@@ -88,6 +89,6 @@ export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PY
 ${PYSPARK} \
   --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
-  --jars ${MANGO_CLI_JAR} \
+  --jars ${MANGO_CLI_JAR},${GOOGLE_CLOUD_NIO_JAR} \
   --driver-class-path ${MANGO_CLI_JAR} \
   ${SPARK_ARGS}
