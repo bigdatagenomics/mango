@@ -45,33 +45,33 @@ Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the be
 After the above steps are completed, ssh into the master node.
 
 .. code:: bash
-    
+
     gcloud compute ssh <cluster-name>-m
 
 Running Mango Notebook on a Dataproc Cluster
 --------------------------------------------
 
-Before mango can run, it is recommended to stage datasets into hdfs if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
+Before mango can run, it is recommended to stage datasets into HDFS if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
 
 .. code:: bash
 
-    hdfs dfs -put /<local machime path> /<hdfs path>
+    hdfs dfs -put /<local-machime-path> /<hdfs-path>
 
 An example docker startup script is available in the Mango gce `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/bin/gce>`__ for running `mango notebook <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-notebook.sh>`__, or for running `mango browser <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-browser.sh>`__ [root permissions may be necessary for docker].
 
 .. code:: bash
 
-    wget 'https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-notebook.sh' 
+    wget 'https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-notebook.sh'
 
     bash run-notebook.sh --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
 
 Once the notebook is running, connect to Mango by setting up a tunnel to your local computer via the exposed port in the master node:
 
 .. code:: bash
-    
-    gcloud compute ssh <cluster-name>-m -- -N -L localhost:<local_port>:localhost:8888
 
-You can navigate to notebook through your local browser by pointing it towards http://localhost:<local_port>/. Once in the browser notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS. Public datasets can be accessed by referencing google cloud storage at gs://genomics-public-data/.
+    gcloud compute ssh <cluster-name>-m -- -N -L localhost:<local-port>:localhost:8888
+
+You can navigate to notebook through your local browser by pointing it towards http://localhost:<local-port>/. Once in the browser notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS. Public datasets can be accessed by referencing google cloud storage at gs://genomics-public-data/.
 
 More information about available public datasets on Google cloud can be found `online <https://cloud.google.com/genomics/v1/public-data>`__
 

@@ -88,6 +88,5 @@ class GenomicVizRDDTest(SparkTestCase):
         featureFile = self.exampleFile("chr17.582500-594500.bed")
 
         # this file is converted from ipynb in make test
-        testFile = self.exampleFile("mango-viz.py")
+        testFile = self.exampleFile("notebooks/mango-viz.py")
         execfile(testFile)
-

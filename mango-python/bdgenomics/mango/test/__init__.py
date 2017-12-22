@@ -64,7 +64,7 @@ class SparkTestCase(unittest.TestCase):
         class_name = self.__class__.__name__
         self.sc = SparkContext('local[4]', class_name)
 
-        
+
     def tearDown(self):
         self.sc.stop()
         sys.path = self._old_sys_path

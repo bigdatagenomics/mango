@@ -43,7 +43,7 @@ To access s3a files when running on AWS, you need the net.fnothaft:jsr203-s3a pa
 
     ./bin/mango-submit \
             --packages org.apache.parquet:parquet-avro:1.8.2 \
-            --packages net.fnothaft:jsr203-s3a:0.0.1 \
+            --packages net.fnothaft:jsr203-s3a:0.0.2 \
             --conf spark.hadoop.hadoopbam.bam.enable-bai-splitter=true \
             -- hg19.2bit \
             -reads s3a://1000genomes/phase1/data/NA12878/exome_alignment/NA12878.mapped.illumina.mosaik.CEU.exome.20110411.bam

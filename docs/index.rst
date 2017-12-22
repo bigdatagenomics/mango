@@ -26,10 +26,16 @@ variety of platforms.
    installation/example
 
 .. toctree::
-   :caption: Docker
+   :caption: Running with Docker
    :maxdepth: 2
 
    docker/docker-examples
+
+.. toctree::
+    :caption: Supported File Types
+    :maxdepth: 2
+
+    files/file-support
 
 .. toctree::
    :caption: Google Cloud
@@ -38,10 +44,12 @@ variety of platforms.
    cloud/google-cloud
 
 .. toctree::
-   :caption: Supported File Types
-   :maxdepth: 2
+    :caption: Amazon EMR
+    :maxdepth: 2
 
-   files/file-support
+    cloud/emr
+
+
 
 * :ref:`genindex`
 * :ref:`search`
