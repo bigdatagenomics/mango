@@ -25,7 +25,6 @@
     <java.version>1.8</java.version>
     <jetty.version>9.2.17.v20160517</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
-    <gcloud-nio.version>0.22.0-alpha</gcloud-nio.version>
     <hadoop.version>2.7.3</hadoop.version>
     <hadoop-bam.version>7.8.0</hadoop-bam.version>
     <htsjdk.version>2.9.1</htsjdk.version>
@@ -614,11 +613,6 @@
         <groupId>org.xerial.snappy</groupId>
         <artifactId>snappy-java</artifactId>
         <version>${snappy.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.cloud</groupId>
-        <artifactId>google-cloud-nio</artifactId>
-        <version>${gcloud-nio.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.mango</groupId>
