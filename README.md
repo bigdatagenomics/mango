@@ -21,7 +21,7 @@ Mango documentation is hosted at [readthedocs](http://bdg-mango.readthedocs.io/e
 ## Installation
 You will need to have [Maven](http://maven.apache.org/) installed in order to build mango.
 
-> **Note:** The default configuration is for Hadoop 2.6.0. If building against a different
+> **Note:** The default configuration is for Hadoop 2.7.3. If building against a different
 > version of Hadoop, please edit the build configuration in the `<properties>` section of
 > the `pom.xml` file.
 
@@ -77,5 +77,3 @@ Mango can also be run through the notebook form. Note: scala 2.11 and Spark 2.X.
 ./bin/mango-notebook
 
 In the jupyter UI, navigate to example-files/mango-python.ipynb.
-
-
