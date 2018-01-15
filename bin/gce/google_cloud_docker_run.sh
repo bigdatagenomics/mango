@@ -1,3 +1,32 @@
+set -ex
+
+# Split args into Spark and notebook args
+DD=False  # DD is "double dash"
+ENTRYPOINT=TRUE
+PRE_DD=()
+POST_DD=()
+
+# by default, runs mango browser (mango-submit)
+# to override to mango-notebook,
+# run docker with --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
+ENTRYPOINT="--entrypoint=/opt/cgl-docker-lib/mango/bin/mango-submit"
+for ARG in "$@"; do
+  shift
+  if [[ $ARG == "--" ]]; then
+    DD=True
+    POST_DD=( "$@" )
+    break
+  fi
+  if [[ $ARG == '--entrypoint='* ]]; then
+       ENTRYPOINT=${ARG#(--entrypoint=): }
+  else
+       PRE_DD+=("$ARG")
+  fi
+done
+
+PRE_DD_ARGS="${PRE_DD[@]}"
+POST_DD_ARGS="${POST_DD[@]}"
+
 export SPARK_HOME=/usr/lib/spark
 export SPARK_CONF_DIR=/usr/lib/spark/conf
 export HADOOP_HOME=/usr/lib/hadoop
@@ -29,9 +58,11 @@ docker run \
        -e HIVE_DIR=${HIVE_DIR} \
        -e HIVE_CONF_DIR=${HIVE_CONF_DIR} \
        -e SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*" \
-       --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook \
+       $ENTRYPOINT \
        -p 8888:8888 \
        quay.io/ucsc_cgl/mango:latest \
-       --master yarn\
-       -- --ip=0.0.0.0 --allow-root
+       --master yarn \
+       $PRE_DD_ARGS \
+       -- --ip=0.0.0.0 --allow-root \
+       $POST_DD_ARGS
 
