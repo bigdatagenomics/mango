@@ -52,3 +52,5 @@ To run Mango notebook on Linux in docker run:
 
 
 Note: To run Mango notebook on OS X, include the ``-p 8080:8080`` Docker parameter in place of ``--net=host``.
+
+To view examples, navigate to /opt/cgl-docker-lib/mango/example-files. Here, you can access numberous ipython notebook examples.
