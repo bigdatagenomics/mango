@@ -25,6 +25,12 @@ Copy the installation scripts to be used by cloud dataproc
 
     gsutil cp google_cloud_mango_install.sh gs://mango-initialization-bucket
 
+While uploading to GCS, we will upload some of the necessary scripts to run mango on google cloud as well:
+
+.. code:: bash
+
+    curl -L https://oss.sonatype.org/content/repositories/releases/com/google/cloud/google-cloud-nio/0.22.0-alpha/google-cloud-nio-0.22.0-alpha-shaded.jar  | gsutil cp - gs://mango-initialization-bucket/google-cloud-nio-0.22.0-alpha-shaded.jar
+
 
 Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the loaded installation script
 
@@ -32,12 +38,12 @@ Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the lo
 
     gcloud dataproc clusters create <cluster-name> \
         --project <project_id> \
-        --bucket <bucket_name> \
+        --bucket <optional_bucket_name> \
         --metadata MINICONDA_VARIANT=2 \
-        --master-machine-type=n1-standard-2 \
+        --master-machine-type=n1-standard-1 \
         --worker-machine-type=n1-standard-1 \
-        --master-boot-disk-size=100GB \
-        --worker-boot-disk-size=50GB \
+        --master-boot-disk-size=50GB \
+        --worker-boot-disk-size=10GB \
         --initialization-actions \
             gs://mango-initialization-bucket/google_cloud_mango_install.sh
 
@@ -61,7 +67,9 @@ An example docker startup script is available in the Mango `scripts directory <h
 
 .. code:: bash
 
-    wget -O - -q 'https://github.com/bigdatagenomics/mango/blob/master/bin/gce/google_cloud_docker_run.sh' | sudo bash
+    wget 'https://github.com/bigdatagenomics/mango/blob/master/bin/gce/google_cloud_docker_run.sh' 
+
+    bash google_cloud_docker_run.sh --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
 
 Once the notebook is running, connect to Mango by setting up a tunnel to your local computer via the exposed port in the master node:
 

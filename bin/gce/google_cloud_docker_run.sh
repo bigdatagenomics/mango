@@ -40,7 +40,7 @@ export CONDA_DIR=/opt/conda
 export PYSPARK_DRIVER_PYTHON=/opt/conda/bin/jupyter
 export HIVE_CONF_DIR=$HIVE_DIR/conf
 
-docker run \
+sudo docker run \
        --net=host \
        -v ${SPARK_HOME}:${SPARK_HOME} \
        -v ${SPARK_CONF_DIR}:${SPARK_CONF_DIR} \
@@ -62,6 +62,7 @@ docker run \
        -p 8888:8888 \
        quay.io/ucsc_cgl/mango:latest \
        --master yarn \
+       --jars gs://mango-initialization-bucket/google-cloud-nio-0.22.0-alpha-shaded.jar \
        $PRE_DD_ARGS \
        -- --ip=0.0.0.0 --allow-root \
        $POST_DD_ARGS
