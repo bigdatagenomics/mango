@@ -128,7 +128,7 @@
                         tracks.push({
                         viz: pileup.viz.pileupcoverage(),
                         isReference: false,
-                        data: pileup.formats.ga4gh({
+                        data: pileup.formats.GAReadAlignment({
                         endpoint: '/reads',
                         readGroupId: '${s._1}',
                         killChr: false
@@ -137,9 +137,11 @@
                         });
                     #end
                     tracks.push({
-                    viz: pileup.viz.pileup(),
+                    viz: pileup.viz.pileup({
+                        hideAlignments: true
+                    }),
                     isReference: false,
-                    data: pileup.formats.ga4gh({
+                    data: pileup.formats.GAReadAlignment({
                     endpoint: '/reads',
                     readGroupId: '${s._1}',
                     killChr: false

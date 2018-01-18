@@ -32,8 +32,14 @@ import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.GenotypeJson
 
-/*
+/**
  * Handles loading and tracking of data from persistent storage into memory for Variant data.
+ *
+ * @param sc SparkContext
+ * @param files list files to materialize
+ * @param sd the sequence dictionary associated with the file records
+ * @param repartition whether to repartition data to the default number of partitions
+ * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
  * @see LazyMaterialization.scala
  */
 class VariantContextMaterialization(@transient sc: SparkContext,
