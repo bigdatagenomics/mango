@@ -37,33 +37,11 @@ then
     exit 1
 fi
 
-
-# this next line is supposed to fail
-set +e
-
-echo "Rewriting POM.xml files to Scala 2.10 and Spark 1 should error..."
-./scripts/move_to_spark_1.sh
-if [[ $? == 0 ]];
-then
-    echo "Running move_to_spark_1.sh when POMs are set up for Spark 1 should fail, but error code was 0 (success)."
-    exit 1
-fi
-
-./scripts/move_to_scala_2.10.sh
-if [[ $? == 0 ]];
-then
-    echo "Running move_to_scala_2.10.sh when POMs are set up for Scala 2.10 should fail, but error code was 0 (success)."
-    exit 1
-fi
-
 set -e
 
 # are we testing for spark 2.1.0? if so, we need to rewrite our poms first
 if [ ${SPARK_VERSION} == 2.1.0 ];
 then
-
-    echo "Rewriting POM.xml files for Spark 2."
-    ./scripts/move_to_spark_2.sh
 
     # shouldn't be able to move to spark 2 twice
     set +e
@@ -79,9 +57,6 @@ fi
 # are we testing for scala 2.11? if so, we need to rewrite our poms to 2.11 first
 if [ ${SCALAVER} == 2.11 ];
 then
-    echo "Rewriting POM.xml files for Scala 2.11."
-    ./scripts/move_to_scala_2.11.sh
-
     # shouldn't be able to move to scala 2.11 twice
     set +e
     ./scripts/move_to_scala_2.11.sh
@@ -133,19 +108,6 @@ mvn clean package -DskipTests \
 find ${MANGO_MVN_TMP_DIR}
 rm -rf ${MANGO_MVN_TMP_DIR}
 
-# and move our poms back to their original values
-if [ ${SPARK_VERSION} == 2.1.0 ];
-then
-
-    echo "Rewriting POM.xml files back to Spark 1."
-    ./scripts/move_to_spark_1.sh
-fi
-if [ ${SCALAVER} == 2.11 ];
-then
-    echo "Rewriting POM.xml files back to Scala 2.10."
-    ./scripts/move_to_scala_2.10.sh
-fi
-
 find . -name pom.xml \
     -exec sed -i.bak \
     -e "s:sun.io.serialization.extendedDebugInfo=true -Djava.io.tmpdir=${MANGO_MVN_TMP_DIR}:sun.io.serialization.extendedDebugInfo=true:g" \
@@ -153,21 +115,9 @@ find . -name pom.xml \
 find . -name "*.bak" -exec rm -f {} \;
 
 # run integration tests
-# prebuilt spark distributions are scala 2.10 for spark 1.x, scala 2.11 for spark 2.x
+# prebuilt spark distributions are scala 2.11 for spark 2.x
 if [[ ${SPARK_VERSION} == 2.1.0 && ${SCALAVER} == 2.11 ]];
 then
-
-    # we moved away from spark 2/scala 2.11 in our poms earlier,
-    # so rewrite poms
-    if [ ${SPARK_VERSION} == 2.1.0 ];
-    then
-
-        echo "Rewriting POM.xml files for Spark 2."
-        ./scripts/move_to_spark_2.sh
-
-        echo "Rewriting POM.xml files for Scala 2.11."
-        ./scripts/move_to_scala_2.11.sh
-    fi
 
     # make a temp directory
     MANGO_TMP_DIR=$(mktemp -d -t mangoTestXXXXXXX)
@@ -197,8 +147,8 @@ then
     # what hadoop version are we on? format string for downloading spark assembly
     if [[ $HADOOP_VERSION =~ ^2\.6 ]]; then
         HADOOP=hadoop2.6
-    elif [[ $HADOOP_VERSION =~ ^2\.3 ]]; then
-        HADOOP=hadoop2.3
+    elif [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
+        HADOOP=hadoop2.7
     else
         echo "Unknown Hadoop version."
         exit 1
@@ -247,18 +197,6 @@ then
     # deactivate and remove the conda env
     source deactivate
     conda remove -n mango-build-${uuid} --all
-
-
-    # we rewrote our poms to spark 2/scala 2.11 earlier, so rewrite now
-    if [ ${SPARK_VERSION} == 2.1.0 ];
-    then
-
-        echo "Reverting POM.xml file changes for Spark 2."
-        ./scripts/move_to_spark_1.sh
-
-        echo "Reverting POM.xml file changes for Scala 2.11."
-        ./scripts/move_to_scala_2.10.sh
-    fi
 
 fi
 
