@@ -223,7 +223,7 @@ object AlignmentRecordMaterialization extends Logging {
             case _             => d
           })
           case _ => {
-            val loadedDataset = sc.loadPartitionedParquetAlignments(fp, use_chr_prefix = true)
+            val loadedDataset = sc.loadPartitionedParquetAlignments(fp, addChrPrefix = true)
             datasetCache(fp) = loadedDataset
             loadedDataset.transformDataset(d => regions match {
               case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions)).filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
