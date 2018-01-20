@@ -215,6 +215,7 @@ object AlignmentRecordMaterialization extends Logging {
    * @return RDD of data from the file over specified ReferenceRegion
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
+    log.warn("### refernce region" + regions.toString)
     AlignmentTimers.loadADAMData.time {
       if (sc.checkPartitionedParquetFlag(fp)) {
         val x: AlignmentRecordRDD = datasetCache.get(fp) match {
@@ -223,7 +224,7 @@ object AlignmentRecordMaterialization extends Logging {
             case _             => d
           })
           case _ => {
-            val loadedDataset = sc.loadPartitionedParquetAlignments(fp, addChrPrefix = true)
+            val loadedDataset = sc.loadPartitionedParquetAlignments(fp)
             datasetCache(fp) = loadedDataset
             loadedDataset.transformDataset(d => regions match {
               case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions)).filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
