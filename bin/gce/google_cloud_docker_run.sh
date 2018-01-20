@@ -39,6 +39,7 @@ export HIVE_DIR=/usr/lib/hive
 export CONDA_DIR=/opt/conda
 export PYSPARK_DRIVER_PYTHON=/opt/conda/bin/jupyter
 export HIVE_CONF_DIR=$HIVE_DIR/conf
+export TARGET_MANGO_ASSEMBLY=/opt/cgl-docker-lib/mango/mango-assembly/target/mango-assembly-0.0.1-SNAPSHOT.jar
 
 sudo docker run \
        --net=host \
@@ -62,7 +63,7 @@ sudo docker run \
        -p 8888:8888 \
        quay.io/ucsc_cgl/mango:latest \
        --master yarn \
-       --jars gs://mango-initialization-bucket/google-cloud-nio-0.22.0-alpha-shaded.jar \
+       --jars ${TARGET_MANGO_ASSEMBLY},gs://mango-initialization-bucket/google-cloud-nio-0.22.0-alpha-shaded.jar \
        $PRE_DD_ARGS \
        -- --ip=0.0.0.0 --allow-root \
        $POST_DD_ARGS

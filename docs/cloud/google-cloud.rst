@@ -54,8 +54,8 @@ After the above steps are completed, ssh into the master node.
     
     gcloud compute ssh <cluster-name>-m
 
-Running Mango on a Dataproc Cluster
------------------------------------
+Running Mango Notebook on a Dataproc Cluster
+--------------------------------------------
 
 Before mango can run, it is recommended to stage datasets into hdfs if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
 
@@ -77,7 +77,8 @@ Once the notebook is running, connect to Mango by setting up a tunnel to your lo
     
     gcloud compute ssh <cluster-name>-m -- -N -L localhost:<local_port>:localhost:8888
 
-Once in the notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS.
+Once in the browser notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS. A sample for accessing public datasets on Google Cloud can be found at mango-google-cloud.ipynb
 
+More information about available public datasets on Google cloud can be found `online <https://cloud.google.com/genomics/v1/public-data>`__
 
 More information on using the dataproc cluster's Spark interface is available through `Google Cloud documentation <https://cloud.google.com/dataproc/docs/concepts/accessing/cluster-web-interfaces>`__
