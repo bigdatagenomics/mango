@@ -6,10 +6,10 @@ ENTRYPOINT=TRUE
 PRE_DD=()
 POST_DD=()
 
-# by default, runs mango browser (mango-submit)
-# to override to mango-notebook,
-# run docker with --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
-ENTRYPOINT="--entrypoint=/opt/cgl-docker-lib/mango/bin/mango-submit"
+# by default, runs mango notebook
+# to override to mango-submit,
+# run docker with --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-submit
+ENTRYPOINT="--entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook"
 for ARG in "$@"; do
   shift
   if [[ $ARG == "--" ]]; then
@@ -35,11 +35,12 @@ export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 export HADOOP_HDFS=/usr/lib/hadoop-hdfs
 export HADOOP_YARN=/usr/lib/hadoop-yarn
 export HADOOP_MAPREDUCE=/usr/lib/hadoop-mapreduce
-export HIVE_DIR=/usr/lib/hive
 export CONDA_DIR=/opt/conda
 export PYSPARK_DRIVER_PYTHON=/opt/conda/bin/jupyter
 export HIVE_CONF_DIR=$HIVE_DIR/conf
 export TARGET_MANGO_ASSEMBLY=/opt/cgl-docker-lib/mango/mango-assembly/target/mango-assembly-0.0.1-SNAPSHOT.jar
+# Sets java classes required for hadoop yarn, mapreduce, hive associated with the cluster
+export SPARK_DIST_CLASS_PATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*"
 
 sudo docker run \
        --net=host \
@@ -51,14 +52,12 @@ sudo docker run \
        -v ${HADOOP_YARN}:${HADOOP_YARN} \
        -v ${CONDA_DIR}:${CONDA_DIR} \
        -v ${HADOOP_MAPREDUCE}:${HADOOP_MAPREDUCE} \
-       -v ${HIVE_DIR}:${HIVE_DIR} \
        -e SPARK_HOME=${SPARK_HOME} \
        -e HADOOP_HOME=${HADOOP_HOME} \
        -e SPARK_CONF_DIR=${SPARK_CONF_DIR} \
        -e HADOOP_CONF_DIR=${HADOOP_CONF_DIR} \
-       -e HIVE_DIR=${HIVE_DIR} \
        -e HIVE_CONF_DIR=${HIVE_CONF_DIR} \
-       -e SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*" \
+       -e SPARK_DIST_CLASSPATH=${SPARK_DIST_CLASSPATH}} \
        $ENTRYPOINT \
        -p 8888:8888 \
        quay.io/ucsc_cgl/mango:latest \
@@ -67,4 +66,3 @@ sudo docker run \
        $PRE_DD_ARGS \
        -- --ip=0.0.0.0 --allow-root \
        $POST_DD_ARGS
-
