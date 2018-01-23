@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@jupyter-widgets/base": "^1.0.0",
-    "pileup": "file:///Users/akmorrow/ADAM/mango/mango-viz/pileup.js",
+    "pileup": "^0.6.9",
     "underscore": "^1.8.3"
   }
 }
