@@ -31,7 +31,7 @@ ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.
 export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
 
 # build executable
-#mvn clean package -DskipTests
+mvn clean package -DskipTests
 
 # prepare mango python
 pushd mango-python
