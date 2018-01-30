@@ -219,10 +219,17 @@ object AlignmentRecordMaterialization extends Logging {
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
     AlignmentTimers.loadADAMData.time {
       if (sc.isPartitioned(fp)) {
+
         val x: AlignmentRecordRDD = datasetCache.get(fp) match {
           case Some(x) => x.transformDataset(d => regions match {
-            case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions)).filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
-            case _             => d
+            case Some(regions) => {
+              val finalRegions: Iterable[ReferenceRegion] = regions.map(x => ReferenceRegion(x.referenceName
+                .replaceFirst("""^chr""", ""","""), x.start, x.end, x.strand))
+
+              d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
+                .filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
+            }
+            case _ => d
           })
           case _ => {
             val loadedDataset = sc.loadPartitionedParquetAlignments(fp)
