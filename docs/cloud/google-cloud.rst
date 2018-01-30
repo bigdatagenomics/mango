@@ -11,7 +11,7 @@ Download the necessary initialization scripts:
 
 .. code:: bash
 
-    wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/google_cloud_mango_install.sh
+    wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/install.sh
 
 Initialize a Google Cloud Storage Bucket
 
@@ -23,7 +23,7 @@ Copy the installation scripts to be used by cloud dataproc
 
 .. code:: bash
 
-    gsutil cp google-cloud-mango-install.sh gs://mango-initialization-bucket
+    gsutil cp install.sh gs://mango-initialization-bucket
 
 
 Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the below installation script
@@ -39,7 +39,7 @@ Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the be
         --master-boot-disk-size=50GB \
         --worker-boot-disk-size=10GB \
         --initialization-actions \
-            gs://mango-initialization-bucket/google-cloud-mango-install.sh
+            gs://mango-initialization-bucket/install.sh
 
 
 After the above steps are completed, ssh into the master node.
@@ -57,7 +57,7 @@ Before mango can run, it is recommended to stage datasets into hdfs if you are t
 
     hdfs dfs -put /<local machime path> /<hdfs path>
 
-An example docker startup script is available in the Mango `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/google-cloud-run-notebook.sh>`__ for running mango notebook [root permissions may be necessary for docker].
+An example docker startup script is available in the Mango gce `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/bin/gce>`__ for running `mango notebook <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-notebook.sh>`__, or for running `mango browser <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-submit.sh>`__ [root permissions may be necessary for docker].
 
 .. code:: bash
 
