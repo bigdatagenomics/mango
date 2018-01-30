@@ -224,7 +224,7 @@ object AlignmentRecordMaterialization extends Logging {
           case Some(x) => x.transformDataset(d => regions match {
             case Some(regions) => {
               val finalRegions: Iterable[ReferenceRegion] = regions.map(x => ReferenceRegion(x.referenceName
-                .replaceFirst("""^chr""", ""","""), x.start, x.end, x.strand))
+                .replaceFirst("""^chr""", """"""), x.start, x.end, x.strand))
 
               d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
                 .filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
@@ -238,7 +238,7 @@ object AlignmentRecordMaterialization extends Logging {
               case Some(regions) => {
 
                 val finalRegions: Iterable[ReferenceRegion] = regions.map(x => ReferenceRegion(x.referenceName
-                  .replaceFirst("""^chr""", ""","""), x.start, x.end, x.strand))
+                  .replaceFirst("""^chr""", """"""), x.start, x.end, x.strand))
 
                 d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
                   .filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
