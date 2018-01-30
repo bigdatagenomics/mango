@@ -71,7 +71,7 @@ Once the notebook is running, connect to Mango by setting up a tunnel to your lo
     
     gcloud compute ssh <cluster-name>-m -- -N -L localhost:<local_port>:localhost:8888
 
-Once in the browser notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS. A sample for accessing public datasets on Google Cloud can be found at mango-google-cloud.ipynb
+Once in the browser notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS.
 
 More information about available public datasets on Google cloud can be found `online <https://cloud.google.com/genomics/v1/public-data>`__
 
