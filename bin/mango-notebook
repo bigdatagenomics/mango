@@ -79,6 +79,7 @@ if [ -z "$PYSPARK" ]; then
   exit 1
 fi
 
+export PYSPARK_PYTHON=$(which python || echo)
 export PYSPARK_DRIVER_PYTHON=jupyter
 export PYSPARK_DRIVER_PYTHON_OPTS="notebook $NOTEBOOK_ARGS"
 

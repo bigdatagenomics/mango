@@ -58,12 +58,7 @@ test: check_build_reqs
 clean:
 	rm -rf bdgenomics/mango/pileup/static/
 	$(jupyter) nbextension uninstall pileup
-
-# clean, also wipe pileup.js
-clean_all: clean
-	rm -r pileup.js
-	$(npm) uninstall pileup.js
-
+	$(npm) uninstall pileup
 
 # check for node, jupyter and npm
 check_build_reqs:
@@ -83,22 +78,10 @@ prepare:
 	$(pip) install jupyter==1.0.0
 	$(pip) install ipywidgets==7.0.0
 
-	# setup pileup
-	# TODO: once pileup is updated on npm, you can change this
-	if [ -d "pileup.js" ]; then \
-			echo "pileup.js exists. Removing and rebuilding.."; \
-			rm -rf pileup.js; \
-	fi
-	git clone https://github.com/hammerlab/pileup.js.git
-
-	cd pileup.js; \
-		$(npm) install ${PWD}/pileup.js && \
-		$(npm) run build ${PWD}/pileup.js
-
 	# install pileup.js to node_modules
 	cd bdgenomics/mango/js; \
 		mkdir node_modules; \
 		cd node_modules; \
-		$(npm) install --save ../../../../pileup.js
+		$(npm) install --save pileup@0.6.9
 
 
