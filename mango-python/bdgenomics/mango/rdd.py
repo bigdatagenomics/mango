@@ -25,11 +25,11 @@ class GenomicVizRDD(object):
     of various quality control.
     """
 
-    def __init__(self, sc, build = 'hg19'):
+    def __init__(self, ss, build = 'hg19'):
         """
         Initializes a GenomicRDD viz class.
         """
-        self.ac = ADAMContext(sc)
+        self.ac = ADAMContext(ss)
         self.build = build
         self.chrPrefix = 'chr'
 

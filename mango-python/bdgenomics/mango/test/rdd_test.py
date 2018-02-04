@@ -25,10 +25,10 @@ from bdgenomics.adam.adamContext import ADAMContext
 class GenomicVizRDDTest(SparkTestCase):
 
     def test_visualize_alignments(self):
-        genomicRDD = GenomicVizRDD(self.sc)
+        genomicRDD = GenomicVizRDD(self.ss)
 
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
 
         # read alignments
@@ -43,10 +43,10 @@ class GenomicVizRDDTest(SparkTestCase):
 
 
     def test_visualize_variants(self):
-        genomicRDD = GenomicVizRDD(self.sc)
+        genomicRDD = GenomicVizRDD(self.ss)
 
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("bqsr1.vcf")
 
         # read alignments
@@ -61,10 +61,10 @@ class GenomicVizRDDTest(SparkTestCase):
 
 
     def test_visualize_features(self):
-        genomicRDD = GenomicVizRDD(self.sc)
+        genomicRDD = GenomicVizRDD(self.ss)
 
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("smalltest.bed")
 
         # read alignments
@@ -81,7 +81,7 @@ class GenomicVizRDDTest(SparkTestCase):
 
     def test_example(self):
         # these variables are read into mango-python.py
-        sc = self.sc
+        spark = self.ss
         testMode = True
         alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
         variantFile = self.exampleFile("snv.chr17.7502100-7502500.vcf")

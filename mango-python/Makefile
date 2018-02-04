@@ -81,13 +81,14 @@ clean_sdist:
 test: check_build_reqs
 	pushd ../example-files/notebooks \
 		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
-		&& jupyter nbconvert --to python mango-python-alignment.ipynb
+		&& jupyter nbconvert --to python mango-python-alignment.ipynb \
+		&& jupyter nbconvert --to python mango-viz.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	pushd ../example-files/notebooks \
 		&& rm mango-python-coverage.py \
 		&& rm mango-python-alignment.py \
-
+		&& rm mango-viz.py
 	exit
 
 
@@ -119,7 +120,7 @@ prepare:
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install cigar==0.1.3
 	$(pip) install matplotlib==2.0.2
-	$(pip) install bdgenomics.adam==0.23.0
+	$(pip) install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple bdgenomics.adam==0.24.0a0
 
 
 check_clean_working_copy:

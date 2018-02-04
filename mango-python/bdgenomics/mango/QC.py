@@ -29,14 +29,14 @@ class CoverageDistribution(object):
     of various quality control.
     """
 
-    def __init__(self, sc, coverageRDDs):
+    def __init__(self, ss, coverageRDDs):
         """
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
         :param SparkContext
         :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
         """
-        self.sc = sc
+        self.sc = ss.sparkContext
 
         # If single RDD, convert to list
         if (not isinstance(coverageRDDs, list)):
@@ -135,7 +135,7 @@ class AlignmentDistribution(object):
     of various quality control.
     """
 
-    def __init__(self, sc, alignmentRDD, sample=1.0, bin_size=10000000):
+    def __init__(self, ss, alignmentRDD, sample=1.0, bin_size=10000000):
         """
         Initializes a AlignmentDistribution class.
         Computes the alignment distribution of multiple coverageRDDs.
@@ -145,7 +145,7 @@ class AlignmentDistribution(object):
         """
         bin_size = int(bin_size)
         self.bin_size = bin_size
-        self.sc = sc
+        self.sc = ss.sparkContext
 
         # filter alignments without a position
         filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, 1.0)) \
