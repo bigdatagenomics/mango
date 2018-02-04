@@ -26,10 +26,16 @@ variety of platforms.
    installation/example
 
 .. toctree::
-   :caption: Docker
+   :caption: Running with Docker
    :maxdepth: 2
 
    docker/docker-examples
+
+.. toctree::
+   :caption: On the Cloud
+   :maxdepth: 2
+
+   EMR/emr
 
 .. toctree::
    :caption: Supported File Types

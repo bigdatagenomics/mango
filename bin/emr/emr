@@ -1,0 +1,99 @@
+# install docker
+sudo yum install docker
+
+export SPARK_HOME=/usr/lib/spark
+export HADOOP_HOME=/usr/lib/hadoop/bin/
+export HADOOP_CONF_DIR=/usr/lib/hadoop/etc/hadoop/
+
+
+# adam
+wget -q https://search.maven.org/remotecontent?filepath=org/bdgenomics/adam/adam-distribution-spark2_2.11/0.22.0/adam-distribution-spark2_2.11-0.22.0-bin.tar.gz
+mv remotecontent\?filepath\=org%2Fbdgenomics%2Fadam%2Fadam-distribution-spark2_2.11%2F0.22.0%2Fadam-distribution-spark2_2.11-0.22.0-bin.tar.gz adam-bin.tar.gz
+tar xzf adam-bin.tar.gz
+
+adam-shell --packages net.fnothaft:jsr203-s3a:0.0.1
+
+# maven
+wget -q http://apache.spinellicreations.com/maven/maven-3/3.5.2/binaries/apache-maven-3.5.2-bin.tar.gz
+tar xzvf apache-maven-3.5.2-bin.tar.gz
+export PATH=/home/hadoop/apache-maven-3.5.2/bin:$PATH
+
+# run notebook
+
+sudo docker run --net=host \
+        -v /usr/lib/spark:/usr/lib/spark \
+        -v /usr/lib/hadoop:/usr/lib/hadoop \
+        -e SPARK_HOME=${SPARK_HOME} \
+        -e HADOOP_HOME=${HADOOP_HOME} \
+        -e HADOOP_CONF_DIR=${HADOOP_CONF_DIR} \
+        -e SPARK_DIST_CLASSPATH=$(hadoop classpath) \
+        --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook  \
+        quay.io/ucsc_cgl/mango:latest  \
+        --packages org.apache.parquet:parquet-avro:1.8.2 \
+        -- --ip=0.0.0.0 --allow-root
+
+# Can browser example-files at /opt/cgl-docker-lib/mango/example-files
+
+# run browser
+# -- /opt/cgl-docker-lib/mango/example-files/hg19.17.2bit \
+
+
+sudo docker run --net=host \
+        -v /usr/lib/spark:/usr/lib/spark \
+        -v /usr/lib/hadoop:/usr/lib/hadoop \
+        -v /usr/lib/hadoop:/usr/lib/hadoop \
+        -v /usr/lib/hadoop-hdfs:/usr/lib/hadoop-hdfs \
+        -v /usr/lib/hadoop-mapreduce:/usr/lib/hadoop-mapreduce \
+        -v /usr/lib/hadoop-yarn:/usr/lib/hadoop-yarn \
+        -v /usr/lib/hadoop-httpfs:/usr/lib/hadoop-httpfs \
+        -v /usr/lib/hadoop-kms:/usr/lib/hadoop-kms \
+        -v /usr/lib/hadoop-kms:/usr/lib/hadoop-kms \
+        -e SPARK_HOME=${SPARK_HOME} \
+        -e HADOOP_HOME=${HADOOP_HOME} \
+        -e HADOOP_CONF_DIR=${HADOOP_CONF_DIR} \
+        -e SPARK_DIST_CLASSPATH=$(hadoop classpath) \
+        quay.io/ucsc_cgl/mango:latest  \
+        --packages org.apache.parquet:parquet-avro:1.8.2 \
+        --packages net.fnothaft:jsr203-s3a:0.0.1 \
+        -- /opt/cgl-docker-lib/mango/example-files/hg19.17.2bit \
+        -genes http://www.biodalliance.org/datasets/ensGene.bb \
+        -reads hdfs://ec2-34-216-192-33.us-west-2.compute.amazonaws.com:8020/user/hadoop/example-files/chr17.7500000-7515000.sam.adam \
+        -variants hdfs://ec2-34-216-192-33.us-west-2.compute.amazonaws.com:8020/user/hadoop/example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf \
+        -show_genotypes \
+        -discover
+
+# test mouse with ADAM s3
+#wget -q http://hgdownload.cse.ucsc.edu/goldenPath/mm10/bigZips/mm10.2bit
+
+sudo docker run --net=host \
+        -v /home/hadoop/mm10.2bit:/home/hadoop/mm10.2bit \
+        -v /usr/lib/spark:/usr/lib/spark \
+        -v /usr/lib/hadoop:/usr/lib/hadoop \
+        -v /usr/lib/hadoop:/usr/lib/hadoop \
+        -v /usr/lib/hadoop-hdfs:/usr/lib/hadoop-hdfs \
+        -v /usr/lib/hadoop-mapreduce:/usr/lib/hadoop-mapreduce \
+        -v /usr/lib/hadoop-yarn:/usr/lib/hadoop-yarn \
+        -v /usr/lib/hadoop-httpfs:/usr/lib/hadoop-httpfs \
+        -v /usr/lib/hadoop-kms:/usr/lib/hadoop-kms \
+        -v /usr/lib/hadoop-kms:/usr/lib/hadoop-kms \
+        -e AWS_SECRET_ACCESS_KE=${AWS_SECRET_ACCESS_KEY} \
+        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+        -e SPARK_HOME=${SPARK_HOME} \
+        -e HADOOP_HOME=${HADOOP_HOME} \
+        -e HADOOP_CONF_DIR=${HADOOP_CONF_DIR} \
+        -e SPARK_DIST_CLASSPATH=$(hadoop classpath) \
+        quay.io/ucsc_cgl/mango:latest  \
+        --packages org.apache.parquet:parquet-avro:1.8.2 \
+        -- /home/hadoop/mm10.2bit \
+        -reads s3://bdgenomics-test/mouse_chrM.bam
+
+#        -variants s3a://1000genomes/release/20130502/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz \
+# running mango browser from source works
+./bin/mango-submit \
+        --packages org.apache.parquet:parquet-avro:1.8.2 \
+        --packages net.fnothaft:jsr203-s3a:0.0.1 \
+        --conf spark.hadoop.hadoopbam.bam.enable-bai-splitter=true \
+        -- /home/hadoop/mango/example-files/hg19.17.2bit \
+        -reads s3a://1000genomes/phase1/data/NA12878/exome_alignment/NA12878.mapped.illumina.mosaik.CEU.exome.20110411.bam,s3a://1000genomes/phase1/data/NA12891/exome_alignment/NA12891.mapped.illumina.mosaik.CEU.exome.20110411.bam,s3a://1000genomes/phase1/data/NA12892/exome_alignment/NA12892.mapped.illumina.mosaik.CEU.exome.20110521.bam
+
+# to quit, go to /quit
