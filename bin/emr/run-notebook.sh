@@ -23,11 +23,7 @@ for ARG in "$@"; do
    POST_DD=( "$@" )
    break
  fi
- if [[ $ARG == '--entrypoint='* ]]; then
-      ENTRYPOINT=${ARG#(--entrypoint=): }
- else
-      PRE_DD+=("$ARG")
- fi
+  PRE_DD+=("$ARG")
 done
 
 PRE_DD_ARGS="${PRE_DD[@]}"
@@ -58,16 +54,8 @@ export AWS_SDK=/usr/share/aws
 uuid=$(uuidgen)
 DOCKER_CONTAINER_NAME=mango_notebook_${uuid}
 
-# s3 commands:
-# --conf spark.driver.extraClassPath=${HADOOP_LZO}/*:${AWS_SDK}/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/* \
-
 # s3a commands
-# --conf spark.driver.extraClassPath=/usr/lib/hadoop/hadoop-aws*:${AWS_SDK}/* \
-EXTRA_CLASSPATH=spark.driver.extraClassPath=/usr/lib/hadoop/hadoop-aws*:${AWS_SDK}/*
-
-# TODO: REMOVE
-# exposing the 2 jars
-# export SPARK_CLASSPATH='/usr/lib/hadoop/hadoop-aws-2.7.3-amzn-5.jar:/usr/share/aws/aws-java-sdk/aws-java-sdk-1.11.221.jar'
+EXTRA_CLASSPATH=/usr/lib/hadoop/hadoop-aws*:${AWS_SDK}/*
 
 sudo docker run \
       --name ${DOCKER_CONTAINER_NAME} \
@@ -77,6 +65,8 @@ sudo docker run \
       -v ${HADOOP_HOME}:${HADOOP_HOME} \
       -v ${HADOOP_HDFS}:${HADOOP_HDFS} \
       -v ${HADOOP_YARN}:${HADOOP_YARN} \
+      -v ~/.ivy2:/root/.ivy2  \
+      -v ~/.sbt:/root/.sbt \
       -v ${AWS_SDK}:${AWS_SDK} \
       -v ${HADOOP_LZO}:${HADOOP_LZO} \
       -v ${HADOOP_CONF_DIR}:${HADOOP_CONF_DIR} \
@@ -93,9 +83,7 @@ sudo docker run \
       $ENTRYPOINT \
       quay.io/ucsc_cgl/mango:latest \
       --master yarn \
-      --conf spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3.S3FileSystem \
-      --conf fs.s3.awsAccessKeyId=${AWS_ACCESS_KEY} \
-      --conf fs.s3.awsSecretAccessKey=${AWS_SECRET} \
+      --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
       --packages org.apache.parquet:parquet-avro:1.8.2 \
       --packages net.fnothaft:jsr203-s3a:0.0.1 \
       --conf spark.hadoop.hadoopbam.bam.enable-bai-splitter=true \

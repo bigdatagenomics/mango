@@ -51,7 +51,7 @@ Connect to cluster via ssh
 --------------------------
 To ssh into your cluster, navigate to your EMR cluster in AWS console and click on 'ssh'. This will give you the command you need to ssh into the cluster.
 
-Accessing Web UI'
+Accessing Web UI
 -----------------
 
 .. code:: bash
@@ -92,6 +92,8 @@ To setup Mango, download the install script to configure Docker with Mango:
 Running Mango Browser on EMR
 -------------------------------
 
+To run Mango browser on EMR, run the following code:
+
 .. code:: bash
 
   # Download the file
@@ -101,11 +103,41 @@ Running Mango Browser on EMR
   # Run the Browser
   ./run-browser.sh <SPARK_ARGS> -- <MANGO_ARGS>
 
-TODO: input for Spark and Mango (required)
-TODO: example cmd with s3
+
+To run Mango Browser, you will first to download a reference (either locally or to hdfs). For example, first get the chr17 reference:
+
+.. code:: bash
+
+  wget http://hgdownload.cse.ucsc.edu/goldenpath/hg19/chromosomes/chr17.fa.gz
+  tar xzvf chr17.fa.gz
+  hdfs dfs -put chr17.fa
+
+Now that you have a reference, you can run Mango browser:
+
+.. code:: bash
+
+  ./run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
+    -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
+
+Note: s3a latency slows down Mango browser. For faster queries, you can first transfer s3a files to hdfs:
+
+.. code:: bash
+
+  /usr/lib/hadoop/bin/hadoop distcp s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam hdfs:///user/hadoop/
+  /usr/lib/hadoop/bin/hadoop distcp s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam.bai hdfs:///user/hadoop/
 
 
-Note: The first time it may take a while to set up.
+You can then run Mango browser on HDFS files:
+
+.. code:: bash
+
+  ./run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
+    -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
+
+TODO: test example cmd with s3
+
+
+Note: The first time Docker may take a while to set up.
 
 Navigate to <PUBLIC_MASTER_DNS>:8080 to access the browser.
 
@@ -122,14 +154,19 @@ Running Mango Notebook on EMR
   # Run the Notebook
   ./run-notebook.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
 
+Where <SPARK_ARGS> are Spark specific arguments and <NOTEBOOK_ARGS> are Jupyter notebook specific arguments.
+For example:
+
+.. code:: bash
+
+  ./run-notebook.sh --master yarn --num-executors 64 --executor-memory 30g --
+
 Note: It will take a couple minutes on startup for the Docker configuration to complete.
-
-# TODO discuss inputs
-
-# TODO example notebook
 
 
 Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal.
+You can view a tutorial regarding 1000 Genomes dataset by navigating in the Jupyter interface to
+/opt/cgl-docker-lib/mango/example-files/notebooks/aws-1000genomes.ipynb.
 
 
 Accessing files from HDFS
