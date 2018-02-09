@@ -32,6 +32,12 @@ variety of platforms.
    docker/docker-examples
 
 .. toctree::
+   :caption: Google Cloud
+   :maxdepth: 2
+
+   cloud/google-cloud
+
+.. toctree::
    :caption: Supported File Types
    :maxdepth: 2
 
