@@ -154,7 +154,7 @@ object AlignmentRecordMaterialization extends Logging {
 
   // caches the first steps of loading binned dataset from files to avoid repeating the
   // several minutes long initalization of these binned dataset
-  val datasetCache = new collection.mutable.HashMap[String, DatasetBoundAlignmentRecordRDD]
+  val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordRDD]
 
   /**
    * Loads alignment data from bam, sam and ADAM file formats
@@ -230,7 +230,7 @@ object AlignmentRecordMaterialization extends Logging {
             x.strand))
 
         // load new dataset or retrieve from cache
-        val data: DatasetBoundAlignmentRecordRDD = datasetCache.get(fp) match {
+        val data = datasetCache.get(fp) match {
           case Some(ds) => ds
           case _ => {
             datasetCache(fp) = sc.loadPartitionedParquetAlignments(fp)
@@ -239,6 +239,7 @@ object AlignmentRecordMaterialization extends Logging {
         }
 
         val partitionedResult = if (regions != None) {
+          //data.f
           data.filterByOverlappingRegions(regions.get)
             .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
         } else {
