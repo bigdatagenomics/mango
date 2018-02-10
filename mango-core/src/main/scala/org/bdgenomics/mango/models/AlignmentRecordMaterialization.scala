@@ -242,6 +242,11 @@ object AlignmentRecordMaterialization extends Logging {
           }
         }
 
+        val data2: DatasetBoundAlignmentRecordRDD = DatasetBoundAlignmentRecordRDD(data.dataset,
+          data.sequences,
+          data.recordGroups,
+          data.processingSteps)
+
         /*val partitionedResult = if (regions != None) {
           //data.f
           data.filterByOverlappingRegions(finalRegions)
@@ -249,15 +254,17 @@ object AlignmentRecordMaterialization extends Logging {
             */
         val partitionedResult = regions match {
           case Some(x) => {
-            data.filterByOverlappingRegions(finalRegions)
-              .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
-            //data.transformDataset((d: Dataset[sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
-            //  .filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+            data2.filterDatasetByOverlappingRegions(finalRegions)
+             // .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+
+            //val test: AlignmentRecordRDD = data.transformDataset((d: Dataset[sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions)))
+
+            //data.transformDataset((d: Dataset[org.bdgenomics.adam.sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions)).filter((x: sql.AlignmentRecord) => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
 
             //data.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
             //.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
           }
-          case _ => { data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)) }
+          case _ => { data2.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)) }
 
           /*      } else {
           data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))*/
