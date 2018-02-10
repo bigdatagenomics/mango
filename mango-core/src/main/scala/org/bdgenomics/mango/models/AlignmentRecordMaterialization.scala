@@ -230,20 +230,32 @@ object AlignmentRecordMaterialization extends Logging {
             x.strand))
 
         // load new dataset or retrieve from cache
-        val data = datasetCache.get(fp) match {
-          case Some(ds) => ds
+        val data: AlignmentRecordRDD = datasetCache.get(fp) match {
+          case Some(ds) => {
+            println("##### Found dataset in Mango Cache")
+            ds
+          }
           case _ => {
+            println("##### Did NOOOOOt find dataset in Mango Cache")
             datasetCache(fp) = sc.loadPartitionedParquetAlignments(fp)
             datasetCache(fp)
           }
         }
 
-        val partitionedResult = if (regions != None) {
+        /*val partitionedResult = if (regions != None) {
           //data.f
           data.filterByOverlappingRegions(finalRegions)
             .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
-        } else {
-          data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+            */
+        val partitionedResult = regions match {
+          case Some(x) => {
+            data.filterByOverlappingRegions(finalRegions)
+              .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+          }
+          case _ => { data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)) }
+
+          /*      } else {
+          data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))*/
         }
         partitionedResult
       } else { // data was not written as partitioned parquet
