@@ -255,7 +255,7 @@ object AlignmentRecordMaterialization extends Logging {
         val partitionedResult = regions match {
           case Some(x) => {
             data2.filterDatasetByOverlappingRegions(finalRegions)
-             // .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+              .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
 
             //val test: AlignmentRecordRDD = data.transformDataset((d: Dataset[sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions)))
 
