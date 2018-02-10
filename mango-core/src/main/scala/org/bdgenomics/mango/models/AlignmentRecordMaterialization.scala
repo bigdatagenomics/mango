@@ -251,6 +251,11 @@ object AlignmentRecordMaterialization extends Logging {
           case Some(x) => {
             data.filterByOverlappingRegions(finalRegions)
               .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+            //data.transformDataset((d: Dataset[sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
+            //  .filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
+
+            //data.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
+            //.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
           }
           case _ => { data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)) }
 
