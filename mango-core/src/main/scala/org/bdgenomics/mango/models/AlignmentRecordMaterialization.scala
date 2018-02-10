@@ -222,6 +222,7 @@ object AlignmentRecordMaterialization extends Logging {
 
     AlignmentTimers.loadADAMData.time {
       val alignmentRecordRDD = if (sc.isPartitioned(fp)) {
+
         // finalRegions includes contigs both with and without "chr" prefix
         val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
           .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
@@ -231,46 +232,25 @@ object AlignmentRecordMaterialization extends Logging {
 
         // load new dataset or retrieve from cache
         val data: AlignmentRecordRDD = datasetCache.get(fp) match {
-          case Some(ds) => {
-            println("##### Found dataset in Mango Cache")
+          case Some(ds) => { // if dataset found in datasetCache
             ds
           }
           case _ => {
-            println("##### Did NOOOOOt find dataset in Mango Cache")
+            // load dataset into cache and use use it
             datasetCache(fp) = sc.loadPartitionedParquetAlignments(fp)
             datasetCache(fp)
           }
         }
 
-        //val data2: DatasetBoundAlignmentRecordRDD = DatasetBoundAlignmentRecordRDD(data.dataset,
-        // data.sequences,
-        // data.recordGroups,
-        // data.processingSteps)
+        val maybeFiltered = if (finalRegions.nonEmpty) {
+          data.filterByOverlappingRegions(finalRegions, partitionedLookBackNum = 1)
+        } else data
 
-        /*val partitionedResult = if (regions != None) {
-          //data.f
-          data.filterByOverlappingRegions(finalRegions)
-            .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
-            */
+        // remove unmapped reads
+        maybeFiltered.transformDataset(d => {
+          d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
+        })
 
-        val partitionedResult = regions match {
-          case Some(x) => {
-            data.filterByOverlappingRegions(finalRegions, partitionedLookBackNum = 1)
-              .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
-
-            //val test: AlignmentRecordRDD = data.transformDataset((d: Dataset[sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions)))
-
-            //data.transformDataset((d: Dataset[org.bdgenomics.adam.sql.AlignmentRecord]) => d.filter(sc.referenceRegionsToDatasetQueryString(finalRegions)).filter((x: sql.AlignmentRecord) => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
-
-            //data.filter(sc.referenceRegionsToDatasetQueryString(finalRegions))
-            //.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
-          }
-          case _ => { data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)) }
-
-          /*      } else {
-          data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))*/
-        }
-        partitionedResult
       } else { // data was not written as partitioned parquet
         val pred =
           if (regions.isDefined) {
