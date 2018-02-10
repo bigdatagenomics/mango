@@ -240,7 +240,7 @@ object AlignmentRecordMaterialization extends Logging {
 
         val partitionedResult = if (regions != None) {
           //data.f
-          data.filterByOverlappingRegions(regions.get)
+          data.filterByOverlappingRegions(finalRegions)
             .transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
         } else {
           data.transformDataset(d => d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0))
