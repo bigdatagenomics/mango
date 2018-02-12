@@ -189,6 +189,7 @@ object VariantContextMaterialization {
     }
   }
 
+  org.bdgenomics.adam.sql.G
   /**
    * Loads adam variant files
    *
