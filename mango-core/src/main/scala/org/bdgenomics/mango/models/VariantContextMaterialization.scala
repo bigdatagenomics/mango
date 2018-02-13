@@ -199,26 +199,6 @@ object VariantContextMaterialization {
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
 
-    /*   if (sc.isPartitioned(fp)) {
-      val x: GenotypeRDD = datasetCache.get(fp) match {
-        case Some(x) => x.transformDataset(d => regions match {
-          case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
-          case _             => d
-        })
-        case _ => {
-          val loadedDataset = sc.loadPartitionedParquetGenotypes(fp)
-          datasetCache(fp) = loadedDataset
-          loadedDataset.transformDataset(d => regions match {
-            case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
-            case _             => d
-          })
-        }
-      }
-      return x.toVariantContexts()
-
-    }
-
-    */
     val variantContext = if (sc.isPartitioned(fp)) {
 
       // finalRegions includes contigs both with and without "chr" prefix
