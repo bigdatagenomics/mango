@@ -221,7 +221,7 @@ object AlignmentRecordMaterialization extends Logging {
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
 
     AlignmentTimers.loadADAMData.time {
-      val alignmentRecordRDD = if (sc.isPartitioned(fp)) {
+      val alignmentRecordRDD: AlignmentRecordRDD = if (sc.isPartitioned(fp)) {
 
         // finalRegions includes contigs both with and without "chr" prefix
         val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
@@ -243,7 +243,7 @@ object AlignmentRecordMaterialization extends Logging {
         }
 
         val maybeFiltered = if (finalRegions.nonEmpty) {
-          data.filterByOverlappingRegions(finalRegions, partitionedLookBackNum = 1)
+          data.filterByOverlappingRegions(finalRegions, optPartitionedLookBackNum = Some(1))
         } else data
 
         // remove unmapped reads

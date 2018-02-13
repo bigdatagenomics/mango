@@ -189,7 +189,6 @@ object VariantContextMaterialization {
     }
   }
 
-  org.bdgenomics.adam.sql.G
   /**
    * Loads adam variant files
    *
@@ -199,7 +198,8 @@ object VariantContextMaterialization {
    * @return VariantContextRDD
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
-    if (sc.isPartitioned(fp)) {
+
+    /*   if (sc.isPartitioned(fp)) {
       val x: GenotypeRDD = datasetCache.get(fp) match {
         case Some(x) => x.transformDataset(d => regions match {
           case Some(regions) => d.filter(sc.referenceRegionsToDatasetQueryString(regions))
@@ -216,6 +216,36 @@ object VariantContextMaterialization {
       }
       return x.toVariantContexts()
 
+    }
+
+    */
+    val variantContext = if (sc.isPartitioned(fp)) {
+
+      // finalRegions includes contigs both with and without "chr" prefix
+      val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
+        .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
+          x.start,
+          x.end,
+          x.strand))
+
+      // load new dataset or retrieve from cache
+      val data: GenotypeRDD = datasetCache.get(fp) match {
+        case Some(ds) => { // if dataset found in datasetCache
+          ds
+        }
+        case _ => {
+          // load dataset into cache and use use it
+          datasetCache(fp) = sc.loadPartitionedParquetGenotypes(fp)
+          datasetCache(fp)
+        }
+      }
+
+      val maybeFiltered: GenotypeRDD = if (finalRegions.nonEmpty) {
+        data.filterByOverlappingRegions(finalRegions, optPartitionedLookBackNum = Some(1))
+      } else data
+
+      maybeFiltered.toVariantContexts()
+
     } else {
       val pred =
         if (regions.isDefined) {
@@ -224,8 +254,10 @@ object VariantContextMaterialization {
         } else {
           None
         }
-      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts
+      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts()
+
     }
+    variantContext
   }
 
   /**
