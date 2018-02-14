@@ -26,7 +26,7 @@
     <jetty.version>9.2.17.v20160517</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
     <hadoop.version>2.7.3</hadoop.version>
-    <hadoop-bam.version>7.8.0</hadoop-bam.version>
+    <hadoop-bam.version>7.9.1</hadoop-bam.version>
     <htsjdk.version>2.9.1</htsjdk.version>
     <parquet.version>1.8.2</parquet.version>
     <scala.version>2.11.12</scala.version>
