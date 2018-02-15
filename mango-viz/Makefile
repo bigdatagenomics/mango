@@ -49,7 +49,7 @@ develop:
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
 
 test: check_build_reqs
-	pushd ../example-files \
+	pushd ../example-files/notebooks \
 		&& jupyter nbconvert --to python mango-viz.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
@@ -83,5 +83,3 @@ prepare:
 		mkdir node_modules; \
 		cd node_modules; \
 		$(npm) install --save pileup@0.6.9
-
-
