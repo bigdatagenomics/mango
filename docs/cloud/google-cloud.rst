@@ -55,7 +55,7 @@ Before mango can run, it is recommended to stage datasets into HDFS if you are t
 
 .. code:: bash
 
-    hdfs dfs -put /<local-machime-path> /<hdfs-path>
+    hdfs dfs -put /<local-machine-path> /<hdfs-path>
 
 An example docker startup script is available in the Mango gce `scripts directory <https://github.com/bigdatagenomics/mango/blob/master/bin/gce>`__ for running `mango notebook <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-notebook.sh>`__, or for running `mango browser <https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-browser.sh>`__ [root permissions may be necessary for docker].
 
