@@ -32,7 +32,7 @@
     <scala.version>2.11.12</scala.version>
     <scala.version.prefix>2.11</scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
-    <spark.version>2.1.0</spark.version>
+    <spark.version>2.2.1</spark.version>
     <spark.version.prefix>-spark2_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
@@ -438,6 +438,12 @@
             Spark 2.2.0 release notes.
         -->
         <version>1.8.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.parquet</groupId>
