@@ -39,8 +39,8 @@ fi
 
 set -e
 
-# are we testing for spark 2.1.0? if so, we need to rewrite our poms first
-if [ ${SPARK_VERSION} == 2.1.0 ];
+# are we testing for spark 2.2.1? if so, we need to rewrite our poms first
+if [ ${SPARK_VERSION} == 2.2.1 ];
 then
 
     # shouldn't be able to move to spark 2 twice
@@ -116,7 +116,7 @@ find . -name "*.bak" -exec rm -f {} \;
 
 # run integration tests
 # prebuilt spark distributions are scala 2.11 for spark 2.x
-if [[ ${SPARK_VERSION} == 2.1.0 && ${SCALAVER} == 2.11 ]];
+if [[ ${SPARK_VERSION} == 2.2.1 && ${SCALAVER} == 2.11 ]];
 then
 
     # make a temp directory
@@ -158,7 +158,10 @@ then
     SPARK=spark-${SPARK_VERSION}
 
     # download prepackaged spark assembly
-    wget -q http://d3kbcqa49mib13.cloudfront.net/${SPARK}-bin-${HADOOP}.tgz
+    curl \
+        -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
+        -o ${SPARK}-bin-${HADOOP}.tgz
+
     tar xzvf ${SPARK}-bin-${HADOOP}.tgz
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 
