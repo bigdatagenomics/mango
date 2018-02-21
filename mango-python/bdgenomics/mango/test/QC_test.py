@@ -28,13 +28,13 @@ class QCTest(SparkTestCase):
 
     def test_alignment_distribution(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
         # read alignments
         reads = ac.loadAlignments(testFile)
 
         bin_size = 10000000
-        qc = AlignmentDistribution(self.sc, reads, bin_size=10000000)
+        qc = AlignmentDistribution(self.ss, reads, bin_size=10000000)
 
         mDistribution = qc.plot(testMode = True, plotType="M")
         print(mDistribution)
@@ -52,12 +52,12 @@ class QCTest(SparkTestCase):
 
     def test_alignment_distribution_maximal_bin_size(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
         # read alignments
         reads = ac.loadAlignments(testFile)
 
-        qc = AlignmentDistribution(self.sc, reads, bin_size=1000000000)
+        qc = AlignmentDistribution(self.ss, reads, bin_size=1000000000)
 
         mDistribution = qc.plot(testMode = True, plotType="M")
         expectedM =  Counter({('1', 0): 1500})
@@ -66,13 +66,12 @@ class QCTest(SparkTestCase):
 
     def test_alignment_distribution_no_elements(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
         # read alignments
         reads = ac.loadAlignments(testFile)
 
-        qc = AlignmentDistribution(self.sc, reads, bin_size=1000000000, sample=0.00001)
-        print(qc)
+        qc = AlignmentDistribution(self.ss, reads, bin_size=1000000000, sample=0.00001)
 
         mDistribution = qc.plot(testMode = True, plotType="D")
         expectedM =  Counter({('1', 0): 0})
@@ -80,7 +79,7 @@ class QCTest(SparkTestCase):
 
     def test_coverage_distribution(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
         # read alignments
 
@@ -89,7 +88,7 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = CoverageDistribution(self.sc, coverage)
+        qc = CoverageDistribution(self.ss, coverage)
 
         cd = qc.plot(testMode = True)
 
@@ -99,7 +98,7 @@ class QCTest(SparkTestCase):
 
     def test_normalized_coverage_distribution(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
         # read alignments
 
@@ -108,7 +107,7 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = CoverageDistribution(self.sc, coverage)
+        qc = CoverageDistribution(self.ss, coverage)
 
         cd = qc.plot(testMode = True, normalize = True)
 
@@ -118,7 +117,7 @@ class QCTest(SparkTestCase):
 
     def test_cumulative_coverage_distribution(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.resourceFile("small.sam")
         # read alignments
 
@@ -127,7 +126,7 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = CoverageDistribution(self.sc, coverage)
+        qc = CoverageDistribution(self.ss, coverage)
 
         cd = qc.plot(testMode = True, cumulative = True)
 
@@ -137,7 +136,7 @@ class QCTest(SparkTestCase):
 
     def test_example_alignments(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
         # read alignments
 
@@ -146,7 +145,7 @@ class QCTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = CoverageDistribution(self.sc, coverage)
+        qc = CoverageDistribution(self.ss, coverage)
 
         cd = qc.plot(testMode = True, cumulative = True)
 
@@ -156,13 +155,13 @@ class QCTest(SparkTestCase):
 
     def test_example_coverage(self):
         # load file
-        ac = ADAMContext(self.sc)
+        ac = ADAMContext(self.ss)
         testFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
         # read alignments
 
         coverage = ac.loadCoverage(testFile)
 
-        qc = CoverageDistribution(self.sc, coverage)
+        qc = CoverageDistribution(self.ss, coverage)
 
         cd1 = qc.plot(testMode = True, cumulative = True)
 
@@ -195,7 +194,7 @@ class QCTest(SparkTestCase):
 
     def test_coverage_example(self):
         # these variables are read into mango-python.py
-        sc = self.sc
+        spark = self.ss
         testMode = True
         coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
 
@@ -205,7 +204,7 @@ class QCTest(SparkTestCase):
 
     def test_alignment_example(self):
         # these variables are read into mango-python.py
-        sc = self.sc
+        spark = self.ss
         testMode = True
         alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
 
