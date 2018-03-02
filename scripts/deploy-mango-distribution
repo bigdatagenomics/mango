@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+
+set -e -x -v
+
+# make a tempdir for writing maven cruft to
+MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
+
+# add this tempdir to the poms...
+find . -name pom.xml \
+    -exec sed -i.bak \
+    -e "s:sun.io.serialization.extendedDebugInfo=true:sun.io.serialization.extendedDebugInfo=true -Djava.io.tmpdir=${MANGO_MVN_TMP_DIR}:g" \
+    {} \;
+find . -name "*.bak" -exec rm {} \;
+
+# variable declarations
+export PATH=${JAVA_HOME}/bin/:${PATH}
+export MAVEN_OPTS="-Xmx1536m -XX:MaxPermSize=1g -Dfile.encoding=utf-8"
+DIR=$( cd $( dirname ${BASH_SOURCE[0]} ) && pwd )
+PROJECT_ROOT=${DIR}/..
+VERSION=$(grep "<version>" ${PROJECT_ROOT}/pom.xml  | head -2 | tail -1 | sed 's/ *<version>//g' | sed 's/<\/version>//g')
+
+# is the hadoop version set?
+if ! [[ ${HADOOP_VERSION} ]];
+then
+    echo "HADOOP_VERSION environment variable is not set."
+    echo "Please set this variable before running."
+
+    exit 1
+fi
+
+# is the spark version set?
+if ! [[ ${SPARK_VERSION} ]];
+then
+    echo "SPARK_VERSION environment variable is not set."
+    echo "Please set this variable before running."
+
+    exit 1
+fi
+
+set -e
+
+# are we testing for spark 2.2.1? if so, we need to rewrite our poms first
+if [ ${SPARK_VERSION} == 2.2.1 ];
+then
+
+    # shouldn't be able to move to spark 2 twice
+    set +e
+    ./scripts/move_to_spark_2.sh
+    if [[ $? == 0 ]];
+    then
+        echo "We have already moved to Spark 2, so running move_to_spark_2.sh a second time should fail, but error code was 0 (success)."
+        exit 1
+    fi
+    set -e
+fi
+
+# are we testing for scala 2.11? if so, we need to rewrite our poms to 2.11 first
+if [ ${SCALAVER} == 2.11 ];
+then
+    # shouldn't be able to move to scala 2.11 twice
+    set +e
+    ./scripts/move_to_scala_2.11.sh
+    if [[ $? == 0 ]];
+    then
+        echo "We have already moved to Scala 2.11, so running move_to_scala_2.11.sh a second time should fail, but error code was 0 (success)."
+        exit 1
+    fi
+    set -e
+fi
+
+# print versions
+echo "Testing MANGO version ${VERSION} on Spark ${SPARK_VERSION} and Hadoop ${HADOOP_VERSION}"
+
+# clean the targets first
+mvn clean
+
+# make verbose again
+set -x -v
+
+# we are done with maven, so clean up the maven temp dir
+find ${MANGO_MVN_TMP_DIR}
+rm -rf ${MANGO_MVN_TMP_DIR}
+
+find . -name pom.xml \
+    -exec sed -i.bak \
+    -e "s:sun.io.serialization.extendedDebugInfo=true -Djava.io.tmpdir=${MANGO_MVN_TMP_DIR}:sun.io.serialization.extendedDebugInfo=true:g" \
+    {} \;
+find . -name "*.bak" -exec rm -f {} \;
+
+
+
+# make a temp directory
+MANGO_TMP_DIR=$(mktemp -d -t mangoTestXXXXXXX)
+
+MANGO_TMP_DIR=$MANGO_TMP_DIR/deleteMePleaseThisIsNoLongerNeeded
+mkdir $MANGO_TMP_DIR
+
+# set the TMPDIR envar, which is used by python to choose where to make temp directories
+export TMPDIR=${MANGO_TMP_DIR}
+
+pushd $PROJECT_ROOT
+
+# Copy the jar into our temp space for testing
+cp -r . $MANGO_TMP_DIR
+popd
+
+pushd $MANGO_TMP_DIR
+
+# create a conda environment for python build, if necessary
+uuid=$(uuidgen)
+conda create -y -q -n mango-build-${uuid} python=2.7 anaconda
+source activate mango-build-${uuid}
+
+# install npm and node in the venv for mango-viz
+conda install nodejs
+
+# what hadoop version are we on? format string for downloading spark assembly
+if [[ $HADOOP_VERSION =~ ^2\.6 ]]; then
+    HADOOP=hadoop2.6
+elif [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
+    HADOOP=hadoop2.7
+else
+    echo "Unknown Hadoop version."
+    exit 1
+fi
+
+# set spark artifact string for downloading assembly
+SPARK=spark-${SPARK_VERSION}
+
+# download prepackaged spark assembly
+curl \
+    -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
+    -o ${SPARK}-bin-${HADOOP}.tgz
+
+tar xzvf ${SPARK}-bin-${HADOOP}.tgz
+export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
+
+# add pyspark to the python path
+PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
+export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
+
+# put mango jar on the pyspark path
+ASSEMBLY_DIR="${MANGO_TMP_DIR}/mango-assembly/target"
+ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
+export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
+
+
+# prepare mango python
+pushd mango-python
+make prepare
+popd
+
+# prepare mango viz
+pushd mango-viz
+make prepare
+popd
+
+mvn --settings=/home/jenkins/workspace/settings.xml deploy -DskipTests -Pdistribution
+
+# copy python targets back
+cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
+
+# deactivate and remove the conda env
+source deactivate
+conda remove -n mango-build-${uuid} --all
+
+
+echo
+echo "Successfully deployed mango distribution"
+echo

@@ -32,6 +32,8 @@ jupyter=jupyter
 pip=pip
 npm=npm
 node=node
+mango_version:=$(shell $(python) version.py)
+sdist_name:=mango.pileup-$(mango_version).tar.gz
 tests=bdgenomics/mango/pileup/
 extras=
 current_commit:=$(shell git log --pretty=oneline -n 1 -- $(pwd) | cut -f1 -d " ")
@@ -47,6 +49,21 @@ develop:
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
+
+
+sdist: dist/$(sdist_name)
+dist/$(sdist_name):
+	@test -f dist/$(sdist_name) && mv dist/$(sdist_name) dist/$(sdist_name).old || true
+	$(python) setup.py sdist bdist_egg
+	@test -f dist/$(sdist_name).old \
+			&& ( cmp -s <(tar -xOzf dist/$(sdist_name)) <(tar -xOzf dist/$(sdist_name).old) \
+					 && mv dist/$(sdist_name).old dist/$(sdist_name) \
+					 && printf "$(green)No significant changes to sdist, reinstating backup.$(normal)" \
+					 || rm dist/$(sdist_name).old ) \
+			|| true
+clean_sdist:
+	- rm -rf dist
+
 
 test: check_build_reqs
 	pushd ../example-files/notebooks \
