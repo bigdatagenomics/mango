@@ -48,8 +48,8 @@ python=python2.7
 pip=pip
 tests=bdgenomics
 extras=
-adam_version:=$(shell $(python) version.py)
-sdist_name:=mango-$(adam_version).tar.gz
+mango_version:=$(shell $(python) version.py)
+sdist_name:=mango-$(mango_version).tar.gz
 current_commit:=$(shell git log --pretty=oneline -n 1 -- $(pwd) | cut -f1 -d " ")
 dirty:=$(shell (git diff --exit-code && git diff --cached --exit-code) > /dev/null || printf -- --DIRTY)
 
@@ -61,13 +61,13 @@ red=\033[0;31m
 develop:
 	$(pip) install -e .$(extras)
 clean_develop:
-	- $(pip) uninstall -y mango
+	- $(pip) uninstall -y bdgenomics.mango
 	- rm -rf src/*.egg-info
 
 sdist: dist/$(sdist_name)
 dist/$(sdist_name):
 	@test -f dist/$(sdist_name) && mv dist/$(sdist_name) dist/$(sdist_name).old || true
-	$(python) setup.py sdist
+	$(python) setup.py sdist bdist_egg
 	@test -f dist/$(sdist_name).old \
 	    && ( cmp -s <(tar -xOzf dist/$(sdist_name)) <(tar -xOzf dist/$(sdist_name).old) \
 	         && mv dist/$(sdist_name).old dist/$(sdist_name) \

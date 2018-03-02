@@ -17,26 +17,19 @@
 # limitations under the License.
 #
 
-# Figure out where MANGO is installed
-SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
+set -e
 
-# Setup CLASSPATH like appassembler
+SPARK_CMD=${1:-spark-submit}
 
-# Assume we're running in a binary distro
-MANGO_CMD="$SCRIPT_DIR/bin/mango"
-REPO="$SCRIPT_DIR/repo"
-
-# Fallback to source repo
-if [ ! -f $MANGO_CMD ]; then
-MANGO_CMD="$SCRIPT_DIR/mango-cli/target/appassembler/bin/mango"
-REPO="$SCRIPT_DIR/mango-cli/target/appassembler/repo"
+# Find spark-submit script
+if [ -z "$SPARK_HOME" ]; then
+  SPARK_SUBMIT=$(which ${SPARK_CMD} || echo)
+else
+  SPARK_SUBMIT=${SPARK_HOME}/bin/${SPARK_CMD}
 fi
-
-if [ ! -f "$MANGO_CMD" ]; then
-  echo "Failed to find appassembler scripts in $BASEDIR/bin"
-  echo "You need to build MANGO before running this program"
+if [ -z "$SPARK_SUBMIT" ]; then
+  echo "SPARK_HOME not set and ${SPARK_CMD} not on PATH; Aborting." 1>&2
   exit 1
 fi
-eval $(cat "$MANGO_CMD" | grep "^CLASSPATH")
 
-echo "$CLASSPATH"
+echo ${SPARK_SUBMIT}

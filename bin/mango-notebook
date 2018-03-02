@@ -20,7 +20,9 @@
 set -ex
 
 
-# Split args into Spark and notebook args
+SOURCE_DIR=$(dirname ${BASH_SOURCE[0]})
+
+# Split args into Spark and ADAM args
 DD=False  # DD is "double dash"
 PRE_DD=()
 POST_DD=()
@@ -35,39 +37,18 @@ for ARG in "$@"; do
 done
 
 if [[ $DD == True ]]; then
-  SPARK_ARGS="${PRE_DD[@]}"
-  NOTEBOOK_ARGS="${POST_DD[@]}"
+  SPARK_ARGS=("${PRE_DD[@]}")
+  NOTEBOOK_ARGS=("${POST_DD[@]}")
 else
   SPARK_ARGS=()
-  NOTEBOOK_ARGS="${PRE_DD[@]}"
+  NOTEBOOK_ARGS=("${PRE_DD[@]}")
 fi
 
-# Figure out where Mango is installed
-SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
+# get Mango jar
+MANGO_CLI_JAR=$(${SOURCE_DIR}/find-mango-assembly.sh)
 
-# Find Mango cli assembly jar
-if [ -d "$SCRIPT_DIR/repo" ]; then
-  ASSEMBLY_DIR="$SCRIPT_DIR/repo"
-else
-  ASSEMBLY_DIR="$SCRIPT_DIR/mango-assembly/target"
-fi
-
-num_jars="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly-[0-9A-Za-z\.-]*\.jar$" | grep -v javadoc | grep -v sources | wc -l)"
-if [ "$num_jars" -eq "0" ]; then
-  echo "Failed to find Mango assembly in $ASSEMBLY_DIR." 1>&2
-  echo "You need to build Mango before running this program." 1>&2
-  exit 1
-fi
-
-ASSEMBLY_JARS="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
-if [ "$num_jars" -gt "1" ]; then
-  echo "Found multiple Mango cli assembly jars in $ASSEMBLY_DIR:" 1>&2
-  echo "$ASSEMBLY_JARS" 1>&2
-  echo "Please remove all but one jar." 1>&2
-  exit 1
-fi
-
-MANGO_CLI_JAR="${ASSEMBLY_DIR}/${ASSEMBLY_JARS}"
+SPARK_SUBMIT=$(${SOURCE_DIR}/find-spark.sh)
+echo "Using spark-submit=$SPARK_SUBMIT" 1>&2
 
 if [ -z "$SPARK_HOME" ]; then
   PYSPARK=$(which pyspark || echo)
@@ -91,4 +72,4 @@ ${PYSPARK} \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   --jars ${MANGO_CLI_JAR} \
   --driver-class-path ${MANGO_CLI_JAR} \
-  ${SPARK_ARGS}
+  "${SPARK_ARGS[@]}"

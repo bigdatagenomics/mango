@@ -21,7 +21,9 @@
 
 set -e
 
-# Split args into Spark and mango args
+SOURCE_DIR=$(dirname ${BASH_SOURCE[0]})
+
+# Split args into Spark and ADAM args
 DD=False  # DD is "double dash"
 PRE_DD=()
 POST_DD=()
@@ -36,11 +38,11 @@ for ARG in "$@"; do
 done
 
 if [[ $DD == True ]]; then
-  SPARK_ARGS="${PRE_DD[@]}"
-  MANGO_ARGS="${POST_DD[@]}"
+  SPARK_ARGS=("${PRE_DD[@]}")
+  MANGO_ARGS=("${POST_DD[@]}")
 else
   SPARK_ARGS=()
-  MANGO_ARGS="${PRE_DD[@]}"
+  MANGO_ARGS=("${PRE_DD[@]}")
 fi
 
 # does the user have MANGO_OPTS set? if yes, then warn
@@ -49,30 +51,12 @@ if [[ $DD == False && -n "$MANGO_OPTS" ]]; then
     echo "Run mango-submit instead as mango-submit <spark-args> -- <mango-args>"
 fi
 
-# Figure out where mango is installed
-SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
 
-# Get list of required jars for mango
-MANGO_JARS=$("$SCRIPT_DIR"/bin/compute-mango-jars.sh)
+# get Mango jar
+MANGO_CLI_JAR=$(${SOURCE_DIR}/find-mango-assembly.sh)
 
-# Split out the CLI jar, since it will be passed to Spark as the "primary resource".
-MANGO_CLI_JAR=${MANGO_JARS##*,}
-MANGO_JARS=$(echo "$MANGO_JARS" | rev | cut -d',' -f2- | rev)
-
-# append mango_JARS to the --jars option, if any
-SPARK_ARGS=$("$SCRIPT_DIR"/bin/append_to_option.py , --jars $MANGO_JARS $SPARK_ARGS)
-
-# Find spark-submit script
-if [ -z "$SPARK_HOME" ]; then
-  SPARK_SUBMIT=$(which spark-submit)
-else
-  SPARK_SUBMIT="$SPARK_HOME"/bin/spark-submit
-fi
-if [ -z "$SPARK_SUBMIT" ]; then
-  echo "SPARK_HOME not set and spark-submit not on PATH; Aborting."
-  exit 1
-fi
-echo "Using SPARK_SUBMIT=$SPARK_SUBMIT"
+SPARK_SUBMIT=$(${SOURCE_DIR}/find-spark.sh)
+echo "Using spark-submit=$SPARK_SUBMIT" 1>&2
 
 # submit the job to Spark
 "$SPARK_SUBMIT" \
@@ -81,6 +65,6 @@ echo "Using SPARK_SUBMIT=$SPARK_SUBMIT"
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   --conf spark.dynamicAllocation.executorIdleTimeout=10d \
   --conf spark.driver.memory=5g \
-  $SPARK_ARGS \
+  "${SPARK_ARGS[@]}" \
   $MANGO_CLI_JAR \
-  $MANGO_ARGS
+  "${MANGO_ARGS[@]}" \

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 #
 # Licensed to Big Data Genomics (BDG) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,16 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
-set -e
+version = '0.0.1a0'
 
-# Figure out where MANGO is installed
-MANGO_REPO="$(cd `dirname $0`/..; pwd)"
-
-CLASSPATH="$(. "$MANGO_REPO"/bin/compute-mango-classpath.sh)"
-
-# list of jars to ship with spark; trim off the first from the CLASSPATH --> this is /etc
-# TODO: brittle? assumes appassembler always puts the $BASE/etc first and the CLI jar last
-MANGO_JARS="$(echo "$CLASSPATH" | tr ":" "\n" | tail -n +2 | perl -pe 's/\n/,/ unless eof' )"
-
-echo "$MANGO_JARS"
+if __name__ == '__main__':
+    print(version)
