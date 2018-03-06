@@ -7,24 +7,7 @@ Commands in this section will require users to create an account on `Google Clou
 
 Creating a Dataproc Cluster
 ---------------------------
-Download the necessary initialization scripts:
-
-.. code:: bash
-
-    wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/install.sh
-
-Initialize a Google Cloud Storage Bucket
-
-.. code:: bash
-
-    gsutil mb gs://mango-initialization-bucket/
-
-Copy the installation scripts to be used by cloud dataproc
-
-.. code:: bash
-
-    gsutil cp install.sh gs://mango-initialization-bucket
-
+The necessary `initialization scripts <https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/install.sh>`__ are available at the Google Cloud Storage bucket located at `gs://mango-initialization-bucket/ <https://console.cloud.google.com/storage/browser/mango-initialization-bucket>`__
 
 Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the below installation script
 
