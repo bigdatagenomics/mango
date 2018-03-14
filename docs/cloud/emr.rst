@@ -18,19 +18,27 @@ You will also need to install the AWS cli to ssh into your machines:
 Creating a Cluster
 ------------------
 
-Navigate to the EMR console in a browser and click "Create Cluster".
+Through the aws command line, create a new cluster:
 
-In the resulting pop up, configure the following items:
+.. code:: bash
 
-1. Name the cluster
-2. Choose Applications for **Spark: Spark 2.2.1 on Hadoop 2.7.3 YARN with Ganglia 3.7.2 and Zeppelin 0.7.3**
-3. Choose the number of instances you will need
-4. Select your EC2 key pair that you will use to ssh into the cluster
+  aws emr create-cluster
+  --release-label emr-5.11.0 \
+  --name 'emr-5.8.0 Mango example' \
+  --applications Name=Hadoop Name=Hive Name=Spark  \
+  --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
+  --service-role EMR_DefaultRole \
+  --instance-groups \
+    InstanceGroupType=MASTER,InstanceCount=1,InstanceType=c3.4xlarge \
+    InstanceGroupType=CORE,InstanceCount=4,InstanceType=c3.4xlarge \
+  --region <your_region> \
+  --log-uri s3://<your-s3-bucket>/emr-logs/ \
+  --bootstrap-actions \
+  Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-emr5.sh"
 
-.. image:: ../img/EMR/create-EMR-cluster.png
 
-Click "Create Cluster".
-This will take a couple minutes to start. Once the status registers as "Waiting", you can access your EMR cluster in the aws console.
+The bootstrap action will download docker and required scripts, available in /home/hadoop/mango-scripts.
+
 
 Enabling a Web Connection
 --------------------------
@@ -69,34 +77,10 @@ The Hadoop UI is located at:
 You can access Spark applications through this UI when they are running.
 
 
-Configuring Mango
-------------------
-
-To setup Mango, download the install script to configure Docker with Mango:
-
-.. code:: bash
-
-  # Download the file
-  wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/emr/install-docker.sh
-  chmod u+x install-docker.sh
-  ./install-docker.sh
-
-
 Running Mango Browser on EMR
 -------------------------------
 
-To run Mango browser on EMR, run the following code:
-
-.. code:: bash
-
-  # Download the file
-  wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/emr/run-browser.sh
-  chmod u+x run-browser.sh
-  # Run the Browser
-  ./run-browser.sh <SPARK_ARGS> -- <MANGO_ARGS>
-
-
-To run Mango Browser, you will first need to download a reference (staged either locally or on HDFS). For example, first get the chr17 reference:
+To run Mango Browser on EMR, you will first need to download a reference (staged either locally or on HDFS). For example, first get the chr17 reference:
 
 .. code:: bash
 
@@ -108,7 +92,7 @@ Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
-  ./run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
+  /home/hadoop/mango-scripts/run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
     -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 Note: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
@@ -122,8 +106,6 @@ You can then run Mango browser on HDFS files:
   ./run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
     -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
-TODO: test example cmd with s3
-
 
 Note: The first time Docker may take a while to set up.
 
@@ -133,13 +115,12 @@ Navigate to <PUBLIC_MASTER_DNS>:8080 to access the browser.
 Running Mango Notebook on EMR
 --------------------------------
 
+To run Mango Notebook on EMR, run the run-notebook script:
+
 .. code:: bash
 
-  # Download the file
-  wget https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/emr/run-notebook.sh
-  chmod u+x run-notebook.sh
   # Run the Notebook
-  ./run-notebook.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
+  /home/hadoop/run-notebook.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
 
 Where <SPARK_ARGS> are Spark specific arguments and <NOTEBOOK_ARGS> are Jupyter notebook specific arguments.
 For example:
@@ -151,7 +132,7 @@ For example:
 Note: It will take a couple minutes on startup for the Docker configuration to complete.
 
 
-Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal.
+Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal. An example notebook for EMR can be found at /opt/cgl-docker-lib/mango/example-files/notebooks/aws-1000genomes.ipynb.
 
 Accessing files from HDFS
 -------------------------------
@@ -165,4 +146,4 @@ You can then reference the file through the following code in Mango notebook:
 
 .. code:: bash
 
-  ac.loadAlignments('hdfs:///users/hadoop/<my_file.bam>')
+  ac.loadAlignments('hdfs:///user/hadoop/<my_file.bam>')
