@@ -50,12 +50,14 @@ export HADOOP_LZO=/usr/lib/hadoop-lzo/lib
 # ENV Variables for EMR/AWS
 export AWS_SDK=/usr/share/aws
 
+export HIVE_SDK=/usr/share/java/Hive-JSON-Serde
+
 # get UUID name for docker container
 uuid=$(uuidgen)
 DOCKER_CONTAINER_NAME=mango_notebook_${uuid}
 
-# s3a commands
-EXTRA_CLASSPATH=/usr/lib/hadoop/hadoop-aws*:${AWS_SDK}/*
+# s3/s3a commands
+EXTRA_CLASSPATH=${HADOOP_LZO}/*:${AWS_SDK}/aws-java-sdk/*:${AWS_SDK}/emr/emrfs/conf:${AWS_SDK}/emr/emrfs/lib/*:${AWS_SDK}/emr/emrfs/auxlib/*:${AWS_SDK}/emr/security/conf:${AWS_SDK}/emr/security/lib/*:${AWS_SDK}/hmclient/lib/aws-glue-datacatalog-spark-client.jar:${AWS_SDK}/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:${HIVE_SDK}/*.jar
 
 sudo docker run \
       --name ${DOCKER_CONTAINER_NAME} \
@@ -67,6 +69,7 @@ sudo docker run \
       -v ${HADOOP_YARN}:${HADOOP_YARN} \
       -v /root/.ivy2:/root/.ivy2  \
       -v ${AWS_SDK}:${AWS_SDK} \
+      -v ${HIVE_SDK}:${HIVE_SDK} \
       -v ${HADOOP_LZO}:${HADOOP_LZO} \
       -v ${HADOOP_CONF_DIR}:${HADOOP_CONF_DIR} \
       -v ${HADOOP_MAPREDUCE}:${HADOOP_MAPREDUCE} \
