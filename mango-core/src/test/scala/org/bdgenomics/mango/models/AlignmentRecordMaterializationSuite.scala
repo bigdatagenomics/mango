@@ -18,12 +18,13 @@
 
 package org.bdgenomics.mango.models
 
-import org.bdgenomics.adam.models.{ SequenceRecord, SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json._
 import net.liftweb.json.Serialization.write
+import org.ga4gh.GAReadAlignment
 
 class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
@@ -51,9 +52,22 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   sparkTest("return raw data from AlignmentRecordMaterialization") {
 
     val data = new AlignmentRecordMaterialization(sc, files, dict)
-
     val region = new ReferenceRegion("chrM", 0L, 900L)
-    val results = data.getJson(region).get(key).get
+    val results: Array[GAReadAlignment] = data.getJson(region).get(key).get
+  }
+
+  sparkTest("Read Partitioned Data") {
+
+    val inputPath = testFile("multi_chr.sam")
+    val outputPath = tmpLocation()
+    val rrdd = sc.loadAlignments(inputPath)
+    rrdd.saveAsPartitionedParquet(outputPath, partitionSize = 1000000)
+    val rdd2 = sc.loadPartitionedParquetAlignments(outputPath)
+    val data: AlignmentRecordMaterialization = new AlignmentRecordMaterialization(sc, List(outputPath), rdd2.sequences)
+    val region = new ReferenceRegion("2", 189000000L, 190000000L)
+    val mykey = LazyMaterialization.filterKeyFromFile(outputPath)
+    val results: Array[GAReadAlignment] = data.getJson(region).get(mykey).get
+    assert(results.length === 1)
   }
 
   sparkTest("return coverage from AlignmentRecordMaterialization") {
