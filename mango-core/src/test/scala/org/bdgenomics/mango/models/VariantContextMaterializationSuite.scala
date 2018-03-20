@@ -19,6 +19,7 @@
 package org.bdgenomics.mango.models
 
 import net.liftweb.json._
+import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.formats.avro.Variant
 import org.bdgenomics.mango.layout.GenotypeJson
@@ -65,6 +66,20 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     assert(vAndg.length == 7)
     assert(vAndg.head.sampleIds.length == 3)
 
+  }
+
+  sparkTest("Can read Partitioned Parquet Genotypes") {
+
+    val inputPath = testFile("small.vcf")
+    val outputPath = tmpLocation()
+    val grdd = sc.loadGenotypes(inputPath)
+    grdd.saveAsPartitionedParquet(outputPath)
+    val grdd2 = sc.loadPartitionedParquetGenotypes(outputPath)
+    val data: VariantContextMaterialization = new VariantContextMaterialization(sc, List(outputPath), grdd2.sequences)
+    val mykey = LazyMaterialization.filterKeyFromFile(outputPath)
+    val region = new ReferenceRegion("1", 0L, 2000000L)
+    val results = data.getJson(region).get(mykey).get
+    assert(results.length === 6)
   }
 
   sparkTest("correctly reassigns contigName") {
