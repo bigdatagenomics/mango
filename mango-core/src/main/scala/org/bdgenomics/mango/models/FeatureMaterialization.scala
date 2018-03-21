@@ -168,7 +168,7 @@ object FeatureMaterialization {
         .toArray
 
       sc.loadFeatures(fp)
-        .transform(rdd => rdd.rdd.filter(g =>
+        .transform(rdd => rdd.filter(g =>
           !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
 
     } else {
