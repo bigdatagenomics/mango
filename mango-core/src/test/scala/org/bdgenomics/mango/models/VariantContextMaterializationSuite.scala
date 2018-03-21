@@ -69,7 +69,6 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
   }
 
   sparkTest("Can read Partitioned Parquet Genotypes") {
-
     val inputPath = testFile("small.vcf")
     val outputPath = tmpLocation()
     val grdd = sc.loadGenotypes(inputPath)

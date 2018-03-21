@@ -50,14 +50,12 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   }
 
   sparkTest("return raw data from AlignmentRecordMaterialization") {
-
     val data = new AlignmentRecordMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 900L)
     val results: Array[GAReadAlignment] = data.getJson(region).get(key).get
   }
 
   sparkTest("Read Partitioned Data") {
-
     val inputPath = testFile("multi_chr.sam")
     val outputPath = tmpLocation()
     val rrdd = sc.loadAlignments(inputPath)
