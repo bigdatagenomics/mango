@@ -9,6 +9,8 @@ Creating a Dataproc Cluster
 ---------------------------
 The necessary `initialization scripts <https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/install.sh>`__ are available at the Google Cloud Storage bucket located at `gs://mango-initialization-bucket/ <https://console.cloud.google.com/storage/browser/mango-initialization-bucket>`__
 
+In order to access this bucket through the cloud dataproc cluster, it is necessary to give 'billing account manager <https://cloud.google.com/billing/docs/how-to/billing-access>`__ permissions to dataproc-accounts.iam.gserviceaccount.com and compute@developer.gserviceaccount.com through the `IAM console <https://console.cloud.google.com/iam-admin>`__
+
 Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the below installation script
 
 .. code:: bash
@@ -44,7 +46,7 @@ An example docker startup script is available in the Mango gce `scripts director
 
 .. code:: bash
 
-    wget 'https://github.com/bigdatagenomics/mango/blob/master/bin/gce/run-notebook.sh'
+    wget 'https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/run-notebook.sh'
 
     bash run-notebook.sh --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
 
