@@ -687,6 +687,8 @@
         <module>mango-core</module>
         <module>mango-cli</module>
         <module>mango-assembly</module>
+        <!-- mango-distribution should be last -->
+        <module>mango-distribution</module>
       </modules>
       <build>
         <plugins>
@@ -707,6 +709,16 @@
                       <shadedPattern>shaded.com.google.protobuf</shadedPattern>
                     </relocation>
                   </relocations>
+                  <filters>
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/*.SF</exclude>
+                        <exclude>META-INF/*.DSA</exclude>
+                        <exclude>META-INF/*.RSA</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
                 </configuration>
               </execution>
             </executions>

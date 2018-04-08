@@ -19,13 +19,17 @@
 
 set -e
 
-# Figure out where MANGO is installed
-MANGO_REPO="$(cd `dirname $0`/..; pwd)"
+SPARK_CMD=${1:-spark-submit}
 
-CLASSPATH="$(. "$MANGO_REPO"/bin/compute-mango-classpath.sh)"
+# Find spark-submit script
+if [ -z "$SPARK_HOME" ]; then
+  SPARK_SUBMIT=$(which ${SPARK_CMD} || echo)
+else
+  SPARK_SUBMIT=${SPARK_HOME}/bin/${SPARK_CMD}
+fi
+if [ -z "$SPARK_SUBMIT" ]; then
+  echo "SPARK_HOME not set and ${SPARK_CMD} not on PATH; Aborting." 1>&2
+  exit 1
+fi
 
-# list of jars to ship with spark; trim off the first from the CLASSPATH --> this is /etc
-# TODO: brittle? assumes appassembler always puts the $BASE/etc first and the CLI jar last
-MANGO_JARS="$(echo "$CLASSPATH" | tr ":" "\n" | tail -n +2 | perl -pe 's/\n/,/ unless eof' )"
-
-echo "$MANGO_JARS"
+echo ${SPARK_SUBMIT}

@@ -18,6 +18,12 @@
 
 from setuptools import find_packages, setup
 from version import version as mango_version
+from pip.req import parse_requirements
+
+# parse_requirements() returns generator of pip.req.InstallRequirement objects
+install_reqs = parse_requirements('requirements.txt', session='hack')
+
+reqs = [str(ir.req) for ir in install_reqs]
 
 setup(
     name='bdgenomics.mango',
@@ -26,5 +32,8 @@ setup(
     author='Alyssa Morrow',
     author_email='akmorrow@berkeley.edu',
     url="https://github.com/bdgenomics/mango",
-    install_requires=[],
+    install_requires=reqs,
+    dependency_links=[
+        'https://test.pypi.org/simple/bdgenomics-adam/'
+    ],
     packages=find_packages(exclude=['*.test.*']))

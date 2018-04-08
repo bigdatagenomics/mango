@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 #
 # Licensed to Big Data Genomics (BDG) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,26 +16,6 @@
 # limitations under the License.
 #
 
-# Figure out where MANGO is installed
-SCRIPT_DIR="$(cd `dirname $0`/..; pwd)"
-
-# Setup CLASSPATH like appassembler
-
-# Assume we're running in a binary distro
-MANGO_CMD="$SCRIPT_DIR/bin/mango"
-REPO="$SCRIPT_DIR/repo"
-
-# Fallback to source repo
-if [ ! -f $MANGO_CMD ]; then
-MANGO_CMD="$SCRIPT_DIR/mango-cli/target/appassembler/bin/mango"
-REPO="$SCRIPT_DIR/mango-cli/target/appassembler/repo"
-fi
-
-if [ ! -f "$MANGO_CMD" ]; then
-  echo "Failed to find appassembler scripts in $BASEDIR/bin"
-  echo "You need to build MANGO before running this program"
-  exit 1
-fi
-eval $(cat "$MANGO_CMD" | grep "^CLASSPATH")
-
-echo "$CLASSPATH"
+global-exclude *.py[cod] __pycache__ .DS_Store
+recursive-include deps/jars *.jar
+include version.py

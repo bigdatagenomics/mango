@@ -89,20 +89,30 @@ then
     exit 1
 fi
 
-# if those pass, build the distribution package and the integration tests
-#mvn -U \
-#    test \
-#    -P coverage,coveralls  scoverage:report coveralls:report \
-#    -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
+# if those pass, run tests
+mvn -U \
+    test \
+    -P coverage,coveralls  scoverage:report coveralls:report \
+    -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
 
 # make verbose again
 set -x -v
 
-# first, build the sources, run the unit tests
-mvn clean package -DskipTests \
+# if those pass, build the distribution package
+mvn -U \
+    -P distribution \
+    package \
+    -DskipTests \
     -Dhadoop.version=${HADOOP_VERSION} \
     -Dspark.version=${SPARK_VERSION} \
     -DargLine=${MANGO_MVN_TMP_DIR}
+
+# make sure that the distribution package contains an assembly jar
+# if no assembly jar is found, this will exit with code 1 and fail the build
+tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
+    grep mango-assembly | \
+    grep jar | \
+    grep -v -e sources -e javadoc
 
 # we are done with maven, so clean up the maven temp dir
 find ${MANGO_MVN_TMP_DIR}
@@ -187,12 +197,17 @@ then
 
     # we can run the python build, now that we have a spark executable
 	  mvn -U \
-            -P python \
+            -P python,distribution \
             package \
             -DskipTests \
             -Dhadoop.version=${HADOOP_VERSION} \
             -Dspark.version=${SPARK_VERSION}
 
+	    # make sure that the distribution package contains an egg
+	    # if no assembly jar is found, this will exit with code 1 and fail the build
+	    tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
+            grep bdgenomics.mango | \
+            grep egg
 
     # copy python targets back
     cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
