@@ -16,4 +16,5 @@
 # limitations under the License.
 #
 
-__version__ = '0.0.1a0'
+version_info = (0, 0, '1a0')
+__version__ = '.'.join(map(str, version_info))
