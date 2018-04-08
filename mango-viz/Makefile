@@ -74,6 +74,7 @@ test: check_build_reqs
 # clean
 clean:
 	rm -rf bdgenomics/mango/pileup/static/
+	rm -rf dist/
 	$(jupyter) nbextension uninstall pileup
 	$(npm) uninstall pileup
 

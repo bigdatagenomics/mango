@@ -1,6 +1,8 @@
 - To release a new version of bdgenomics.mango.pileup on PyPI:
 
 Update _version.py (set release version, remove 'dev')
+make clean
+make sdist
 git add and git commit
 python setup.py sdist upload
 python setup.py bdist_wheel upload
