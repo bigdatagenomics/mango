@@ -120,7 +120,7 @@ prepare:
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install cigar==0.1.3
 	$(pip) install matplotlib==2.0.2
-	$(pip) install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple bdgenomics.adam==0.24.0a0
+	$(pip) install bdgenomics.adam==0.24.0
 
 
 check_clean_working_copy:
