@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.bdgenomics.mango</groupId>
     <artifactId>mango-parent</artifactId>
-    <version>0.0.1-rc0</version>
+    <version>0.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -70,7 +70,7 @@
                 </relocation>
               </relocations>
               <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
               </transformers>
             </configuration>
           </execution>
