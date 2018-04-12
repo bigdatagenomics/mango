@@ -40,7 +40,13 @@ log.set_verbosity(log.DEBUG)
 log.info('setup.py entered')
 log.info('$PATH=%s' % os.environ['PATH'])
 
-LONG_DESCRIPTION = 'bdgenomics.mango.pileup'
+# Utility function to read the README file.
+# Used for the long_description.
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
+
+LONG_DESCRIPTION = read("README.md")
 
 def js_prerelease(command, strict=False):
     """decorator for building minified js/css prior to another command"""

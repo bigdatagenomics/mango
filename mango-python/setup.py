@@ -19,6 +19,12 @@
 from setuptools import find_packages, setup
 from version import version as mango_version
 from pip.req import parse_requirements
+import os
+
+# Utility function to read the README file.
+# Used for the long_description.
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 # parse_requirements() returns generator of pip.req.InstallRequirement objects
 install_reqs = parse_requirements('requirements.txt', session='hack')
@@ -36,4 +42,5 @@ setup(
     dependency_links=[
         'https://test.pypi.org/simple/bdgenomics-adam/'
     ],
+    long_description=read('README.md'),
     packages=find_packages(exclude=['*.test.*']))
