@@ -195,6 +195,10 @@ then
     make prepare
     popd
 
+
+    # clear distribution in case there are residual jars
+    rm -rf mango-distribution/target/
+
     # we can run the python build, now that we have a spark executable
 	  mvn -U \
             -P python,distribution \
