@@ -74,6 +74,9 @@ echo "Testing MANGO version ${VERSION} on Spark ${SPARK_VERSION} and Hadoop ${HA
 # clean the targets first
 mvn clean
 
+# clear distribution in case there are residual jars
+rm -rf mango-distribution/target/
+
 # if this is a pull request, we need to set the coveralls pr id
 if [[ ! -z $ghprbPullId ]];
 then
@@ -194,9 +197,6 @@ then
     pushd mango-viz
     make prepare
     popd
-
-    # clear distribution in case there are residual jars
-    rm -rf mango-distribution/target/
 
     # we can run the python build, now that we have a spark executable
 	  mvn -U \
