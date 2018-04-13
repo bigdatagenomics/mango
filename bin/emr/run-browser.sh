@@ -26,14 +26,6 @@ done
 PRE_DD_ARGS="${PRE_DD[@]}"
 POST_DD_ARGS="${POST_DD[@]}"
 
-
-export SPARK_HOME=/usr/lib/spark
-export SPARK_CONF_DIR=/usr/lib/spark/conf
-export HADOOP_HOME=/usr/lib/hadoop
-export HADOOP_LIBEXEC_DIR=$HADOOP_HOME/libexec
-export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
-
-
 export SPARK_HOME=/usr/lib/spark
 export SPARK_CONF_DIR=/usr/lib/spark/conf
 export HADOOP_HOME=/usr/lib/hadoop
