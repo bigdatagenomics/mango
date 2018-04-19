@@ -21,6 +21,7 @@ from cigar import Cigar
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.ticker as ticker
+import math
 plt.rcdefaults()
 
 
@@ -227,6 +228,7 @@ class VariantEffectAlleleFreq(object):
     todo: this needs to be modified to calculate bins in Spark so as to reduce Collect size
     """
     def __init__(self, ss, variantRDD):
+
         so_terms = [
             'intergenic_region',
             'downstream_gene_variant',
@@ -255,7 +257,6 @@ class VariantEffectAlleleFreq(object):
             'splice_region_variant',
             'frameshift_variant',
             'stop_gained']
-
         so_to_rank = dict(zip(so_terms, range(1,len(so_terms)+1)))
         rank_to_so = {v: k for k, v in so_to_rank.iteritems()}
 
@@ -284,6 +285,98 @@ class VariantEffectAlleleFreq(object):
         ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y,pos: ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
         ax.yaxis.set_label_text("Percent Variants")
         ax.xaxis.set_label_text("Allele Frequency")
+        plt.show()
+
+class VariantEffectAlleleFreq2(object):
+    """
+    todo: this needs to be modified to calculate bins in Spark so as to reduce Collect size
+    """
+    def __init__(self, ss, variantRDD):
+
+        so_terms = [
+            'intergenic_region',
+            'downstream_gene_variant',
+            'upstream_gene_variant',
+            'sequence_feature',
+            'structural_interaction_variant',
+            'intron_variant',
+            'non_coding_transcript_exon_variant',
+            '3_prime_UTR_variant',
+            '5_prime_UTR_variant',
+            'synonymous_variant',
+            'conservative_inframe_insertion',
+            'conservative_inframe_deletion',
+            'initiator_codon_variant',
+            'protein_protein_contact',
+            'non_coding_transcript_variant',
+            'stop_retained_variant',
+            '5_prime_UTR_premature_start_codon_gain_variant',
+            'disruptive_inframe_deletion',
+            'disruptive_inframe_insertion',
+            'missense_variant',
+            'stop_lost',
+            'start_lost',
+            'splice_donor_variant',
+            'splice_acceptor_variant',
+            'splice_region_variant',
+            'frameshift_variant',
+            'stop_gained']
+        so_to_rank = dict(zip(so_terms, range(1,len(so_terms)+1)))
+        rank_to_so = {v: k for k, v in so_to_rank.iteritems()}
+
+        def most_sig_effect(effectList):
+            return rank_to_so[max( [ so_to_rank[item] for item in effectList] )]
+
+        def jp3(dd1):
+            effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
+            mostSigEffect = most_sig_effect(effectList)
+            return mostSigEffect
+
+
+        z = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
+            lambda x: x['attributes']['AF_NFE'] != ".").map(
+            lambda d: (jp3(d), math.floor(float(d['attributes']['AF_NFE'])*10000)/10000)).filter(
+            lambda f: f[0] == 'missense_variant').countByValue()
+        zlist = z.items()
+        zbins = [ item[0][1] for item in zlist ]
+        zweights = [ item[1] for item in zlist ]
+
+        y = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
+            lambda x: x['attributes']['AF_NFE'] != ".").map(
+            lambda d: (jp3(d), math.floor(float(d['attributes']['AF_NFE'])*10000)/10000)).filter(
+            lambda f: f[0] == 'synonymous_variant').countByValue()
+        ylist = y.items()
+        ybins = [ item[0][1] for item in ylist ]
+        yweights = [ item[1] for item in ylist ]
+
+        self.z_data = (zbins, zweights)
+        self.y_data = (ybins, yweights)
+
+
+        """
+        z = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).map(lambda d: (d['attributes']['AF_NFE'], jp3(d)) )
+        self.b_data = z.filter(lambda f: f[1] == 'missense_variant').collect()
+        self.c_data = z.filter(lambda f: f[1] == 'synonymous_variant').collect()
+        """
+        self.sc = ss.sparkContext
+
+    def plot(self):
+        plt.rcdefaults()
+        plt.title("Allele Frequency Distribution by Functional Category")
+        plt.hist([self.z_data[0],self.y_data[0]], weights=[self.z_data[1],self.y_data[1]],bins=20,normed=1)
+        plt.yscale('log')
+        plt.show()
+        """
+        fig, ax = plt.subplots(1,figsize=(14, 8))
+        b_data2= [ float(item[0]) for item in self.b_data if item[0] != "."]
+        c_data2= [ float(item[0]) for item in self.c_data if item[0] != "."]
+        ax.hist([b_data2,c_data2],bins=40, normed=1, label=['missense_variant','synonymous_variant'])
+        ax.legend(loc='upper right')
+        ax.set_yscale('log')
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y,pos: ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
+        ax.yaxis.set_label_text("Percent Variants")
+        ax.xaxis.set_label_text("Allele Frequency")
+        """
         plt.show()
 
 class VariantEffectCounts(object):
