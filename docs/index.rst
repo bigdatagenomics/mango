@@ -24,6 +24,7 @@ variety of platforms.
 
    installation/source
    installation/example
+   installation/distribution
 
 .. toctree::
    :caption: Running with Docker
