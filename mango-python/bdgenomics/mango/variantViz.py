@@ -24,7 +24,9 @@ import matplotlib.ticker as ticker
 import math
 plt.rcdefaults()
 
-
+"""
+so_terms in order of least to most clinically significant
+"""
 so_terms = [
     'intergenic_region',
     'downstream_gene_variant',
@@ -57,14 +59,56 @@ so_terms = [
 so_to_rank = dict(zip(so_terms, range(1,len(so_terms)+1)))
 rank_to_so = {v: k for k, v in so_to_rank.iteritems()}
 
+
 def most_sig_effect(effectList):
+    """
+    :param effectList: list of sequence ontology terms
+    :return: so_term from effectList with most disruptive effect 
+    """
     return rank_to_so[max( [ so_to_rank[item] for item in effectList] )]
 
+class VariantFreqPopCompareScatter(object):
+    """
+    Scattergram comparing comparing allele frequencies of variants in two popilations
+    """
+    def __init__(self, ss, variantRDD, pop1, pop2):
+        """
+        
+        :param ss: SparkContext
+        :param variantRDD: bdgenomics variantRDD
+        :param pop1: population one name 
+        :param pop2: population two name
+        """
+        curr = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
+            lambda x: x['attributes']['AF_NFE'] != ".").filter(
+            lambda x: x['attributes']['AF_AFR'] != ".").map(lambda d: ((float(d['attributes'][pop1])), float(d['attributes'][pop2]))   ).collect()
+        self.x = [ i[0] for i in curr ]
+        self.y = [ i[1] for i in curr ]
+        self.pop1 = pop1
+        self.pop2 = pop2
+
+    def plot(self):
+        plt.rcdefaults()
+        plt.title("Population Frequency Scattergram comparing populations " + self.pop1 + " and " + self.pop2)
+        plt.scatter(self.x,self.y)
+        plt.xlabel(self.pop1)
+        plt.ylabel(self.pop2)
+        plt.show()
+
+
 class VariantEffectAlleleFreq(object):
+    """
+    Plots Histogram of Variant Effect versus Allele Frequency
+    """
 
     def __init__(self, ss, variantRDD, annot_list=[], bins=100):
-
-        def jp3(dd1):
+        """
+        :param ss: the global SparkContext
+        :param variantRDD: a bdgenomics.adam.rdd.AlignmentRDD object
+        :param annot_list: a list of text sequence ontology terms
+        :param bins: number of bins in Histogram, default 100
+        """
+        def get_effect(dd1):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
             mostSigEffect = most_sig_effect(effectList)
             return mostSigEffect
@@ -75,13 +119,11 @@ class VariantEffectAlleleFreq(object):
         data_bins = []
         data_weights = []
 
-
         for annot in annot_list:
               curr = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
                   lambda x: x['attributes']['AF_NFE'] != ".").map(
-                  lambda d: (jp3(d), math.floor(float(d['attributes']['AF_NFE'])*10000)/10000)).filter(
+                  lambda d: (get_effect(d), math.floor(float(d['attributes']['AF_NFE'])*10000)/10000)).filter(
                   lambda f: f[0] == annot).countByValue()
-              #data_list.append(curr)
               currlist = curr.items()
               currbins = [ item[0][1] for item in currlist ]
               currweights = [ item[1] for item in currlist ]
@@ -103,17 +145,16 @@ class VariantEffectAlleleFreq(object):
         plt.show()
 
 
-
 class VariantCountByPop(object):
+    """
+    Plot Allele Frequency Distribution by Population
+    """
     def __init__(self, ss, variantRDD, annot_list=[], bins=100):
 
         def jp3(dd1):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
             mostSigEffect = most_sig_effect(effectList)
             return mostSigEffect
-
-        if len(annot_list) == 0:
-            annot_list = ['frameshift_variant','stop_gained', 'missense_variant', 'synonymous_variant']
 
         data_bins = []
         data_weights = []
@@ -129,12 +170,8 @@ class VariantCountByPop(object):
            data_bins.append(currbins)
            data_weights.append(currweights)
 
-
-
-
         self.data_bins = data_bins
         self.data_weights = data_weights
-        self.annot_list = annot_list
         self.pop_list=pop_list
         self.bins = bins
         self.sc = ss.sparkContext
@@ -145,9 +182,7 @@ class VariantCountByPop(object):
         plt.hist(self.data_bins, weights=self.data_weights, bins=self.bins, histtype = 'step', label=self.pop_list)
         plt.legend()
         plt.yscale('log')
-        #plt.xscale('log')
         plt.show()
-
 
 
 class VariantEffectCounts(object):
@@ -198,6 +233,9 @@ class VariantEffectCounts(object):
         plt.show()
 
 class VariantCountByGene(object):
+    """
+    Plot Histogram of variant count by Gene
+    """
     def __init__(self,ss,variantRDD, so_term='missense_variant', bins=100):
 
       def compute(dd1):
