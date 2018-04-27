@@ -69,19 +69,18 @@ def most_sig_effect(effectList):
 
 class VariantFreqPopCompareScatter(object):
     """
-    Scattergram comparing comparing allele frequencies of variants in two popilations
+    Scattergram comparing comparing allele frequencies of variants in two populations
     """
-    def __init__(self, ss, variantRDD, pop1, pop2):
+    def __init__(self, ss, variantRDD, pop1='AF_NFE', pop2='AF_AFR'):
         """
-        
         :param ss: SparkContext
         :param variantRDD: bdgenomics variantRDD
         :param pop1: population one name 
         :param pop2: population two name
         """
         curr = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
-            lambda x: x['attributes']['AF_NFE'] != ".").filter(
-            lambda x: x['attributes']['AF_AFR'] != ".").map(lambda d: ((float(d['attributes'][pop1])), float(d['attributes'][pop2]))   ).collect()
+            lambda x: x['attributes'][pop1] != ".").filter(
+            lambda x: x['attributes'][pop2] != ".").map(lambda d: ((float(d['attributes'][pop1])), float(d['attributes'][pop2]))   ).collect()
         self.x = [ i[0] for i in curr ]
         self.y = [ i[1] for i in curr ]
         self.pop1 = pop1
@@ -89,7 +88,7 @@ class VariantFreqPopCompareScatter(object):
 
     def plot(self):
         plt.rcdefaults()
-        plt.title("Population Frequency Scattergram comparing populations " + self.pop1 + " and " + self.pop2)
+        plt.title("Population Frequency Scattergram\ncomparing populations " + self.pop1 + " and " + self.pop2)
         plt.scatter(self.x,self.y)
         plt.xlabel(self.pop1)
         plt.ylabel(self.pop2)
@@ -98,7 +97,7 @@ class VariantFreqPopCompareScatter(object):
 
 class VariantEffectAlleleFreq(object):
     """
-    Plots Histogram of Variant Effect versus Allele Frequency
+    Plots Cumulative Distribution ofVariant Effect versus Allele Frequency
     """
 
     def __init__(self, ss, variantRDD, annot_list=[], bins=100):
@@ -114,7 +113,8 @@ class VariantEffectAlleleFreq(object):
             return mostSigEffect
 
         if len(annot_list) == 0:
-            annot_list = ['frameshift_variant','stop_gained', 'missense_variant', 'synonymous_variant']
+          annot_list = ['missense_variant', 'synonymous_variant']
+
 
         data_bins = []
         data_weights = []
@@ -138,18 +138,20 @@ class VariantEffectAlleleFreq(object):
 
     def plot(self):
         plt.rcdefaults()
-        plt.title("Allele Frequency Distribution by Functional Category")
-        plt.hist(self.data_bins, weights=self.data_weights, bins=self.bins, normed=1, histtype = 'step', label=self.annot_list)
-        plt.legend()
-        plt.yscale('log')
+        plt.title("Cumulative Allele Frequency Distribution by Functional Category")
+        #[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]
+        plt.hist(self.data_bins, weights=self.data_weights, bins=500, normed=1, histtype = 'step', cumulative=1, label=self.annot_list)
+        plt.legend(loc='lower center')
+        #plt.yscale('log')
+        plt.xscale('log')
         plt.show()
 
 
-class VariantCountByPop(object):
+class VariantDistribByPop(object):
     """
     Plot Allele Frequency Distribution by Population
     """
-    def __init__(self, ss, variantRDD, annot_list=[], bins=100):
+    def __init__(self, ss, variantRDD, pop_list=[ 'AF_NFE', 'AF_AFR']):
 
         def jp3(dd1):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
@@ -159,11 +161,16 @@ class VariantCountByPop(object):
         data_bins = []
         data_weights = []
 
-        pop_list = [ 'AF_NFE', 'AF_AFR']
+        def getmaf(x):
+            if(x<0.5):
+                return x
+            else:
+              return 1 - x
+
         for pop in pop_list:
            curr = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
              lambda x: x['attributes'][pop] != ".").map(
-             lambda d: (jp3(d), math.floor(float(d['attributes'][pop])*100000)/100000)).filter(lambda f: f[1] > 0).countByValue()
+             lambda d: (jp3(d), math.floor( getmaf(float(d['attributes'][pop])) *100000)/100000)).filter(lambda f: f[1] > 0).countByValue()
            currlist = curr.items()
            currbins = [ item[0][1] for item in currlist ]
            currweights = [ item[1] for item in currlist ]
@@ -173,15 +180,17 @@ class VariantCountByPop(object):
         self.data_bins = data_bins
         self.data_weights = data_weights
         self.pop_list=pop_list
-        self.bins = bins
         self.sc = ss.sparkContext
 
     def plot(self):
         plt.rcdefaults()
         plt.title("Allele Frequency Distribution by Population")
-        plt.hist(self.data_bins, weights=self.data_weights, bins=self.bins, histtype = 'step', label=self.pop_list)
+        plt.hist(self.data_bins, weights=self.data_weights, bins=[.00001,.0001,.001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5], histtype = 'step', label=self.pop_list)
         plt.legend()
         plt.yscale('log')
+        plt.xlabel("Minor Allele Frequency")
+        plt.ylabel("Variant Count")
+        #plt.xscale('log')
         plt.show()
 
 
@@ -258,5 +267,53 @@ class VariantCountByGene(object):
     def plot(self):
         plt.hist(self.data, bins=100)
         plt.title("Count of " + self.so_term + " per gene")
+        plt.xlabel("Number of Variants")
+        plt.ylabel("Number of Genes")
         plt.show()
 
+
+class VariantsGenomicRegion(object):
+    def __init__(self,ss,variantRDD, start = 0, end = 1000000000, contigName="22"):
+        data = variantRDD.toDF().filter((variantRDD.toDF().start > start) & (variantRDD.toDF().start < end) & (variantRDD.toDF().contigName == contigName) ).rdd.map(lambda w: w.asDict()).map(lambda x: (x['contigName'], int(math.floor(float(x['start'])/1000000)))).countByValue()
+        self.data = data
+    def plot(self):
+        x = [ z[0][1] for z in self.data.items() ]
+        data = [ (z[0][1],z[1]) for z in self.data.items() ]
+        data_sorted = sorted(data, key = lambda tup: tup[0])
+        plt.plot([ z[0] for z in data_sorted ], [ z[1] for z in data_sorted ])
+        plt.title("Variant density on chromosome " + contigName)
+        plt.xlabel("position (MB)")
+        plt.ylabel("Variant Count / MB")
+        plt.show()
+
+class VariantCountPerSample(object):
+    """
+    Plot Histogram of variant count per sample
+    """
+    def __init__(self,ss,genotypeRDD):
+        df =  genotypeRDD.toDF()
+        data =  df.where( (df.alleles[0] == u'ALT') | (df.alleles[1] == u'ALT')).groupBy("sampleid").count().collect()
+        counts = [ sample.asDict()['count'] for sample in data ]
+        self.counts = counts
+    def plot(self):
+        plt.hist(self.counts,bins=100)
+        plt.title("Variants per Sample")
+        plt.xlabel("Variants")
+        plt.ylabel("Samples")
+        plt.show()
+
+class QDDist(object):
+    """
+    Plot Histogram of Quality By Depth (QD) score from a variant dataset
+    """
+    def __init__(self,ss,variantRDD):
+        data = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).map(lambda x: math.floor(float(x['attributes']['QD'])*10/10)).countByValue()
+        self.scores = [ x[0] for x in data.items() ]
+        self.weights = [ x[1] for x in data.items() ]
+
+    def plot(self):
+        plt.hist(self.scores,weights=self.weights, bins=80)
+        plt.title("Quality By Depth (QD) Score Distribution")
+        plt.xlabel("QD")
+        plt.ylabel("Variant Sites")
+        plt.show()
