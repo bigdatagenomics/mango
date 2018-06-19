@@ -23,8 +23,8 @@ Through the aws command line, create a new cluster:
 .. code:: bash
 
   aws emr create-cluster
-  --release-label emr-5.11.0 \
-  --name 'emr-5.8.0 Mango example' \
+  --release-label emr-5.14.0 \
+  --name 'emr-5.14.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark  \
   --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
@@ -47,6 +47,8 @@ To view the Spark UI, notebook, and browser, you must setup a web connection for
 .. image:: ../img/EMR/enable_web_connection.png
 
 Note that for accessing the recommended 8157 port for FoxyProxy (as well as port 22 for ssh), you will have to expose these ports in the security group for the master node. To do this, navigate to **Security and access** in your Cluster EMR manager. Click on **Security groups for Master**. Add a new rule for ssh port 22 or the port configured in FoxyProxy to inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
+
+Alternatively,  `you can set up an ssh tunnel on the master node <https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-ssh-tunnel-local.html>`__.
 
 Connecting to Cluster
 ---------------------
