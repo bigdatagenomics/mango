@@ -141,9 +141,10 @@ class VariantEffectAlleleFreq(object):
     def plot(self, testMode = False):
         if (not testMode):
           plt.rcdefaults()
-          plt.title("Cumulative Allele Frequency Distribution by Functional Category")
-          #[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]
-          plt.hist(self.data_bins, weights=self.data_weights, bins=500, normed=1, histtype = 'step', cumulative=1, label=self.annot_list)
+          plt.title("Allele Frequency Distribution by Functional Category")
+          bins = [.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]
+          #plt.hist(self.data_bins, weights=self.data_weights, bins=500, normed=1, histtype = 'step', cumulative=1, label=self.annot_list)
+          plt.hist(self.data_bins, weights=self.data_weights, bins=bins, normed=1, histtype = 'step', label=self.annot_list)
           plt.legend(loc='lower center')
           #plt.yscale('log')
           plt.xscale('log')
@@ -296,6 +297,9 @@ class VariantCountByGene(object):
         return self.data
 
 class VariantsGenomicRegion(object):
+    """
+    Plot variant density across chromosome region
+    """
     def __init__(self,ss,variantRDD, start = 0, end = 1000000000, contigName="22"):
         """
         :param ss: SparkContext 
@@ -338,7 +342,7 @@ class VariantCountPerSample(object):
           plt.xlabel("Variants")
           plt.ylabel("Samples")
           plt.show()
-        return dict(self.counts)
+        return self.counts
 
 
 class InsertionCountPerSample(object):
@@ -385,7 +389,7 @@ class HetHomRatioPerSample(object):
           plt.xlabel("Het/Hom Ratio")
           plt.ylabel("Sample Count")
           plt.show()
-        return self.htm_hom_ratio
+        return self.het_hom_ratio
 
 
 class CallRatePerSample(object):
