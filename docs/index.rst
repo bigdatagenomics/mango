@@ -50,6 +50,11 @@ variety of platforms.
 
     cloud/emr
 
+.. toctree::
+    :caption: Demo Notebooks 
+    :maxdepth: 2
+
+    mango-viz_demo.ipynb
 
 
 * :ref:`genindex`

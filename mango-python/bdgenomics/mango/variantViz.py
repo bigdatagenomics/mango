@@ -27,7 +27,7 @@ plt.rcdefaults()
 plt.rcParams['figure.figsize'] = [10, 8]
 
 """
-so_terms in order of least to most clinically significant
+so_terms, listed in order of least to most clinically significant
 """
 so_terms = [
     'intergenic_region',
@@ -100,15 +100,15 @@ class VariantFreqPopCompareScatter(object):
 
 class VariantEffectAlleleFreq(object):
     """
-    Plots Cumulative Distribution ofVariant Effect versus Allele Frequency
+    Plots Cumulative Distribution of Variant Effect versus Allele Frequency
     """
 
-    def __init__(self, ss, variantRDD, annot_list=[], bins=100):
+    def __init__(self, ss, variantRDD, annot_list=[], bins=[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]):
         """
         :param ss: the global SparkContext
         :param variantRDD: a bdgenomics.adam.rdd.AlignmentRDD object
         :param annot_list: a list of text sequence ontology terms
-        :param bins: number of bins in Histogram, default 100
+        :param bins: integer number of bins in Histogram, or a list of bin boundaries
         """
         def get_effect(dd1):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
@@ -142,9 +142,9 @@ class VariantEffectAlleleFreq(object):
         if (not testMode):
           plt.rcdefaults()
           plt.title("Allele Frequency Distribution by Functional Category")
-          bins = [.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]
+          #bins = [.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]
           #plt.hist(self.data_bins, weights=self.data_weights, bins=500, normed=1, histtype = 'step', cumulative=1, label=self.annot_list)
-          plt.hist(self.data_bins, weights=self.data_weights, bins=bins, normed=1, histtype = 'step', label=self.annot_list)
+          plt.hist(self.data_bins, weights=self.data_weights, bins=self.bins, normed=1, histtype = 'step', label=self.annot_list)
           plt.legend(loc='lower center')
           #plt.yscale('log')
           plt.xscale('log')
@@ -158,14 +158,15 @@ class VariantDistribByPop(object):
     """
     Plot Allele Frequency Distribution by Population
     """
-    def __init__(self, ss, variantRDD, pop_list=[ 'AF_NFE', 'AF_AFR']):
+    def __init__(self, ss, variantRDD, pop_list=[ 'AF_NFE', 'AF_AFR'], bins=[.00001,.0001,.001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]):
         """
         :param ss: SparkContext 
         :param variantRDD: bdgenomics VariantRDD
-        :param pop_list: list of populations
+        :param pop_list: list of populations, defaults to [ 'AF_NFE', 'AF_AFR']
+        :param bins: integer number of bins in Histogram, or a list of bin boundaries
         """
 
-        def jp3(dd1):
+        def getMostSigEffect(dd1):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
             mostSigEffect = most_sig_effect(effectList)
             return mostSigEffect
@@ -182,7 +183,7 @@ class VariantDistribByPop(object):
         for pop in pop_list:
            curr = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
              lambda x: x['attributes'][pop] != ".").map(
-             lambda d: (jp3(d), math.floor( getmaf(float(d['attributes'][pop])) *100000)/100000)).filter(lambda f: f[1] > 0).countByValue()
+             lambda d: (getMostSigEffect(d), math.floor( getmaf(float(d['attributes'][pop])) *100000)/100000)).filter(lambda f: f[1] > 0).countByValue()
            currlist = curr.items()
            currbins = [ item[0][1] for item in currlist ]
            currweights = [ item[1] for item in currlist ]
@@ -193,11 +194,12 @@ class VariantDistribByPop(object):
         self.data_weights = data_weights
         self.pop_list=pop_list
         self.sc = ss.sparkContext
+        self.bins = bins
 
     def plot(self):
         plt.rcdefaults()
         plt.title("Allele Frequency Distribution by Population")
-        plt.hist(self.data_bins, weights=self.data_weights, bins=[.00001,.0001,.001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5], histtype = 'step', label=self.pop_list)
+        plt.hist(self.data_bins, weights=self.data_weights, bins=self.bins, histtype = 'step', label=self.pop_list)
         plt.legend()
         plt.yscale('log')
         plt.xlabel("Minor Allele Frequency")
