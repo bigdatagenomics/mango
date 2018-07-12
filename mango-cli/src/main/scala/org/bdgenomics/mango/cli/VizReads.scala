@@ -23,6 +23,7 @@ import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.mango.cli.util.Materializer
 import org.bdgenomics.mango.core.util.{ VizUtils, VizCacheIndicator }
 import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.layout.{ PositionCount, BedRowJson, GenotypeJson }
@@ -60,63 +61,6 @@ object VizTimers extends Metrics {
   val MakingTrack = timer("Making Track")
   val DoingCollect = timer("Doing Collect")
   val PrintReferenceTimer = timer("JSON get reference string")
-}
-
-case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
-
-  /**
-   * Access functions for materializer
-   */
-  def getReads(): Option[AlignmentRecordMaterialization] = {
-    val x = objects.flatMap(r =>
-      r match {
-        case m: AlignmentRecordMaterialization => Some(m)
-        case _                                 => None
-      })
-    if (x.isEmpty) None
-    else Some(x.head)
-  }
-
-  def getCoverage(): Option[CoverageMaterialization] = {
-    val x = objects.flatMap(r =>
-      r match {
-        case m: CoverageMaterialization => Some(m)
-        case _                          => None
-      })
-    if (x.isEmpty) None
-    else Some(x.head)
-  }
-
-  def getVariantContext(): Option[VariantContextMaterialization] = {
-    val x = objects.flatMap(r =>
-      r match {
-        case m: VariantContextMaterialization => Some(m)
-        case _                                => None
-      })
-    if (x.isEmpty) None
-    else Some(x.head)
-  }
-
-  def getFeatures(): Option[FeatureMaterialization] = {
-    val x = objects.flatMap(r =>
-      r match {
-        case m: FeatureMaterialization => Some(m)
-        case _                         => None
-      })
-    if (x.isEmpty) None
-    else Some(x.head)
-  }
-
-  /**
-   * definitions tracking whether optional datatypes were loaded
-   */
-  def readsExist: Boolean = getReads().isDefined
-
-  def coveragesExist: Boolean = getCoverage().isDefined
-
-  def variantContextExist: Boolean = getVariantContext().isDefined
-
-  def featuresExist: Boolean = getFeatures().isDefined
 }
 
 /**
@@ -246,8 +190,6 @@ object VizReads extends BDGCommandCompanion with Logging {
   }
 
 }
-
-case class ReferenceJson(reference: String, position: Long)
 
 class VizReadsArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)

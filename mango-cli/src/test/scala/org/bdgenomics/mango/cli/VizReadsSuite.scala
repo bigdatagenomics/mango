@@ -77,14 +77,23 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("/reads/:key/:ref") {
+  sparkTest("Reference should throw NotFound error on invalid contig") {
     implicit val VizReads = runVizReads(args)
-    get(s"/reads/${bamKey}/chrM?start=0&end=100") {
+    // should return data
+    get("/reference/fakeChr?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  /** Reads tests **/
+  sparkTest("should return reads") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/reads/${bamKey}/chrM?start=0&end=2") {
       assert(status == Ok("").status.code)
     }
   }
 
-  sparkTest("/reads/coverage/:key/:ref") {
+  sparkTest("should return coverage from reads") {
     implicit val VizReads = runVizReads(args)
     get(s"/reads/coverage/${bamKey}/chrM?start=1&end=100") {
       assert(status == Ok("").status.code)
@@ -93,6 +102,33 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  sparkTest("Should throw error when reads do not exist") {
+    val newArgs = new VizReadsArgs()
+    newArgs.referencePath = referenceFile
+    newArgs.testMode = true
+    implicit val VizReads = runVizReads(newArgs)
+
+    get(s"/reads/${bamKey}/chrM?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  sparkTest("Reads should throw NotFound error on invalid contig") {
+    implicit val VizReads = runVizReads(args)
+
+    get(s"/reads/${bamKey}/fakeChr?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  sparkTest("should not return reads with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/reads/invalidKey/chrM?start=0&end=100") {
+      assert(status == Ok("").status.code)
+    }
+  }
+
+  /** Variants tests **/
   sparkTest("/variants/:key/:ref") {
     val args = new VizReadsArgs()
     args.referencePath = referenceFile
@@ -122,6 +158,27 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  sparkTest("should not return variants with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/variants/invalidKey/chrM?start=0&end=100") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
+      assert(json.map(_.variant).length == 0)
+    }
+  }
+
+  sparkTest("Should throw error when variants do not exist") {
+    val newArgs = new VizReadsArgs()
+    newArgs.referencePath = referenceFile
+    newArgs.testMode = true
+    implicit val VizReads = runVizReads(newArgs)
+
+    get(s"/variants/invalidKey/chrM?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  /** Feature Tests **/
   sparkTest("/features/:key/:ref") {
     implicit val vizReads = runVizReads(args)
     get(s"/features/${featureKey}/chrM?start=0&end=1200") {
@@ -131,6 +188,35 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  sparkTest("should not return features with invalid key") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/features/invalidKey/chrM?start=0&end=100") {
+      assert(status == Ok("").status.code)
+      val json = parse(response.getContent()).extract[Array[BedRowJson]]
+      assert(json.length == 0)
+    }
+  }
+
+  sparkTest("Should throw error when features do not exist") {
+    val newArgs = new VizReadsArgs()
+    newArgs.referencePath = referenceFile
+    newArgs.testMode = true
+    implicit val VizReads = runVizReads(newArgs)
+
+    get(s"/features/invalidKey/chrM?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  sparkTest("Features should throw out of bounds error on invalid contig") {
+    implicit val VizReads = runVizReads(args)
+
+    get(s"/features/${featureKey}/fakeChr?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  /** Coverage Tests **/
   sparkTest("/coverage/:key/:ref") {
     val args = new VizReadsArgs()
     args.referencePath = referenceFile
@@ -145,32 +231,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("should not return reads with invalid key") {
-    implicit val VizReads = runVizReads(args)
-    get(s"/reads/invalidKey/chrM?start=0&end=100") {
-      assert(status == Ok("").status.code)
-    }
-  }
-
-  sparkTest("should not return variants with invalid key") {
-    implicit val VizReads = runVizReads(args)
-    get(s"/variants/invalidKey/chrM?start=0&end=100") {
-      assert(status == Ok("").status.code)
-      val json = parse(response.getContent()).extract[Array[String]].map(r => GenotypeJson(r))
-      assert(json.length == 0)
-
-    }
-  }
-
-  sparkTest("should not return features with invalid key") {
-    implicit val VizReads = runVizReads(args)
-    get(s"/features/invalidKey/chrM?start=0&end=100") {
-      assert(status == Ok("").status.code)
-      val json = parse(response.getContent()).extract[Array[BedRowJson]]
-      assert(json.length == 0)
-    }
-  }
-
   sparkTest("should not return coverage with invalid key") {
     implicit val VizReads = runVizReads(args)
     get(s"/coverage/invalidKey/chrM?start=0&end=100") {
@@ -180,6 +240,26 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  sparkTest("Should throw error when coverage does not exist") {
+    val newArgs = new VizReadsArgs()
+    newArgs.referencePath = referenceFile
+    newArgs.testMode = true
+    implicit val VizReads = runVizReads(newArgs)
+
+    get(s"/coverage/invalidKey/chrM?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  sparkTest("Coverage should throw out of bounds error on invalid contig") {
+    implicit val VizReads = runVizReads(args)
+
+    get(s"/reads/${coverageKey}/fakeChr?start=1&end=100") {
+      assert(status == NotFound().status.code)
+    }
+  }
+
+  /** Example files **/
   sparkTest("should run example files") {
 
     val args = new VizReadsArgs()
