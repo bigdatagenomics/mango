@@ -19,6 +19,9 @@
 from collections import Counter, OrderedDict
 from cigar import Cigar
 import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.ticker as ticker
+import math
 plt.rcdefaults()
 
 
@@ -219,3 +222,4 @@ class AlignmentDistribution(object):
             plt.show()
 
         return chromosomes
+
