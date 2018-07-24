@@ -56,6 +56,11 @@ variety of platforms.
 
     mango-viz_demo.ipynb
 
+.. automodule:: bdgenomics.mango.variantViz
+   :members:
+
+.. autoclass:: bdgenomics.mango.variantViz.VariantFreqPopCompareScatter
+   :members:
 
 * :ref:`genindex`
 * :ref:`search`

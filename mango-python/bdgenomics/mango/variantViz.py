@@ -61,7 +61,6 @@ so_terms = [
 so_to_rank = dict(zip(so_terms, range(1,len(so_terms)+1)))
 rank_to_so = {v: k for k, v in so_to_rank.iteritems()}
 
-
 def most_sig_effect(effectList):
     """
     :param effectList: list of sequence ontology terms
@@ -71,7 +70,7 @@ def most_sig_effect(effectList):
 
 class VariantFreqPopCompareScatter(object):
     """
-    Scattergram comparing comparing allele frequencies of variants in two populations
+    Scattergram comparing allele frequencies of variants in two populations
     """
     def __init__(self, ss, variantRDD, pop1='AF_NFE', pop2='AF_AFR'):
         """
@@ -103,7 +102,7 @@ class VariantEffectAlleleFreq(object):
     Plots Cumulative Distribution of Variant Effect versus Allele Frequency
     """
 
-    def __init__(self, ss, variantRDD, annot_list=[], bins=[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]):
+    def __init__(self, ss, variantRDD, annot_list=['missense_variant', 'synonymous_variant'], bins=[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]):
         """
         :param ss: the global SparkContext
         :param variantRDD: a bdgenomics.adam.rdd.AlignmentRDD object
@@ -114,9 +113,6 @@ class VariantEffectAlleleFreq(object):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
             mostSigEffect = most_sig_effect(effectList)
             return mostSigEffect
-
-        if len(annot_list) == 0:
-          annot_list = ['missense_variant', 'synonymous_variant']
 
         data_bins = []
         data_weights = []
@@ -142,17 +138,13 @@ class VariantEffectAlleleFreq(object):
         if (not testMode):
           plt.rcdefaults()
           plt.title("Allele Frequency Distribution by Functional Category")
-          #bins = [.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]
-          #plt.hist(self.data_bins, weights=self.data_weights, bins=500, normed=1, histtype = 'step', cumulative=1, label=self.annot_list)
           plt.hist(self.data_bins, weights=self.data_weights, bins=self.bins, normed=1, histtype = 'step', label=self.annot_list)
           plt.legend(loc='lower center')
-          #plt.yscale('log')
           plt.xscale('log')
           plt.xlabel("Allele Frequency")
           plt.ylabel("Proportion of Variants (normalized)")
           plt.show()
         return ( sorted(self.data_bins[0])[0:20], sorted(self.data_weights[0][0:20]) )
-
 
 class VariantDistribByPop(object):
     """
@@ -204,9 +196,7 @@ class VariantDistribByPop(object):
         plt.yscale('log')
         plt.xlabel("Minor Allele Frequency")
         plt.ylabel("Variant Count")
-        #plt.xscale('log')
         plt.show()
-
 
 class VariantEffectCounts(object):
     """
@@ -237,7 +227,6 @@ class VariantEffectCounts(object):
 
         effectCounts = variantRDD.toDF().select("annotation").rdd.map(lambda w: w[0].asDict()['transcriptEffects']) \
             .flatMap(lambda m: m).map(lambda g: g.asDict()['effects']).flatMap(lambda a: a).filter(lambda i: i in includeList).countByValue()
-
 
         self.sc = ss.sparkContext
         self.effectCounts = effectCounts
@@ -418,8 +407,6 @@ class CallRatePerSample(object):
           plt.ylabel("Sample Count")
           plt.show()
         return self.call_rate
-
-
 
 class QDDist(object):
     """
