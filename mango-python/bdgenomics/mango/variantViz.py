@@ -26,6 +26,8 @@ from pyspark.sql import Row
 plt.rcdefaults()
 plt.rcParams['figure.figsize'] = [10, 8]
 
+default_bins=100
+
 """
 so_terms, listed in order of least to most clinically significant
 """
@@ -102,12 +104,13 @@ class VariantEffectAlleleFreq(object):
     Plots Cumulative Distribution of Variant Effect versus Allele Frequency
     """
 
-    def __init__(self, ss, variantRDD, annot_list=['missense_variant', 'synonymous_variant'], bins=[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5]):
+    def __init__(self, ss, variantRDD, annot_list=['missense_variant', 'synonymous_variant'], bins=[.00001,.0001,.01,.025,.05,.075,.1,.15,.2,.25,.3,.35,.4,.45,.5], pop):
         """
         :param ss: the global SparkContext
         :param variantRDD: a bdgenomics.adam.rdd.AlignmentRDD object
         :param annot_list: a list of text sequence ontology terms
         :param bins: integer number of bins in Histogram, or a list of bin boundaries
+        :param pop: population code from which to select allele frequency
         """
         def get_effect(dd1):
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
@@ -119,8 +122,8 @@ class VariantEffectAlleleFreq(object):
 
         for annot in annot_list:
               curr = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
-                  lambda x: x['attributes']['AF_NFE'] != ".").map(
-                  lambda d: (get_effect(d), math.floor(float(d['attributes']['AF_NFE'])*10000)/10000)).filter(
+                  lambda x: x['attributes'][pop] != ".").map(
+                  lambda d: (get_effect(d), math.floor(float(d['attributes'][pop])*10000)/10000)).filter(
                   lambda f: f[0] == annot).countByValue()
               currlist = curr.items()
               currbins = [ item[0][1] for item in currlist ]
@@ -159,6 +162,9 @@ class VariantDistribByPop(object):
         """
 
         def getMostSigEffect(dd1):
+        """
+        Return most significant effect from list of transcript annotations
+        """
             effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
             mostSigEffect = most_sig_effect(effectList)
             return mostSigEffect
@@ -252,7 +258,7 @@ class VariantCountByGene(object):
     """
     Plot Histogram of variant count by Gene
     """
-    def __init__(self,ss,variantRDD, so_term='missense_variant', bins=100):
+    def __init__(self,ss,variantRDD, so_term='missense_variant', bins=default_bins):
         """
         :param ss: SparkContext 
         :param variantRDD: bdgenomics VariantRDD
@@ -291,7 +297,7 @@ class VariantsGenomicRegion(object):
     """
     Plot variant density across chromosome region
     """
-    def __init__(self,ss,variantRDD, start = 0, end = 1000000000, contigName="22"):
+    def __init__(self,ss,variantRDD, start, end, contigName):
         """
         :param ss: SparkContext 
         :param variantRDD: bdgenomics variantRDD
@@ -299,7 +305,12 @@ class VariantsGenomicRegion(object):
         :param end:  genomic stop position
         :param contigName: contig name
         """
-        data = variantRDD.toDF().filter((variantRDD.toDF().start > start) & (variantRDD.toDF().start < end) & (variantRDD.toDF().contigName == contigName) ).rdd.map(lambda w: w.asDict()).map(lambda x: (x['contigName'], int(math.floor(float(x['start'])/1000000)))).countByValue()
+        data = variantRDD.toDF().filter(
+            (variantRDD.toDF().start > start) &
+            (variantRDD.toDF().start < end) &
+            (variantRDD.toDF().contigName == contigName) ).rdd.map(
+              lambda w: w.asDict()).map(
+               lambda x: (x['contigName'], int(math.floor(float(x['start'])/1000000)))).countByValue()
         self.data = data
         self.contigName=contigName
     def plot(self):
@@ -328,7 +339,7 @@ class VariantCountPerSample(object):
     def plot(self, testMode = False):
 
         if (not testMode):
-          plt.hist(self.counts,bins=100)
+          plt.hist(self.counts,bins=default_bins)
           plt.title("Variants per Sample")
           plt.xlabel("Variants")
           plt.ylabel("Samples")
@@ -350,7 +361,7 @@ class InsertionCountPerSample(object):
         counts = [ sample.asDict()['count'] for sample in data ]
         self.counts = counts
     def plot(self):
-        plt.hist(self.counts,bins=100)
+        plt.hist(self.counts,bins=default_bins)
         plt.title("Variants per Sample")
         plt.xlabel("Variants")
         plt.ylabel("Samples")
@@ -375,7 +386,7 @@ class HetHomRatioPerSample(object):
 
     def plot(self, testMode = False):
         if (not testMode):
-          plt.hist(self.het_hom_ratio,bins=100)
+          plt.hist(self.het_hom_ratio,bins=default_bins)
           plt.title("Histogram of Het/Hom Ratio")
           plt.xlabel("Het/Hom Ratio")
           plt.ylabel("Sample Count")
@@ -401,7 +412,7 @@ class CallRatePerSample(object):
 
     def plot(self, testMode = False):
         if (not testMode):
-          plt.hist(self.call_rate,bins=100)
+          plt.hist(self.call_rate,bins=default_bins)
           plt.title("Histogram of Call Rate per sample")
           plt.xlabel("Call Rate")
           plt.ylabel("Sample Count")
@@ -417,7 +428,8 @@ class QDDist(object):
         :param ss: SparkContext 
         :param variantRDD: bdgenomics variantRDD
         """
-        data = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).map(lambda x: math.floor(float(x['attributes']['QD'])*10/10)).countByValue()
+        data = variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).map(
+            lambda x: math.floor(float(x['attributes']['QD'])*10)/10).countByValue()
         self.scores = [ x[0] for x in data.items() ]
         self.weights = [ x[1] for x in data.items() ]
 
