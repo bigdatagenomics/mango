@@ -11,7 +11,7 @@ to view Mango browser.
 
 .. code:: bash
 
-    ./example-files/run-example
+    ./example-files/browser-scripts/run-example
 
 One Mango browser is set up, navigate to `localhost:8080 <localhost:8080 />`__
 to view the browser.
@@ -50,7 +50,7 @@ to view Mango notebook.
 
 .. code:: bash
 
-    ./bin/run-mango-notebook
+    ./bin/mango-notebook
 
 Mango notebook depends on Jupyter notebook. To install all dependencies for Mango notebook in a virtual environment, see installation/sources.
 
