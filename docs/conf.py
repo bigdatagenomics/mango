@@ -23,11 +23,6 @@ import imp
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../src'))
 
-# This makes the modules located in docs/vendor available to import
-
-fulltoc = imp.load_source('sphinxcontrib.fulltoc', './vendor/sphinxcontrib/fulltoc.py')
-
-
 def real_dir_name(p, n=1):
     p = os.path.realpath(p)
     for i in range(n):
@@ -36,12 +31,12 @@ def real_dir_name(p, n=1):
 
 path_to_dir = os.path.dirname(os.path.abspath(__file__))
 
-bdgVersion = '0.0.1-SNAPSHOT'
+bdgVersion = '0.0.1'
 
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.5.6'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -54,7 +49,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
-    'sphinxcontrib.fulltoc',
 ]
 
 intersphinx_mapping = {

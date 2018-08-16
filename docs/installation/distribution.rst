@@ -1,5 +1,5 @@
 Running Mango from Distribution
-==========================
+===============================
 
 Fetching Mango Distribution
 ---------------------------

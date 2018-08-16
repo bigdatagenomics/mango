@@ -74,7 +74,7 @@ The Hadoop UI is located at:
 
 .. code:: bash
 
-<PUBLIC_MASTER_DNS>:8088
+  <PUBLIC_MASTER_DNS>:8088
 
 You can access Spark applications through this UI when they are running.
 

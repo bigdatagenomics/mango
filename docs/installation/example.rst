@@ -66,6 +66,7 @@ or the open port assigned by Jupyter notebook. There are three notebooks that ca
 Running Mango with Parameters
 ------------------------------
 To run Mango notebook with user specified parameters, run
+
 .. code:: bash
 
     ./bin/mango-submit <Spark-parameters> -- <Mango-notebook-parameters>
