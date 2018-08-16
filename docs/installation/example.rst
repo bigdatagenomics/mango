@@ -11,7 +11,7 @@ to view Mango browser.
 
 .. code:: bash
 
-    ./example-files/run-example
+    ./example-files/browser-scripts/run-example
 
 One Mango browser is set up, navigate to `localhost:8080 <localhost:8080 />`__
 to view the browser.
