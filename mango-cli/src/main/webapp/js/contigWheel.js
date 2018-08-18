@@ -1,5 +1,5 @@
 /**
- * Handles javascript for visualizing chromosome clickable wheel for navigation
+ * Handles javascript for visualizing chromosome clickable wheel for navigation in Mango browser
 **/
 
 function refVis(dictionary, browser, fromOverall) {
@@ -43,6 +43,17 @@ function refVis(dictionary, browser, fromOverall) {
     .attr('fill', function(d, i) {
       return color(d.data.name);
     });
+
+  // select whole sidebar menu
+  var menu = $('#menu');
+  // get bigSlide identifier
+  var bigSlide = $('.menu-link').bigSlide();
+
+    // toggle bigslide on mouseleave
+    menu.on('mouseleave', function(d) {
+      bigSlide.bigSlideAPI.view.toggleClose();
+    });
+
   var tooltip = d3.select('#refVis')
   .append('div')
   .attr('class', 'refVistooltip');
