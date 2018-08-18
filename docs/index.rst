@@ -27,6 +27,12 @@ variety of platforms.
    installation/distribution
 
 .. toctree::
+   :caption: Development
+   :maxdepth: 2
+
+   development/browser
+
+.. toctree::
    :caption: Running with Docker
    :maxdepth: 2
 
