@@ -54,13 +54,3 @@ docs/jupyterWidgets/_generate/*
 
 # resources for browser
 mango-cli/src/main/webapp/resources/node_modules/*
-!mango-cli/src/main/webapp/resources/node_modules/pileup/
-
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/lib/
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/main/
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/test/
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/test.js
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/pileup.js
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/pileup.js.map
-mango-cli/src/main/webapp/resources/node_modules/pileup/dist/node_modules/
-mango-cli/src/main/webapp/resources/node_modules/pileup/node_modules/

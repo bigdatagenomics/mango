@@ -27,10 +27,13 @@ import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.formats.avro.Feature
+import org.bdgenomics.mango.converters.GA4GHutil
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
-import org.bdgenomics.mango.layout.BedRowJson
 import org.bdgenomics.utils.misc.Logging
 import java.io.{ StringWriter, PrintWriter }
+import scala.collection.JavaConversions._
+
+import org.slf4j.LoggerFactory
 
 /**
  * Handles loading and tracking of data from persistent storage into memory for Feature data.
@@ -47,7 +50,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
                              sd: SequenceDictionary,
                              repartition: Boolean = false,
                              prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[Feature, BedRowJson](FeatureMaterialization.name, sc, files, sd, repartition, prefetchSize)
+    extends LazyMaterialization[Feature, ga4gh.SequenceAnnotations.Feature](FeatureMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable with Logging {
 
   /**
@@ -77,50 +80,27 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * @param data RDD (sampleId, Feature)
    * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def toJson(data: RDD[(String, Feature)]): Map[String, Array[BedRowJson]] = {
-
+  def toJson(data: RDD[(String, Feature)]): Map[String, Array[ga4gh.SequenceAnnotations.Feature]] = {
     data
-      .collect
-      .groupBy(_._1)
-      .map(r => (r._1, r._2.map(_._2)))
-      .mapValues(r =>
-        r.map(f => {
-          val score = Option(f.getScore)
-            .getOrElse(VizUtils.defaultScore.toDouble)
-            .asInstanceOf[Double].toInt
-          BedRowJson(Option(f.getFeatureId).getOrElse("N/A"),
-            Option(f.getFeatureType).getOrElse("N/A"),
-            f.getReferenceName, f.getStart, f.getEnd,
-            score)
-        }))
+      .collect.groupBy(_._1).mapValues(r =>
+        {
+          r.map(a => GA4GHutil.featureToGAFeature(a._2))
+        })
   }
 
   /**
-   * Formats raw data from RDD to JSON.
-   *
-   * @param region Region to obtain coverage for
-   * @param binning Tells what granularity of coverage to return. Used for large regions
-   * @return JSONified data map;
+   * Formats raw data from GA4GH Variants Response to JSON.
+   * @param data An array of GA4GH Variants
+   * @return JSONified data
    */
-  def getJson(region: ReferenceRegion, binning: Int = 1): Map[String, Array[BedRowJson]] = {
-    val data = get(Some(region))
+  def stringify = (data: Array[ga4gh.SequenceAnnotations.Feature]) => {
 
-    val binnedData =
-      if (binning > 1) {
-        bin(data, binning)
-          .map(r => {
-            // map to bin start, bin end
-            val start = r._1._2.start
-            val binned = Feature.newBuilder(r._2)
-              .setStart(start)
-              .setEnd(Math.max(r._2.getEnd, start + binning))
-              .setFeatureId("N/A")
-              .setFeatureType("N/A")
-              .build()
-            (r._1._1, binned)
-          })
-      } else data
-    toJson(binnedData)
+    // write message
+    val message = ga4gh.SequenceAnnotationServiceOuterClass
+      .SearchFeaturesResponse.newBuilder().addAllFeatures(data.toList)
+      .build()
+
+    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(message)
   }
 
 }

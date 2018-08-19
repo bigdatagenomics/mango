@@ -35,16 +35,6 @@ case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
     else Some(x.head)
   }
 
-  def getCoverage(): Option[CoverageMaterialization] = {
-    val x = objects.flatMap(r =>
-      r match {
-        case m: CoverageMaterialization => Some(m)
-        case _                          => None
-      })
-    if (x.isEmpty) None
-    else Some(x.head)
-  }
-
   def getVariantContext(): Option[VariantContextMaterialization] = {
     val x = objects.flatMap(r =>
       r match {
@@ -69,8 +59,6 @@ case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
    * definitions tracking whether optional datatypes were loaded
    */
   def readsExist: Boolean = getReads().isDefined
-
-  def coveragesExist: Boolean = getCoverage().isDefined
 
   def variantContextExist: Boolean = getVariantContext().isDefined
 

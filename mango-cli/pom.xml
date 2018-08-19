@@ -38,6 +38,51 @@
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <workingDirectory>${project.build.directory}/../src/main/webapp/resources/</workingDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>Run `npm install`</id>
+            <phase>process-resources</phase>
+            <configuration>
+              <executable>npm</executable> <!-- requires npm to run -->
+              <arguments>
+                <argument>install</argument>
+              </arguments>
+            </configuration>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jasig.maven</groupId>
+        <artifactId>sass-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>update-stylesheets</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <resources>
+            <resource>
+              <!-- Set source and destination dirs -->
+              <source>
+                <directory>${project.build.directory}/../src/main/webapp/stylesheets</directory>
+              </source>
+              <destination>${project.build.directory}/../src/main/webapp/stylesheets</destination>
+            </resource>
+          </resources>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
@@ -101,10 +146,6 @@
   </build>
 
   <dependencies>
-    <dependency>
-      <groupId>net.fnothaft</groupId>
-      <artifactId>ga4gh-format</artifactId>
-    </dependency>
     <dependency>
       <groupId>com.esotericsoftware.kryo</groupId>
       <artifactId>kryo</artifactId>

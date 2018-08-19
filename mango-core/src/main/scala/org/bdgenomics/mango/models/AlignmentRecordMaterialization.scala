@@ -20,6 +20,8 @@ package org.bdgenomics.mango.models
 import java.io.{ PrintWriter, StringWriter }
 
 import htsjdk.samtools.ValidationStringency
+import net.liftweb.json.Extraction._
+import net.liftweb.json._
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
@@ -31,17 +33,16 @@ import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.utils.instrumentation.Metrics
-import org.ga4gh.{ GAReadAlignment, GASearchReadsResponse }
+import ga4gh.Reads.ReadAlignment
 import net.liftweb.json.Serialization._
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.JavaConversions._
 import scala.reflect._
-import scala.collection.JavaConverters._
+import org.bdgenomics.mango.converters.GA4GHutil._
 
 import scala.reflect.ClassTag
 
@@ -71,7 +72,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
                                      sd: SequenceDictionary,
                                      repartition: Boolean = false,
                                      prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[AlignmentRecord, GAReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, repartition, prefetchSize)
+    extends LazyMaterialization[AlignmentRecord, ReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable with Logging {
 
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => AlignmentRecordMaterialization.load(sc, file, regions).rdd
@@ -123,15 +124,13 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
    * @param data RDD of (id, AlignmentRecord) tuples
    * @return GAReadAlignments mapped by key
    */
-  override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
+  override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[ReadAlignment]] = {
     AlignmentTimers.collect.time {
       AlignmentTimers.getAlignmentData.time {
-        val filtered = data.filter(r => Option(r._2.mappingQuality).getOrElse(1).asInstanceOf[Int] > 0) // filter mappingQuality 0 reads out
-        if (!filtered.isEmpty())
-          filtered.mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
-            .reduceByKeyLocally(_ ++ _).toMap
-        else
-          Map.empty
+        data.filter(r => Option(r._2.mappingQuality).getOrElse(1).asInstanceOf[Int] > 0)  // filter mappingQuality 0 reads out
+          .collect.groupBy(_._1).mapValues(r => {
+            r.map(a => alignmentRecordToGAReadAlignment(a._2))
+          })
       }
     }
   }
@@ -141,10 +140,12 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
    * @param data An array of GAReadAlignments
    * @return JSONified data
    */
-  override def stringify(data: Array[GAReadAlignment]): String = {
-    GASearchReadsResponse.newBuilder()
-      .setAlignments(data.toList)
-      .build().toString
+  def stringify = (data: Array[ReadAlignment]) => {
+
+    val message = ga4gh.ReadServiceOuterClass.SearchReadsResponse
+      .newBuilder().addAllAlignments(data.toList).build()
+
+    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(message)
   }
 }
 

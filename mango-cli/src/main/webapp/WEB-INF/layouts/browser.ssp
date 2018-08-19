@@ -1,9 +1,9 @@
 <%@ val dictionary:     String  %>
+<%@ val twoBitUrl:      String  %>
 <%@ val genes:          Option[String] %>
-<%@ val coverage:  Option[List[String]] %>
-<%@ val reads:     Option[List[(String, Option[String])]] %>
-<%@ val variants:  Option[List[(String, String)]] %>
-<%@ val features:  Option[List[String]] %>
+<%@ val reads:     Option[List[String]] %>
+<%@ val variants:  Option[Map[String, String]] %> <!-- map of file name and samples to extract genotype ids/names -->
+<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
 <%@ val contig: String %>
 <%@ val start: String %>
 <%@ val end: String %>
@@ -40,9 +40,8 @@
                 {
                 viz: pileup.viz.genome(),
                 isReference: true,
-                data: pileup.formats.reference({
-                url: '/reference',
-                contigList: contigList
+                data: pileup.formats.twoBit({
+                  url: '${twoBitUrl}'
                 }),
                 name: 'Reference'
                 },
@@ -68,85 +67,70 @@
             // generate and add variants, if defined
             #if (variants.isDefined)
                 #for (s <- variants.get)
-                    var data = pileup.formats.variants({
-                    url: '/variants/${s._1}',
-                    samples: '${s._2}'.split(",")
-                    })
+                    var data = pileup.formats.GAVariant({
+                        endpoint: '',
+                        variantSetId: '${s._1}',
+                        callSetIds: '${s._2}'.split(","),
+                        callSetNames:  '${s._2}'.split(",")
+                    });
                     tracks.push({
-                    viz: pileup.viz.variants(),
-                    data: data,
-                    name: '${s._1}'
-                    })
-                    #if (s._2.length > 0)
-                        tracks.push({
+                        viz: pileup.viz.variants(),
+                        data: data,
+                        name: '${s._1}'
+                    });
+                    tracks.push({
                         viz: pileup.viz.genotypes(),
                         data: data,
                         name: ''
-                        })
-                    #end
+                    })
                 #end
             #end
 
-            // add coverage
-            #if (coverage.isDefined)
-                #for (s <- coverage.get)
-                    tracks.push({
-                    viz: pileup.viz.coverage(),
-                    data: pileup.formats.coverage({
-                    url: '/coverage/${s}'
-                    }),
-                    name: '${s}'
-                    });
-                #end
-            #end
-
-            // add features
+            // add features and coverage
             #if (features.isDefined)
                 #for (s <- features.get)
-                    tracks.push({
-                    viz: pileup.viz.features(),
-                    data: pileup.formats.features({
-                    url: '/features/${s}'
-                    }),
-                    name: '${s}'
+                    var data = pileup.formats.GAFeature({
+                    endpoint: '',
+                    featureSetId: '${s._1}'
                     });
+                    #if (s._2 == true)
+                        tracks.push({
+                            viz: pileup.viz.coverage(),
+                            data: data,
+                            name: '${s._1}'
+                        });
+                    #else
+                        tracks.push({
+                            viz: pileup.viz.features(),
+                            data: data,
+                            name: '${s._1}'
+                        });
+                    #end
                 #end
             #end
 
             // add reads
             #if (reads.isDefined)
                 #for (s <- reads.get)
-                    #if (s._2.isDefined)
-                        tracks.push({
-                        viz: pileup.viz.coverage(),
-                        data: pileup.formats.coverage({
-                        url: '/coverage/${s._2.get}'
-                        }),
-                        name: '${s._2.get}'
-                        });
-                    #else
-                        tracks.push({
-                        viz: pileup.viz.pileupcoverage(),
-                        isReference: false,
-                        data: pileup.formats.GAReadAlignment({
-                        endpoint: '/reads',
-                        readGroupId: '${s._1}',
+                    var data = pileup.formats.GAReadAlignment({
+                        endpoint: '',
+                        readGroupId: '${s}',
                         killChr: false
-                        }),
-                        name: 'Coverage'
-                        });
-                    #end
+                    });
+                    // track for coverage for reads
                     tracks.push({
-                    viz: pileup.viz.pileup({
-                        hideAlignments: ${reads.get.length > 5}
-                    }),
-                    isReference: false,
-                    data: pileup.formats.GAReadAlignment({
-                    endpoint: '/reads',
-                    readGroupId: '${s._1}',
-                    killChr: false
-                    }),
-                    name: '${s._1}'
+                        viz: pileup.viz.coverage(),
+                        data: data,
+                        name: '${s}'
+                    });
+                    // track for reads
+                    tracks.push({
+                        viz: pileup.viz.pileup({
+                            hideAlignments: true
+                        }),
+                        isReference: false,
+                        data: data,
+                        name: '${s}'
                     });
                 #end
             #end

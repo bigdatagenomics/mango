@@ -27,6 +27,7 @@ The Mango tools are published to Maven central. Corresponding python modules are
 Instructions for running the Mango tools from source can be found at [readthedocs](https://bdg-mango.readthedocs.io/en/latest/installation/source.html#building-mango-from-source).
 
 You will need to have [Maven](http://maven.apache.org/) installed in order to build mango.
+Mango browser also requires [npm > 3.10.10](https://www.npmjs.com/get-npm).
 
 > **Note:** The default configuration is for Hadoop 2.7.3. If building against a different
 > version of Hadoop, please edit the build configuration in the `<properties>` section of

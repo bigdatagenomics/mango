@@ -18,13 +18,15 @@
 
 package org.bdgenomics.mango.models
 
+import ga4gh.Reads
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.mango.converters.GA4GHutil
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json._
 import net.liftweb.json.Serialization.write
-import org.ga4gh.GAReadAlignment
+import ga4gh.Reads.ReadAlignment
 
 class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
@@ -52,7 +54,19 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   sparkTest("return raw data from AlignmentRecordMaterialization") {
     val data = new AlignmentRecordMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 900L)
-    val results: Array[GAReadAlignment] = data.getJson(region).get(key).get
+    val results: Array[ReadAlignment] = data.getJson(region).get(key).get
+    assert(results.length == 9387)
+  }
+
+  sparkTest("can process stringified data") {
+    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val region = new ReferenceRegion("chrM", 0L, 900L)
+    val results: Array[ReadAlignment] = data.getJson(region).get(key).get
+
+    val buf = data.stringify(results)
+    val keyData = GA4GHutil.stringToSearchReadsResponse(buf).getAlignmentsList
+
+    assert(keyData.size() == results.length)
   }
 
   sparkTest("Read Partitioned Data") {
@@ -64,7 +78,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val data: AlignmentRecordMaterialization = new AlignmentRecordMaterialization(sc, List(outputPath), rdd2.sequences)
     val region = new ReferenceRegion("2", 189000000L, 190000000L)
     val mykey = LazyMaterialization.filterKeyFromFile(outputPath)
-    val results: Array[GAReadAlignment] = data.getJson(region).get(mykey).get
+    val results: Array[ReadAlignment] = data.getJson(region).get(mykey).get
     assert(results.length === 1)
   }
 

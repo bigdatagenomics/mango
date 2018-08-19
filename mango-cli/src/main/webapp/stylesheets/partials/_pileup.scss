@@ -49,15 +49,6 @@
     margin-left: 100px;
 }
 
-.track.pileup {
-    max-height: 400px;
-    min-height: 65px !important; /* leave room for label and gear icon */
-}
-
-.track.features {
-    height: 35px;
-}
-
 /* TODO: this should be fixed in pileup, where genotype height is set to 100% */
 #pileup > div > div.track.genotypes > div.track-content > div > div > div {
     height: inherit !important;

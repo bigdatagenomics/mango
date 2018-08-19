@@ -86,10 +86,16 @@ class LazyDummy(@transient sc: SparkContext,
       .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
   }
 
+  def stringify = (data: Array[ReferenceRegion]) => {
+    // empty
+    ""
+  }
+
   def setReferenceName = (r: ReferenceRegion, referenceName: String) => {
     ReferenceRegion(referenceName, r.start, r.end)
     r
   }
+
   def toJson(data: RDD[(String, ReferenceRegion)]): Map[String, Array[ReferenceRegion]] = {
     data.collect.groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
   }

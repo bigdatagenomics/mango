@@ -30,9 +30,7 @@ import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.interval.rdd.IntervalRDD
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.misc.Logging
-import org.fusesource.scalate.util.Resource
 import scala.reflect.ClassTag
-import net.liftweb.json.Serialization._
 
 // metric variables
 object LazyMaterializationTimers extends Metrics {
@@ -141,7 +139,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    */
   def setReferenceName: (T, String) => T
 
-  def stringify(data: Array[S]): String = write(data)
+  def stringify: (Array[S]) => String
 
   /**
    * Stringify T classtag to json
