@@ -36,7 +36,7 @@ bdgVersion = '0.0.1'
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.5.6'
+needs_sphinx = '1.7.7'
 
 nbsphinx_execute = 'always'
 

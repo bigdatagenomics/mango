@@ -3,5 +3,3 @@ matplotlib == 2.0.2
 ipython == 5.5.0
 jupyter == 1.0.0
 bdgenomics.adam == 0.24.0
-pip install nbsphinx==0.3.3
-pip install sphinx==1.7.4
