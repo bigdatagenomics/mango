@@ -71,7 +71,7 @@ class QCTest(SparkTestCase):
         # read alignments
         reads = ac.loadAlignments(testFile)
 
-        qc = AlignmentDistribution(self.ss, reads, bin_size=1000000000, sample=0.00001)
+        qc = AlignmentDistribution(self.ss, reads, bin_size=1000000000)
 
         mDistribution = qc.plot(testMode = True, plotType="D")
         expectedM =  Counter({('1', 0): 0})

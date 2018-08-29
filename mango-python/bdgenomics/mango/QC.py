@@ -33,7 +33,7 @@ class CoverageDistribution(object):
         """
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
-        :param SparkContext
+        :param ss: Spark object
         :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
         """
         self.sc = ss.sparkContext
@@ -139,17 +139,17 @@ class AlignmentDistribution(object):
         """
         Initializes a AlignmentDistribution class.
         Computes the alignment distribution of multiple coverageRDDs.
-        :param SparkContext: the global SparkContext
+        :param ss: Spark Object
         :param alignmentRDDs: A list of bdgenomics.adam.rdd.AlignmentRDD objects
         :param int bin_size: Division size per bin
         """
-        bin_size = int(bin_size)
-        self.bin_size = bin_size
+        self.bin_size = int(bin_size)
         self.sc = ss.sparkContext
 
         # filter alignments without a position
-        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, 1.0)) \
+        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, sample)) \
             .toDF().rdd.filter(lambda r: r["start"] != None)
+
 
         # Assign alignments with counter for contigs. Reduce and collect.
         mappedDistributions = filteredAlignments \
