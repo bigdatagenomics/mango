@@ -185,3 +185,7 @@ class TestEmbed:
         print("CONTENT!!!!!!!!!!!!!!!!!!")
         print(content)
         assert content.splitlines()[0] == '<!DOCTYPE html>'
+
+
+    def test_minimal_pielup_html(self):
+        assert False

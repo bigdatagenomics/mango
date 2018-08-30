@@ -19,7 +19,8 @@ module.exports = {};
 var loadedModules = [
     require('./reads'),
     require('./features'),
-    require('./variants')
+    require('./variants'),
+    require('./pileup')
 ];
 
 for (var i = 0; i < loadedModules.length; i++) {
