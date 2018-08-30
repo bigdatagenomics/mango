@@ -62,8 +62,11 @@ class TestEmbed:
         for w in tuple(Widget.widgets.values()):
             w.close()
 
-    def test_embed_features(self):
-        w = pileup.Features(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
+    def test_embed_pileup(self):
+
+        track = pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHFeatureJson('{}'))
+
+        w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
         state = dependency_state(w, drop_defaults=True)
         data = embed_data(views=w, drop_defaults=True, state=state)
 
@@ -73,41 +76,17 @@ class TestEmbed:
         assert len(views) == 1
 
         model_names = [s['model_name'] for s in state.values()]
-        assert 'FeatureModel' in model_names
+        assert 'PileupViewerModel' in model_names
 
-
-    def test_embed_alignments(self):
-        w = pileup.Reads(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
-        state = dependency_state(w, drop_defaults=True)
-        data = embed_data(views=w, drop_defaults=True, state=state)
-
-        state = data['manager_state']['state']
-        views = data['view_specs']
-
-        assert len(views) == 1
-
-        model_names = [s['model_name'] for s in state.values()]
-        assert 'ReadsModel' in model_names
-
-
-    def test_embed_variants(self):
-        w = pileup.Variants(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
-        state = dependency_state(w, drop_defaults=True)
-        data = embed_data(views=w, drop_defaults=True, state=state)
-
-        state = data['manager_state']['state']
-        views = data['view_specs']
-
-        assert len(views) == 1
-
-        model_names = [s['model_name'] for s in state.values()]
-        assert 'VariantModel' in model_names
 
     def test_embed_data_two_widgets(self):
-        w1 = pileup.Variants(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
-        w2 = pileup.Features(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
+        feature_track = pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHFeatureJson('{}'))
+        variant_track = pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHVariantJson('{}'))
 
-        jslink((w1, 'start'), (w2, 'start'))
+        w1 = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[feature_track])
+        w2 = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[variant_track])
+
+        jslink((w1, 'reference'), (w2, 'reference'))
         state = dependency_state([w1, w2], drop_defaults=True)
         data = embed_data(views=[w1, w2], drop_defaults=True, state=state)
 
@@ -117,8 +96,8 @@ class TestEmbed:
         assert len(views) == 2
 
         model_names = [s['model_name'] for s in state.values()]
-        assert 'VariantModel' in model_names
-        assert 'FeatureModel' in model_names
+        widget_names = list(filter(lambda x: x == 'PileupViewerModel', model_names))
+        assert len(widget_names) == 2
 
     def test_snippet(self):
 
@@ -148,7 +127,10 @@ class TestEmbed:
                     assert isinstance(view, dict)
                     self.states.append('check-widget-view')
 
-        w = pileup.Reads(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
+        track = pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHVariantJson('{}'))
+
+        w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+
         state = dependency_state(w, drop_defaults=True)
         snippet = embed_snippet(views=w, drop_defaults=True, state=state)
         parser = Parser()
@@ -156,32 +138,12 @@ class TestEmbed:
         assert parser.states == ['widget-state', 'check-widget-state', 'widget-view', 'check-widget-view']
 
 
-    def test_minimal_reads_html(self):
-        w = pileup.Reads(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
+    def test_minimal_pileup_html(self):
+        track = pileup.Track(viz="pileup", label="myReads", source=pileup.sources.GA4GHAlignmentJson('{}'))
+
+        w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
         output = StringIO()
         state = dependency_state(w, drop_defaults=True)
         embed_minimal_html(output, views=w, drop_defaults=True, state=state)
         content = output.getvalue()
-        assert content.splitlines()[0] == '<!DOCTYPE html>'
-
-
-
-    def test_minimal_features_html(self):
-        w = pileup.Features(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
-        output = StringIO()
-        state = dependency_state(w, drop_defaults=True)
-        embed_minimal_html(output, views=w, drop_defaults=True, state=state)
-        content = output.getvalue()
-        assert content.splitlines()[0] == '<!DOCTYPE html>'
-
-
-
-    def test_minimal_variants_html(self):
-        w = pileup.Variants(json = "{}", build='hg19', contig='chr1',start=1,stop=20)
-        output = StringIO()
-        state = dependency_state(w, drop_defaults=True)
-        embed_minimal_html(output, views=w, drop_defaults=True, state=state)
-        content = output.getvalue()
-        print("CONTENT!!!!!!!!!!!!!!!!!!")
-        print(content)
         assert content.splitlines()[0] == '<!DOCTYPE html>'

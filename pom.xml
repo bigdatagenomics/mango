@@ -38,12 +38,6 @@
     <protobuf.version>3.0.0-beta-3</protobuf.version>
   </properties>
 
-  <modules>
-    <module>mango-core</module>
-    <module>mango-cli</module>
-    <module>mango-assembly</module>
-  </modules>
-
   <licenses>
     <license>
       <name>Apache License</name>
@@ -687,10 +681,26 @@
 
   <profiles>
     <profile>
+      <id>core</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>mango-core</module>
+        <module>mango-cli</module>
+        <module>mango-assembly</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>widgets</id>
+      <modules>
+        <module>mango-viz</module>
+      </modules>
+    </profile>
+    <profile>
       <id>python</id>
       <modules>
         <module>mango-core</module>
-        <module>mango-viz</module>
         <module>mango-python</module>
         <module>mango-cli</module>
         <module>mango-assembly</module>
@@ -824,11 +834,12 @@
           <plugin>
             <groupId>org.eluder.coveralls</groupId>
             <artifactId>coveralls-maven-plugin</artifactId>
-            <version>3.0.1</version>
+            <version>4.3.0</version>
             <configuration>
               <coberturaReports>
                 <param>${project.build.directory}/cobertura.xml</param>
               </coberturaReports>
+              <failOnServiceError>false</failOnServiceError>
               <sourceDirectories>
                 <param>mango-core/src/main/scala</param>
                 <param>mango-cli/src/main/scala</param>

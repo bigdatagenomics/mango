@@ -23,25 +23,48 @@ import bdgenomics.mango.pileup as pileup
 class MangoVizTest(unittest.TestCase):
 
     def test_features(self):
-        start = 120000
-        stop = 121000
-        x = pileup.Features(json = "{}", build='hg19', contig='chr1',start=start,stop=stop)
-        assert(x.start == start)
-        assert(x.stop == stop)
+        track = pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHFeatureJson('{}'))
+
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
 
     def test_variants(self):
-        start = 120000
-        stop = 121000
-        x = pileup.Features(json = "{}", build='hg19', contig='chr1',start=start,stop=stop)
-        assert(x.start == start)
-        assert(x.stop == stop)
+        track = pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHVariantJson('{}'))
 
-    def test_reads(self):
-        start = 120000
-        stop = 121000
-        x = pileup.Reads(json = "{}", build='hg19', contig='chr17',start=start,stop=stop)
-        assert(x.start == start)
-        assert(x.stop == stop)
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
+
+    def test_pileup(self):
+        track = pileup.Track(viz="pileup", label="myReads", source=pileup.sources.GA4GHAlignmentJson('{}'))
+
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
+
+    def test_genes(self):
+        track = pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource('fakeGenes.bb'))
+
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
+
+    def test_pileup(self):
+        track = pileup.Track(viz="pileup", label="myReads", source=pileup.sources.GA4GHAlignmentJson('{}'))
+
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
+
+    def test_genes(self):
+        track = pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource('fakeGenes.bb'))
+
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
+
+
 
 
 # Run tests
