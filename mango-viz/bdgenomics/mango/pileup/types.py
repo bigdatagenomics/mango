@@ -21,14 +21,14 @@ import six
 
 
 class Track(TraitType):
-    """A trait for a pileupTrack. Contains name, label, format and source.
+    """A trait for a pileupTrack. Contains name, label, format and sourceOptions.
     """
     # pileup.viz, pileup.format, file or data, track name
     info_text = 'a pileup track (requires names for pileup.viz, pileup.format, pileup.source, and optional pileup.label)'
 
     viz = None
     format = None
-    source = None
+    sourceOptions = None
     label = None
 
     def __init__(self, **kwargs):
@@ -46,7 +46,7 @@ def track_to_json(pyTrack, manager):
         return dict(
             viz=pyTrack.viz,
             format=pyTrack.format,
-            source=pyTrack.source,
+            sourceOptions=pyTrack.sourceOptions,
             label=pyTrack.label
         )
 
@@ -58,7 +58,7 @@ def track_from_json(js, manager):
         return Track(
             viz = js['viz'],
             format = js['format'],
-            source = js['source'],
+            sourceOptions = js['sourceOptions'],
             label = js['label'])
 
 def tracks_to_json(pyTracks, manager):
@@ -77,7 +77,7 @@ def tracks_from_json(js, manager):
     if js is None:
         return None
     else:
-        return [this.track_from_json(j, manager) for j in js]
+        return [track_from_json(j, manager) for j in js]
 
 
 track_serialization = {

@@ -44,8 +44,10 @@ normal=\033[0m\n
 red=\033[0;31m
 
 develop:
-	- $(pip) install -e .$(extras)
-	- $(pip) install jupyter==1.0.0
+	rm -r bdgenomics/mango/pileup/static
+	rm -r bdgenomics/mango/js/dist
+	rm -r bdgenomics.mango.pileup.egg-info/
+	- $(pip) install -v -e .$(extras)
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
