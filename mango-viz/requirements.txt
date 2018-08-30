@@ -1,3 +1,4 @@
 jupyter == 1.0.0
 ipywidgets==7.0.0
+six
 

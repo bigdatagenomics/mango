@@ -43,6 +43,9 @@ class MangoVizTest(unittest.TestCase):
         assert(x.start == start)
         assert(x.stop == stop)
 
+    def test_pileup(self):
+        assert(False)
+
 
 # Run tests
 if __name__ == '__main__':
