@@ -8,7 +8,7 @@ var loadedModules = [
     require('./reads'),
     require('./features'),
     require('./variants'),
-    require('./pileup')
+    require('./pileupViewer')
 ];
 
 for (var i = 0; i < loadedModules.length; i++) {
