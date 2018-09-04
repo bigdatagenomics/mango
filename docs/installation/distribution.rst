@@ -14,7 +14,7 @@ To fetch Mango distribution, run:
 
 .. code:: bash
 
-      wget https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution/0.0.1/mango-distribution-0.0.1-bin.tar.gz
+      wget -O mango-distribution-0.0.1-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution/0.0.1/mango-distribution-0.0.1-bin.tar.gz
       tar xzvf mango-distribution-0.0.1-bin.tar.gz
 
 
@@ -26,7 +26,7 @@ First, make sure your SPARK_HOME env variable is set:
 
 .. code:: bash
 
-      export <PATH_TO_SPARK>
+      export SPARK_HOME=<PATH_TO_SPARK>
 
 
 Then run Mango notebook or Mango browser:
