@@ -56,10 +56,15 @@ variety of platforms.
 
     cloud/emr
 
+.. toctree::
+    :caption: Demo notebooks
+    :maxdepth: 2
+
+    notebooks/mango-python-alignment-executed.ipynb
+    notebooks/mango-python-coverage-executed.ipynb
 
 
-* :ref:`genindex`
-* :ref:`search`
+:ref:`search`
 
 References
 ==========
