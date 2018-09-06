@@ -32,7 +32,7 @@ jupyter=jupyter
 pip=pip
 npm=npm
 node=node
-mango_version:=$(shell $(python) version.py)
+mango_version:=$(shell $(python) bdgenomics/mango/pileup/_version.py)
 sdist_name:=mango.pileup-$(mango_version).tar.gz
 tests=bdgenomics/mango/pileup/
 extras=
@@ -44,9 +44,9 @@ normal=\033[0m\n
 red=\033[0;31m
 
 develop:
-	rm -r bdgenomics/mango/pileup/static
-	rm -r bdgenomics/mango/js/dist
-	rm -r bdgenomics.mango.pileup.egg-info/
+	rm -rf bdgenomics/mango/pileup/static
+	rm -rf bdgenomics/mango/js/dist
+	rm -rf bdgenomics.mango.pileup.egg-info/
 	- $(pip) install -v -e .$(extras)
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
@@ -75,6 +75,8 @@ test: check_build_reqs
 
 # clean
 clean:
+	rm -rf bdgenomics/mango/js/dist
+	rm -rf bdgenomics.mango.pileup.egg-info/
 	rm -rf bdgenomics/mango/pileup/static/
 	rm -rf dist/
 	$(jupyter) nbextension uninstall pileup
@@ -103,3 +105,9 @@ prepare:
 		mkdir node_modules; \
 		cd node_modules; \
 		$(npm) install --save pileup@0.6.9
+
+
+
+# moves necessary files over to docs folder for readthedocs
+prepare_docs:
+	cp examples/pileup-tutorial.ipynb ../docs/notebooks/pileup-tutorial-executed.ipynb
