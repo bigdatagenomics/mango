@@ -50,6 +50,12 @@ variety of platforms.
 
     cloud/emr
 
+.. toctree::
+    :caption: Jupyter Widgets and Pileup.js
+    :maxdepth: 2
+
+    notebooks/pileup-tutorial-executed.ipynb
+
 
 
 * :ref:`genindex`

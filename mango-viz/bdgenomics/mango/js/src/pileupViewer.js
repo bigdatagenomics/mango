@@ -32,10 +32,6 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
 
     data_changed: function() {
 
-      console.log(this.model.get('tracks'));
-      console.log(this.model.get('reference'));
-      console.log(this.model.get('locus'));
-
       // make pileup div
       var sources = [
           {
@@ -58,7 +54,7 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
 
         sources.push({
           viz: pileup.viz[track.viz](),
-          data: pileup.formats[track.format](track.sourceOptions),
+          data: pileup.formats[track.source](track.sourceOptions),
           name: track.label
         })
       }

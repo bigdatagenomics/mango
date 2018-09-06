@@ -5,9 +5,6 @@
 module.exports = {};
 
 var loadedModules = [
-    require('./reads'),
-    require('./features'),
-    require('./variants'),
     require('./pileupViewer')
 ];
 
