@@ -105,9 +105,3 @@ prepare:
 		mkdir node_modules; \
 		cd node_modules; \
 		$(npm) install --save pileup@0.6.9
-
-
-
-# moves necessary files over to docs folder for readthedocs
-prepare_docs:
-	cp examples/pileup-tutorial.ipynb ../docs/notebooks/pileup-tutorial-executed.ipynb
