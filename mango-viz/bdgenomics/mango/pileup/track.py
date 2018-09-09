@@ -16,13 +16,32 @@
 # limitations under the License.
 #
 
+r"""
+=====
+Track
+=====
+.. currentmodule:: bdgenomics.mango.pileup.track
+
+Tracks specify what visualization will be drawn. 
+
+.. autosummary::
+    :toctree: _generate/
+
+    Track
+    track_to_json
+    track_from_json
+    tracks_to_json
+    tracks_from_json
+"""
+
 from traitlets import TraitType
 import six
 from .sources import *
 
 
 class Track(TraitType):
-    """A trait for a pileupTrack. Contains name, label, source and sourceOptions.
+    """A trait for a pileupTrack, requires a viz string of (coverage, pileup, features, variants, genome, genes, scale, or location)
+    and a DataSource.
     """
     # pileup.viz, pileup.source, file or data, track name
     info_text = 'a pileup track (requires names for pileup.viz, pileup.source, pileup.source, and optional pileup.label)'

@@ -16,6 +16,29 @@
 # limitations under the License.
 #
 
+r"""
+=======
+Sources
+=======
+.. currentmodule:: bdgenomics.mango.pileup.sources
+
+Sources specify where the genomic data comes from. Sources can come from a url, a GA4GHDatasource, or a JSON string of GA4GH formatted data.
+
+.. autosummary::
+    :toctree: _generate/
+
+    BamDataSource
+    VcfDataSource
+    TwoBitDataSource
+    BigBedDataSource
+    GA4GHAlignmentJson
+    GA4GHVariantJson
+    GA4GHFeatureJson
+    GA4GHAlignmentSource
+    GA4GHVariantSource
+    GA4GHFeatureSource
+"""
+
 # generic data source for pileup.js
 class Source:
     # dictionary containing source elements (viz, source, sourceOptions, label)
@@ -74,37 +97,100 @@ class FileSource(Source):
 ##### Specific data sources build from generic data sources #####
 # file sources
 class BamDataSource(FileSource): 
+    """ Initializes file source from bam file endpoint.
+
+    Args:
+        param str: url to file
+        param str: indexUrl to index file
+    
+    """
     name = 'bam'
     
 class VcfDataSource(FileSource): 
+    """ Initializes file source from vcf file endpoint.
+
+    Args:
+        param str: url to file
+        param str: indexUrl to index file
+    
+    """
     name = 'vcf'
     
 class TwoBitDataSource(FileSource): 
+    """ Initializes file source from twoBit file endpoint.
+
+    Args:
+        param str: url to file
+    
+    """
     name = 'twoBit'
 
 class BigBedDataSource(FileSource): 
+    """ Initializes file source from big bed (.bb) file endpoint.
+
+    Args:
+        param str: url to file
+    
+    """   
     name = 'bigBed'
 
     
 # json built sources
 class GA4GHAlignmentJson(jsonString): 
+    """ Initializes GA4GH Alignment JSON.
+
+    Args:
+        param str: json in GA4GH format
+    
+    """
     name = 'alignmentJson'
     
 class GA4GHVariantJson(jsonString): 
+    """ Initializes GA4GH variant JSON.
+
+    Args:
+        param str: json in GA4GH format
+    
+    """
     name = 'variantJson'
     
 class GA4GHFeatureJson(jsonString): 
+    """ Initializes GA4GH feature JSON.
+
+    Args:
+        param str: json in GA4GH format
+    
+    """
     name = 'featureJson'
     
     
 # GA4GH Sources
 class GA4GHAlignmentSource(GA4GHSource): 
+    """ Initializes GA4GHAlignmentSource.
+
+    Args:
+        param str: url endpoint
+        param str: read group id    
+    """
     name = 'GAReadAlignment'
     
 class GA4GHVariantSource(GA4GHSource): 
+    """ Initializes GA4GHSource.
+
+    Args:
+        param str: url endpoint
+        param str: call set ID
+        param str: optional call set ID for variants
+    
+    """
     name = 'GAVariant'
     
 class GA4GHFeatureSource(GA4GHSource): 
+    """ Initializes GA4GHFeatureSource.
+
+    Args:
+        param str: url endpoint
+    """   
     name = 'GAFeature'
 
 

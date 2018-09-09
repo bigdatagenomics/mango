@@ -59,8 +59,6 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
         })
       }
 
-      console.log(sources);
-
       var contig = this.model.get('locus').split(':')[0];
       var start =  parseInt(this.model.get('locus').split(':')[1].split('-')[0]);
       var stop =  parseInt(this.model.get('locus').split(':')[1].split('-')[1]);

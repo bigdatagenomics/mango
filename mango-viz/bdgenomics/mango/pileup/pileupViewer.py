@@ -15,6 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+r"""
+============
+PileupViewer
+============
+.. currentmodule:: bdgenomics.mango.pileup.pileupViewer
+.. autosummary::
+   :toctree: _generate/
+
+   PileupViewer
+"""
 
 import ipywidgets as widgets
 from traitlets import Unicode, Int, List
