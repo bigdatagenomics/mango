@@ -60,8 +60,7 @@ variety of platforms.
     :caption: Jupyter Widgets and Pileup.js
     :maxdepth: 2
 
-    notebooks/pileup-tutorial-executed.ipynb
-
+    jupyterWidgets/usage.rst
 
 
 * :ref:`genindex`

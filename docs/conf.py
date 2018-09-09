@@ -42,8 +42,8 @@ needs_sphinx = '1.5.6'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'nbsphinx',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -72,6 +72,8 @@ def skip(app, what, name, obj, skip, options):
 def setup(app):
     app.connect('autodoc-skip-member', skip)
 
+
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
