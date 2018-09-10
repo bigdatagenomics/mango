@@ -193,10 +193,6 @@ then
     make prepare
     popd
 
-    # prepare mango viz
-    pushd mango-viz
-    make prepare
-    popd
 
     # we can run the python build, now that we have a spark executable
 	  mvn -U \
@@ -206,11 +202,19 @@ then
             -Dhadoop.version=${HADOOP_VERSION} \
             -Dspark.version=${SPARK_VERSION}
 
-	    # make sure that the distribution package contains an egg
-	    # if no assembly jar is found, this will exit with code 1 and fail the build
-	    tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
-            grep bdgenomics.mango | \
-            grep egg
+    # prepare mango viz
+    pushd mango-viz
+    make prepare
+    popd
+
+    # run the widgets tests (mango-viz)
+    mvn -P widgets test
+
+    # make sure that the distribution package contains an egg
+    # if no assembly jar is found, this will exit with code 1 and fail the build
+    tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
+        grep bdgenomics.mango | \
+        grep egg
 
     # copy python targets back
     cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
