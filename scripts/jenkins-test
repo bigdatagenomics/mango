@@ -95,7 +95,7 @@ fi
 # if those pass, run tests
 mvn -U \
     test \
-    -P coverage,coveralls  scoverage:report coveralls:report \
+    -P core,coverage,coveralls  scoverage:report coveralls:report \
     -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
 
 # make verbose again
@@ -202,6 +202,11 @@ then
             -Dhadoop.version=${HADOOP_VERSION} \
             -Dspark.version=${SPARK_VERSION}
 
+    # clean mango python
+    pushd mango-python
+    make clean
+    popd
+
     # prepare mango viz
     pushd mango-viz
     make prepare
@@ -209,6 +214,11 @@ then
 
     # run the widgets tests (mango-viz)
     mvn -P widgets test
+
+    # clean mango viz
+    pushd mango-viz
+    make clean
+    popd
 
     # make sure that the distribution package contains an egg
     # if no assembly jar is found, this will exit with code 1 and fail the build

@@ -62,7 +62,7 @@ class Track(TraitType):
             
             if key == "viz":
                 if value not in vizNames.keys():
-                    raise RuntimeError('Invalid track visualization %s' % (value))
+                    raise RuntimeError('Invalid track visualization %s. Available tracks include %s' % (value, vizNames.keys()))
                 setattr(self, key, value)
                 
             elif key == "source":

@@ -139,7 +139,7 @@ class TestEmbed:
 
 
     def test_minimal_pileup_html(self):
-        track = pileup.Track(viz="pileup", label="myVariants", source=pileup.sources.GA4GHAlignmentJson('{}'))
+        track = pileup.Track(viz="pileup", label="myReads", source=pileup.sources.GA4GHAlignmentJson('{}'))
 
         w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
         output = StringIO()
