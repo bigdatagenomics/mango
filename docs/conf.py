@@ -22,6 +22,7 @@ import imp
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../src'))
+sys.path.insert(0, '../mango-python/bdgenomics/mango/')
 
 def real_dir_name(p, n=1):
     p = os.path.realpath(p)
@@ -42,6 +43,7 @@ needs_sphinx = '1.5.6'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',

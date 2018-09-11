@@ -56,7 +56,17 @@ variety of platforms.
 
     cloud/emr
 
+.. toctree::
+    :caption: Demo Notebooks 
+    :maxdepth: 2
 
+    mango-viz_demo.ipynb
+
+.. automodule:: bdgenomics.mango.variantViz
+   :members:
+
+.. autoclass:: bdgenomics.mango.variantViz.VariantFreqPopCompareScatter
+   :members:
 
 * :ref:`genindex`
 * :ref:`search`
