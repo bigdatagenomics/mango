@@ -5,7 +5,7 @@ Jupyter Widget Usage
 Installation
 ------------
 
-First, install install bdgenomics.mango.pileup, a Jupyter Widget:
+First, install bdgenomics.mango.pileup, a Jupyter Widget:
 
 
 .. code:: bash
