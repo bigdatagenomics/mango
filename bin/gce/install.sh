@@ -55,12 +55,16 @@ if [[ "${ROLE}" == 'Master' ]]; then
        stable"
     # update the apt package index:
     apt-get -y update
+    # install maven (jessie-backport)
+    apt-get -y install -t jessie-backports maven
     # finally, install docker
     apt-get -y install docker-ce
-
-    # Install google cloud nio 
-    curl -L https://oss.sonatype.org/content/repositories/releases/com/google/cloud/google-cloud-nio/0.22.0-alpha/google-cloud-nio-0.22.0-alpha-shaded.jar  | gsutil cp - gs://mango-initialization-bucket/google-cloud-nio-0.22.0-alpha-shaded.jar
     
+    # update node and npm version using Debian, as root
+    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+    apt-get -y install nodejs
+    npm install -g n
+
 fi
 echo "Completed installing Jupyter!"
 
