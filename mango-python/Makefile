@@ -63,6 +63,9 @@ develop:
 clean_develop:
 	- $(pip) uninstall -y bdgenomics.mango
 	- rm -rf src/*.egg-info
+update_docs:
+	jupyter nbconvert --to notebook --execute ../example-files/notebooks/mango-python-alignment.ipynb --output-dir ../docs/notebooks/
+	jupyter nbconvert --to notebook --execute ../example-files/notebooks/mango-python-coverage.ipynb --output-dir ../docs/notebooks/
 
 sdist: dist/$(sdist_name)
 dist/$(sdist_name):

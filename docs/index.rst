@@ -60,8 +60,8 @@ variety of platforms.
     :caption: Demo notebooks
     :maxdepth: 2
 
-    notebooks/mango-python-alignment-executed.ipynb
-    notebooks/mango-python-coverage-executed.ipynb
+    notebooks/mango-python-alignment.ipynb
+    notebooks/mango-python-coverage.ipynb
 
 
 :ref:`search`
