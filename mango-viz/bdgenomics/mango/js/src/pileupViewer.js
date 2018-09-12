@@ -26,36 +26,15 @@ var PileupViewerModel = widgets.DOMWidgetModel.extend({
 var PileupViewerView = widgets.DOMWidgetView.extend({
     render: function() {
       this.data_changed();
-      this.model.on('change', this.update_error, this);
     },
 
     data_changed: function() {
 
-      // make a div for javascript errors
-      var errDiv = document.createElement('div');
-      // make a div for the pileup widget
-      var pileupDiv = document.createElement('div');
-
-      // set ids and styles to the new divs
-      errDiv.id = 'errDiv';
-      errDiv.style.color="red";
-      pileupDiv.id='pileupDiv';
-
-      // append divs to this widget's element
-      this.el.appendChild(errDiv);
-      this.el.appendChild(pileupDiv);
-
       // listen for errors so we can bubble them up to the Jupyter interface.
-      // This function will replace the 
+      // TODO: this would ideally be embedded in the widget
       window.onerror = function errorHandler(errorMsg, url, lineNumber) {
           var errText = `Javascript error occured at ${url}:${lineNumber} \n ${errorMsg}`;
-          errDiv.innerText = errText;    
-      }
-
-      // clear the error div on window change
-      // TODO: there is probably a better way to d this
-      window.onchange = function clearErrorDiv() {
-          errDiv.innerText = null;    
+          alert(errText);
       }
 
       // reference URL can be a name (ie hg19, valid names
@@ -101,7 +80,7 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
       var stop =  parseInt(this.model.get('locus').split(':')[1].split('-')[1]);
       var range = {contig: contig, start: start, stop: stop};
 
-      var p = pileup.create(pileupDiv, {
+      var p = pileup.create(this.el, {
         range: range,
         tracks: sources
       });
