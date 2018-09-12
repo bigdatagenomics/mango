@@ -1,0 +1,5 @@
+sphinx==1.7.7
+nbsphinx==0.3.4
+bdgenomics.mango.pileup==0.0.1
+bdgenomics.mango==0.0.2a0
+
