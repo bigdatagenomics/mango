@@ -65,8 +65,6 @@ class MangoVizTest(unittest.TestCase):
         assert(x.tracks[0] == track)
 
 
-
-
 # Run tests
 if __name__ == '__main__':
     unittest.main()

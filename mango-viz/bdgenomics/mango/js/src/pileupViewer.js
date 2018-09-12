@@ -70,12 +70,10 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
 
         // data may not exist for scale or location tracks
         if (pileup.formats[track.source] != null) {
-          newTrack["data"] = pileup.formats[track.source](track.sourceOptions);
+          newTrack.data = pileup.formats[track.source](track.sourceOptions);
         }
         sources.push(newTrack);
       }
-
-      console.log(sources);
 
       var contig = this.model.get('locus').split(':')[0];
       var start =  parseInt(this.model.get('locus').split(':')[1].split('-')[0]);

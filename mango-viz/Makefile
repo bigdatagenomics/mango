@@ -72,6 +72,9 @@ test: check_build_reqs
 		&& jupyter nbconvert --to python mango-viz.ipynb
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
+	# run lint and flow for js
+	pushd bdgenomics/mango/js \
+		&& npm run lint 
 
 # clean
 clean:
@@ -102,6 +105,4 @@ prepare:
 
 	# install pileup.js to node_modules
 	cd bdgenomics/mango/js; \
-		mkdir node_modules; \
-		cd node_modules; \
-		$(npm) install --save pileup@0.6.9
+		$(npm) install
