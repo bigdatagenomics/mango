@@ -275,8 +275,7 @@ class VariantCountByGene(object):
             geneList = list("NoGene")
           return geneList[0]
 
-        y= variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).filter(
-          lambda x: x['attributes']['AF_NFE'] != ".").map(
+        y= variantRDD.toDF().rdd.map(lambda w: w.asDict()).map(lambda p: p['annotation']).map(
           lambda d: ( get_effect(d),get_gene(d))).filter(
           lambda f: f[0] == so_term and f[1] != 'NoGene').countByValue()
 
