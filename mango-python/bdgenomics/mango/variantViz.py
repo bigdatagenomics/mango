@@ -163,6 +163,7 @@ class VariantDistribByPop(object):
         def getMostSigEffect(dd1):
            """
            Return most significant effect from list of transcript annotations
+           :param dd1: map of annotations for this variant
            """
            effectList = [ effect for transcript in dd1['transcriptEffects'] for effect in transcript['effects'] ]
            mostSigEffect = findMostSigEffect(effectList)
@@ -297,20 +298,21 @@ class VariantsGenomicRegion(object):
     """
     Plot variant density across chromosome region
     """
-    def __init__(self,ss,variantRDD, start, end, contigName):
+    def __init__(self,ss,variantRDD, start, end, contigName, binSize=1000000):
         """
         :param ss: SparkContext 
         :param variantRDD: bdgenomics variantRDD
         :param start: genomic start position
         :param end:  genomic stop position
         :param contigName: contig name
+        :param binSize: region bin size defaults to 1000000  
         """
         data = variantRDD.toDF().filter(
             (variantRDD.toDF().start > start) &
             (variantRDD.toDF().start < end) &
             (variantRDD.toDF().contigName == contigName) ).rdd.map(
               lambda w: w.asDict()).map(
-               lambda x: (x['contigName'], int(math.floor(float(x['start'])/1000000)))).countByValue()
+               lambda x: (x['contigName'], int(math.floor(float(x['start'])/binSize)))).countByValue()
         self.data = data
         self.contigName=contigName
     def plot(self):
