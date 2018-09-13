@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 # Based on gs://dataproc-initialization-actions/jupyter/jupyter.sh
+# Installs the following on the dataproc master: 
+#   conda
+#   jupyter
+#   npm
+#   nodejs
+#   maven
+#   docker
+#   google_compute_engine [pip]
+#   cigar [pip]
+# Installs the following on dataproc workers:
+#   conda
+#   cigar [pip]
 set -e
 
 ROLE=$(curl -f -s -H Metadata-Flavor:Google http://metadata/computeMetadata/v1/instance/attributes/dataproc-role)
@@ -32,7 +44,10 @@ if [ -n "${JUPYTER_CONDA_PACKAGES}" ]; then
 fi
 
 if [[ "${ROLE}" == 'Master' ]]; then
+
     conda install jupyter
+    echo "Completed installing Jupyter!"
+
     pip install google_compute_engine
 
     if gsutil -q stat "gs://$DATAPROC_BUCKET/notebooks/**"; then
@@ -57,16 +72,19 @@ if [[ "${ROLE}" == 'Master' ]]; then
     apt-get -y update
     # install maven (jessie-backport)
     apt-get -y install -t jessie-backports maven
+    echo "Completed installing Maven!"
     # finally, install docker
     apt-get -y install docker-ce
+    echo "Completed installing Docker!"
     
     # update node and npm version using Debian, as root
     curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
     apt-get -y install nodejs
+    echo "Completed installing nodejs!"
     npm install -g n
+    echo "Completed installing npm!"
 
 fi
-echo "Completed installing Jupyter!"
 
 # Install Jupyter extensions (if desired)
 # TODO: document this in readme
