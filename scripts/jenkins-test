@@ -199,18 +199,62 @@ then
     popd
 
     # we can run the python build, now that we have a spark executable
-	  mvn -U \
-            -P python,distribution \
-            package \
-            -DskipTests \
-            -Dhadoop.version=${HADOOP_VERSION} \
-            -Dspark.version=${SPARK_VERSION}
+    mvn -U \
+        -P python,distribution \
+        package \
+        -DskipTests \
+        -Dhadoop.version=${HADOOP_VERSION} \
+        -Dspark.version=${SPARK_VERSION}
 
-	    # make sure that the distribution package contains an egg
-	    # if no assembly jar is found, this will exit with code 1 and fail the build
-	    tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
-            grep bdgenomics.mango | \
-            grep egg
+    # make sure that the distribution package contains an egg
+    # if no assembly jar is found, this will exit with code 1 and fail the build
+    tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
+        grep bdgenomics.mango | \
+        grep egg
+
+
+    # test mango notebook, output to temporary log file
+    MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
+    ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
+
+    # sleep for 2 seconds to let mango-notebook start up
+    sleep 2
+
+    # if mango-notebook fails, then trying to kill the process will fail
+    if kill $! ; then
+        echo "Mango Notebook Succeeded"
+        # kill jupyter notebook
+        pkill -f jupyter-notebook
+    else
+        echo "Mango Notebook failed with logs:"
+        cat ${MANGO_NOTEBOOK_LOGS}
+        # clean up
+        rm -rf ${MANGO_TMP_DIR}
+        exit 1
+    fi
+
+    # test mango submit
+    MANGO_BROWSER_LOGS=mango-submit.log
+    ./bin/mango-submit ./example-files/hg19.17.2bit &> ${MANGO_BROWSER_LOGS} &
+
+    # sleep for 10 seconds to let mango-browser start up
+    sleep 10
+
+    # get processes with mango prefix
+    PROCESSES=( $(ps aux | grep -F '/example-files/hg19.17.2bit' | grep -v -F 'grep' | awk '{ print $2 }') )
+
+    # There should be 2 processes running: 1 for JAVA and 1 for mango-submit script
+    if [ "${#PROCESSES[@]}" -eq 2 ] ; then
+        echo "Mango Browser Succeeded"
+        # kill all Mango Browser related processes
+        kill ${PROCESSES}; 
+    else
+        echo "Mango Browser failed with logs:"
+        cat ${MANGO_BROWSER_LOGS}
+        z# clean up
+        rm -rf ${MANGO_TMP_DIR}
+        exit 1
+    fi
 
     # copy python targets back
     cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
@@ -218,6 +262,9 @@ then
     # deactivate and remove the conda env
     source deactivate
     conda remove -n mango-build-${uuid} --all
+
+    # clean up
+    rm -rf ${MANGO_TMP_DIR}
 
 fi
 
