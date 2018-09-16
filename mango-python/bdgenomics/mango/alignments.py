@@ -16,116 +16,44 @@
 # limitations under the License.
 #
 
+import bdgenomics.mango.pileup as pileup
+from bdgenomics.adam.adamContext import ADAMContext
+import utils
+
 from collections import Counter, OrderedDict
 from cigar import Cigar
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
-
-## Plots distribution for CoverageRDD
-class CoverageDistribution(object):
+class AlignmentSummary(object):
     """
     QC provides preprocessing functions for visualization
     of various quality control.
     """
 
-    def __init__(self, ss, coverageRDDs):
+    def __init__(self, ac, rdd):
         """
-        Initializes a CoverageDistribution class.
-        Computes the coverage distribution of multiple coverageRDDs.
-        :param ss: Spark object
-        :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
+        Initializes a GenomicRDD viz class.
         """
-        self.sc = ss.sparkContext
-
-        # If single RDD, convert to list
-        if (not isinstance(coverageRDDs, list)):
-            coverageRDDs = [coverageRDDs]
-
-        # Assign each RDD with counter. Reduce and collect.
-        mappedDistributions = [c.flatten().toDF().rdd.map(lambda r: ((i, int(r["count"])), 1)).reduceByKey(lambda x,y: x+y) for i,c in enumerate(coverageRDDs)]
-        unionRDD = self.sc.union(mappedDistributions)
-        collectedCoverage = unionRDD.map(lambda r: (r[0][0], Counter({r[0][1]:r[1]}))) \
-            .reduceByKey(lambda x,y:x+y) \
-            .sortByKey() \
-            .map(lambda r: r[1]).collect()
-
-        # we have to run a local sort. Creates a list of OrderedDict
-        f = lambda x: OrderedDict(sorted(x.items()))
-        self.collectedCoverage = [f(x) for x in collectedCoverage]
+        self.ac = ac
+        self.rdd = rdd
 
 
-    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False, labels = []):
-        """
-        Plots final distribution values and returns the plotted distribution as a Counter object.
-        :param normalize: normalizes readcounts to sum to 1
-        :param cumulative: plots CDF of reads
-        :param xScaleLog: rescales xaxis to log
-        :param yScaleLog: rescales yaxis to log
-        :param testMode: if true, does not generate plot. Used for testing.
-        """
+    # Takes a bdgenomics.AlignmentRecordRDD and visualizes results
+    def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
+        contig_trimmed = contig.lstrip(utils.CHR_PREFIX)
 
+        # Filter RDD
+        filtered = self.rdd.transform(lambda r: r.filter(((r.contigName == contig) | (r.contigName == contig_trimmed))
+                                                                   & (r.start < end) & (r.end > start) & (r.readMapped)))
 
-        # If single RDD, convert to list
-        if (not isinstance(labels, list)):
-            labels = [labels]
+        # convert to GA4GH JSON to be consumed by mango-viz module
+        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordRDDtoJSON(filtered._jvmRdd)
 
-        # Make sure there are enough labels for the RDDs.
-        # If not, add them
-        if (len(labels) != len(self.collectedCoverage)):
-            print("No labels set. Assigning labels to dataset...")
-            labels = map(lambda count: "Coverage " + str(count + 1), range(len(self.collectedCoverage)))
+        # visualize
+        if (showPlot):
+            return pileup.Reads(json = json, build=build, contig=contig,start=start,stop=end)
 
-        coverageDistributions = []
-
-        for coverageDistribution in self.collectedCoverage:
-
-            copiedDistribution = coverageDistribution.copy()
-
-            if normalize:
-                total = float(sum(copiedDistribution.values()))
-
-                # replace coverage distribution counts with normalized values
-                for key in copiedDistribution:
-                    copiedDistribution[key] /= total
-
-            if cumulative:
-                cumulativeSum = 0.0
-
-                # Keep adding up reads for cumulative
-                for key in copiedDistribution.keys():
-                    cumulativeSum += copiedDistribution[key]
-                    copiedDistribution[key] = cumulativeSum
-
-            coverageDistributions.append(copiedDistribution)
-
-        if (not testMode): # For testing: do not run plots if testMode
-
-            title =  'Target Region Coverage'
-            if cumulative:
-                title = 'Cumulative ' + title
-            if normalize:
-                title = 'Normalized ' + title
-            plt.ylabel('Fraction' if normalize else 'Counts')
-            plt.xlabel('Coverage Depth')
-
-            # log scales, if applicable
-            if (xScaleLog):
-                plt.xscale('log')
-            if (yScaleLog):
-                plt.yscale('log')
-
-            plt.title(title)
-
-
-            for count, coverageDistribution in enumerate(coverageDistributions):
-                coverage = coverageDistribution.keys()
-                counts = coverageDistribution.values()
-                plt.plot(coverage, counts, label = labels[count])
-            plt.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
-            plt.show()
-
-        return coverageDistributions
 
 
 ## Plots alignment distribution for AlignmentRDD using the cigar string
@@ -139,17 +67,17 @@ class AlignmentDistribution(object):
         """
         Initializes a AlignmentDistribution class.
         Computes the alignment distribution of multiple coverageRDDs.
-        :param ss: Spark Object
+        :param SparkContext: the global SparkContext
         :param alignmentRDDs: A list of bdgenomics.adam.rdd.AlignmentRDD objects
         :param int bin_size: Division size per bin
         """
-        self.bin_size = int(bin_size)
+        bin_size = int(bin_size)
+        self.bin_size = bin_size
         self.sc = ss.sparkContext
 
         # filter alignments without a position
-        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, sample)) \
+        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, 1.0)) \
             .toDF().rdd.filter(lambda r: r["start"] != None)
-
 
         # Assign alignments with counter for contigs. Reduce and collect.
         mappedDistributions = filteredAlignments \

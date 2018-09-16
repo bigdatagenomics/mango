@@ -17,67 +17,11 @@
 #
 
 from bdgenomics.mango.test import SparkTestCase
-from bdgenomics.mango.rdd import GenomicVizRDD
 
 from bdgenomics.adam.adamContext import ADAMContext
 
 
-class GenomicVizRDDTest(SparkTestCase):
-
-    def test_visualize_alignments(self):
-        genomicRDD = GenomicVizRDD(self.ss)
-
-        # load file
-        ac = ADAMContext(self.ss)
-        testFile = self.resourceFile("small.sam")
-
-        # read alignments
-        reads = ac.loadAlignments(testFile)
-
-        contig = "16"
-        start = 26472780
-        end = 26482780
-
-        genomicRDD.ViewAlignments(reads, contig, start, end)
-        assert(True)
-
-
-    def test_visualize_variants(self):
-        genomicRDD = GenomicVizRDD(self.ss)
-
-        # load file
-        ac = ADAMContext(self.ss)
-        testFile = self.resourceFile("bqsr1.vcf")
-
-        # read alignments
-        variants = ac.loadVariants(testFile)
-
-        contig = "chrM"
-        start = 1
-        end = 2000
-
-        genomicRDD.ViewVariants(variants, contig, start, end)
-        assert(True)
-
-
-    def test_visualize_features(self):
-        genomicRDD = GenomicVizRDD(self.ss)
-
-        # load file
-        ac = ADAMContext(self.ss)
-        testFile = self.resourceFile("smalltest.bed")
-
-        # read alignments
-        features = ac.loadFeatures(testFile)
-
-        contig = "chrM"
-        start = 1
-        end = 2000
-
-        x = genomicRDD.ViewFeatures(features, contig, start, end)
-        assert(True)
-
-
+class NotebookTest(SparkTestCase):
 
     def test_example(self):
         # these variables are read into mango-python.py
@@ -90,3 +34,24 @@ class GenomicVizRDDTest(SparkTestCase):
         # this file is converted from ipynb in make test
         testFile = self.exampleFile("notebooks/mango-viz.py")
         execfile(testFile)
+
+    def test_coverage_example(self):
+        # these variables are read into mango-python.py
+        spark = self.ss
+        testMode = True
+        coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
+
+        # this file is converted from mango-python.coverage.ipynb in the Makefile
+        testCoverageFile = self.exampleFile("notebooks/mango-python-coverage.py")
+        execfile(testCoverageFile)
+
+    def test_alignment_example(self):
+        # these variables are read into mango-python.py
+        spark = self.ss
+        testMode = True
+        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
+
+        # this file is converted from mango-python-alignment.ipynb in the Makefile
+        testAlignmentFile = self.exampleFile("notebooks/mango-python-alignment.py")
+        execfile(testAlignmentFile)
+
