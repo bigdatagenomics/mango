@@ -16,24 +16,35 @@
 # limitations under the License.
 #
 
+r"""
+========
+Coverage
+========
+.. currentmodule:: bdgenomics.mango.coverage
+.. autosummary::
+   :toctree: _generate/
+
+   CoverageDistribution
+"""
+
 from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
 
-## Plots distribution for CoverageRDD
 class CoverageDistribution(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
+    """ CoverageDistribution class.
+    Plotting functionality for visualizing coverage distributions of multi-sample cohorts.
     """
 
     def __init__(self, ss, coverageRDDs):
         """
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
-        :param ss: Spark object
-        :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
+
+        Args:
+            param ss: global SparkSession
+            param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
         """
         self.sc = ss.sparkContext
 
@@ -57,11 +68,13 @@ class CoverageDistribution(object):
     def plotDistributions(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False, labels = []):
         """
         Plots final distribution values and returns the plotted distribution as a Counter object.
-        :param normalize: normalizes readcounts to sum to 1
-        :param cumulative: plots CDF of reads
-        :param xScaleLog: rescales xaxis to log
-        :param yScaleLog: rescales yaxis to log
-        :param testMode: if true, does not generate plot. Used for testing.
+
+        Args:
+            param normalize: normalizes readcounts to sum to 1
+            param cumulative: plots CDF of reads
+            param xScaleLog: rescales xaxis to log
+            param yScaleLog: rescales yaxis to log
+            param testMode: if true, does not generate plot. Used for testing.
         """
 
 

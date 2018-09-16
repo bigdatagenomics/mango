@@ -16,25 +16,50 @@
 # limitations under the License.
 #
 
+r"""
+========
+Features
+========
+.. currentmodule:: bdgenomics.mango.features
+.. autosummary::
+   :toctree: _generate/
+
+   FeatureSummary
+"""
+
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.adam.adamContext import ADAMContext
 import utils
 
 class FeatureSummary(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
+    """ FeatureSummary class.
+    FeatureSummary provides scrollable visualization of features based on genomic regions.
     """
 
     def __init__(self, ac, rdd):
         """
         Initializes a GenomicRDD viz class.
+
+        Args:
+            param ac: ADAMContext
+            param rdd: AlignmentRecordRDD
         """
         self.ac = ac
         self.rdd = rdd
 
     # Takes a bdgenomics.adam.FeatureRDD and visualizes results in pileup format
     def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
+        """
+        Visualizes a portion of this FeatureRDD in a scrollable pileup widget
+
+        Args:
+            param contig: contig of locus to view
+            param start: start position of locus to view
+            param end: end position of locus to view
+            build: genome build. Default is hg19
+            showPlot: Disables widget, used for testing. Default is true.
+        """
+
         contig_trimmed = contig.lstrip(utils.CHR_PREFIX)
 
         # Filter RDD

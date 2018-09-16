@@ -16,14 +16,24 @@
 # limitations under the License.
 #
 
+r"""
+========
+Variants
+========
+.. currentmodule:: bdgenomics.mango.variants
+.. autosummary::
+   :toctree: _generate/
+
+   VariantSummary
+"""
+
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.adam.adamContext import ADAMContext
 import utils
 
 class VariantSummary(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
+    """ VariantSummary class.
+    VariantSummary provides scrollable visualization of variants based on genomic regions.
     """
 
     def __init__(self, ac, rdd):
@@ -35,6 +45,16 @@ class VariantSummary(object):
 
     # Takes a bdgenomics.adam.VariantContextRDD and visualizes results
     def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
+        """
+        Visualizes a portion of this VariantRDD in a scrollable pileup widget
+
+        Args:
+            param contig: contig of locus to view
+            param start: start position of locus to view
+            param end: end position of locus to view
+            build: genome build. Default is hg19
+            showPlot: Disables widget, used for testing. Default is true.
+        """
         contig_trimmed = contig.lstrip(utils.CHR_PREFIX)
 
         # Filter RDD

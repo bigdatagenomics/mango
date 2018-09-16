@@ -15,4 +15,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+r"""
+========================
+bdgenomics.mango Package
+========================
+.. currentmodule:: bdgenomics.mango
+
+bdgenomics.mango provides hooks for visualizing genomic data on top of Apache Spark. Available
+visualizations are supported for alignments, coverage, variants and features.
+
+.. automodule:: bdgenomics.mango.alignments
+.. automodule:: bdgenomics.mango.coverage
+.. automodule:: bdgenomics.mango.features
+.. automodule:: bdgenomics.mango.variants
+
+
+"""
+
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)

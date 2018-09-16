@@ -16,6 +16,18 @@
 # limitations under the License.
 #
 
+r"""
+==========
+Alignments
+==========
+.. currentmodule:: bdgenomics.mango.alignments
+.. autosummary::
+   :toctree: _generate/
+
+   AlignmentSummary
+   AlignmentDistribution
+"""
+
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.adam.adamContext import ADAMContext
 import utils
@@ -26,21 +38,33 @@ import matplotlib.pyplot as plt
 plt.rcdefaults()
 
 class AlignmentSummary(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
+    """AlignmentSummary class.
+    AlignmentSummary provides scrollable visualization of alignments based on genomic regions.
     """
 
     def __init__(self, ac, rdd):
         """
-        Initializes a GenomicRDD viz class.
+        Initializes an AlignmentSummary class.
+
+        Args:
+            param ac: ADAMContext
+            param rdd: AlignmentRecordRDD
         """
         self.ac = ac
         self.rdd = rdd
 
 
-    # Takes a bdgenomics.AlignmentRecordRDD and visualizes results
     def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
+        """
+        Visualizes a portion of this AlignmentRDD in a scrollable pileup widget
+
+        Args:
+            param contig: contig of locus to view
+            param start: start position of locus to view
+            param end: end position of locus to view
+            build: genome build. Default is hg19
+            showPlot: Disables widget, used for testing. Default is true.
+        """
         contig_trimmed = contig.lstrip(utils.CHR_PREFIX)
 
         # Filter RDD
@@ -55,21 +79,20 @@ class AlignmentSummary(object):
             return pileup.Reads(json = json, build=build, contig=contig,start=start,stop=end)
 
 
-
-## Plots alignment distribution for AlignmentRDD using the cigar string
 class AlignmentDistribution(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
+    """ AlignmentDistribution class.
+    AlignmentDistribution calculates indel distributions on an Alignment RDD.
     """
 
     def __init__(self, ss, alignmentRDD, sample=1.0, bin_size=10000000):
         """
         Initializes a AlignmentDistribution class.
         Computes the alignment distribution of multiple coverageRDDs.
-        :param SparkContext: the global SparkContext
-        :param alignmentRDDs: A list of bdgenomics.adam.rdd.AlignmentRDD objects
-        :param int bin_size: Division size per bin
+
+        Args:
+            param SparkSession: the global SparkSession
+            param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object
+            param bin_size: Division size per bin
         """
         bin_size = int(bin_size)
         self.bin_size = bin_size
@@ -90,10 +113,12 @@ class AlignmentDistribution(object):
     def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plotType="I"):
         """
         Plots final distribution values and returns the plotted distribution as a counter object.
-        :param xScaleLog: rescales xaxis to log
-        :param yScaleLog: rescales yaxis to log
-        :param testMode: if true, does not generate plot. Used for testing.
-        :param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
+
+        Args:
+            param xScaleLog: rescales xaxis to log
+            param yScaleLog: rescales yaxis to log
+            param testMode: if true, does not generate plot. Used for testing.
+            param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
         """
         chromosomes = Counter()
 
