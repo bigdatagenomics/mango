@@ -38,7 +38,11 @@ mango-viz/mangoviz/static/*
 example-files/metastore_db/*
 
 
+# mango-viz node modules
+mango-viz/bdgenomics/mango/js/node_modules/*
 
+# docs _build
+docs/_build/*
 
 # resources for browser
 mango-cli/src/main/webapp/resources/node_modules/*

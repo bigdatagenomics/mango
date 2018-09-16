@@ -121,6 +121,8 @@ prepare:
 	$(pip) install cigar==0.1.3
 	$(pip) install matplotlib==2.0.2
 	$(pip) install bdgenomics.adam==0.24.0
+	$(pip) install bdgenomics.mango.pileup==0.0.1
+	$(pip) install ipywidgets==7.0.0
 
 
 check_clean_working_copy:
