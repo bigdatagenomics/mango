@@ -30,7 +30,7 @@ Alignments
 
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.adam.adamContext import ADAMContext
-import utils
+from .utils import *
 
 from collections import Counter, OrderedDict
 from cigar import Cigar
@@ -65,7 +65,7 @@ class AlignmentSummary(object):
             build: genome build. Default is hg19
             showPlot: Disables widget, used for testing. Default is true.
         """
-        contig_trimmed = contig.lstrip(utils.CHR_PREFIX)
+        contig_trimmed = contig.lstrip(CHR_PREFIX)
 
         # Filter RDD
         filtered = self.rdd.transform(lambda r: r.filter(((r.contigName == contig) | (r.contigName == contig_trimmed))

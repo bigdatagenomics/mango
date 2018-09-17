@@ -29,7 +29,7 @@ Features
 
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.adam.adamContext import ADAMContext
-import utils
+from .utils import *
 
 class FeatureSummary(object):
     """ FeatureSummary class.
@@ -60,7 +60,7 @@ class FeatureSummary(object):
             showPlot: Disables widget, used for testing. Default is true.
         """
 
-        contig_trimmed = contig.lstrip(utils.CHR_PREFIX)
+        contig_trimmed = contig.lstrip(CHR_PREFIX)
 
         # Filter RDD
         filtered = self.rdd.transform(lambda r: r.filter(((r.contigName == contig) | (r.contigName == contig_trimmed))
