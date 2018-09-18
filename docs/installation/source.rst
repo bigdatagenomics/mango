@@ -92,3 +92,21 @@ active virtualenv environment, run:
 
     cd mango-viz
     make prepare
+
+
+For Mango developers - if the contents of the example notebooks
+
+.. code:: bash
+
+    example-files/notebooks/mango-python-alignment.ipynb
+    example-files/notebooks/mango-python-coverage.ipynb
+    
+have been updated, then run
+
+.. code:: bash
+
+   cd mango-python
+   make update_docs
+   
+in order to update the pre-executed notebooks in docs/notebooks
+    
