@@ -16,9 +16,9 @@
   <name>mango</name>
 
   <properties>
-    <adam.version>0.24.0</adam.version>
+    <adam.version>0.25.0-SNAPSHOT</adam.version>
     <avro.version>1.8.1</avro.version>
-    <bdg-formats.version>0.11.3</bdg-formats.version>
+    <bdg-formats.version>0.12.0-SNAPSHOT</bdg-formats.version>
     <bdg-utils.version>0.2.13</bdg-utils.version>
     <convert.version>0.3.0</convert.version>
     <java.version>1.8</java.version>
