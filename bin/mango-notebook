@@ -17,8 +17,47 @@
 # limitations under the License.
 #
 
-set -ex
+shopt -s extglob
 
+err_report() {
+  local -ir line=$1
+  local -ir exit_code=$2
+  echo "Error on line ${line} with exit code ${exit_code}"
+}
+
+trap 'err_report $LINENO' ERR
+
+print_err(){
+  local -r msg="$1"
+  printf 'ERROR: %s\n'  "${msg}" 1>&2
+}
+
+# Retrieve the full path of a program using its name. If the program is not
+# found using $PATH viariable the script exit on error
+#
+# Usage program_exists [name] {true|false}
+# Argument 1 program name
+# Argument 2 optional boolean flag to exit or not if the program is not found
+#            default is true (exit on error)
+# Return full path or empty string if not found
+get_program_path(){
+  local -r name="$1"
+  local -r exit_on_error=${2:-true}
+  local -r path=$(command -v "${name}")
+  if [[ -z "${path}" ]]; then
+    if ${exit_on_error} ; then
+      print_err "${name} is not found."
+      exit 1
+    else
+      print_err "${name} is not found; Aborting."
+    fi
+  fi
+  echo ${path}
+}
+
+# Main
+
+trap 'err_report ${LINENO} $?' ERR
 
 SOURCE_DIR=$(dirname ${BASH_SOURCE[0]})
 
@@ -47,24 +86,50 @@ fi
 # get Mango jar
 MANGO_CLI_JAR=$(${SOURCE_DIR}/find-mango-assembly.sh)
 
-SPARK_SUBMIT=$(${SOURCE_DIR}/find-spark.sh)
-echo "Using spark-submit=$SPARK_SUBMIT" 1>&2
-
-if [ -z "$SPARK_HOME" ]; then
-  PYSPARK=$(which pyspark || echo)
+# get pyspark path
+if [[ -z "${SPARK_HOME}" ]]; then
+  wrapper_path=$(get_program_path spark-script-wrapper.sh false)
+  if [[ -f "${wrapper_path}" ]]; then
+    . ${wrapper_path}
+    PYSPARK=$(find_script pyspark)
+  else
+    PYSPARK=$(get_program_path pyspark)
+  fi
+  SPARK_HOME=${PYSPARK/bin\/pyspark}
 else
-  PYSPARK="$SPARK_HOME"/bin/pyspark
+  PYSPARK="${SPARK_HOME}"/bin/pyspark
 fi
-if [ -z "$PYSPARK" ]; then
-  echo "SPARK_HOME not set and spark-shell not on PATH; Aborting."
+
+if [[ ! -f "${PYSPARK}" ]]; then
+  print_err "pyspark was not found on PATH and SPARK_HOME; Aborting."
   exit 1
 fi
 
-export PYSPARK_PYTHON=$(which python || echo)
-export PYSPARK_DRIVER_PYTHON=jupyter
-export PYSPARK_DRIVER_PYTHON_OPTS="notebook $NOTEBOOK_ARGS"
+# Use standard PYSPARK environement variables
+if [[ -z ${PYSPARK_PYTHON} ]]; then
+  export PYSPARK_PYTHON=$(get_program_path python)
+fi
 
-PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
+if [[ -z ${PYSPARK_DRIVER_PYTHON} ]]; then
+  export PYSPARK_DRIVER_PYTHON=jupyter
+fi
+
+if [[ -z ${PYSPARK_DRIVER_PYTHON_OPTS} ]]; then
+  export PYSPARK_DRIVER_PYTHON_OPTS="notebook ${NOTEBOOK_ARGS}"
+else
+  export PYSPARK_DRIVER_PYTHON_OPTS="${PYSPARK_DRIVER_PYTHON_OPTS} ${NOTEBOOK_ARGS}"
+fi
+
+if [[ -d "${SPARK_HOME}/python/lib" ]]; then
+  PY4J_ZIP_ALL_VERSIONS=( ${SPARK_HOME}/python/lib/py4j-+([0-9]).+([0-9]).+([0-9])-src.zip )
+  # use the latest version
+  PY4J_ZIP="${PY4J_ZIP_ALL_VERSIONS[-1]}"
+  if [[ ! -e ${PY4J_ZIP} ]]; then
+    print_err "${PY4J_ZIP} is not found; Aborting."
+    exit 1
+  fi
+fi
+
 export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
 
 ${PYSPARK} \
@@ -72,4 +137,4 @@ ${PYSPARK} \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   --jars ${MANGO_CLI_JAR} \
   --driver-class-path ${MANGO_CLI_JAR} \
-  "${SPARK_ARGS[@]}"
+  ${PYSPARK_SUBMIT_ARGS} ${SPARK_ARGS[@]}
