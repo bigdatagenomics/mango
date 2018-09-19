@@ -137,4 +137,4 @@ ${PYSPARK} \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
   --jars ${MANGO_CLI_JAR} \
   --driver-class-path ${MANGO_CLI_JAR} \
-  ${PYSPARK_SUBMIT_ARGS} ${SPARK_ARGS[@]}
+  ${SPARK_ARGS[@]}
