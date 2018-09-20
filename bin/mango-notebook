@@ -55,11 +55,25 @@ get_program_path(){
   echo ${path}
 }
 
-# Main
+get_py4jzip(){
+  local -a py4j_zip_all_versions
+  local py4j_zip=""
+  if [[ -d "${SPARK_HOME}/python/lib" ]]; then
+    py4j_zip_all_versions=( ${SPARK_HOME}/python/lib/py4j-+([0-9])\.+([0-9])?(\.+([0-9]))-src.zip )
+    # use the latest version
+    py4j_zip="${py4j_zip_all_versions[-1]}"
+    if [[ ! -e ${py4j_zip} ]]; then
+      err_report ${LINENO} $? "${py4j_zip} is not found; Aborting."
+    fi
+  fi
+  echo "${py4j_zip}"
+}
 
+### MAIN ###
+# variable declarations
 trap 'err_report ${LINENO} $?' ERR
-
-SOURCE_DIR=$(dirname ${BASH_SOURCE[0]})
+declare -r PY4J_ZIP=$(get_py4jzip)
+declare -r SOURCE_DIR=$(dirname ${BASH_SOURCE[0]})
 
 # Split args into Spark and ADAM args
 DD=False  # DD is "double dash"
@@ -95,7 +109,7 @@ if [[ -z "${SPARK_HOME}" ]]; then
   else
     PYSPARK=$(get_program_path pyspark)
   fi
-  SPARK_HOME=${PYSPARK/bin\/pyspark}
+  SPARK_HOME=${PYSPARK/bin/pyspark}
 else
   PYSPARK="${SPARK_HOME}"/bin/pyspark
 fi
@@ -120,15 +134,6 @@ else
   export PYSPARK_DRIVER_PYTHON_OPTS="${PYSPARK_DRIVER_PYTHON_OPTS} ${NOTEBOOK_ARGS}"
 fi
 
-if [[ -d "${SPARK_HOME}/python/lib" ]]; then
-  PY4J_ZIP_ALL_VERSIONS=( ${SPARK_HOME}/python/lib/py4j-+([0-9]).+([0-9]).+([0-9])-src.zip )
-  # use the latest version
-  PY4J_ZIP="${PY4J_ZIP_ALL_VERSIONS[-1]}"
-  if [[ ! -e ${PY4J_ZIP} ]]; then
-    print_err "${PY4J_ZIP} is not found; Aborting."
-    exit 1
-  fi
-fi
 
 export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
 
