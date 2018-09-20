@@ -18,6 +18,13 @@
 #
 
 shopt -s extglob
+## Global variable declarations
+# Bash 4.3 introduce nameref feature which able to write bash
+# script without global variable.
+# Unfortunately some major distribution use bash 4.2 such as centOS 7.
+
+declare -a SPARK_ARGS=()
+declare -a NOTEBOOK_ARGS=()
 
 err_report() {
   local -ir line=$1
@@ -55,6 +62,7 @@ get_program_path(){
   echo ${path}
 }
 
+# Retrieve the path of py4j zip archive used by current spark
 get_py4jzip(){
   local -a py4j_zip_all_versions
   local py4j_zip=""
@@ -69,52 +77,64 @@ get_py4jzip(){
   echo "${py4j_zip}"
 }
 
+# parse command line and set accordingly the global variables: SPARK_ARGS and NOTEBOOK_ARGS
+parse_args(){
+# statements below require bash 4.3 or upper
+#  local -n spark_args="$1"
+#  local -n notebook_args="$2"
+  local -a arguments="$@"
+  local -a pre_dd=()
+  local -a post_dd=()
+  local    has_dd=false # DD is "double dash"
+  local    arg
+  # Split args into Spark and ADAM args
+  for arg in "${arguments[@]}"; do
+    shift
+    if [[ "${arg}" == "--" ]]; then
+      has_dd=true
+      post_dd=( "$@" )
+      break
+    fi
+    pre_dd+=("${arg}")
+  done
+
+  if ${has_dd}; then
+    SPARK_ARGS=("${pre_dd[@]}")
+    NOTEBOOK_ARGS=("${post_dd[@]}")
+  else
+    SPARK_ARGS=()
+    NOTEBOOK_ARGS=("${pre_dd[@]}")
+  fi
+}
+
 ### MAIN ###
 # variable declarations
 trap 'err_report ${LINENO} $?' ERR
 declare -r PY4J_ZIP=$(get_py4jzip)
 declare -r SOURCE_DIR=$(dirname ${BASH_SOURCE[0]})
-
-# Split args into Spark and ADAM args
-DD=False  # DD is "double dash"
-PRE_DD=()
-POST_DD=()
-for ARG in "$@"; do
-  shift
-  if [[ $ARG == "--" ]]; then
-    DD=True
-    POST_DD=( "$@" )
-    break
-  fi
-  PRE_DD+=("$ARG")
-done
-
-if [[ $DD == True ]]; then
-  SPARK_ARGS=("${PRE_DD[@]}")
-  NOTEBOOK_ARGS=("${POST_DD[@]}")
-else
-  SPARK_ARGS=()
-  NOTEBOOK_ARGS=("${PRE_DD[@]}")
-fi
+declare mango_cli_jar=""
+declare wrapper_path
+declare pyspark=""
+parse_args "$@"
 
 # get Mango jar
-MANGO_CLI_JAR=$(${SOURCE_DIR}/find-mango-assembly.sh)
+mango_cli_jar=$(${SOURCE_DIR}/find-mango-assembly.sh)
 
 # get pyspark path
 if [[ -z "${SPARK_HOME}" ]]; then
   wrapper_path=$(get_program_path spark-script-wrapper.sh false)
   if [[ -f "${wrapper_path}" ]]; then
     . ${wrapper_path}
-    PYSPARK=$(find_script pyspark)
+    pyspark=$(find_script pyspark)
   else
-    PYSPARK=$(get_program_path pyspark)
+    pyspark=$(get_program_path pyspark)
   fi
-  SPARK_HOME=${PYSPARK/bin/pyspark}
+  SPARK_HOME=${pyspark/bin/pyspark}
 else
-  PYSPARK="${SPARK_HOME}"/bin/pyspark
+  pyspark="${SPARK_HOME}"/bin/pyspark
 fi
 
-if [[ ! -f "${PYSPARK}" ]]; then
+if [[ ! -f "${pyspark}" ]]; then
   print_err "pyspark was not found on PATH and SPARK_HOME; Aborting."
   exit 1
 fi
@@ -137,9 +157,9 @@ fi
 
 export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
 
-${PYSPARK} \
+${pyspark} \
   --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
   --conf spark.kryo.registrator=org.bdgenomics.mango.serialization.MangoKryoRegistrator \
-  --jars ${MANGO_CLI_JAR} \
-  --driver-class-path ${MANGO_CLI_JAR} \
+  --jars ${mango_cli_jar} \
+  --driver-class-path ${mango_cli_jar} \
   ${SPARK_ARGS[@]}
