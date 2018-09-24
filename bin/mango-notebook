@@ -66,10 +66,12 @@ get_program_path(){
 get_py4jzip(){
   local -a py4j_zip_all_versions
   local py4j_zip=""
+  local -i last_index=0
   if [[ -d "${SPARK_HOME}/python/lib" ]]; then
     py4j_zip_all_versions=( ${SPARK_HOME}/python/lib/py4j-+([0-9])\.+([0-9])?(\.+([0-9]))-src.zip )
     # use the latest version
-    py4j_zip="${py4j_zip_all_versions[-1]}"
+    last_index=$(( ${#py4j_zip_all_versions[@]} - 1 ))
+    py4j_zip="${py4j_zip_all_versions[${last_index}]}"
     if [[ ! -e ${py4j_zip} ]]; then
       err_report ${LINENO} $? "${py4j_zip} is not found; Aborting."
     fi
