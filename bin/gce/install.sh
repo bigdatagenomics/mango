@@ -83,11 +83,9 @@ if [[ "${ROLE}" == 'Master' ]]; then
     echo "Completed installing nodejs!"
     npm install -g n
     echo "Completed installing npm!"
-
 fi
 
 # Install Jupyter extensions (if desired)
-# TODO: document this in readme
 if [[ ! -v $INSTALL_JUPYTER_EXT ]]
     then
     INSTALL_JUPYTER_EXT=false
