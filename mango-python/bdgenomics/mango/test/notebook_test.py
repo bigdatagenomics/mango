@@ -39,7 +39,7 @@ class NotebookTest(SparkTestCase):
         # these variables are read into mango-python.py
         spark = self.ss
         testMode = True
-        coverageFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
+        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
 
         # this file is converted from mango-python.coverage.ipynb in the Makefile
         testCoverageFile = self.exampleFile("notebooks/mango-python-coverage.py")

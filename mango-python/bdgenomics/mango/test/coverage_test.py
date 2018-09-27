@@ -39,105 +39,54 @@ class CoverageTest(SparkTestCase):
 
         qc = CoverageDistribution(self.ss, coverage)
 
-        cd = qc.plotDistributions(testMode = True)
+        _, cd = qc.plotDistributions(testMode = True)
 
         assert(len(cd) == 1)
         assert(cd.pop()[1] == 1500)
-
-
-    def test_normalized_coverage_distribution(self):
-        # load file
-        ac = ADAMContext(self.ss)
-        testFile = self.resourceFile("small.sam")
-        # read alignments
-
-        reads = ac.loadAlignments(testFile)
-
-        # convert to coverage
-        coverage = reads.toCoverage()
-
-        qc = CoverageDistribution(self.ss, coverage)
-
-        cd = qc.plotDistributions(testMode = True, normalize = True)
-
-        assert(len(cd) == 1)
-        assert(cd.pop()[1] == 1)
-
-
-    def test_cumulative_coverage_distribution(self):
-        # load file
-        ac = ADAMContext(self.ss)
-        testFile = self.resourceFile("small.sam")
-        # read alignments
-
-        reads = ac.loadAlignments(testFile)
-
-        # convert to coverage
-        coverage = reads.toCoverage()
-
-        qc = CoverageDistribution(self.ss, coverage)
-
-        cd = qc.plotDistributions(testMode = True, cumulative = True)
-
-        assert(len(cd) == 1)
-        assert(cd.pop()[1] == 1500)
-
-
-    def test_coverage_from_alignments(self):
-        # load file
-        ac = ADAMContext(self.ss)
-        testFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
-        # read alignments
-
-        reads = ac.loadAlignments(testFile)
-
-        # convert to coverage
-        coverage = reads.toCoverage()
-
-        qc =CoverageDistribution(self.ss, coverage)
-
-        cd = qc.plotDistributions(testMode = True, cumulative = True)
-
-        assert(len(cd) == 1)
-        assert(cd.pop()[1] == 6.0)
-
 
     def test_example_coverage(self):
         # load file
         ac = ADAMContext(self.ss)
-        testFile = self.exampleFile("chr17.7500000-7515000.sam.coverage.adam")
+        testFile = self.exampleFile("chr17.7500000-7515000.sam")
         # read alignments
 
         coverage = ac.loadCoverage(testFile)
 
         qc = CoverageDistribution(self.ss, coverage)
 
-        cd1 = qc.plotDistributions(testMode = True, cumulative = True)
+        _, cd1 = qc.plotDistributions(testMode = True, cumulative = True)
 
-        assert(len(cd1) == 1)
-        x = cd1.pop()
+        # first sample
+        items = cd1.items()[0][1]
+        assert(len(items) == 1)
+        x = items.pop()
         assert(x[1] == 6)
         assert(x[2] == 38)
 
-        cd2 = qc.plotDistributions(testMode = True, cumulative = False)
+        _, cd2 = qc.plotDistributions(testMode = True, cumulative = False)
 
-        assert(len(cd2) == 1)
-        x = cd2.pop()
+        # first sample
+        items = cd2.items()[0][1]
+        assert(len(items) == 1)
+        x = items.pop()
         assert(x[1] == 6)
         assert(x[2] == 32)
 
-        cd3 = qc.plotDistributions(testMode = True, cumulative = True, normalize = True)
+        _, cd3 = qc.plotDistributions(testMode = True, cumulative = True, normalize = True)
         total = float(sum(qc.collectedCoverage[0].values()))
 
-        assert(len(cd3) == 1)
-        x = cd3.pop()
+        # first sample
+        items = cd3.items()[0][1]
+        assert(len(items) == 1)
+        x = items.pop()
         assert(x[1] == 6.0/total)
         assert(x[2] == 38.0/total)
 
-        cd4 = qc.plotDistributions(testMode = True, normalize = True)
+        _, cd4 = qc.plotDistributions(testMode = True, normalize = True)
 
-        assert(len(cd4) == 1)
-        x = cd4.pop()
+        # first sample
+        items = cd4.items()[0][1]
+        assert(len(items) == 1)
+        x = items.pop()
         assert(x[1] == 6.0/total)
         assert(x[2] == 32.0/total)
-
