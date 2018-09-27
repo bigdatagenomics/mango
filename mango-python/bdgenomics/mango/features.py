@@ -58,6 +58,9 @@ class FeatureSummary(object):
             param end: end position of locus to view
             build: genome build. Default is hg19
             showPlot: Disables widget, used for testing. Default is true.
+
+        Returns:
+            pileup view for features
         """
 
         contig_trimmed = contig.lstrip(CHR_PREFIX)
