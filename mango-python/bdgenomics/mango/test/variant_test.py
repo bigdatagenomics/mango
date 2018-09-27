@@ -16,21 +16,27 @@
 # limitations under the License.
 #
 
-r"""
-========================
-bdgenomics.mango Package
-========================
-.. currentmodule:: bdgenomics.mango
+from bdgenomics.mango.test import SparkTestCase
+from bdgenomics.mango.variants import *
 
-bdgenomics.mango provides hooks for visualizing genomic data on top of Apache Spark. Available
-visualizations are supported for alignments, coverage, variants and features.
-
-.. automodule:: bdgenomics.mango.alignments
-.. automodule:: bdgenomics.mango.coverage
-.. automodule:: bdgenomics.mango.features
-.. automodule:: bdgenomics.mango.variants
+from bdgenomics.adam.adamContext import ADAMContext
 
 
-"""
+class VariantTest(SparkTestCase):
 
-__path__ = __import__('pkgutil').extend_path(__path__, __name__)
+    def test_visualize_variants(self):
+        # load file
+        ac = ADAMContext(self.ss)
+        testFile = self.resourceFile("bqsr1.vcf")
+
+        # read alignments
+        variants = ac.loadVariants(testFile)
+
+        variantViz = VariantSummary(ac, variants)
+
+        contig = "chrM"
+        start = 1
+        end = 2000
+
+        x = variantViz.viewPileup(contig, start, end)
+        assert(x != None)

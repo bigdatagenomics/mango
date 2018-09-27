@@ -16,25 +16,35 @@
 # limitations under the License.
 #
 
+r"""
+========
+Coverage
+========
+.. currentmodule:: bdgenomics.mango.coverage
+.. autosummary::
+   :toctree: _generate/
+
+   CoverageDistribution
+"""
+
 from collections import Counter, OrderedDict
-from cigar import Cigar
 import matplotlib.pyplot as plt
 plt.rcdefaults()
 
 
-## Plots distribution for CoverageRDD
 class CoverageDistribution(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
+    """ CoverageDistribution class.
+    Plotting functionality for visualizing coverage distributions of multi-sample cohorts.
     """
 
     def __init__(self, ss, coverageRDDs):
         """
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of multiple coverageRDDs.
-        :param ss: Spark object
-        :param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
+
+        Args:
+            param ss: global SparkSession
+            param coverageRDDs: A list of bdgenomics.adam.rdd.CoverageRDD objects
         """
         self.sc = ss.sparkContext
 
@@ -55,14 +65,16 @@ class CoverageDistribution(object):
         self.collectedCoverage = [f(x) for x in collectedCoverage]
 
 
-    def plot(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False, labels = []):
+    def plotDistributions(self, normalize = False, cumulative = False, xScaleLog = False, yScaleLog = False, testMode = False, labels = []):
         """
         Plots final distribution values and returns the plotted distribution as a Counter object.
-        :param normalize: normalizes readcounts to sum to 1
-        :param cumulative: plots CDF of reads
-        :param xScaleLog: rescales xaxis to log
-        :param yScaleLog: rescales yaxis to log
-        :param testMode: if true, does not generate plot. Used for testing.
+
+        Args:
+            param normalize: normalizes readcounts to sum to 1
+            param cumulative: plots CDF of reads
+            param xScaleLog: rescales xaxis to log
+            param yScaleLog: rescales yaxis to log
+            param testMode: if true, does not generate plot. Used for testing.
         """
 
 
@@ -126,96 +138,3 @@ class CoverageDistribution(object):
             plt.show()
 
         return coverageDistributions
-
-
-## Plots alignment distribution for AlignmentRDD using the cigar string
-class AlignmentDistribution(object):
-    """
-    QC provides preprocessing functions for visualization
-    of various quality control.
-    """
-
-    def __init__(self, ss, alignmentRDD, sample=1.0, bin_size=10000000):
-        """
-        Initializes a AlignmentDistribution class.
-        Computes the alignment distribution of multiple coverageRDDs.
-        :param ss: Spark Object
-        :param alignmentRDDs: A list of bdgenomics.adam.rdd.AlignmentRDD objects
-        :param int bin_size: Division size per bin
-        """
-        self.bin_size = int(bin_size)
-        self.sc = ss.sparkContext
-
-        # filter alignments without a position
-        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, sample)) \
-            .toDF().rdd.filter(lambda r: r["start"] != None)
-
-
-        # Assign alignments with counter for contigs. Reduce and collect.
-        mappedDistributions = filteredAlignments \
-            .map(lambda r: ((r["contigName"], r["start"] - r["start"]%bin_size), \
-                            Counter(dict([(y,x) for x,y in Cigar(r["cigar"]).items()])))) \
-            .reduceByKey(lambda x,y: x+y)
-
-        self.alignments = mappedDistributions.collect()
-
-    def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plotType="I"):
-        """
-        Plots final distribution values and returns the plotted distribution as a counter object.
-        :param xScaleLog: rescales xaxis to log
-        :param yScaleLog: rescales yaxis to log
-        :param testMode: if true, does not generate plot. Used for testing.
-        :param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
-        """
-        chromosomes = Counter()
-
-
-        # count contig type at each location
-        for index, counts in self.alignments:
-            chromosomes[index] += counts[plotType]
-
-        if (not testMode): # For testing: do not run plots if testMode
-            title =  'Target Region Alignment for Type %s with bin size %d' % (plotType, self.bin_size)
-            plt.ylabel('Counts')
-            plt.xlabel('Chromosome number')
-
-            # log scales, if applicable
-            if (xScaleLog):
-                plt.xscale('log')
-            if (yScaleLog):
-                plt.yscale('log')
-            plt.title(title)
-
-            # get distinct chromosome names for plot
-            keys = sorted(list(set(map(lambda x: x[0][0], self.alignments))))
-
-            # offset for max chr
-            offset = 0
-
-            # holds xtick information
-            midPoints = []
-
-            # for all chromosomes
-            for key in keys:
-
-                # filter by chromosome key
-                values = [x for x in chromosomes.items() if x[0][0] == key]
-
-                # get positions
-                positions = map(lambda x: x[0][1] + offset, values)
-
-                # get counts
-                counts = map(lambda x: x[1], values)
-
-                plt.plot(positions, counts, ls='', marker='.')
-
-                # set label for chromosome
-                midPoint = min(positions) + (max(positions) - min(positions))/2
-                midPoints.append(midPoint)
-
-                offset = max(positions)
-
-            plt.xticks(midPoints,  keys, rotation=-90, size=8.5)
-            plt.show()
-
-        return chromosomes
