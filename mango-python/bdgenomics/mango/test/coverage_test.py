@@ -39,54 +39,49 @@ class CoverageTest(SparkTestCase):
 
         qc = CoverageDistribution(self.ss, coverage)
 
-        _, cd = qc.plotDistributions(testMode = True)
+        _, cd = qc.plotDistributions(testMode = True, normalize=False)
 
         assert(len(cd) == 1)
-        assert(cd.pop()[1] == 1500)
+
+        # all items for first sample
+        items = cd.items()[0][1]
+
+        print("Coverage")
+        print(cd)
+        assert(items[0][1] == 1500)
 
     def test_example_coverage(self):
         # load file
         ac = ADAMContext(self.ss)
         testFile = self.exampleFile("chr17.7500000-7515000.sam")
         # read alignments
-
-        coverage = ac.loadCoverage(testFile)
+        alignments = ac.loadAlignments(testFile)
+        coverage = alignments.toCoverage()
 
         qc = CoverageDistribution(self.ss, coverage)
+        # sum of all coverage
+        total = sum(map(lambda x: x[1], qc.collectedCounts.items()[0][1]))
 
-        _, cd1 = qc.plotDistributions(testMode = True, cumulative = True)
+        _, cd1 = qc.plotDistributions(testMode = True, cumulative = False, normalize=False)
 
         # first sample
         items = cd1.items()[0][1]
-        assert(len(items) == 1)
-        x = items.pop()
+        x = items[0]
+        assert(x[0] == 1) # 6 locations with read depth 1
         assert(x[1] == 6)
-        assert(x[2] == 38)
 
-        _, cd2 = qc.plotDistributions(testMode = True, cumulative = False)
+        _, cd2 = qc.plotDistributions(testMode = True, cumulative = False, normalize=True)
 
         # first sample
         items = cd2.items()[0][1]
-        assert(len(items) == 1)
-        x = items.pop()
-        assert(x[1] == 6)
-        assert(x[2] == 32)
+        x = items[0]
+        assert(x[0] == 1)
+        assert(x[1] == 6.0/total) # normalized value
 
         _, cd3 = qc.plotDistributions(testMode = True, cumulative = True, normalize = True)
-        total = float(sum(qc.collectedCoverage[0].values()))
 
         # first sample
         items = cd3.items()[0][1]
-        assert(len(items) == 1)
-        x = items.pop()
-        assert(x[1] == 6.0/total)
-        assert(x[2] == 38.0/total)
-
-        _, cd4 = qc.plotDistributions(testMode = True, normalize = True)
-
-        # first sample
-        items = cd4.items()[0][1]
-        assert(len(items) == 1)
-        x = items.pop()
-        assert(x[1] == 6.0/total)
-        assert(x[2] == 32.0/total)
+        x = items[-1]
+        assert(x[0] == 89)
+        assert(x[1] > 0.999) # cumulative and normalized, so last value shound be about 1

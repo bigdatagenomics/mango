@@ -163,7 +163,7 @@ class FragmentDistribution(CountDistribution):
     Plotting functionality for visualizing fragment distributions of multi-sample cohorts.
     """
 
-    def __init__(self, ss, alignmentRDD, sample = 0.2):
+    def __init__(self, ss, alignmentRDD, sample = 1.0):
         """
         Initializes a FragmentDistribution class.
         Computes the fragment distribution of a AlignmentRDD. This RDD can have data for multiple samples.
@@ -177,7 +177,7 @@ class FragmentDistribution(CountDistribution):
         self.sc = ss.sparkContext
         self.sample = sample
         self.rdd = alignmentRDD.toDF().rdd \
-            .map(lambda r: (r["recordGroupSample"], (int(r["end"])-int(r["start"])), 1)) # TODO what is fragment size?
+            .map(lambda r: ((r["recordGroupSample"], len(r["sequence"])), 1))
 
         CountDistribution.__init__(self)
 
@@ -187,7 +187,7 @@ class MapQDistribution(CountDistribution):
     Plotting functionality for visualizing mapping quality distributions of multi-sample cohorts.
     """
 
-    def __init__(self, ss, alignmentRDD, sample = 0.2):
+    def __init__(self, ss, alignmentRDD, sample = 1.0):
         """
         Initializes a MapQDistribution class.
         Computes the mapping quality distribution of an AlignmentRDD. This RDD can have data for multiple samples.

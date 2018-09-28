@@ -62,7 +62,6 @@ class CountDistribution:
         if self.sample < 1:
             self.rdd = self.rdd.sample(False, self.sample)
 
-
         # Assign each RDD with counter. Reduce and collect.
         collectedCounts = self.rdd.reduceByKey(lambda x,y: x+y) \
             .collect()  # (id, count), number of times that count appears)

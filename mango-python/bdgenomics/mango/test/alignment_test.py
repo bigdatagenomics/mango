@@ -33,7 +33,7 @@ class AlignmentTest(SparkTestCase):
         # read alignments
         reads = ac.loadAlignments(testFile)
 
-        alignmentViz = AlignmentSummary(ac, reads)
+        alignmentViz = AlignmentSummary(self.ss, ac, reads)
 
         contig = "16"
         start = 26472780
@@ -50,7 +50,7 @@ class AlignmentTest(SparkTestCase):
         reads = ac.loadAlignments(testFile)
 
         bin_size = 10000000
-        summary = AlignmentSummary(self.ss, reads)
+        summary = AlignmentSummary(self.ss, ac, reads)
 
         indels = summary.getIndelDistribution(bin_size=10000000)
 
@@ -93,9 +93,9 @@ class AlignmentTest(SparkTestCase):
 
         indels = summary.getIndelDistribution(bin_size=1000000000)
 
-        _, mDistribution = qc.plot(testMode = True, plotType="D")
-        expectedM =  Counter({('1', 0): 0})
-        assert(mDistribution == expectedM)
+        _, dDistribution = indels.plot(testMode = True, plotType="D")
+        expectedD =  Counter()
+        assert(dDistribution == expectedD)
 
     def test_coverage_distribution(self):
         # load file
@@ -107,13 +107,14 @@ class AlignmentTest(SparkTestCase):
         summary = AlignmentSummary(self.ss, ac, reads)
 
         coverage = summary.getCoverageDistribution()
+        _, cd = coverage.plotDistributions(testMode = True, cumulative = False, normalize=False)
 
         # first sample
         items = cd.items()[0][1]
         assert(len(items) == 1)
         x = items.pop()
-        assert(x[0] == 6) # issue
-        assert(x[1] == 38)
+        assert(x[0] == 1) # all positions have coverage of 1
+        assert(x[1] == 1500)
 
 
     def test_fragment_distribution(self):
@@ -127,14 +128,15 @@ class AlignmentTest(SparkTestCase):
         summary = AlignmentSummary(self.ss, ac, reads)
 
         fragments = summary.getFragmentDistribution()
-        _, cd = fragments.plotDistributions(testMode = True, cumulative = True)
+        _, cd = fragments.plotDistributions(testMode = True, cumulative = False, normalize=False)
 
         # first sample
         items = cd.items()[0][1]
         assert(len(items) == 1)
-        x = items.pop()
-        assert(x[1] == 6)
-        assert(x[2] == 38)
+        print(cd)
+        x = items[0]
+        assert(x[0] == 75)
+        assert(x[1] == 20) # all 20 sequences have same length of 75
 
     def test_mapq_distribution(self):
 
@@ -147,11 +149,11 @@ class AlignmentTest(SparkTestCase):
         summary = AlignmentSummary(self.ss, ac, reads)
 
         mapq = summary.getMapQDistribution()
-        md = mapq.plotDistributions(testMode = True, cumulative = True)
+        _, md = mapq.plotDistributions(testMode = True, cumulative = False, normalize = False)
 
         # first sample
-        items = cd.items()[0][1]
-        assert(len(items) == 1)
-        x = items.pop()
-        assert(x[1] == 6)
-        assert(x[2] == 38)
+        items = md.items()[0][1]
+        assert(len(items) == 5) # mapq for 24, 28, 35, 40, 60
+        x = items[0]
+        assert(x[0] == 24) # 1 read with mapq 24
+        assert(x[1] == 1)
