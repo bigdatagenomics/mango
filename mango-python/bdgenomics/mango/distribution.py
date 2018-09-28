@@ -40,6 +40,7 @@ class CountDistribution:
     ss = None
     rdd = None
     sample = 1.0
+    pre_sampled = False
 
 
     def __init__(self):
@@ -58,8 +59,8 @@ class CountDistribution:
         if self.sample <= 0 or self.sample > 1:
             raise Exception('sample {} should be > 0 and <= 1'.format(self.sample))
 
-        # sample RDD
-        if self.sample < 1:
+        # sample RDD if sample is specified AND rdd has not been pre-sampled
+        if self.sample < 1 and not self.pre_sampled:
             self.rdd = self.rdd.sample(False, self.sample)
 
         # Assign each RDD with counter. Reduce and collect.

@@ -38,7 +38,7 @@ class CoverageDistribution(CountDistribution):
     Plotting functionality for visualizing coverage distributions of multi-sample cohorts.
     """
 
-    def __init__(self, ss, coverageRDD, sample = 1.0, name="coverage"):
+    def __init__(self, ss, coverageRDD, sample = 1.0, name="coverage", bin_size = 10, pre_sampled = False):
         """
         Initializes a CoverageDistribution class.
         Computes the coverage distribution of a CoverageRDD. This RDD can have data for multiple samples.
@@ -53,8 +53,8 @@ class CoverageDistribution(CountDistribution):
 
         self.sc = ss.sparkContext
         self.sample = sample
+        # TODO replace name with r["sampleId"], dependent on https://github.com/bigdatagenomics/adam/pull/2051
         self.rdd = coverageRDD.toDF().rdd \
-            .map(lambda r: ((name, int(r["count"])), (int(r["end"])-int(r["start"]))))
-        # TODO replace name with r["sampleId"]
+            .map(lambda r: ((name, r["count"] - r["count"]%bin_size), (int(r["end"])-int(r["start"]))))
 
         CountDistribution.__init__(self)

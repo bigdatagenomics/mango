@@ -75,16 +75,25 @@ class AlignmentSummary(object):
         self.mapQDistribution = None
         self.indelDistribution = None
 
-    def getCoverageDistribution(self):
+    def getCoverageDistribution(self, bin_size = 10):
         """
         Computes coverage distribution for this AlignmentRDD.
+
+        Args:
+            param bin_size: size to bin coverage by
 
         Returns:
            CoverageDistribution object
         """
         if self.coverageDistribution == None:
             print("Computing coverage distributions...")
-            self.coverageDistribution = CoverageDistribution(self.ss, self.rdd.toCoverage(), sample=self.sample)
+            # pre-sample before computing coverage
+            sampledRdd = self.rdd.transform(lambda rdd: rdd.sample(False, self.sample))
+            self.coverageDistribution = CoverageDistribution(self.ss,   \
+                                                             sampledRdd.toCoverage(), \
+                                                             sample = self.sample, \
+                                                             bin_size = bin_size,
+                                                             pre_sampled = True)
 
         return self.coverageDistribution
 
