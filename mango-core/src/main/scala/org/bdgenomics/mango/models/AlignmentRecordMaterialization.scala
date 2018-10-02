@@ -193,7 +193,7 @@ object AlignmentRecordMaterialization extends Logging {
         val predicateRegions: Iterable[ReferenceRegion] = regions.get
           .flatMap(r => {
             LazyMaterialization.getContigPredicate(r)
-          }).filter(r => fileSd.containsReferenceName(r.referenceName))
+          }).filter(r => fileSd.containsRefName(r.referenceName))
         try {
           sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
         } catch {
