@@ -23,26 +23,27 @@ variety of platforms.
    :maxdepth: 2
 
    installation/source
-   installation/example
    installation/distribution
 
 .. toctree::
-   :caption: Development
+   :caption: Usage and Examples
    :maxdepth: 2
 
-   development/browser
-
-.. toctree::
-   :caption: Running with Docker
-   :maxdepth: 2
-
-   docker/docker-examples
+   jupyterWidgets/usage.rst
+   browser/example
+   mangoPython/example
 
 .. toctree::
     :caption: Supported File Types
     :maxdepth: 2
 
     files/file-support
+
+.. toctree::
+   :caption: Running with Docker
+   :maxdepth: 2
+
+   docker/docker-examples
 
 .. toctree::
    :caption: Google Cloud
@@ -57,11 +58,10 @@ variety of platforms.
     cloud/emr
 
 .. toctree::
-    :caption: Jupyter Widgets and Pileup.js
-    :maxdepth: 2
+   :caption: Development
+   :maxdepth: 2
 
-    jupyterWidgets/usage.rst
-
+   development/browser
 
 * :ref:`genindex`
 * :ref:`search`
