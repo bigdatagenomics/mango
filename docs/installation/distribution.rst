@@ -35,11 +35,11 @@ Then run Mango notebook or Mango browser:
 
       cd mango-distribution-0.0.1
       ./bin/mango-notebook
-      ./bin/mango-browser
+      ./bin/mango-submit
 
 
-Mango Python
--------------
+Installing python modules
+-------------------------
 
 To run Mango in a python notebook, install bdgenomics.mango.pileup, a Jupyter Widget:
 
