@@ -37,7 +37,7 @@ class CoverageTest(SparkTestCase):
         # convert to coverage
         coverage = reads.toCoverage()
 
-        qc = CoverageDistribution(self.ss, coverage)
+        qc = CoverageDistribution(self.ss, coverage, bin_size = 1)
 
         _, cd = qc.plotDistributions(testMode = True, normalize=False)
 
@@ -58,7 +58,7 @@ class CoverageTest(SparkTestCase):
         alignments = ac.loadAlignments(testFile)
         coverage = alignments.toCoverage()
 
-        qc = CoverageDistribution(self.ss, coverage)
+        qc = CoverageDistribution(self.ss, coverage, bin_size = 1)
         # sum of all coverage
         total = sum(map(lambda x: x[1], qc.collectedCounts.items()[0][1]))
 

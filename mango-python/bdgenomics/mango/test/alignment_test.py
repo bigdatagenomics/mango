@@ -106,7 +106,7 @@ class AlignmentTest(SparkTestCase):
 
         summary = AlignmentSummary(self.ss, ac, reads)
 
-        coverage = summary.getCoverageDistribution()
+        coverage = summary.getCoverageDistribution(bin_size = 1)
         _, cd = coverage.plotDistributions(testMode = True, cumulative = False, normalize=False)
 
         # first sample
