@@ -5,3 +5,4 @@ jupyter==1.0.0
 bdgenomics.mango.pileup==0.0.1
 bdgenomics.adam==0.24.0
 ipywidgets==7.0.0
+psutil

@@ -25,14 +25,20 @@ Alignments
    :toctree: _generate/
 
    AlignmentSummary
-   AlignmentDistribution
+   FragmentDistribution
+   MapQDistribution
+   IndelDistribution
+
 """
 
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.adam.adamContext import ADAMContext
+
+from .coverage import *
 from .utils import *
 
 from collections import Counter, OrderedDict
+from .distribution import CountDistribution
 from cigar import Cigar
 import matplotlib.pyplot as plt
 plt.rcdefaults()
@@ -42,16 +48,95 @@ class AlignmentSummary(object):
     AlignmentSummary provides scrollable visualization of alignments based on genomic regions.
     """
 
-    def __init__(self, ac, rdd):
+    def __init__(self, spark, ac, alignmentRdd, sample = 1.0):
         """
         Initializes an AlignmentSummary class.
 
         Args:
+            param spark: SparkSession
             param ac: ADAMContext
-            param rdd: AlignmentRecordRDD
+            param alignmentRdd: AlignmentRecordRDD
+            param sample: fraction of reads to sample from
         """
+
+        # sample must be between 0 and 1
+        if sample <= 0 or sample > 1:
+            raise Exception('sample {} should be > 0 and <= 1'.format(self.sample))
+
+        self.ss = spark
         self.ac = ac
-        self.rdd = rdd
+        self.sample = sample
+        # sample rdd
+        self.rdd = alignmentRdd
+
+        # where to store collected data
+        self.coverageDistribution = None
+        self.fragmentDistribution = None
+        self.mapQDistribution = None
+        self.indelDistribution = None
+
+    def getCoverageDistribution(self, bin_size = 10):
+        """
+        Computes coverage distribution for this AlignmentRDD.
+
+        Args:
+            param bin_size: size to bin coverage by
+
+        Returns:
+           CoverageDistribution object
+        """
+        if self.coverageDistribution == None:
+            print("Computing coverage distributions...")
+            # pre-sample before computing coverage
+            sampledRdd = self.rdd.transform(lambda rdd: rdd.sample(False, self.sample))
+            self.coverageDistribution = CoverageDistribution(self.ss,   \
+                                                             sampledRdd.toCoverage(), \
+                                                             sample = self.sample, \
+                                                             bin_size = bin_size,
+                                                             pre_sampled = True)
+
+        return self.coverageDistribution
+
+    def getFragmentDistribution(self):
+        """
+        Computes fragment distribution for this AlignmentRDD.
+
+        Returns:
+           FragmentDistribution object
+        """
+        if self.fragmentDistribution == None:
+            print("Computing fragment distributions...")
+            self.fragmentDistribution = FragmentDistribution(self.ss, self.rdd, sample=self.sample)
+
+        return self.fragmentDistribution
+
+
+    def getMapQDistribution(self):
+        """
+        Computes mapping quality distribution for this AlignmentRDD.
+
+        Returns:
+           MapQDistribution object
+        """
+        if self.mapQDistribution == None:
+            print("Computing MapQ distributions...")
+            self.mapQDistribution = MapQDistribution(self.ss, self.rdd, sample=self.sample)
+
+        return self.mapQDistribution
+
+
+    def getIndelDistribution(self, bin_size=10000000):
+        """
+        Computes insertion and deletion distribution for this AlignmentRDD
+
+        Returns:
+           IndelDistribution object
+        """
+        if self.indelDistribution == None:
+            print("Computing Indel distributions...")
+            self.indelDistribution = IndelDistribution(self.ss, self.rdd, bin_size=bin_size, sample=self.sample)
+
+        return self.indelDistribution
 
 
     def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
@@ -82,15 +167,63 @@ class AlignmentSummary(object):
             return pileup.Reads(json = json, build=build, contig=contig,start=start,stop=end)
 
 
-class AlignmentDistribution(object):
-    """ AlignmentDistribution class.
-    AlignmentDistribution calculates indel distributions on an Alignment RDD.
+class FragmentDistribution(CountDistribution):
+    """ FragmentDistribution class.
+    Plotting functionality for visualizing fragment distributions of multi-sample cohorts.
+    """
+
+    def __init__(self, ss, alignmentRDD, sample = 1.0):
+        """
+        Initializes a FragmentDistribution class.
+        Computes the fragment distribution of a AlignmentRDD. This RDD can have data for multiple samples.
+
+        Args:
+            param ss: global SparkSession.
+            param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
+            param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
+        """
+
+        self.sc = ss.sparkContext
+        self.sample = sample
+        self.rdd = alignmentRDD.toDF().rdd \
+            .map(lambda r: ((r["recordGroupSample"], len(r["sequence"])), 1))
+
+        CountDistribution.__init__(self)
+
+
+class MapQDistribution(CountDistribution):
+    """ MapQDistribution class.
+    Plotting functionality for visualizing mapping quality distributions of multi-sample cohorts.
+    """
+
+    def __init__(self, ss, alignmentRDD, sample = 1.0):
+        """
+        Initializes a MapQDistribution class.
+        Computes the mapping quality distribution of an AlignmentRDD. This RDD can have data for multiple samples.
+
+        Args:
+            param ss: global SparkSession.
+            param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
+            param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
+        """
+
+        self.sc = ss.sparkContext
+        self.sample = sample
+        self.rdd = alignmentRDD.toDF().rdd \
+            .map(lambda r: ((r["recordGroupSample"], int(r["mapq"])), 1))
+
+        CountDistribution.__init__(self)
+
+
+class IndelDistribution(object):
+    """ IndelDistribution class.
+    IndelDistribution calculates indel distributions on an AlignmentRDD.
     """
 
     def __init__(self, ss, alignmentRDD, sample=1.0, bin_size=10000000):
         """
-        Initializes a AlignmentDistribution class.
-        Computes the alignment distribution of multiple coverageRDDs.
+        Initializes a IndelDistribution class.
+        Computes the insertiona and deletion distribution of alignmentRDD.
 
         Args:
             param SparkSession: the global SparkSession
@@ -100,9 +233,10 @@ class AlignmentDistribution(object):
         bin_size = int(bin_size)
         self.bin_size = bin_size
         self.sc = ss.sparkContext
+        self.sample = sample
 
         # filter alignments without a position
-        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, 1.0)) \
+        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, self.sample)) \
             .toDF().rdd.filter(lambda r: r["start"] != None)
 
         # Assign alignments with counter for contigs. Reduce and collect.
@@ -113,7 +247,7 @@ class AlignmentDistribution(object):
 
         self.alignments = mappedDistributions.collect()
 
-    def plot(self, xScaleLog = False, yScaleLog = False, testMode = False, plotType="I"):
+    def plot(self, testMode = False, plotType="I", **kwargs):
         """
         Plots final distribution values and returns the plotted distribution as a counter object.
 
@@ -122,6 +256,9 @@ class AlignmentDistribution(object):
             param yScaleLog: rescales yaxis to log
             param testMode: if true, does not generate plot. Used for testing.
             param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
+
+        Returns:
+            matplotlib axis to plot and computed data
         """
         chromosomes = Counter()
 
@@ -131,17 +268,6 @@ class AlignmentDistribution(object):
             chromosomes[index] += counts[plotType]
 
         if (not testMode): # For testing: do not run plots if testMode
-            title =  'Target Region Alignment for Type %s with bin size %d' % (plotType, self.bin_size)
-            plt.ylabel('Counts')
-            plt.xlabel('Chromosome number')
-
-            # log scales, if applicable
-            if (xScaleLog):
-                plt.xscale('log')
-            if (yScaleLog):
-                plt.yscale('log')
-            plt.title(title)
-
             # get distinct chromosome names for plot
             keys = sorted(list(set(map(lambda x: x[0][0], self.alignments))))
 
@@ -150,6 +276,10 @@ class AlignmentDistribution(object):
 
             # holds xtick information
             midPoints = []
+
+            # make figure plot
+            figsize = kwargs.get('figsize',(10, 5))
+            f, ax = plt.subplots(figsize=figsize)
 
             # for all chromosomes
             for key in keys:
@@ -163,7 +293,7 @@ class AlignmentDistribution(object):
                 # get counts
                 counts = map(lambda x: x[1], values)
 
-                plt.plot(positions, counts, ls='', marker='.')
+                ax.plot(positions, counts, ls='', marker='.')
 
                 # set label for chromosome
                 midPoint = min(positions) + (max(positions) - min(positions))/2
@@ -171,7 +301,10 @@ class AlignmentDistribution(object):
 
                 offset = max(positions)
 
-            plt.xticks(midPoints,  keys, rotation=-90, size=8.5)
-            plt.show()
 
-        return chromosomes
+            ax.set_xticks(midPoints)
+            ax.set_xticklabels(keys, rotation=-90, size=8.5)
+            return ax, chromosomes
+
+        else:
+            return None, chromosomes

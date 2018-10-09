@@ -57,7 +57,6 @@ class VariantSummary(object):
 
         Returns:
             pileup view for variants
-
         """
         contig_trimmed = contig.lstrip(CHR_PREFIX)
 
