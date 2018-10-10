@@ -34,6 +34,12 @@ variety of platforms.
    mangoPython/example
 
 .. toctree::
+   :caption: API
+   :maxdepth: 3
+
+   jupyterWidgets/api.rst
+
+.. toctree::
     :caption: Supported File Types
     :maxdepth: 2
 
