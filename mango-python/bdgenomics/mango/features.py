@@ -28,6 +28,7 @@ Features
 """
 
 import bdgenomics.mango.pileup as pileup
+from bdgenomics.mango.pileup.track import *
 from bdgenomics.adam.adamContext import ADAMContext
 from .utils import *
 
@@ -48,7 +49,7 @@ class FeatureSummary(object):
         self.rdd = rdd
 
     # Takes a bdgenomics.adam.FeatureRDD and visualizes results in pileup format
-    def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
+    def viewPileup(self, contig, start, end, reference = 'hg19', label = "Features", showPlot = True):
         """
         Visualizes a portion of this FeatureRDD in a scrollable pileup widget
 
@@ -56,7 +57,8 @@ class FeatureSummary(object):
             param contig: contig of locus to view
             param start: start position of locus to view
             param end: end position of locus to view
-            build: genome build. Default is hg19
+            reference: genome build. Default is hg19
+            label: name of feature track
             showPlot: Disables widget, used for testing. Default is true.
 
         Returns:
@@ -74,6 +76,9 @@ class FeatureSummary(object):
 
         # visualize
         if (showPlot):
-            return pileup.Features(json = json, build=build, contig=contig,start=start,stop=end)
+            # make feature track
+            tracks=[Track(viz="features", label=label, source=pileup.sources.GA4GHFeatureJson(json))]
+            locus="%s:%i-%i" % (contig, start, end)
+            return pileup.PileupViewer(locus=locus, reference=reference, tracks=tracks)
 
 
