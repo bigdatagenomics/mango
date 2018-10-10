@@ -115,14 +115,9 @@ check_build_reqs:
 prepare:
 	$(pip) install pytest==2.8.3
 	# ipython version required for python 2.7
-	$(pip) install ipython==5.5.0
-	$(pip) install jupyter==1.0.0
 	$(pip) install jupyter_contrib_nbextensions
-	$(pip) install cigar==0.1.3
-	$(pip) install matplotlib==2.0.2
-	$(pip) install bdgenomics.adam==0.24.0
-	$(pip) install bdgenomics.mango.pileup==0.0.1
-	$(pip) install ipywidgets==7.0.0
+	$(pip) install -r requirements.txt
+
 
 
 check_clean_working_copy:

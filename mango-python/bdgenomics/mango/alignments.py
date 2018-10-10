@@ -32,6 +32,7 @@ Alignments
 """
 
 import bdgenomics.mango.pileup as pileup
+from bdgenomics.mango.pileup.track import *
 from bdgenomics.adam.adamContext import ADAMContext
 
 from .coverage import *
@@ -139,7 +140,7 @@ class AlignmentSummary(object):
         return self.indelDistribution
 
 
-    def viewPileup(self, contig, start, end, build = 'hg19', showPlot = True):
+    def viewPileup(self, contig, start, end, reference = 'hg19', label = "Reads", showPlot = True):
         """
         Visualizes a portion of this AlignmentRDD in a scrollable pileup widget
 
@@ -147,7 +148,8 @@ class AlignmentSummary(object):
             param contig: contig of locus to view
             param start: start position of locus to view
             param end: end position of locus to view
-            build: genome build. Default is hg19
+            reference: genome build. Default is hg19
+            label: name of alignment track
             showPlot: Disables widget, used for testing. Default is true.
 
         Returns:
@@ -164,7 +166,10 @@ class AlignmentSummary(object):
 
         # visualize
         if (showPlot):
-            return pileup.Reads(json = json, build=build, contig=contig,start=start,stop=end)
+        # make pileup track
+            tracks=[Track(viz="pileup", label=label, source=pileup.sources.GA4GHAlignmentJson(json))]
+            locus="%s:%i-%i" % (contig, start, end)
+            return pileup.PileupViewer(locus=locus, reference=reference, tracks=tracks)
 
 
 class FragmentDistribution(CountDistribution):
