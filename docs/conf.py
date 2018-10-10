@@ -156,13 +156,16 @@ autodoc_member_order = 'bysource'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
-    "github_banner": True,
-    "github_user": "bigdatagenomics",
-    "github_repo": "mango",
-    "caption_font_size": "24px"
+    'collapse_navigation': True,
 }
+
+extlinks = {
+    'issue': ('https://github.com/bigdatagenomics/mango/issues/%s', '#'),
+    'pr': ('https://github.com/bigdatagenomics/mango/pull/%s', 'PR #'),
+}
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -252,9 +255,6 @@ html_show_sourcelink = False
 # The name of a javascript file (relative to the configuration directory) that
 # implements a search results scorer. If empty, the default will be used.
 #html_search_scorer = 'scorer.js'
-
-# Output file base name for HTML help builder.
-htmlhelp_basename = 'bdgworkflowdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 

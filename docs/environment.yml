@@ -1,0 +1,10 @@
+name: bdgenomics.mango_docs
+dependencies:
+ - python=2.7
+ - traitlets
+ - traittypes
+ - widgetsnbextension
+ - numpy
+ - pandas
+ - jupyter_sphinx
+ - bdgenomics.mango.pileup=0.0.2a0

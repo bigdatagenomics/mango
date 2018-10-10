@@ -82,8 +82,9 @@ clean:
 	rm -rf bdgenomics.mango.pileup.egg-info/
 	rm -rf bdgenomics/mango/pileup/static/
 	rm -rf dist/
+	rm -rf bdgenomics/mango/js/node_modules
 	$(jupyter) nbextension uninstall pileup
-	$(npm) uninstall pileup
+
 
 # check for node, jupyter and npm
 check_build_reqs:
@@ -103,6 +104,6 @@ prepare:
 	$(pip) install jupyter==1.0.0
 	$(pip) install ipywidgets==7.0.0
 
-	# install pileup.js to node_modules
+	# install node_modules
 	cd bdgenomics/mango/js; \
 		$(npm) install
