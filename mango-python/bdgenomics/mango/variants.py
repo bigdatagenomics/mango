@@ -50,9 +50,9 @@ class VariantSummary(object):
         Visualizes a portion of this VariantRDD in a scrollable pileup widget
 
         Args:
-            param contig: contig of locus to view
-            param start: start position of locus to view
-            param end: end position of locus to view
+            :param contig: contig of locus to view
+            :param start: start position of locus to view
+            :param end: end position of locus to view
             reference: genome build. Default is hg19
             label: name of variant track
             showPlot: Disables widget, used for testing. Default is true.

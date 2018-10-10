@@ -42,8 +42,8 @@ class FeatureSummary(object):
         Initializes a GenomicRDD viz class.
 
         Args:
-            param ac: ADAMContext
-            param rdd: AlignmentRecordRDD
+            :param ac: ADAMContext
+            :param rdd: AlignmentRecordRDD
         """
         self.ac = ac
         self.rdd = rdd
@@ -54,9 +54,9 @@ class FeatureSummary(object):
         Visualizes a portion of this FeatureRDD in a scrollable pileup widget
 
         Args:
-            param contig: contig of locus to view
-            param start: start position of locus to view
-            param end: end position of locus to view
+            :param contig: contig of locus to view
+            :param start: start position of locus to view
+            :param end: end position of locus to view
             reference: genome build. Default is hg19
             label: name of feature track
             showPlot: Disables widget, used for testing. Default is true.

@@ -44,10 +44,10 @@ class CoverageDistribution(CountDistribution):
         Computes the coverage distribution of a CoverageRDD. This RDD can have data for multiple samples.
 
         Args:
-            param ss: global SparkSession.
-            param coverageRDD: A bdgenomics.adam.rdd.CoverageRDD object.
-            param sample: Fraction to sample CoverageRDD. Should be between 0 and 1
-            param name: sample name
+            :param ss: global SparkSession.
+            :param coverageRDD: A bdgenomics.adam.rdd.CoverageRDD object.
+            :param sample: Fraction to sample CoverageRDD. Should be between 0 and 1
+            :param name: sample name
 
         """
 

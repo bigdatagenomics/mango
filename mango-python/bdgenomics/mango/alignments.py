@@ -54,10 +54,10 @@ class AlignmentSummary(object):
         Initializes an AlignmentSummary class.
 
         Args:
-            param spark: SparkSession
-            param ac: ADAMContext
-            param alignmentRdd: AlignmentRecordRDD
-            param sample: fraction of reads to sample from
+            :param spark: SparkSession
+            :param ac: ADAMContext
+            :param alignmentRdd: AlignmentRecordRDD
+            :param sample: fraction of reads to sample from
         """
 
         # sample must be between 0 and 1
@@ -81,7 +81,7 @@ class AlignmentSummary(object):
         Computes coverage distribution for this AlignmentRDD.
 
         Args:
-            param bin_size: size to bin coverage by
+            :param bin_size: size to bin coverage by
 
         Returns:
            CoverageDistribution object
@@ -145,12 +145,12 @@ class AlignmentSummary(object):
         Visualizes a portion of this AlignmentRDD in a scrollable pileup widget
 
         Args:
-            param contig: contig of locus to view
-            param start: start position of locus to view
-            param end: end position of locus to view
-            reference: genome build. Default is hg19
-            label: name of alignment track
-            showPlot: Disables widget, used for testing. Default is true.
+            :param contig: contig of locus to view
+            :param start: start position of locus to view
+            :param end: end position of locus to view
+            :param reference: genome build. Default is hg19
+            :param label: name of alignment track
+            :param showPlot: Disables widget, used for testing. Default is true.
 
         Returns:
             pileup view for alignments
@@ -183,9 +183,9 @@ class FragmentDistribution(CountDistribution):
         Computes the fragment distribution of a AlignmentRDD. This RDD can have data for multiple samples.
 
         Args:
-            param ss: global SparkSession.
-            param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
-            param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
+            :param ss: global SparkSession.
+            :param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
+            :param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
         """
 
         self.sc = ss.sparkContext
@@ -207,9 +207,9 @@ class MapQDistribution(CountDistribution):
         Computes the mapping quality distribution of an AlignmentRDD. This RDD can have data for multiple samples.
 
         Args:
-            param ss: global SparkSession.
-            param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
-            param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
+            :param ss: global SparkSession.
+            :param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
+            :param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
         """
 
         self.sc = ss.sparkContext
@@ -231,9 +231,9 @@ class IndelDistribution(object):
         Computes the insertiona and deletion distribution of alignmentRDD.
 
         Args:
-            param SparkSession: the global SparkSession
-            param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object
-            param bin_size: Division size per bin
+            :param SparkSession: the global SparkSession
+            :param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object
+            :param bin_size: Division size per bin
         """
         bin_size = int(bin_size)
         self.bin_size = bin_size
@@ -257,10 +257,10 @@ class IndelDistribution(object):
         Plots final distribution values and returns the plotted distribution as a counter object.
 
         Args:
-            param xScaleLog: rescales xaxis to log
-            param yScaleLog: rescales yaxis to log
-            param testMode: if true, does not generate plot. Used for testing.
-            param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
+            :param xScaleLog: rescales xaxis to log
+            :param yScaleLog: rescales yaxis to log
+            :param testMode: if true, does not generate plot. Used for testing.
+            :param plotType: Cigar type to plot, from ['I', 'H', 'D', 'M', 'S']
 
         Returns:
             matplotlib axis to plot and computed data

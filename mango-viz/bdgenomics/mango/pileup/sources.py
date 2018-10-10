@@ -41,9 +41,9 @@ Sources specify where the genomic data comes from. Sources can come from a url, 
 
 # generic data source for pileup.js
 class Source:
-    # dictionary containing source elements (viz, source, sourceOptions, label)
+    #: dictionary containing source elements (viz, source, sourceOptions, label)
     dict_ = {}
-    # name that pileup.js uses to identify sources
+    #: name that pileup.js uses to identify sources
     name = None
 
 
@@ -53,12 +53,13 @@ class GA4GHSource(Source):
         """ Initializes GA4GHSource.
 
         Args:
-            param str: url endpoint
-            param str: read group id
-            param str: optional call set ID for variants
+            :param str: url endpoint
+            :param str: read group id
+            :param str: optional call set ID for variants
         
         """
 
+        #: dictionary containing source elements (viz, source, sourceOptions, label)
         self.dict_ = {
             'endpoint': endpoint,
             'readGroupId': readGroupId
@@ -71,10 +72,11 @@ class jsonString(Source):
         """ Initializes GA4GH JSON.
 
         Args:
-            param str: json in GA4GH format
+            :param str: json in GA4GH format
         
         """
 
+        #: dictionary containing source elements (viz, source, sourceOptions, label)
         self.dict_ = json
 
 
@@ -84,11 +86,12 @@ class FileSource(Source):
         """ Initializes file sources.
 
         Args:
-            param str: url to file
-            param str: indexUrl to index file
+            :param str: url to file
+            :param str: indexUrl to index file
         
         """
-        
+
+        #: dictionary containing source elements (viz, source, sourceOptions, label)
         self.dict_ = {
             'url': url,
             'indexUrl': indexUrl
@@ -100,27 +103,31 @@ class BamDataSource(FileSource):
     """ Initializes file source from bam file endpoint.
 
     Args:
-        param str: url to file
-        param str: indexUrl to index file
+        :param str: url to file
+        :param str: indexUrl to index file
     
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'bam'
     
 class VcfDataSource(FileSource): 
     """ Initializes file source from vcf file endpoint.
 
     Args:
-        param str: url to file
-        param str: indexUrl to index file
+        :param str: url to file
+        :param str: indexUrl to index file
     
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'vcf'
     
 class TwoBitDataSource(FileSource): 
     """ Initializes file source from twoBit file endpoint.
 
     Args:
-        param str: url to file
+        :param str: url to file
     
     """
     name = 'twoBit'
@@ -129,9 +136,11 @@ class BigBedDataSource(FileSource):
     """ Initializes file source from big bed (.bb) file endpoint.
 
     Args:
-        param str: url to file
+        :param str: url to file
     
-    """   
+    """
+
+    #: name that pileup.js uses to identify sources
     name = 'bigBed'
 
     
@@ -140,27 +149,33 @@ class GA4GHAlignmentJson(jsonString):
     """ Initializes GA4GH Alignment JSON.
 
     Args:
-        param str: json in GA4GH format
+        :param str: json in GA4GH format
     
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'alignmentJson'
     
 class GA4GHVariantJson(jsonString): 
     """ Initializes GA4GH variant JSON.
 
     Args:
-        param str: json in GA4GH format
+        :param str: json in GA4GH format
     
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'variantJson'
     
 class GA4GHFeatureJson(jsonString): 
     """ Initializes GA4GH feature JSON.
 
     Args:
-        param str: json in GA4GH format
+        :param str: json in GA4GH format
     
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'featureJson'
     
     
@@ -169,28 +184,34 @@ class GA4GHAlignmentSource(GA4GHSource):
     """ Initializes GA4GHAlignmentSource.
 
     Args:
-        param str: url endpoint
-        param str: read group id    
+        :param str: url endpoint
+        :param str: read group id    
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'GAReadAlignment'
     
 class GA4GHVariantSource(GA4GHSource): 
     """ Initializes GA4GHSource.
 
     Args:
-        param str: url endpoint
-        param str: call set ID
-        param str: optional call set ID for variants
+        :param str: url endpoint
+        :param str: call set ID
+        :param str: optional call set ID for variants
     
     """
+
+    #: name that pileup.js uses to identify sources
     name = 'GAVariant'
     
 class GA4GHFeatureSource(GA4GHSource): 
     """ Initializes GA4GHFeatureSource.
 
     Args:
-        param str: url endpoint
-    """   
+        :param str: url endpoint
+    """
+
+    #: name that pileup.js uses to identify sources
     name = 'GAFeature'
 
 

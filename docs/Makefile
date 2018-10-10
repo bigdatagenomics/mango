@@ -6,6 +6,9 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
+MANGOPYDIR		= mangoPython
+MANGOVIZDIR		= jupyterWidgets
+
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -50,6 +53,9 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -rf $(MANGOPYDIR)/_generate
+	rm -rf $(MANGOVIZDIR)/_generate
+
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

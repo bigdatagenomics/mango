@@ -38,6 +38,7 @@ variety of platforms.
    :maxdepth: 3
 
    jupyterWidgets/api.rst
+   mangoPython/api.rst
 
 .. toctree::
     :caption: Supported File Types
