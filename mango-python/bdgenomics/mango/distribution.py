@@ -93,8 +93,16 @@ class CountDistribution:
 
         countDistributions = {}
 
+        if (not testMode): # For testing: do not run plots if testMode
+            figsize = kwargs.get('figsize',(10, 5))
+            bar_plt = kwargs.get('bar', False)
+            f, ax = plt.subplots(figsize=figsize)
+
         # iterate through each sample
         for label, data in self.collectedCounts.iteritems():
+
+            if data == set(): # Do not plot any empty sets of data
+                continue
 
             sData = sorted(data)
             values = map(lambda p: p[0], sData)
@@ -113,14 +121,15 @@ class CountDistribution:
             countDistributions[label]=zip(values, counts)
 
             if (not testMode): # For testing: do not run plots if testMode
-                figsize = kwargs.get('figsize',(10, 5))
-                bar_plt = kwargs.get('bar', False)
-                f, ax = plt.subplots(figsize=figsize)
                 if (bar_plt):
                     ax.bar(values, counts, 1, label = label)
                 else:
                     ax.plot(values, counts, label = label)
-                ax.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
-                return ax, countDistributions
-            else:
-                return None, countDistributions
+
+        # return plots once all samples have been added
+        if (not testMode): # For testing: do not run plots if testMode
+            ax.legend(loc=2, shadow = True, bbox_to_anchor=(1.05, 1))
+            return ax, countDistributions
+        else:
+            return None, countDistributions
+

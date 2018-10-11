@@ -214,8 +214,11 @@ class MapQDistribution(CountDistribution):
 
         self.sc = ss.sparkContext
         self.sample = sample
+
+        # filter out reads that are not mappped
         self.rdd = alignmentRDD.toDF().rdd \
-            .map(lambda r: ((r["recordGroupSample"], int(r["mapq"])), 1))
+            .filter(lambda r: (r.readMapped)) \
+            .map(lambda r: ((r["recordGroupSample"], int(r["mapq"] or 0)), 1))
 
         CountDistribution.__init__(self)
 
