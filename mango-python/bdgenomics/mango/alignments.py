@@ -162,12 +162,19 @@ class AlignmentSummary(object):
                                                                    & (r.start < end) & (r.end > start) & (r.readMapped)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
-        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordRDDtoJSON(filtered._jvmRdd)
+        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordRDDtoJSON(filtered._jvmRdd)
 
         # visualize
         if (showPlot):
-        # make pileup track
-            tracks=[Track(viz="pileup", label=label, source=pileup.sources.GA4GHAlignmentJson(json))]
+        # make pileup tracks
+            tracks = []
+            # iterate through all group names and make a track for each.
+            for groupName in json_map:
+                # create new track for this recordGroupName. files with unspecified recordGroup name
+                # have a default label of "1"
+                track=Track(viz="pileup", label=groupName, source=pileup.sources.GA4GHAlignmentJson(json_map[groupName]))
+                tracks.append(track)
+
             locus="%s:%i-%i" % (contig, start, end)
             return pileup.PileupViewer(locus=locus, reference=reference, tracks=tracks)
 

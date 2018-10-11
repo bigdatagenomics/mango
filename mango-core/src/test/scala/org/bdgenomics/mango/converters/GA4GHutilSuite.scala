@@ -25,16 +25,18 @@ import org.bdgenomics.adam.rdd.feature.FeatureRDD
 import org.bdgenomics.adam.rdd.variant.VariantRDD
 
 class GA4GHutilSuite extends MangoFunSuite {
-  sparkTest("converting an empty cigar should yield an empty cigar") {
-    assert(1 === 1)
-  }
 
   sparkTest("create JSON from AlignmentRecordRDD") {
     val inputPath = resourcePath("small.1.sam")
     val rrdd: AlignmentRecordRDD = sc.loadAlignments(inputPath)
+
     val collected = rrdd.rdd.collect()
 
-    val json = GA4GHutil.alignmentRecordRDDtoJSON(rrdd).replaceAll("\\s", "")
+    // did the converters correctly pull the recordGroupMap as the id?
+    val recordGroupName = rrdd.recordGroups.recordGroupMap.keys.head
+    val converted = GA4GHutil.alignmentRecordRDDtoJSON(rrdd).get(recordGroupName)
+
+    val json = converted.replaceAll("\\s", "")
 
     val builder = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
 
@@ -44,6 +46,15 @@ class GA4GHutilSuite extends MangoFunSuite {
     val response = builder.build()
 
     assert(response.getAlignmentsCount == collected.length)
+  }
+
+  sparkTest("create JSON from AlignmentRecordRDD with more than 1 sample") {
+
+    val inputPath = resourcePath("small.1.sam")
+    val samPaths = globPath(inputPath, ".sam")
+    val rrdd: AlignmentRecordRDD = sc.loadAlignments(samPaths)
+
+    assert(GA4GHutil.alignmentRecordRDDtoJSON(rrdd).size == 2)
   }
 
   sparkTest("create JSON with genotypes from VCF using genotypeRDD") {
