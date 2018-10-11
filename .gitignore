@@ -21,8 +21,13 @@ parquettest.sh
 *.iml
 .idea/
 workfiles/
-chr20/
 
+# metadata
+example-files/notebooks/metastore_db/*
+mango-viz/examples/.ipynb_checkpoints/*
+
+# builds
+mango-viz/build/*
 
 # venvs
 venv/*
@@ -43,6 +48,8 @@ mango-viz/bdgenomics/mango/js/node_modules/*
 
 # docs _build
 docs/_build/*
+docs/mangoPython/_generate/*
+docs/jupyterWidgets/_generate/*
 
 # resources for browser
 mango-cli/src/main/webapp/resources/node_modules/*

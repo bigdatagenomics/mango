@@ -37,9 +37,13 @@ class CountDistribution:
     Plotting functionality for visualizing count distributions of multi-sample cohorts.
     """
 
+    #: SparkSession
     ss = None
+    #: RDD of the form ((id: string, location: long), count: int))
     rdd = None
+    #: fraction to sample rdd. Value should be between 0.0 and 1.0.
     sample = 1.0
+    #: Whether rdd has already been sampled.
     pre_sampled = False
 
 
@@ -48,11 +52,6 @@ class CountDistribution:
         Initializes a Distribution class.
         Computes the distribution of an rdd with records of the form (key: (sample ID, count), value: numObservations).
         Length is usually just a 1, and is used for reduceByKey().
-
-        Args:
-            param ss: global SparkSession.
-            param rdd: An RDD mapped as (key: (sample ID, count), value: numObservations)
-            param sample: Fraction to sample rdd. Should be between 0 and 1
         """
 
         # sample must be between 0 and 1
@@ -83,10 +82,10 @@ class CountDistribution:
         Plots final distribution values and returns the plotted distribution as a Counter object.
 
         Args:
-            param normalize: normalizes readcounts to sum to 1
-            param cumulative: plots CDF of reads
-            param testMode: if true, does not generate plot. Used for testing.
-            param **kwargs: can hold figsize
+            :param normalize: normalizes readcounts to sum to 1
+            :param cumulative: plots CDF of reads
+            :param testMode: if true, does not generate plot. Used for testing.
+            :param **kwargs: can hold figsize
 
         Returns:
             matplotlib axis to plot and computed data

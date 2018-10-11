@@ -46,16 +46,20 @@ class Track(TraitType):
     # pileup.viz, pileup.source, file or data, track name
     info_text = 'a pileup track (requires names for pileup.viz, pileup.source, pileup.source, and optional pileup.label)'
 
+    #: visualization specified in pileup.js. Can be, for example, features, pileup, variants, etc.
     viz = None
+    #: Datasource consumed by pileup.js. Can be, for example, BamDataSource, VcfDataSource, etc.
     source = None
+    #: Options for source. Includes index files, etc.
     sourceOptions = None
+    #: Label for this track.
     label = None
 
     def __init__(self, **kwargs):
         """ Initializes track. 
 
         Args:
-            param kwargs: Should contain viz, optional source, optional label.
+            :param kwargs: Should contain viz, optional source, optional label.
 
         """
         for key, value in kwargs.items():
@@ -83,8 +87,8 @@ def track_to_json(pyTrack, manager):
     constructor.
 
     Args:
-        param (Track): Track object
-        param (any): manager. Used for widget serialization.
+        :param Track: Track object
+        :param any: manager. Used for widget serialization.
 
     Returns:
         dict of Track elements (viz, source, sourceOptions and label)
@@ -104,8 +108,8 @@ def track_from_json(js, manager):
     """Deserialize a Track from JSON.
 
     Args:
-        param (str): json for Track containing viz, source, sourceOptions and label
-        param (any): manager. Used for widget serialization.
+        :param (str): json for Track containing viz, source, sourceOptions and label
+        :param (any): manager. Used for widget serialization.
 
     Returns:
         Track: pileup Track built from json
@@ -126,8 +130,8 @@ def tracks_to_json(pyTracks, manager):
     constructor.
 
     Args:
-        param (List): List of Tracks
-        param (any): manager. Used for widget serialization.
+        :param (List): List of Tracks
+        :param (any): manager. Used for widget serialization.
 
     Returns:
         List of dict of Track elements (viz, source, sourceOptions and label)
@@ -144,8 +148,8 @@ def tracks_from_json(js, manager):
     """Deserialize a list of Tracks from JSON.
 
     Args:
-        param (str): json for list of Tracks containing viz, source, sourceOptions and label
-        param (any): manager. Used for widget serialization.
+        :param (str): json for list of Tracks containing viz, source, sourceOptions and label
+        :param (any): manager. Used for widget serialization.
 
     Returns:
         List: List of pileup Track built from json
