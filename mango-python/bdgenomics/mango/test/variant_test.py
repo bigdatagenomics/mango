@@ -29,7 +29,6 @@ class VariantTest(SparkTestCase):
         ac = ADAMContext(self.ss)
         testFile = self.resourceFile("bqsr1.vcf")
 
-        # read alignments
         variants = ac.loadVariants(testFile)
 
         variantViz = VariantSummary(ac, variants)

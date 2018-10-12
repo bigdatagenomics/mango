@@ -29,7 +29,7 @@ visualizations are supported for alignments, coverage, variants and features.
 .. automodule:: bdgenomics.mango.coverage
 .. automodule:: bdgenomics.mango.features
 .. automodule:: bdgenomics.mango.variants
-
+.. automodule:: bdgenomics.mango.genotypes
 
 """
 

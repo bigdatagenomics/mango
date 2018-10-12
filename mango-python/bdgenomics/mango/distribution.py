@@ -25,6 +25,7 @@ CountDistribution
    :toctree: _generate/
 
    CountDistribution
+   HistogramDistribution
 """
 
 import collections
@@ -81,13 +82,11 @@ class CountDistribution:
     def plotDistributions(self, normalize = True, cumulative = False, testMode = False, **kwargs):
         """
         Plots final distribution values and returns the plotted distribution as a Counter object.
-
         Args:
             :param normalize: normalizes readcounts to sum to 1
             :param cumulative: plots CDF of reads
             :param testMode: if true, does not generate plot. Used for testing.
             :param **kwargs: can hold figsize
-
         Returns:
             matplotlib axis to plot and computed data
         """
@@ -134,3 +133,69 @@ class CountDistribution:
         else:
             return None, countDistributions
 
+
+
+class HistogramDistribution:
+    """ Abstract HistogramDistribution class.
+    Plotting functionality for visualizing count distributions of multi-sample cohorts.
+    HistogramDistribution is based off of distributions with a single key.
+    """
+
+    #: SparkSession
+    ss = None
+    #: RDD of the form (id: string, count: int)
+    rdd = None
+    #: fraction to sample rdd. Value should be between 0.0 and 1.0.
+    sample = 1.0
+    #: Whether rdd has already been sampled.
+    pre_sampled = False
+
+
+    def __init__(self):
+        """
+        Initializes a Distribution class.
+        Computes the distribution of an rdd with records of the form (key: (sample ID, count), value: numObservations).
+        Length is usually just a 1, and is used for reduceByKey().
+        """
+
+        # sample must be between 0 and 1
+        if self.sample <= 0 or self.sample > 1:
+            raise Exception('sample {} should be > 0 and <= 1'.format(self.sample))
+
+        # sample RDD if sample is specified AND rdd has not been pre-sampled
+        if self.sample < 1 and not self.pre_sampled:
+            self.rdd = self.rdd.sample(False, self.sample)
+
+        # Assign each RDD with counter. Reduce and collect.
+        collectedCounts = self.rdd.reduceByKey(lambda x,y: x+y) \
+            .collect()  # id, number of times that id appears)
+
+        # function that re-calculates coverage based on sampling
+        approximateCounts = lambda counts, sample: int(counts * 1.0/sample)
+
+        # approximate counts based on sampling
+        self.collectedCounts = map(lambda x: approximateCounts(x[1], self.sample), collectedCounts)
+
+    def plotDistributions(self, normalize = True, cumulative = False, testMode = False, **kwargs):
+        """
+        Plots final distribution values and returns the plotted distribution as a Counter object.
+
+        Args:
+            :param normalize: normalizes readcounts to sum to 1
+            :param cumulative: plots CDF of reads
+            :param testMode: if true, does not generate plot. Used for testing.
+            :param **kwargs: can hold figsize
+
+        Returns:
+            matplotlib axis to plot and computed data
+        """
+
+        if (not testMode): # For testing: do not run plots if testMode
+            figsize = kwargs.get('figsize',(10, 5))
+            bins = kwargs.get('bins',100)
+
+            f, ax = plt.subplots(figsize=figsize)
+            ax.hist(self.collectedCounts, bins)
+            return ax, self.collectedCounts
+        else:
+            return None, self.collectedCounts
