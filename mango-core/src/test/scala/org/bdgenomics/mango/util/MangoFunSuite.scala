@@ -34,5 +34,10 @@ trait MangoFunSuite extends SparkFunSuite with FunSuiteLike {
     ("spark.kryo.referenceTracking", "true"))
 
   def resourcePath(path: String) = ClassLoader.getSystemClassLoader.getResource(path).getFile
+
+  def globPath(path: String, suffix: String) = {
+    val newPath = path.split("/").dropRight(1).mkString("/")
+    newPath + s"/*${suffix}"
+  }
 }
 

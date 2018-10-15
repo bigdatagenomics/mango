@@ -30,6 +30,7 @@ import org.bdgenomics.convert.{ ConversionStringency, Converter }
 import org.bdgenomics.formats.avro.AlignmentRecord
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import org.slf4j.LoggerFactory
 
 /*
@@ -55,17 +56,23 @@ object GA4GHutil {
    * Converts alignmentRecordRDD to GA4GHReadsResponse string
    *
    * @param alignmentRecordRDD rdd to convert
-   * @return GA4GHReadsResponse json string
+   * @return Map GA4GHReadsResponse json strings for each sample in RDD
    */
-  def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD): String = {
+  def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD): java.util.Map[String, String] = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
 
     val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
-    val result: ga4gh.ReadServiceOuterClass.SearchReadsResponse = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
-      .addAllAlignments(gaReads.toList.asJava).build()
+    // Group by ReadGroupID, which is set in bdg convert to alignmentRecord's getRecordGroupName(), if it exists, or "1"
+    val results: Map[String, ga4gh.ReadServiceOuterClass.SearchReadsResponse] =
+      gaReads.groupBy(r => r.getReadGroupId).map(sampleReads =>
+        (sampleReads._1,
+          ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
+          .addAllAlignments(sampleReads._2.toList.asJava).build()))
 
-    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(result)
+    // convert results to json strings for each readGroupName
+    val jsonMap = results.map(r => (r._1, com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(r._2)))
+    return mapAsJavaMap(jsonMap)
   }
 
   /**
