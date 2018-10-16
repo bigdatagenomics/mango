@@ -21,6 +21,7 @@ import net.liftweb.json._
 import org.bdgenomics.mango.layout._
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
+import org.ga4gh.GASearchReadsResponse
 import org.scalatra.{ NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 
@@ -28,6 +29,8 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   implicit val formats = DefaultFormats
   addServlet(classOf[VizServlet], "/*")
+
+  val emptyGASearchResponse = GASearchReadsResponse.newBuilder().build().toString
 
   val bamFile = resourcePath("mouse_chrM.bam")
   val referenceFile = resourcePath("mm10_chrM.fa")
@@ -90,6 +93,18 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     implicit val VizReads = runVizReads(args)
     get(s"/reads/${bamKey}/chrM?start=0&end=2") {
       assert(status == Ok("").status.code)
+      assert(response.getContent().length > emptyGASearchResponse.length)
+    }
+  }
+
+  sparkTest("should return reads after first call returns no reads") {
+    implicit val VizReads = runVizReads(args)
+    get(s"/reads/${bamKey}/chrN?start=0&end=2") { // no reads
+      assert(response.getContent().length == emptyGASearchResponse.length)
+      get(s"/reads/${bamKey}/chrM?start=0&end=2") {
+        assert(status == Ok("").status.code)
+        assert(response.getContent().length > emptyGASearchResponse.length)
+      }
     }
   }
 

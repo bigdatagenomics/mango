@@ -104,7 +104,6 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
    * cooresponding frequency.
    */
   def getCoverage(region: ReferenceRegion): Map[String, Array[PositionCount]] = {
-
     AlignmentTimers.getCoverageData.time {
       val covCounts: RDD[(String, PositionCount)] =
         get(Some(region))
@@ -127,9 +126,12 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
     AlignmentTimers.collect.time {
       AlignmentTimers.getAlignmentData.time {
-        data.filter(r => Option(r._2.mapq).getOrElse(1).asInstanceOf[Int] > 0) // filter mapq 0 reads out 
-          .mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
-          .reduceByKeyLocally(_ ++ _).toMap
+        val filtered = data.filter(r => Option(r._2.mapq).getOrElse(1).asInstanceOf[Int] > 0) // filter mapq 0 reads out
+        if (!filtered.isEmpty())
+          filtered.mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
+            .reduceByKeyLocally(_ ++ _).toMap
+        else
+          Map.empty
       }
     }
   }
