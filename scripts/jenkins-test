@@ -228,7 +228,7 @@ then
 
     # test mango notebook, output to temporary log file
     MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
-    ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
+    bash -xv ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
 
     # sleep for 2 seconds to let mango-notebook start up
     sleep 2
@@ -248,7 +248,7 @@ then
 
     # test mango submit
     MANGO_BROWSER_LOGS=mango-submit.log
-    ./bin/mango-submit ./example-files/hg19.17.2bit &> ${MANGO_BROWSER_LOGS} &
+    bash -xv ${PROJECT_ROOT}/bin/mango-submit ./example-files/hg19.17.2bit &> ${MANGO_BROWSER_LOGS} &
 
     # sleep for 10 seconds to let mango-browser start up
     sleep 10
