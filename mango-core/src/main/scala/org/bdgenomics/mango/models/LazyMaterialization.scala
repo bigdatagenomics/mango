@@ -214,7 +214,12 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
               if (!missing.isEmpty) {
                 put(missing)
               }
-              intRDD.filterByInterval(region).toRDD.map(_._2)
+              if (intRDD != null) {
+                intRDD.filterByInterval(region).toRDD.map(_._2)
+              } else {
+                sc.emptyRDD
+              }
+
             }
             case None => {
               throw new Exception(s"${region} not found in dictionary")
@@ -242,7 +247,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * Fetches the data from disk, using predicates and range filtering
    * Then puts fetched data in the IntervalRDD, and calls multiget again, now with the data existing
    *
-   * @param regions ReferenceRegion in which data is retreived
+   * @param regions ReferenceRegion in which data is retrieved
    */
   def put(regions: Iterable[ReferenceRegion]) = {
     checkMemory()
@@ -258,18 +263,19 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
       filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
 
       // insert into IntervalRDD if there is data
-      if (intRDD == null) {
-        // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
-        intRDD = partitionIntervalRDD(data, repartition)
-
-        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-      } else {
-        val t = intRDD
-        intRDD = intRDD.multiputRDD(data)
-        t.unpersist(true)
-        intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      if (!data.isEmpty()) {
+        if (intRDD == null) {
+          // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
+          intRDD = partitionIntervalRDD(data, repartition)
+          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        } else {
+          val t = intRDD
+          intRDD = intRDD.multiputRDD(data)
+          t.unpersist(true)
+          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        }
+        intRDD.setName(name)
       }
-      intRDD.setName(name)
     }
   }
 
