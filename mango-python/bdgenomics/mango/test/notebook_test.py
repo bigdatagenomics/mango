@@ -33,7 +33,7 @@ class NotebookTest(SparkTestCase):
 
         # this file is converted from ipynb in make test
         testFile = self.exampleFile("notebooks/mango-viz.py")
-        execfile(testFile)
+        exec(open(testFile).read())
 
     def test_coverage_example(self):
         # these variables are read into mango-python.py
@@ -43,7 +43,7 @@ class NotebookTest(SparkTestCase):
 
         # this file is converted from mango-python.coverage.ipynb in the Makefile
         testCoverageFile = self.exampleFile("notebooks/mango-python-coverage.py")
-        execfile(testCoverageFile)
+        exec(open(testCoverageFile).read())
 
     def test_alignment_example(self):
         # these variables are read into mango-python.py
@@ -53,5 +53,4 @@ class NotebookTest(SparkTestCase):
 
         # this file is converted from mango-python-alignment.ipynb in the Makefile
         testAlignmentFile = self.exampleFile("notebooks/mango-python-alignment.py")
-        execfile(testAlignmentFile)
-
+        exec(open(testAlignmentFile).read())

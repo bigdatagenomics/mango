@@ -44,10 +44,8 @@ class CoverageTest(SparkTestCase):
         assert(len(cd) == 1)
 
         # all items for first sample
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
 
-        print("Coverage")
-        print(cd)
         assert(items[0][1] == 1500)
 
     def test_example_coverage(self):
@@ -60,12 +58,12 @@ class CoverageTest(SparkTestCase):
 
         qc = CoverageDistribution(self.ss, coverage, bin_size = 1)
         # sum of all coverage
-        total = sum(map(lambda x: x[1], qc.collectedCounts.items()[0][1]))
 
         _, cd1 = qc.plotDistributions(testMode = True, cumulative = False, normalize=False)
+        total = sum(map(lambda x: x[1], list(qc.collectedCounts.items())[0][1]))
 
         # first sample
-        items = cd1.items()[0][1]
+        items = list(cd1.popitem()[1])
         x = items[0]
         assert(x[0] == 1) # 6 locations with read depth 1
         assert(x[1] == 6)
@@ -73,7 +71,7 @@ class CoverageTest(SparkTestCase):
         _, cd2 = qc.plotDistributions(testMode = True, cumulative = False, normalize=True)
 
         # first sample
-        items = cd2.items()[0][1]
+        items = list(cd2.popitem()[1])
         x = items[0]
         assert(x[0] == 1)
         assert(x[1] == 6.0/total) # normalized value
@@ -81,7 +79,7 @@ class CoverageTest(SparkTestCase):
         _, cd3 = qc.plotDistributions(testMode = True, cumulative = True, normalize = True)
 
         # first sample
-        items = cd3.items()[0][1]
+        items = list(cd3.popitem()[1])
         x = items[-1]
         assert(x[0] == 89)
         assert(x[1] > 0.999) # cumulative and normalized, so last value shound be about 1

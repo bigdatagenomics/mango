@@ -70,7 +70,8 @@ class CountDistribution:
         approximateCounts = lambda counts, sample: int(counts * 1.0/sample)
 
         # restructure each record so record structure is  (key: sampleId, value: (coverage, count))
-        x = map(lambda x: (x[0][0], (x[0][1], approximateCounts(x[1], self.sample))), collectedCounts)
+        x = list(map(lambda x: (x[0][0], (x[0][1], approximateCounts(x[1], self.sample))), collectedCounts))
+
         # create dictionary where keys are the sampleId
         self.collectedCounts = collections.defaultdict(set)
         for k, v in x:
@@ -99,14 +100,14 @@ class CountDistribution:
             f, ax = plt.subplots(figsize=figsize)
 
         # iterate through each sample
-        for label, data in self.collectedCounts.iteritems():
+        for label, data in self.collectedCounts.items():
 
             if data == set(): # Do not plot any empty sets of data
                 continue
 
             sData = sorted(data)
-            values = map(lambda p: p[0], sData)
-            counts   = map(lambda p: p[1], sData)
+            values = list(map(lambda p: p[0], sData))
+            counts   = list(map(lambda p: p[1], sData))
 
             if normalize:
                 # replace distribution counts with normalized values
@@ -118,7 +119,7 @@ class CountDistribution:
                 counts = np.cumsum(counts)
 
             # re-write manipulated data
-            countDistributions[label]=zip(values, counts)
+            countDistributions[label]=list(zip(values, counts))
 
             if (not testMode): # For testing: do not run plots if testMode
                 if (bar_plt):

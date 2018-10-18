@@ -38,12 +38,12 @@ class DistributionTest(SparkTestCase):
         qc = CoverageDistribution(self.ss, coverage)
 
         _, cd = qc.plotDistributions(testMode = True, normalize = True)
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
         assert(len(items) == 1)
         assert(items.pop()[1] == 1.0)
 
         _, cd = qc.plotDistributions(testMode = True, normalize = False)
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
         assert(len(items) == 1)
         assert(items.pop()[1] == 1500)
 
@@ -64,15 +64,14 @@ class DistributionTest(SparkTestCase):
         _, cd = qc.plotDistributions(testMode = True, cumulative = True, normalize = False)
 
         # first sample
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
         assert(len(items) == 1)
-        print(items)
         assert(items.pop()[1] == 1500)
 
         _, cd = qc.plotDistributions(testMode = True, cumulative = False, normalize = False)
 
         # first sample
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
         assert(len(items) == 1)
         assert(items.pop()[1] == 1500)
 
@@ -103,11 +102,10 @@ class DistributionTest(SparkTestCase):
         coverage = reads.toCoverage()
 
         cd1 = CoverageDistribution(self.ss, coverage, sample = 0.9)
-        sum1 = sum(map(lambda x: x[1], cd1.collectedCounts.items()[0][1]))
+        sum1 = sum(map(lambda x: x[1], cd1.collectedCounts.popitem()[1]))
         cd2 = CoverageDistribution(self.ss, coverage, sample = 1.0)
-        sum2 = sum(map(lambda x: x[1], cd2.collectedCounts.items()[0][1]))
+        sum2 = sum(map(lambda x: x[1], cd2.collectedCounts.popitem()[1]))
 
         # estimated counts should be around real counts
         dev = 100
         assert(sum1 > sum2 - dev and sum1 < sum2 + dev)
-
