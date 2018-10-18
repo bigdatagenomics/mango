@@ -72,7 +72,7 @@ class TestTypes(unittest.TestCase):
             # viz pileup with incompatible TwoBit source
             pileup.Track(viz="pileup", label="myReads", source=pileup.sources.TwoBitDataSource("fakeFile.2bit"))
 
-        self.assertTrue('Invalid data source twoBit for track pileup' in context.exception)
+            self.assertTrue('Invalid data source twoBit for track pileup' in context.exception)
 
 
     def test_track_invalid_viz_coverage(self):
@@ -83,7 +83,7 @@ class TestTypes(unittest.TestCase):
             # viz coverage with incompatible TwoBit source
             pileup.Track(viz="coverage", label="myReads", source=pileup.sources.TwoBitDataSource("fakeFile.2bit"))
 
-        self.assertTrue('Invalid data source twoBit for track coverage' in context.exception)
+            self.assertTrue('Invalid data source twoBit for track coverage' in context.exception)
 
 
     def test_track_invalid_viz_features(self):
@@ -94,7 +94,7 @@ class TestTypes(unittest.TestCase):
             # viz features with incompatible GA4GHVariantJson source
             pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHVariantJson("{}"))
 
-        self.assertTrue('Invalid data source variantJson for track features' in context.exception)
+            self.assertTrue('Invalid data source variantJson for track features' in context.exception)
 
 
     def test_track_invalid_viz_genome(self):
@@ -107,7 +107,7 @@ class TestTypes(unittest.TestCase):
             pileup.Track(viz="genome", label="myReference", source=pileup.sources.GA4GHFeatureJson("{}"))
 
 
-        self.assertTrue('Invalid data source featureJson for track genome' in context.exception)
+            self.assertTrue('Invalid data source featureJson for track genome' in context.exception)
 
 
     def test_track_invalid_viz_variants(self):
@@ -118,7 +118,7 @@ class TestTypes(unittest.TestCase):
             # viz variants with incompatible GA4GHAlignmentSource source
             pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHAlignmentSource("www.fakeEndpoint.com", "readGroup"))
 
-        self.assertTrue('Invalid data source GAReadAlignment for track variants' in context.exception)
+            self.assertTrue('Invalid data source GAReadAlignment for track variants' in context.exception)
 
 
     def test_track_invalid_viz_genes(self):
@@ -129,7 +129,7 @@ class TestTypes(unittest.TestCase):
             # viz genes with incompatible bam data source
             pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-        self.assertTrue('Invalid data source bam for track genes' in context.exception)
+            self.assertTrue('Invalid data source bam for track genes' in context.exception)
 
 
     def test_track_invalid_viz_scale(self):
@@ -140,7 +140,7 @@ class TestTypes(unittest.TestCase):
             # viz scale with incompatible with any source
             pileup.Track(viz="scale", label="scale", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-        self.assertTrue('Invalid data source bam for track scale' in context.exception)
+            self.assertTrue('Invalid data source bam for track scale' in context.exception)
 
 
     def test_track_invalid_viz_location(self):
@@ -151,7 +151,7 @@ class TestTypes(unittest.TestCase):
             # viz location with incompatible any source
             pileup.Track(viz="location", label="location", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-        self.assertTrue('Invalid data source bam for track location' in context.exception)
+            self.assertTrue('Invalid data source bam for track location' in context.exception)
 
 
 # Run tests

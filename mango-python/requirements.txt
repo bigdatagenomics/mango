@@ -3,6 +3,6 @@ matplotlib==2.0.2
 ipython==5.5.0
 jupyter==1.0.0
 bdgenomics.mango.pileup==0.0.2a0
-bdgenomics.adam==0.24.0
+bdgenomics.adam==0.25.0
 ipywidgets==7.0.0
 psutil
