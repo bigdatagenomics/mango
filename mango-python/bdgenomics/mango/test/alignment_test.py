@@ -110,9 +110,10 @@ class AlignmentTest(SparkTestCase):
         _, cd = coverage.plotDistributions(testMode = True, cumulative = False, normalize=False)
 
         # first sample
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
         assert(len(items) == 1)
         x = items.pop()
+        assert(x[0] == 1) # all positions have coverage of 1
         assert(x[0] == 1) # all positions have coverage of 1
         assert(x[1] == 1500)
 
@@ -131,9 +132,8 @@ class AlignmentTest(SparkTestCase):
         _, cd = fragments.plotDistributions(testMode = True, cumulative = False, normalize=False)
 
         # first sample
-        items = cd.items()[0][1]
+        items = list(cd.popitem()[1])
         assert(len(items) == 1)
-        print(cd)
         x = items[0]
         assert(x[0] == 75)
         assert(x[1] == 20) # all 20 sequences have same length of 75
@@ -152,7 +152,7 @@ class AlignmentTest(SparkTestCase):
         _, md = mapq.plotDistributions(testMode = True, cumulative = False, normalize = False)
 
         # first sample
-        items = md.items()[0][1]
+        items = list(md.popitem()[1])
         assert(len(items) == 5) # mapq for 24, 28, 35, 40, 60
         x = items[0]
         assert(x[0] == 24) # 1 read with mapq 24

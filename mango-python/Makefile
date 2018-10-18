@@ -44,7 +44,7 @@ help:
 
 # This Makefile uses bash features like printf and <()
 SHELL=bash
-python=python2.7
+python=python
 pip=pip
 tests=bdgenomics
 extras=
@@ -113,7 +113,7 @@ check_build_reqs:
 
 
 prepare:
-	$(pip) install pytest==2.8.3
+	$(pip) install pytest==3.9.1
 	# ipython version required for python 2.7
 	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install -r requirements.txt
