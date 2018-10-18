@@ -25,6 +25,10 @@ Variants
    :toctree: _generate/
 
    VariantSummary
+   VariantsPerSampleDistribution
+   HetHomRatioDistribution
+   GenotypeCallRatesDistribution
+   QualityByDepthDistribution
 """
 
 import bdgenomics.mango.pileup as pileup
@@ -34,8 +38,6 @@ from bdgenomics.mango.pileup.track import *
 from bdgenomics.adam.adamContext import ADAMContext
 from collections import Counter, OrderedDict
 from .utils import *
-
-default_bins=100
 
 class VariantSummary(object):
     """ VariantSummary class.
@@ -109,7 +111,7 @@ class VariantsPerSampleDistribution(object):
         if(not testMode):
             figsize = kwargs.get('figsize',(10,5))
             fig, ax = plt.subplots(figsize=figsize)
-            bins = kwargs.get('bins',default_bins)
+            bins = kwargs.get('bins',100)
             hist = ax.hist(self.counts, bins=bins)
             return ax, self.counts
         else:
@@ -143,6 +145,7 @@ class HetHomRatioDistribution(object):
         Returns:
           matplotlib axis to plot and computed data
         """
+
 
         hetHomRatio = []
         for sampleid in self.homs.keys():
@@ -242,8 +245,3 @@ class QualityByDepthDistribution(object):
             return ax, self.counterData
         else:
             return None, self.counterData
-
-
-
-
-
