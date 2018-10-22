@@ -138,7 +138,7 @@
                     #end
                     tracks.push({
                     viz: pileup.viz.pileup({
-                        hideAlignments: true
+                        hideAlignments: ${reads.get.length > 5}
                     }),
                     isReference: false,
                     data: pileup.formats.GAReadAlignment({
