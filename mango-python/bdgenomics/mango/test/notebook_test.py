@@ -54,3 +54,13 @@ class NotebookTest(SparkTestCase):
         # this file is converted from mango-python-alignment.ipynb in the Makefile
         testAlignmentFile = self.exampleFile("notebooks/mango-python-alignment.py")
         exec(open(testAlignmentFile).read())
+
+    def test_variants_example(self):
+        # these variables are read into mango-python.py
+        spark = self.ss
+        testMode = True
+        vcfFile = self.exampleFile("genodata.v3.vcf")
+
+        # this file is converted from mango-python-alignment.ipynb in the Makefile
+        testVariantFile = self.exampleFile("notebooks/mango-python-variants.py")
+        exec(open(testVariantFile).read())
