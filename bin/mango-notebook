@@ -84,13 +84,12 @@ parse_args(){
 # statements below require bash 4.3 or upper
 #  local -n spark_args="$1"
 #  local -n notebook_args="$2"
-  local -a arguments="$@"
   local -a pre_dd=()
   local -a post_dd=()
   local    has_dd=false # DD is "double dash"
   local    arg
-  # Split args into Spark and ADAM args
-  for arg in "${arguments[@]}"; do
+  # Split args into Spark and Mango args
+  for arg in "$@"; do
     shift
     if [[ "${arg}" == "--" ]]; then
       has_dd=true

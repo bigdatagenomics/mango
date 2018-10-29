@@ -16,8 +16,8 @@
   <name>mango</name>
 
   <properties>
-    <adam.version>0.24.0</adam.version>
-    <avro.version>1.8.1</avro.version>
+    <adam.version>0.25.0-SNAPSHOT</adam.version>
+    <avro.version>1.8.2</avro.version>
     <bdg-formats.version>0.11.3</bdg-formats.version>
     <bdg-utils.version>0.2.13</bdg-utils.version>
     <convert.version>0.3.0</convert.version>
@@ -27,11 +27,11 @@
     <hadoop.version>2.7.3</hadoop.version>
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
     <htsjdk.version>2.9.1</htsjdk.version>
-    <parquet.version>1.8.2</parquet.version>
+    <parquet.version>1.8.3</parquet.version>
     <scala.version>2.11.12</scala.version>
     <scala.version.prefix>2.11</scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
-    <spark.version>2.2.1</spark.version>
+    <spark.version>2.3.2</spark.version>
     <spark.version.prefix>-spark2_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
