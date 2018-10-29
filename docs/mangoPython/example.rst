@@ -23,11 +23,32 @@ or the open port assigned by Jupyter notebook. There are three notebooks that ca
 - `example-files/notebooks/mango-viz.ipynb <https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/mango-viz.ipynb>`__
 
 
-Running Mango with Parameters
-------------------------------
+Running the Mango Notebook with Parameters
+------------------------------------------
 The Mango Notebook can be run with `Apache Spark parameters <https://spark.apache.org/docs/latest/configuration.html>`__ and `Jupyter notebook parameters <http://jupyter-notebook.readthedocs.io/en/stable/config.html>`__.
 To run Mango notebook with user specified parameters, run
 
 .. code:: bash
 
     ./bin/mango-submit <Spark-parameters> -- <Jupyter-notebook-parameters>
+
+
+Running the Mango Notebook on YARN
+----------------------------------
+
+YARN is a resource management system for clusters.
+The Mango notebook can run on `YARN <https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html>`__ clusters, and requires jars for org.apache.parquet:parquet-hadoop:1.8.3.
+To run the Mango browser on YARN, download parquet-hadoop jar:
+
+
+Then include the jar in spark.driver.extraClassPath:
+
+.. code:: bash
+
+  wget http://central.maven.org/maven2/org/apache/parquet/parquet-hadoop/1.8.3/parquet-hadoop-1.8.3.jar
+
+.. code:: bash
+
+    ./bin/mango-notebook --master yarn \
+      --conf spark.driver.extraClassPath=<path_to_jar>/parquet-hadoop-1.8.3.jar \
+       -- <Jupyter-notebook-parameters>

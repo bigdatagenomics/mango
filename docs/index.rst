@@ -37,6 +37,7 @@ variety of platforms.
    :caption: API
    :maxdepth: 3
 
+   mangoPython/api.rst
    jupyterWidgets/api.rst
 
 .. toctree::
