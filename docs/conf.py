@@ -23,7 +23,11 @@ MOCK_MODULES = [
     "bdgenomics.adam",
     "bdgenomics.adam.adamContext",
     "matplotlib",
-    "matplotlib.pyplot"
+    "matplotlib.pyplot",
+    "ipywidgets",
+    "cigar",
+    "numpy"
+
 ]
 
 for mod_name in MOCK_MODULES:
