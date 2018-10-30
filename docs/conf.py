@@ -16,7 +16,16 @@ import os
 import inspect
 import re
 from datetime import datetime
-import imp
+import mock
+
+# These lines added to enable Sphinx to work without installing Mango.
+MOCK_MODULES = [
+    "bdgenomics.adam",
+    "bdgenomics.adam.adamContext"
+]
+
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
