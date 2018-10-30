@@ -21,7 +21,9 @@ import mock
 # These lines added to enable Sphinx to work without installing Mango.
 MOCK_MODULES = [
     "bdgenomics.adam",
-    "bdgenomics.adam.adamContext"
+    "bdgenomics.adam.adamContext",
+    "matplotlib",
+    "matplotlib.pyplot"
 ]
 
 for mod_name in MOCK_MODULES:
