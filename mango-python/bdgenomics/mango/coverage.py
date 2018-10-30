@@ -29,7 +29,6 @@ Coverage
 
 import collections
 import matplotlib.pyplot as plt
-import numpy as np
 from .distribution import CountDistribution
 plt.rcdefaults()
 
