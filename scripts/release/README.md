@@ -3,6 +3,10 @@ Notes for release managers
 
 This document describes how to make an Mango release.
 
+First, make sure you have:
+- Updated the pom.xml for the new version
+- Updated the distributions in bin/emr and bin/gce to reflect the new versions.
+
 Setup your environment
 1. Copy (or incorporate) the settings.xml file to ```~/.m2/settings.xml```
 2. Request the Mango packager private GPG key

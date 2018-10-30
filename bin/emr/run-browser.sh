@@ -67,7 +67,7 @@ sudo docker run \
       -e HADOOP_CONF_DIR=${HADOOP_CONF_DIR} \
       -e SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*" \
       -e SPARK_LIBRARY_PATH=${SPARK_LIBRARY_PATH} \
-      -p 8080:8080 \
+      -p 8081:8081 \
       -i \
       -t \
        quay.io/ucsc_cgl/mango:latest \
@@ -81,4 +81,5 @@ sudo docker run \
        --conf spark.executor.extraClassPath=${EXTRA_CLASSPATH} \
        $PRE_DD_ARGS \
        --  \
+       -port 8081 \
        $POST_DD_ARGS
