@@ -26,9 +26,11 @@ Genotypes
 
    GenotypeSummary
    VariantsPerSampleDistribution
+   HetHomRatioDistribution
 """
 
 from bdgenomics.mango.pileup.track import *
+from pyspark.sql.functions import col, expr, when
 
 from .distribution import HistogramDistribution
 import matplotlib.pyplot as plt
@@ -62,6 +64,7 @@ class GenotypeSummary(object):
 
         # where to store collected data
         self.variantsPerSampleDistribution = None
+        self.hetHomRatioDistribution = None
 
     def getVariantsPerSampleDistribution(self):
         """
@@ -77,9 +80,20 @@ class GenotypeSummary(object):
             self.variantsPerSampleDistribution = VariantsPerSampleDistribution(self.ss, \
                                                                                self.genotypeRdd, \
                                                                                sample = self.sample)
-
         return self.variantsPerSampleDistribution
 
+    def getHetHomRatioDistribution(self):
+        """
+        Computes a distribution of (Heterozygote/Homozygote) ratios per sample
+
+        Returns:
+           HetHomRatioDistribution object
+        """
+        if self.hetHomRatioDistribution == None:
+            print("Computing (Heterozygote/Homozygote) ratio distribution")
+            self.hetHomRatioDistribution = HetHomRatioDistribution(self.ss, self.genotypeRdd, self.sample)
+
+        return self.hetHomRatioDistribution
 
 class VariantsPerSampleDistribution(HistogramDistribution):
     """ VariantsPerSampleDistribution class.
@@ -94,7 +108,7 @@ class VariantsPerSampleDistribution(HistogramDistribution):
         Args:
             :param ss: global SparkSession.
             :param genotypeRDD: A bdgenomics.adam.rdd.GenotypeRDD object.
-            :param sample: Fraction to sample CoverageRDD. Should be between 0 and 1
+            :param sample: Fraction to sample GenotypeRDD. Should be between 0 and 1
         """
 
         self.sc = ss.sparkContext
@@ -105,3 +119,58 @@ class VariantsPerSampleDistribution(HistogramDistribution):
             .map(lambda r: ((r["sampleId"]), 1))
 
         HistogramDistribution.__init__(self)
+
+class HetHomRatioDistribution(object):
+    """ HetHomRatioDistribution class.
+    HetHomRatioDistribution computes a distribution of (Heterozygote/Homozygote) ratios from a genotypeRDD.
+    """
+    def __init__(self,ss,genotypeRDD, sample = 1.0):
+        """
+        Initializes HetHomRatioDistribution class.
+        Retrieves the call rate and missing rate for each sample in a genotypeRDD
+
+        Args:
+            :param ss: global SparkSession.
+            :param genotypeRDD: A bdgenomics.adam.rdd.GenotypeRDD object.
+            :param sample: Fraction to sample GenotypeRDD. Should be between 0 and 1
+        """
+
+        self.sample = sample
+        new_col1 = when((col("alleles")[0] == u'REF') & (col("alleles")[1] == u'ALT'),1) \
+            .otherwise(when( (col("alleles")[0] == u'ALT') & (col("alleles")[1] == u'ALT'),2))
+
+        genocounts =  genotypeRDD.toDF().sample(False, self.sample) \
+            .withColumn("hethomclass", new_col1) \
+            .groupBy("sampleid", "hethomclass").count().collect()
+
+        data_het = {}
+        data_hom = {}
+        for row in genocounts:
+            curr = row.asDict()
+            if(curr['hethomclass'] == 1):
+              data_het[curr['sampleid']] = curr['count']
+            if(curr['hethomclass'] == 2):
+              data_hom[curr['sampleid']] = curr['count']
+
+        self.hetHomRatio = []
+        for sampleid in data_hom.keys():
+            if sampleid in data_het.keys():
+                self.hetHomRatio.append(float(data_het[sampleid])/float(data_hom[sampleid]))
+
+    def plot(self, testMode = False, **kwargs):
+        """
+        Plots final distribution values and returns the plotted distribution as a list
+
+        Returns:
+          matplotlib axis to plot and computed data
+        """
+
+        if(not testMode):
+            figsize = kwargs.get('figsize',(10,5))
+            fig, ax = plt.subplots(figsize=figsize)
+            hist = ax.hist(self.hetHomRatio,bins=100)
+            return ax, self.hetHomRatio
+        else:
+            return None, self.hetHomRatio
+
+
