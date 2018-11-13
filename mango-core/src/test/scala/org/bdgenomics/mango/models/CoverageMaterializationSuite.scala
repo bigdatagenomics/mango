@@ -28,7 +28,7 @@ class CoverageMaterializationSuite extends MangoFunSuite {
 
   implicit val formats = DefaultFormats
 
-  val coverageFileName = "mouse_chrM.coverage.adam"
+  val coverageFileName = "mouse_chrM.coverage.bed"
   val coverageFile = resourcePath(coverageFileName)
   val key = LazyMaterialization.filterKeyFromFile(coverageFileName)
 
