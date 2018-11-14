@@ -24,7 +24,6 @@ from setuptools.command.egg_info import egg_info
 from subprocess import check_call
 import os
 import sys
-import platform
 
 here = os.path.dirname(os.path.abspath(__file__))
 node_root = os.path.join(here, 'bdgenomics', 'mango', 'js')
@@ -46,34 +45,14 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-LONG_DESCRIPTION = """
-
-bdgenomics.mango.pileup
-=======================
-bdgenomics.mango.pileup is a Jupyter widget that allows users to view genomic reads, variants and features in a python notebook.
-bdgenomics.mango.pileup builds off of `pileup.js <https://github.com/hammerlab/pileup.js>`__.
-Installation
-============
-.. code-block:: bash
-    pip install bdgenomics.mango.pileup
-    jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup  # can be skipped for notebook version 5.3 and above
-Usage
-=====
-.. code-block:: python
-    import bdgenomics.mango.pileup as pileup
-    from bdgenomics.mango.pileup.track import *
-    import pandas as pd
-
-    readsJson = pd.read_json("<path_to_GA4GH_json_file>")
-    GA4GHAlignmentJson = readsJson.to_json()
-
-    # make pileup track
-    tracks=[Track(viz="pileup", label="My Reads", source=pileup.sources.GA4GHAlignmentJson(GA4GHAlignmentJson))]
-
-    # render tracks in widget
-    reads = pileup.PileupViewer(locus="chr17:1-100", reference="hg19", tracks=tracks)
-    reads
-"""
+long_description = "!!!!! missing pandoc do not upload to PyPI !!!!"
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except ImportError:
+    print("Could not import pypandoc - required to package bdgenomics.mango", file=sys.stderr)
+except OSError:
+    print("Could not convert - pandoc is not installed", file=sys.stderr)
 
 def js_prerelease(command, strict=False):
     """decorator for building minified js/css prior to another command"""
@@ -170,7 +149,7 @@ setup_args = {
     'name': 'bdgenomics.mango.pileup',
     'version': version_ns['__version__'],
     'description': 'bdgenomics.mango.pileup',
-    'long_description': LONG_DESCRIPTION,
+    'long_description': long_description,
     'include_package_data': True,
     'data_files': [
         ('share/jupyter/nbextensions/pileup', [
