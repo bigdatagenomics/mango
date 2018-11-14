@@ -24,7 +24,7 @@
     <java.version>1.8</java.version>
     <jetty.version>[9.3.24.v20180605,)</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
-    <hadoop.version>2.7.3</hadoop.version>
+    <hadoop.version>2.7.5</hadoop.version>
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
     <htsjdk.version>2.9.1</htsjdk.version>
     <parquet.version>1.8.3</parquet.version>
