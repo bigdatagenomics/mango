@@ -36,7 +36,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   val referenceFile = resourcePath("mm10_chrM.fa")
   val vcfFile = resourcePath("truetest.genotypes.vcf")
   val featureFile = resourcePath("smalltest.bed")
-  val coverageFile = resourcePath("mouse_chrM.coverage.adam")
+  val coverageFile = resourcePath("mouse_chrM.coverage.bed")
 
   // exampleFiles
   val chr17bam = examplePath("chr17.7500000-7515000.sam.adam")
