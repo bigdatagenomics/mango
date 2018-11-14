@@ -107,5 +107,5 @@ class DistributionTest(SparkTestCase):
         sum2 = sum(map(lambda x: x[1], cd2.collectedCounts.popitem()[1]))
 
         # estimated counts should be around real counts
-        dev = 100
+        dev = 500
         assert(sum1 > sum2 - dev and sum1 < sum2 + dev)
