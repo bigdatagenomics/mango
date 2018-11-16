@@ -196,6 +196,6 @@ class HistogramDistribution:
 
             f, ax = plt.subplots(figsize=figsize)
             ax.hist(self.collectedCounts, bins)
-            return ax, self.collectedCounts
+            return ax, list(self.collectedCounts)
         else:
-            return None, self.collectedCounts
+            return None, list(self.collectedCounts)
