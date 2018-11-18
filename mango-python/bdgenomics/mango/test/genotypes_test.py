@@ -48,6 +48,26 @@ class GenotypesTest(SparkTestCase):
         dev = 8
         assert(sum(expected) > sum(data) - dev and sum(expected) < sum(data) + dev)
 
+    def test_HetHomRatioDistribution(self):
+        ac = ADAMContext(self.ss)
+        testFile = self.resourceFile("genodata.v3.test.vcf")
+
+        genotypes = ac.loadGenotypes(testFile)
+        _, data =  HetHomRatioDistribution(self.ss, genotypes, sample=1.0).plot(testMode= True)
+        expected = [5.0, 0.6, 0.14, 0.17, 1.67]
+
+        assert( expected == [ round(x,2) for x in data ])
+
+    def test_GenotypeCallRatesDistribution(self):
+        ac = ADAMContext(self.ss)
+        testFile = self.resourceFile("genodata.v3.test.vcf")
+
+        genotypes = ac.loadGenotypes(testFile)
+        _, data =  GenotypeCallRatesDistribution(self.ss, genotypes, sample=1.0).plot(testMode= True)
+        expected = [0.95, 0.88, 0.89, 0.94, 0.93, 0.90]
+
+        assert( expected == [ round(x,2) for x in data] )
+
 
     def test_GenotypeSummary(self):
         ac = ADAMContext(self.ss)
