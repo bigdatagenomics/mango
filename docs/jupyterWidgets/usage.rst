@@ -11,7 +11,10 @@ First, install bdgenomics.mango.pileup, a Jupyter Widget:
 .. code:: bash
 
     pip install bdgenomics.mango.pileup
-    jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup  # can be skipped for notebook version 5.3 and above
+
+    jupyter nbextension enable --py widgetsnbextension
+    jupyter nbextension install --py --symlink --user bdgenomics.mango.pileup
+    jupyter nbextension enable bdgenomics.mango.pileup --user --py
 
 
 
