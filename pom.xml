@@ -11,7 +11,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.bdgenomics.mango</groupId>
   <artifactId>mango-parent</artifactId>
-  <version>0.0.2</version>
+  <version>0.0.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>mango</name>
 
@@ -50,7 +50,7 @@
     <connection>scm:git:git@github.com:bigdatagenomics/mango.git</connection>
     <developerConnection>scm:git:git@github.com:bigdatagenomics/mango.git</developerConnection>
     <url>scm:git:git@github.com:bigdatagenomics/mango.git</url>
-    <tag>mango-parent-spark2_2.11-</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <developers>
