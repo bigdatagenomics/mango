@@ -25,3 +25,10 @@ After the release is rsynced to the Maven Central repository, confirm checksums 
 Be sure to announce the release on the ADAM mailing list and Twitter (@bigdatagenomics).
 
 Additionally, once the release is done, you will need to bump the mango-python and mango-viz development versions on trunk.
+
+Debugging gpg:
+
+To test if you have set up keys correctly, run mvn gpg:sign.
+
+If this fails with error gpg: signing failed: Inappropriate ioctl for device, you can try:
+export GPG_TTY=$(tty)
