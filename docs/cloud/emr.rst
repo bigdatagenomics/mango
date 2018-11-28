@@ -1,8 +1,7 @@
 Running Mango from Amazon EMR
 =============================
 
-Amazon EMR provides a pre-built Hadoop and Spark distribution that allows users to easily deploy and test Mango.
-
+`Amazon EMR <https://aws.amazon.com/emr/>`__ provides a pre-built Hadoop and Spark distribution that allows users to easily deploy and test Mango.
 
 Before you Start
 ----------------
@@ -17,6 +16,8 @@ You will also need to install the AWS cli to ssh into your machines:
 
 Running Mango through Docker
 ============================
+
+This section explains how to run the Mango browser and the Mango notebook through Docker on Amazon EMR.
 
 Creating a Cluster
 ------------------
@@ -40,7 +41,7 @@ Through the aws command line, create a new cluster:
   Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-docker-emr5.sh"
 
 
-The bootstrap action will download docker and required scripts, available in /home/hadoop/mango-scripts.
+The bootstrap action will download docker and required scripts, available on your master node in EMR in directory /home/hadoop/mango-scripts.
 
 
 Enabling a Web Connection
@@ -84,10 +85,10 @@ The Hadoop UI is located at:
 You can access Spark applications through this UI when they are running.
 
 
-Running Mango Browser on EMR
--------------------------------
+Running the Mango Browser on EMR with Docker
+--------------------------------------------
 
-To run Mango Browser on EMR, you will first need to download a reference (staged either locally or on HDFS). For example, first get the chr17 reference:
+To run Mango Browser on EMR on top of Docker, you will first need to download a reference (staged either locally or on HDFS). For example, first get the chr17 reference:
 
 .. code:: bash
 
@@ -122,10 +123,10 @@ Navigate to <PUBLIC_MASTER_DNS>:8080 to access the browser.
 In the browser, navigate to a gene (ie. TP53, chr17-chr17:7,510,400-7,533,590) with exome data to view results.
 
 
-Running Mango Notebook on EMR
---------------------------------
+Running Mango Notebook on EMR with Docker
+-----------------------------------------
 
-To run Mango Notebook on EMR, run the run-notebook script:
+To run Mango Notebook on EMR on top of Docker, run the run-notebook script:
 
 .. code:: bash
 
@@ -161,16 +162,16 @@ You can then reference the file through the following code in Mango notebook:
 Running Mango Standalone
 ========================
 
-This section explains how to run the Mango browser and the Mango notebook without Docker.
+This section explains how to run the Mango browser and the Mango notebook without Docker on EMR.
 
 Creating a Cluster
 ------------------
 
-Through the aws command line, create a new cluster:
+Through the AWS command line, create a new cluster:
 
 .. code:: bash
 
-  VERSION=0.0.1
+  VERSION=0.0.2
 
   aws emr create-cluster
   --release-label emr-5.18.0 \
@@ -185,6 +186,8 @@ Through the aws command line, create a new cluster:
   --log-uri s3://<your-s3-bucket>/emr-logs/ \
   --bootstrap-actions \
   Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-dist-emr5.sh",Args=[$VERSION]
+
+Where $VERSION specifies the Mango version available in the `Maven central repository <https://search.maven.org/search?q=g:org.bdgenomics.mango>`__.
 
 The bootstrap action will download Mango distribution code, and an example notebook file for the Mango notebook will
 be available at /home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb.
@@ -209,7 +212,7 @@ Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
-  ./mango-distribution-X.X.X/bin/mango-submit <SPARK_ARGS>  \
+  /home/hadoop//mango-distribution-${VERSION}/bin/mango-submit <SPARK_ARGS>  \
     --packages net.fnothaft:jsr203-s3a:0.0.2 \
     -- /<absolute_local_path_to_reference_file>/hg19.2bit \
     -genes http://www.biodalliance.org/datasets/ensGene.bb \
@@ -235,8 +238,8 @@ To run Mango Notebook on EMR, run the mango-notebook script:
   EXTRA_CLASSPATH=/usr/lib/hadoop-lzo/lib/*:/usr/lib/hadoop/hadoop-aws.jar:/usr/share/aws/aws-java-sdk/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/java/Hive-JSON-Serde/hive-openx-serde.jar:/usr/share/aws/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:/usr/share/aws/emr/s3select/lib/emr-s3-select-spark-connector.jar
 
 
-  ./mango-distribution-${VERSION}/bin/mango-notebook \
-        --packages net.fnothaft:jsr203-s3a:0.0.2 \  # required for reading from s3/s3a
+  /home/hadoop/mango-distribution-${VERSION}/bin/mango-notebook \
+        --packages net.fnothaft:jsr203-s3a:0.0.2 \
   	    --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
         --conf fs.s3a.connection.maximum=50000 \
         --conf spark.driver.extraClassPath=file:////home/hadoop/.ivy2/jars/net.fnothaft_jsr203-s3a-0.0.2.jar:${EXTRA_CLASSPATH} \
