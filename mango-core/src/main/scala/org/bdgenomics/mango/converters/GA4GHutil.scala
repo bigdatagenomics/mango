@@ -56,19 +56,27 @@ object GA4GHutil {
    * Converts alignmentRecordRDD to GA4GHReadsResponse string
    *
    * @param alignmentRecordRDD rdd to convert
+   * @param multipleGroupNames Boolean determining whether to map group names separately
    * @return Map GA4GHReadsResponse json strings for each sample in RDD
    */
-  def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD): java.util.Map[String, String] = {
+  def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD,
+                               multipleGroupNames: Boolean = false): java.util.Map[String, String] = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
 
     val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
     // Group by ReadGroupID, which is set in bdg convert to alignmentRecord's getRecordGroupName(), if it exists, or "1"
     val results: Map[String, ga4gh.ReadServiceOuterClass.SearchReadsResponse] =
-      gaReads.groupBy(r => r.getReadGroupId).map(sampleReads =>
-        (sampleReads._1,
+      if (multipleGroupNames) {
+        gaReads.groupBy(r => r.getReadGroupId).map(sampleReads =>
+          (sampleReads._1,
+            ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
+            .addAllAlignments(sampleReads._2.toList.asJava).build()))
+      } else {
+        Map(("1",
           ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
-          .addAllAlignments(sampleReads._2.toList.asJava).build()))
+          .addAllAlignments(gaReads.toList.asJava).build()))
+      }
 
     // convert results to json strings for each readGroupName
     val jsonMap = results.map(r => (r._1, com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(r._2)))

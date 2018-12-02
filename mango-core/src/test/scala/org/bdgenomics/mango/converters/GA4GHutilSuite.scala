@@ -34,7 +34,29 @@ class GA4GHutilSuite extends MangoFunSuite {
 
     // did the converters correctly pull the recordGroupMap as the id?
     val recordGroupName = rrdd.recordGroups.recordGroupMap.keys.head
-    val converted = GA4GHutil.alignmentRecordRDDtoJSON(rrdd).get(recordGroupName)
+    val converted = GA4GHutil.alignmentRecordRDDtoJSON(rrdd, multipleGroupNames = true).get(recordGroupName)
+
+    val json = converted.replaceAll("\\s", "")
+
+    val builder = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
+
+    com.google.protobuf.util.JsonFormat.parser().merge(json,
+      builder)
+
+    val response = builder.build()
+
+    assert(response.getAlignmentsCount == collected.length)
+  }
+
+  sparkTest("create JSON from AlignmentRecordRDD  with 1 sample") {
+    val inputPath = resourcePath("small.1.sam")
+    val rrdd: AlignmentRecordRDD = sc.loadAlignments(inputPath)
+
+    val collected = rrdd.rdd.collect()
+
+    // did the converters correctly pull the recordGroupMap as the id?
+    val recordGroupName = rrdd.recordGroups.recordGroupMap.keys.head
+    val converted = GA4GHutil.alignmentRecordRDDtoJSON(rrdd, multipleGroupNames = false).get("1")
 
     val json = converted.replaceAll("\\s", "")
 
@@ -54,7 +76,7 @@ class GA4GHutilSuite extends MangoFunSuite {
     val samPaths = globPath(inputPath, ".sam")
     val rrdd: AlignmentRecordRDD = sc.loadAlignments(samPaths)
 
-    assert(GA4GHutil.alignmentRecordRDDtoJSON(rrdd).size == 2)
+    assert(GA4GHutil.alignmentRecordRDDtoJSON(rrdd, multipleGroupNames = true).size == 2)
   }
 
   sparkTest("create JSON with genotypes from VCF using genotypeRDD") {
