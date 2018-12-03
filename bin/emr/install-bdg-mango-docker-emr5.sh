@@ -14,14 +14,14 @@ then
   IS_MASTER=true
 fi
 
+sudo yum install -y docker
+sudo service docker start
+sudo usermod -a -G docker hadoop
+
+# pull image
+sudo docker pull quay.io/ucsc_cgl/mango:latest
+
 if [ "$IS_MASTER" = true ]; then
-  sudo yum install -y docker
-  sudo service docker start
-  sudo usermod -a -G docker hadoop
-
-  # pull image
-  sudo docker pull quay.io/ucsc_cgl/mango:latest
-
   mkdir -p /home/hadoop/mango-scripts
 
   # Download the EMR script for Mango Browser
@@ -33,5 +33,8 @@ if [ "$IS_MASTER" = true ]; then
   chmod u+x /home/hadoop/mango-scripts/run-notebook.sh
 
 fi
+
+# update python to 3.5
+sudo yum -y install python35
 
 echo "Mango Docker bootstrap action finished"

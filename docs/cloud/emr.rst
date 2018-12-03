@@ -145,8 +145,8 @@ Note: It will take a couple minutes on startup for the Docker configuration to c
 
 Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal. An example notebook for EMR can be found at /opt/cgl-docker-lib/mango/example-files/notebooks/aws-1000genomes.ipynb.
 
-Accessing files in the Mango notebookfrom HDFS
-----------------------------------------------
+Accessing files in the Mango notebook from HDFS
+-----------------------------------------------
 Mango notebook and Mango browser can also access files from HDFS on EMR. To do so, first put the files in HDFS:
 
 .. code:: bash

@@ -140,7 +140,7 @@ class AlignmentSummary(object):
         return self.indelDistribution
 
 
-    def viewPileup(self, contig, start, end, reference = 'hg19', label = "Reads", showPlot = True):
+    def viewPileup(self, contig, start, end, reference = 'hg19', label = "Reads", multipleGroupNames = False, showPlot = True):
         """
         Visualizes a portion of this AlignmentRDD in a scrollable pileup widget
 
@@ -150,6 +150,8 @@ class AlignmentSummary(object):
             :param end: end position of locus to view
             :param reference: genome build. Default is hg19
             :param label: name of alignment track
+            :param multipleGroupName: determines whether to different show tracks for each group name.
+            If false, coalesces into one track.
             :param showPlot: Disables widget, used for testing. Default is true.
 
         Returns:
@@ -162,7 +164,8 @@ class AlignmentSummary(object):
                                                                    & (r.start < end) & (r.end > start) & (r.readMapped)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
-        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordRDDtoJSON(filtered._jvmRdd)
+        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordRDDtoJSON(filtered._jvmRdd,
+                                                                                                   multipleGroupNames)
 
         # visualize
         if (showPlot):
@@ -170,9 +173,12 @@ class AlignmentSummary(object):
             tracks = []
             # iterate through all group names and make a track for each.
             for groupName in json_map:
+                # set label if only one track. Otherwise, set to group names.
+                thisLabel = groupName if multipleGroupNames else label
+
                 # create new track for this recordGroupName. files with unspecified recordGroup name
                 # have a default label of "1"
-                track=Track(viz="pileup", label=groupName, source=pileup.sources.GA4GHAlignmentJson(json_map[groupName]))
+                track=Track(viz="pileup", label=thisLabel, source=pileup.sources.GA4GHAlignmentJson(json_map[groupName]))
                 tracks.append(track)
 
             locus="%s:%i-%i" % (contig, start, end)
