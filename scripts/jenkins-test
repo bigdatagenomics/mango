@@ -184,7 +184,7 @@ then
     for python in ${pythons[*]}
     do
         uuid=$(uuidgen)
-        conda create -q -n mango-build-${uuid} python=${python} anaconda
+        conda create -q -n mango-build-${uuid} python=${python}
         source activate mango-build-${uuid}
 
         # install npm and node in the venv for mango-viz
@@ -244,8 +244,6 @@ then
         # if mango-notebook fails, then trying to kill the process will fail
         if kill $! ; then
             echo "Mango Notebook Succeeded"
-            # kill jupyter notebook
-            pkill -f jupyter-notebook
         else
             echo "Mango Notebook failed with logs:"
             cat ${MANGO_NOTEBOOK_LOGS}
