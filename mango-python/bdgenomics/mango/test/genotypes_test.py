@@ -54,9 +54,10 @@ class GenotypesTest(SparkTestCase):
 
         genotypes = ac.loadGenotypes(testFile)
         _, data =  HetHomRatioDistribution(self.ss, genotypes, sample=1.0).plot(testMode= True)
-        expected = [5.0, 0.6, 0.14, 0.17, 1.67]
+        expected = sorted([5.0, 0.6, 0.14, 0.17, 1.67])
+        sorted_data = sorted(data)
 
-        assert( expected == [ round(x,2) for x in data ])
+        assert( expected == [ round(x,2) for x in sorted_data ])
 
     def test_GenotypeCallRatesDistribution(self):
         ac = ADAMContext(self.ss)
@@ -64,9 +65,10 @@ class GenotypesTest(SparkTestCase):
 
         genotypes = ac.loadGenotypes(testFile)
         _, data =  GenotypeCallRatesDistribution(self.ss, genotypes, sample=1.0).plot(testMode= True)
-        expected = [0.95, 0.88, 0.89, 0.94, 0.93, 0.90]
+        expected = sorted([0.95, 0.88, 0.89, 0.94, 0.93, 0.90])
+        sorted_data = sorted(data)
 
-        assert( expected == [ round(x,2) for x in data] )
+        assert( expected == [ round(x,2) for x in sorted_data] )
 
 
     def test_GenotypeSummary(self):

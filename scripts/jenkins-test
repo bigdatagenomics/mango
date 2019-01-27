@@ -272,7 +272,7 @@ then
     else
         echo "Mango Browser failed with logs:"
         cat ${MANGO_BROWSER_LOGS}
-        z# clean up
+        # clean up
         rm -rf ${MANGO_TMP_DIR}
         exit 1
     fi
