@@ -15,6 +15,7 @@ project/boot/
 project/plugins/project/
 parquettest.sh
 *.css.map
+*.css
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
