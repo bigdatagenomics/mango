@@ -221,10 +221,6 @@ then
         make clean
         popd
 
-    	# deactivate and remove the conda env
-    	source deactivate
-    	conda remove -n mango-build-${uuid} --all
-
     	# copy python targets back
     	cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
 
