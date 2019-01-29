@@ -39,8 +39,8 @@ fi
 
 set -e
 
-# are we testing for spark 2.2.2? if so, we need to rewrite our poms first
-if [ ${SPARK_VERSION} == 2.2.2 ];
+# are we testing for spark 2.2.3? if so, we need to rewrite our poms first
+if [ ${SPARK_VERSION} == 2.2.3 ];
 then
 
     # shouldn't be able to move to spark 2 twice
@@ -129,7 +129,7 @@ find . -name "*.bak" -exec rm -f {} \;
 
 # run integration tests
 # prebuilt spark distributions are scala 2.11 for spark 2.x
-if [[ ${SPARK_VERSION} == 2.2.2 && ${SCALAVER} == 2.11 ]];
+if [[ ${SPARK_VERSION} == 2.2.3 && ${SCALAVER} == 2.11 ]];
 then
 
     # make a temp directory
@@ -184,7 +184,7 @@ then
     for python in ${pythons[*]}
     do
         uuid=$(uuidgen)
-        conda create -q -n mango-build-${uuid} python=${python} anaconda
+        conda create -q -n mango-build-${uuid} python=${python}
         source activate mango-build-${uuid}
 
         # install npm and node in the venv for mango-viz
@@ -221,10 +221,6 @@ then
         make clean
         popd
 
-    	# deactivate and remove the conda env
-    	source deactivate
-    	conda remove -n mango-build-${uuid} --all
-
     	# copy python targets back
     	cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
 
@@ -244,8 +240,6 @@ then
         # if mango-notebook fails, then trying to kill the process will fail
         if kill $! ; then
             echo "Mango Notebook Succeeded"
-            # kill jupyter notebook
-            pkill -f jupyter-notebook
         else
             echo "Mango Notebook failed with logs:"
             cat ${MANGO_NOTEBOOK_LOGS}
@@ -274,7 +268,7 @@ then
     else
         echo "Mango Browser failed with logs:"
         cat ${MANGO_BROWSER_LOGS}
-        z# clean up
+        # clean up
         rm -rf ${MANGO_TMP_DIR}
         exit 1
     fi
