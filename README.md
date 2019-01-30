@@ -19,11 +19,10 @@ also provides Python API documentation for the Mango notebook.
 # Installation from distribution
 
 
-The Mango tools are published to Maven central. Corresponding python modules are published to pypi. [Readthedocs](https://bdg-mango.readthedocs.io/en/latest/installation/distribution.html) provides instructions on how to install the Mango tools from distribution code.
+The Mango tools are published to Maven central. Corresponding python modules are published to Pypi. [Readthedocs](https://bdg-mango.readthedocs.io/en/latest/installation/distribution.html) provides instructions on how to install the Mango tools from the most recent distribution.
 
 
-
-## Installation from Source
+# Installation from Source
 
 Instructions for running the Mango tools from source can be found at [readthedocs](https://bdg-mango.readthedocs.io/en/latest/installation/source.html#building-mango-from-source).
 
