@@ -279,6 +279,19 @@ then
         exit 1
     fi
 
+    # test genome builds
+    TEST_GENOME="anoGam1"
+    bash -xv ${PROJECT_ROOT}/bin/make_genome ${TEST_GENOME} ${MANGO_TMP_DIR}
+
+    unzip ${MANGO_TMP_DIR}/${TEST_GENOME}.genome -d ${MANGO_TMP_DIR}/${TEST_GENOME}
+
+    pushd ${MANGO_TMP_DIR}/${TEST_GENOME}
+    cat properties.txt
+    cat ${TEST_GENOME}.chrom.sizes
+    popd
+
+    rm -rf ${MANGO_TMP_DIR}/${TEST_GENOME}*
+
     # copy python targets back
     cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
 
