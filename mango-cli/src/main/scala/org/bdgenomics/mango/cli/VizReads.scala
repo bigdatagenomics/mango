@@ -25,9 +25,8 @@ import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ SequenceRecord, ReferencePosition, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.cli.util.Materializer
 import org.bdgenomics.mango.converters.{ SearchFeaturesRequestGA4GH, SearchVariantsRequestGA4GH, SearchReadsRequestGA4GH }
-import org.bdgenomics.mango.core.util.{ VizUtils, VizCacheIndicator }
+import org.bdgenomics.mango.core.util.{ Genome, GenomeConfig, VizUtils, VizCacheIndicator }
 import org.bdgenomics.mango.filters._
-import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.mango.models._
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
@@ -72,20 +71,19 @@ object VizReads extends BDGCommandCompanion with Logging {
   val commandDescription: String = "Genomic visualization for ADAM"
   implicit val formats = net.liftweb.json.DefaultFormats
 
+  val GENES_REQUEST = "REFSEQ_REQUEST" // key for genes request from the loaded genome
+
   var sc: SparkContext = null
   var server: org.eclipse.jetty.server.Server = null
-  var globalDict: SequenceDictionary = null
 
   // Structures storing data types. All but reference is optional
-  var twoBitFile: String = null
+  var genome: Genome = null
+
   // holds coverage paths
   var coveragePaths: Array[String] = Array()
   var materializer: Materializer = null
 
   var cacheSize: Int = 1000
-
-  // Gene URL
-  var genes: Option[String] = None
 
   /**
    * Caching information for frontend
@@ -184,15 +182,9 @@ object VizReads extends BDGCommandCompanion with Logging {
 }
 
 class VizReadsArgs extends Args4jBase with ParquetArgs {
-  @Argument(required = true, metaVar = "reference", usage = "The reference file to view, required", index = 0)
-  var referencePath: String = null
 
-  // TODO remove this
-  @Argument(required = true, metaVar = "chromsizes", usage = "Tab delimited file of chromosome sizes, required", index = 1)
-  var chromSizesPath: String = null
-
-  @Args4jOption(required = false, name = "-genes", usage = "Gene URL.")
-  var genePath: String = null
+  @Argument(required = true, metaVar = "genome", usage = "Path to compressed .genome file. To build a new genome file, run bin/make_genome.", index = 0)
+  var genomePath: String = null
 
   @Args4jOption(required = false, name = "-reads", usage = "A list of reads files to view, separated by commas (,)")
   var readsPaths: String = null
@@ -252,10 +244,10 @@ class VizServlet extends ScalatraServlet {
     contentType = "text/html"
     val templateEngine = new TemplateEngine
     // set initial referenceRegion so it is defined. pick first chromosome to view
-    val firstChr = VizReads.globalDict.records.head.name
+    val firstChr = VizReads.genome.chromSizes.records.head.name
     session("referenceRegion") = ReferenceRegion(firstChr, 1, 100)
     templateEngine.layout("/WEB-INF/layouts/overall.ssp",
-      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
+      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.genome.chromSizes),
         "regions" -> VizReads.formatClickableRegions(VizReads.prefetchedRegions)))
   }
 
@@ -272,7 +264,7 @@ class VizServlet extends ScalatraServlet {
       session("referenceRegion")
     } catch {
       case e: Exception =>
-        val firstChr = VizReads.globalDict.records.head.name
+        val firstChr = VizReads.genome.chromSizes.records.head.name
         session("referenceRegion") = ReferenceRegion(firstChr, 0, 100)
     }
 
@@ -293,7 +285,6 @@ class VizServlet extends ScalatraServlet {
 
     val featureSamples = try {
       Some(VizReads.materializer.getFeatures().get.getFiles.map(r => {
-        println("file in featureSamples", r)
         VizReads.coveragePaths.foreach(println)
         (LazyMaterialization.filterKeyFromFile(r), VizReads.coveragePaths.contains(r))
       }))
@@ -302,9 +293,9 @@ class VizServlet extends ScalatraServlet {
     }
 
     templateEngine.layout("/WEB-INF/layouts/browser.ssp",
-      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.globalDict),
-        "twoBitUrl" -> VizReads.twoBitFile,
-        "genes" -> VizReads.genes,
+      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.genome.chromSizes),
+        "twoBitUrl" -> VizReads.genome.twoBitPath,
+        "genes" -> (if (VizReads.genome.genes.isDefined) Some(VizReads.GENES_REQUEST) else None),
         "reads" -> readsSamples,
         "variants" -> variantSamples,
         "features" -> featureSamples,
@@ -315,7 +306,7 @@ class VizServlet extends ScalatraServlet {
 
   // used in browser.ssp to set contig list for wheel
   get("/sequenceDictionary") {
-    Ok(write(VizReads.globalDict.records))
+    Ok(write(VizReads.genome.chromSizes.records))
   }
 
   // post command for genome reads.
@@ -330,11 +321,11 @@ class VizServlet extends ScalatraServlet {
           VizReads.errors.notFound("ReadsMaterialization")
         } else {
           val viewRegion = ReferenceRegion(searchReadsRequest.referenceId, searchReadsRequest.start.toLong,
-            VizUtils.getEnd(searchReadsRequest.end.toLong, VizReads.globalDict(searchReadsRequest.referenceId)))
+            VizUtils.getEnd(searchReadsRequest.end.toLong, VizReads.genome.chromSizes(searchReadsRequest.referenceId)))
           val key: String = searchReadsRequest.readGroupIds(0) // there will never be more than 1 readGroup for the browser
           contentType = "json"
 
-          val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+          val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
           if (dictOpt.isDefined) {
             var results: Option[String] = None
             // region was already collected, grab from cache
@@ -377,18 +368,18 @@ class VizServlet extends ScalatraServlet {
           VizReads.errors.notFound("VariantContextMaterialization")
         else {
           val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName, searchVariantsRequest.start,
-            VizUtils.getEnd(searchVariantsRequest.end, VizReads.globalDict(searchVariantsRequest.referenceName)))
+            VizUtils.getEnd(searchVariantsRequest.end, VizReads.genome.chromSizes(searchVariantsRequest.referenceName)))
 
           val key: String = searchVariantsRequest.variantSetId
           contentType = "json"
 
           // if region is in bounds of reference, return data
-          val dictOpt = VizReads.globalDict(viewRegion.referenceName)
+          val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
           if (dictOpt.isDefined) {
             var results: Option[String] = None
             val binning: Int =
               try {
-                params("binning").toInt // TODO
+                params("binning").toInt
               } catch {
                 case e: Exception => 1
               }
@@ -428,41 +419,55 @@ class VizServlet extends ScalatraServlet {
         val searchFeaturesRequest: SearchFeaturesRequestGA4GH =
           net.liftweb.json.parse(request.body).extract[SearchFeaturesRequestGA4GH]
 
-        if (!VizReads.materializer.featuresExist)
-          VizReads.errors.notFound("FeaturesMaterialization")
-        else {
-          val viewRegion = ReferenceRegion(searchFeaturesRequest.referenceName, searchFeaturesRequest.start,
-            VizUtils.getEnd(searchFeaturesRequest.end, VizReads.globalDict(searchFeaturesRequest.referenceName)))
-          val key: String = searchFeaturesRequest.featureSetId
-          contentType = "json"
+        val key: String = searchFeaturesRequest.featureSetId
 
-          // if region is in bounds of reference, return data
-          val dictOpt = VizReads.globalDict(viewRegion.referenceName)
-          if (dictOpt.isDefined) {
-            var results: Option[String] = None
-            val binning: Int =
-              try {
-                params("binning").toInt // TODO
-              } catch {
-                case e: Exception => 1
+        val viewRegion = ReferenceRegion(searchFeaturesRequest.referenceName, searchFeaturesRequest.start,
+          VizUtils.getEnd(searchFeaturesRequest.end, VizReads.genome.chromSizes(searchFeaturesRequest.referenceName)))
+
+        // if this is a genes request, return genes
+        if (key == VizReads.GENES_REQUEST && VizReads.genome.genes.isDefined) {
+
+          val genes = VizReads.genome.genes.get.get(viewRegion).toArray.map(_._2)
+
+          Ok(FeatureMaterialization.stringify(genes))
+
+          // otherwise, process features
+        } else {
+
+          if (!VizReads.materializer.featuresExist)
+            VizReads.errors.notFound("FeaturesMaterialization")
+          else {
+
+            contentType = "json"
+
+            // if region is in bounds of reference, return data
+            val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
+            if (dictOpt.isDefined) {
+              var results: Option[String] = None
+              val binning: Int =
+                try {
+                  params("binning").toInt
+                } catch {
+                  case e: Exception => 1
+                }
+              VizReads.featuresWait.synchronized {
+                // region was not already collected, reset cache
+                if (!VizReads.featuresIndicator.region.contains(viewRegion) || binning != VizReads.featuresIndicator.resolution) {
+                  val expanded = VizReads.expand(viewRegion)
+                  VizReads.featuresCache = VizReads.materializer.getFeatures().get.getJson(expanded)
+                  VizReads.featuresIndicator = VizCacheIndicator(expanded, binning)
+                }
               }
-            VizReads.featuresWait.synchronized {
-              // region was not already collected, reset cache
-              if (!VizReads.featuresIndicator.region.contains(viewRegion) || binning != VizReads.featuresIndicator.resolution) {
-                val expanded = VizReads.expand(viewRegion)
-                VizReads.featuresCache = VizReads.materializer.getFeatures().get.getJson(expanded)
-                VizReads.featuresIndicator = VizCacheIndicator(expanded, binning)
-              }
-            }
-            // filter data overlapping viewRegion and stringify
-            val dataForKey = VizReads.featuresCache.get(key)
-            val data = dataForKey.getOrElse(Array.empty)
-              .filter(r => ReferenceRegion(r.getReferenceName, r.getStart, r.getEnd).overlaps(viewRegion))
-            results = Some(VizReads.materializer.getFeatures().get.stringify(data))
-            if (results.isDefined) {
-              Ok(results.get)
-            } else VizReads.errors.noContent(viewRegion)
-          } else VizReads.errors.outOfBounds
+              // filter data overlapping viewRegion and stringify
+              val dataForKey = VizReads.featuresCache.get(key)
+              val data = dataForKey.getOrElse(Array.empty)
+                .filter(r => ReferenceRegion(r.getReferenceName, r.getStart, r.getEnd).overlaps(viewRegion))
+              results = Some(VizReads.materializer.getFeatures().get.stringify(data))
+              if (results.isDefined) {
+                Ok(results.get)
+              } else VizReads.errors.noContent(viewRegion)
+            } else VizReads.errors.outOfBounds
+          }
         }
       }
     } catch { // catch all for errors
@@ -472,6 +477,7 @@ class VizServlet extends ScalatraServlet {
       }
     }
   }
+
 }
 
 class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizReadsArgs] with Logging {
@@ -480,11 +486,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   override def run(sc: SparkContext): Unit = {
     VizReads.sc = sc
 
-    // initialize reference TODO clean up function
-    assignChromosomeSizes(args.chromSizesPath)
+    VizReads.genome = GenomeConfig.loadZippedGenome(args.genomePath)
 
     VizReads.cacheSize = args.cacheSize
-    VizReads.twoBitFile = args.referencePath
 
     // set materializer
     VizReads.materializer = Materializer(Seq(initAlignments(sc, args.prefetchSize),
@@ -500,14 +504,9 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     // run discovery mode if it is specified in the startup script
     if (!preload.isEmpty) {
-      val preloaded = VizReads.globalDict.records.filter(r => preload.contains(r.name))
+      val preloaded = VizReads.genome.chromSizes.records.filter(r => preload.contains(r.name))
         .map(r => ReferenceRegion(r.name, 0, r.length))
       preprocess(preloaded)
-    }
-
-    // check whether genePath was supplied
-    if (args.genePath != null) {
-      VizReads.genes = Some(args.genePath)
     }
 
     // initialize binned parquet by doing a small query to force warm-up
@@ -526,22 +525,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   }
 
   /*
-   * Initialize sequence dictionary from chromosome files
-   * @param chromSizesFiles String of chrom sizes location
-   */
-  def assignChromosomeSizes(chromSizesFile: String) = {
-
-    // parse records from file
-    val sequenceRecords =
-      Source.fromFile(chromSizesFile).getLines.map(line => {
-        SequenceRecord(line.split("\t")(0), line.split("\t")(1).toLong)
-      })
-
-    // load sequence records into globalDict
-    VizReads.globalDict = new SequenceDictionary(sequenceRecords.toVector)
-  }
-
-  /*
  * Initialize loaded alignment files
  */
   def initAlignments(sc: SparkContext, prefetch: Int): Option[AlignmentRecordMaterialization] = {
@@ -551,7 +534,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (readsPaths.nonEmpty) {
         object readsWait
         VizReads.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
-        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.globalDict, args.repartition, Some(prefetch)))
+        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.genome.chromSizes, args.repartition, Some(prefetch)))
       } else None
     } else None
   }
@@ -567,7 +550,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (variantsPaths.nonEmpty) {
         object variantsWait
         VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
-        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.globalDict, args.repartition, Some(prefetch)))
+        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.genome.chromSizes, args.repartition, Some(prefetch)))
       } else None
     } else None
   }
@@ -590,7 +573,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
     if (paths.length > 0) {
       object featuresWait
       VizReads.syncObject += (FeatureMaterialization.name -> featuresWait)
-      Some(new FeatureMaterialization(sc, paths.map(r => r._1).toList, VizReads.globalDict, args.repartition, Some(prefetch)))
+      Some(new FeatureMaterialization(sc, paths.map(r => r._1).toList, VizReads.genome.chromSizes, args.repartition, Some(prefetch)))
     } else None
   }
 
@@ -602,7 +585,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
    */
   def discoverFrequencies(sc: SparkContext): List[(ReferenceRegion, Double)] = {
 
-    val discovery = Discovery(VizReads.globalDict)
+    val discovery = Discovery(VizReads.genome.chromSizes)
     var regions: List[(ReferenceRegion, Double)] = List()
 
     // parse all materialization structures to calculate region frequencies

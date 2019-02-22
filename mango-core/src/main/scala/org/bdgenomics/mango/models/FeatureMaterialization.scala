@@ -93,21 +93,29 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * @param data An array of GA4GH Variants
    * @return JSONified data
    */
-  def stringify = (data: Array[ga4gh.SequenceAnnotations.Feature]) => {
-
-    // write message
-    val message = ga4gh.SequenceAnnotationServiceOuterClass
-      .SearchFeaturesResponse.newBuilder().addAllFeatures(data.toList)
-      .build()
-
-    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(message)
-  }
+  def stringify = (data: Array[ga4gh.SequenceAnnotations.Feature]) => FeatureMaterialization.stringify(data)
 
 }
 
 object FeatureMaterialization {
 
   val name = "Feature"
+
+  /**
+   * Formats raw data from GA4GH Variants Response to JSON.
+   * @param data An array of GA4GH Variants
+   * @return JSONified data
+   */
+  def stringify(data: Array[ga4gh.SequenceAnnotations.Feature]): String = {
+
+    // write message
+    val message = ga4gh.SequenceAnnotationServiceOuterClass
+      .SearchFeaturesResponse.newBuilder().addAllFeatures(data.toList)
+      .build()
+
+    // do not call includingDefaultValueFields, because this includes all possible attribute types
+    com.google.protobuf.util.JsonFormat.printer().print(message)
+  }
 
   /**
    * Loads feature data from bam, sam and ADAM file formats

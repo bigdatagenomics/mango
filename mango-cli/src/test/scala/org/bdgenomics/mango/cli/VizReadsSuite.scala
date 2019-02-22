@@ -29,11 +29,10 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   implicit val formats = DefaultFormats
 
   val bamFile = resourcePath("mouse_chrM.bam")
-  val referenceFile = resourcePath("mm10_chrM.fa")
+  val genomeFile = resourcePath("mm10.genome")
   val vcfFile = resourcePath("truetest.genotypes.vcf")
   val featureFile = resourcePath("smalltest.bed")
   val coverageFile = resourcePath("mouse_chrM.coverage.bed")
-  val chromSizesFile = resourcePath("hg19.chrom.sizes")
 
   // exampleFiles
   val chr17bam = examplePath("chr17.7500000-7515000.sam")
@@ -47,8 +46,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   val args = new VizReadsArgs()
   args.readsPaths = bamFile
-  args.chromSizesPath = chromSizesFile
-  args.referencePath = referenceFile
+  args.genomePath = genomeFile
   args.variantsPaths = vcfFile
   args.featurePaths = featureFile
   args.coveragePaths = coverageFile
@@ -62,8 +60,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     addServlet(classOf[VizServlet], "/*")
     val args = new VizReadsArgs()
     args.discoveryMode = true
-    args.referencePath = referenceFile
-    args.chromSizesPath = chromSizesFile
+    args.genomePath = genomeFile
     args.featurePaths = featureFile
     args.variantsPaths = vcfFile
     args.coveragePaths = coverageFile
@@ -102,8 +99,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   sparkTest("Should throw error when reads do not exist") {
     val newArgs = new VizReadsArgs()
-    newArgs.referencePath = referenceFile
-    newArgs.chromSizesPath = chromSizesFile
+    newArgs.genomePath = genomeFile
     newArgs.testMode = true
     implicit val vizReads = runVizReads(newArgs)
 
@@ -137,10 +133,9 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   /** Variants tests **/
   sparkTest("/variants/:key/:ref") {
     val args = new VizReadsArgs()
-    args.referencePath = referenceFile
+    args.genomePath = genomeFile
     args.variantsPaths = vcfFile
     args.testMode = true
-    args.chromSizesPath = chromSizesFile
 
     implicit val vizReads = runVizReads(args)
 
@@ -157,22 +152,6 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       assert(json.get(0).getCallsCount == 3)
     }
   }
-
-  //  sparkTest("does not return genotypes when binned") {
-  //    implicit val VizReads = runVizReads(args)
-  //
-  //    val body = SearchVariantsRequestGA4GH(vcfKey, "null", 200, "chrM", Array(), 0, 100).toByteArray()
-  //
-  //    post("/variants/search", body, requestHeader) {
-  //      assert(status == Ok("").status.code)
-  //
-  //      val json = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.parseFrom(response.getContentBytes())
-  //        .getVariantsList
-  //
-  //      assert(json.size == 1)
-  //      assert(json.get(0).getCallsCount == 0)
-  //    }
-  //  }
 
   sparkTest("should not return variants with invalid key") {
     implicit val VizReads = runVizReads(args)
@@ -191,8 +170,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   sparkTest("Should throw error when variants do not exist") {
     val newArgs = new VizReadsArgs()
-    newArgs.referencePath = referenceFile
-    newArgs.chromSizesPath = chromSizesFile
+    newArgs.genomePath = genomeFile
     newArgs.testMode = true
     implicit val VizReads = runVizReads(newArgs)
 
@@ -235,8 +213,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   sparkTest("Should throw error when features do not exist") {
     val newArgs = new VizReadsArgs()
-    newArgs.referencePath = referenceFile
-    newArgs.chromSizesPath = chromSizesFile
+    newArgs.genomePath = genomeFile
     newArgs.testMode = true
 
     implicit val VizReads = runVizReads(newArgs)
@@ -261,9 +238,8 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   /** Coverage Tests **/
   sparkTest("gets coverage from feature endpoint") {
     val newArgs = new VizReadsArgs()
-    newArgs.referencePath = referenceFile
+    newArgs.genomePath = genomeFile
     newArgs.coveragePaths = coverageFile
-    newArgs.chromSizesPath = chromSizesFile
     newArgs.testMode = true
 
     implicit val vizReads = runVizReads(newArgs)
@@ -295,8 +271,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   sparkTest("Should return coverage and features") {
     val newArgs = new VizReadsArgs()
-    newArgs.referencePath = referenceFile
-    newArgs.chromSizesPath = chromSizesFile
+    newArgs.genomePath = genomeFile
     newArgs.coveragePaths = coverageFile
     newArgs.featurePaths = featureFile
     newArgs.testMode = true
@@ -324,7 +299,21 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   }
 
-  sparkTest("Coverage should throw out of bounds error on invalid regerence") {
+  sparkTest("gets genes") {
+    implicit val vizReads = runVizReads(args)
+
+    val featureBody = SearchFeaturesRequestGA4GH(VizReads.GENES_REQUEST, "null", 200, "chr1", 4773199, 4783199).toByteArray()
+
+    post("/features/search", featureBody, requestHeader) {
+      assert(status == Ok("").status.code)
+      val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
+        .getFeaturesList
+
+      assert(json.size == 3)
+    }
+  }
+
+  sparkTest("Coverage should throw out of bounds error on invalid reference") {
     implicit val VizReads = runVizReads(args)
 
     val coverageBody = SearchFeaturesRequestGA4GH(coverageKey, "null", 200, "fakeChr", 0, 1200).toByteArray()
@@ -339,8 +328,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
     val args = new VizReadsArgs()
     args.readsPaths = chr17bam
-    args.referencePath = chr17Reference
-    args.chromSizesPath = chromSizesFile
+    args.genomePath = genomeFile
     args.variantsPaths = chr17Vcf
     args.testMode = true
 
