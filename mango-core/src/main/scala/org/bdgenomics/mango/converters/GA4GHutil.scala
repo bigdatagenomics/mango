@@ -20,8 +20,15 @@ package org.bdgenomics.mango.converters
 import javax.inject.Inject
 
 import com.google.inject._
+import ga4gh.ReadServiceOuterClass.SearchReadsResponse
 import ga4gh.Reads.ReadAlignment
+import ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
+import ga4gh.VariantServiceOuterClass.SearchVariantsResponse
 import net.codingwell.scalaguice.ScalaModule
+import net.liftweb.json.Extraction._
+import net.liftweb.json._
+import org.bdgenomics.adam.models.VariantContext
+import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
 import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD, VariantRDD }
 import org.bdgenomics.adam.rdd.feature.FeatureRDD
@@ -52,16 +59,101 @@ object GA4GHutil {
   val featureConverter: Converter[org.bdgenomics.formats.avro.Feature, ga4gh.SequenceAnnotations.Feature] = injector
     .getInstance(Key.get(new TypeLiteral[Converter[org.bdgenomics.formats.avro.Feature, ga4gh.SequenceAnnotations.Feature]]() {}))
 
+  val logger = LoggerFactory.getLogger("GA4GHutil")
+
+  /**
+   * Converts avro Alignment Record to GA4GH Read Alignment
+   *
+   * @param alignmentRecord Alignment Record
+   * @return GA4GH Read Alignment
+   */
+  def alignmentRecordToGAReadAlignment(alignmentRecord: AlignmentRecord): ReadAlignment = {
+    alignmentConverter.convert(alignmentRecord, ConversionStringency.LENIENT, logger)
+  }
+
+  /**
+   * Converts VariantContext to GA4GH Variant
+   *
+   * @param variantContext variant context
+   * @return GA4GH Variant
+   */
+  def variantContextToGAVariant(variantContext: VariantContext) = {
+    ga4gh.Variants.Variant.newBuilder(variantConverter.convert(variantContext.variant.variant, ConversionStringency.LENIENT, logger))
+      .addAllCalls(variantContext.genotypes.map((g) => genotypeConverter.convert(g, ConversionStringency.LENIENT, logger)).asJava)
+      .build()
+  }
+
+  /**
+   * Converts avro features to GA4GH features
+   *
+   * @param feature avro Features
+   * @return GA4GH Feature
+   */
+  def featureToGAFeature(feature: Feature): ga4gh.SequenceAnnotations.Feature = {
+    ga4gh.SequenceAnnotations.Feature
+      .newBuilder(featureConverter.convert(feature, ConversionStringency.LENIENT, logger)).build()
+  }
+
+  /**
+   * Converts a JSON formatted ga4gh.VariantServiceOuterClass.  in string form
+   * back into a SearchVariantsResponse.
+   *
+   * @param variantServiceString string of JSONified
+   * @return converted SearchVariantsResponse
+   */
+  def stringToVariantServiceResponse(variantServiceString: String): SearchVariantsResponse = {
+
+    val builder = ga4gh.VariantServiceOuterClass.SearchVariantsResponse.newBuilder()
+
+    com.google.protobuf.util.JsonFormat.parser().merge(variantServiceString,
+      builder)
+
+    builder.build()
+  }
+
+  /**
+   * Converts JSON formatted ga4gh.ReadServiceOuterClass.SearchReadsResponse in string form
+   * back into a SearchReadsResponse.
+   *
+   * @param readsServiceString string of JSONified ga4gh.ReadServiceOuterClass.SearchReadsResponse
+   * @return converted SearchReadsResponse
+   */
+  def stringToSearchReadsResponse(readsServiceString: String): SearchReadsResponse = {
+
+    val builder = SearchReadsResponse.newBuilder()
+
+    com.google.protobuf.util.JsonFormat.parser().merge(readsServiceString,
+      builder)
+
+    builder.build()
+  }
+
+  /**
+   * Converts a JSON formatted ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
+   * in string form back into a SearchFeaturesResponse.
+   *
+   * @param featureServiceString string of JSONified ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
+   * @return converted SearchFeaturesResponse
+   */
+  def stringToSearchFeaturesResponse(featureServiceString: String): SearchFeaturesResponse = {
+
+    val builder = SearchFeaturesResponse.newBuilder()
+
+    com.google.protobuf.util.JsonFormat.parser().merge(featureServiceString,
+      builder)
+
+    builder.build()
+  }
+
   /**
    * Converts alignmentRecordRDD to GA4GHReadsResponse string
    *
    * @param alignmentRecordRDD rdd to convert
    * @param multipleGroupNames Boolean determining whether to map group names separately
-   * @return Map GA4GHReadsResponse json strings for each sample in RDD
+   * @return GA4GHReadsResponse json string
    */
   def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD,
                                multipleGroupNames: Boolean = false): java.util.Map[String, String] = {
-    val logger = LoggerFactory.getLogger("GA4GHutil")
 
     val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
@@ -90,12 +182,9 @@ object GA4GHutil {
    * @return GA4GHVariantResponse json string
    */
   def variantContextRDDtoJSON(variantContextRDD: VariantContextRDD): String = {
-    val logger = LoggerFactory.getLogger("GA4GHutil")
 
     val gaVariants: Array[ga4gh.Variants.Variant] = variantContextRDD.rdd.collect.map(a => {
-      ga4gh.Variants.Variant.newBuilder(variantConverter.convert(a.variant.variant, ConversionStringency.LENIENT, logger))
-        .addAllCalls(a.genotypes.map((g) => genotypeConverter.convert(g, ConversionStringency.LENIENT, logger)).asJava)
-        .build()
+      variantContextToGAVariant(a)
     })
 
     val result: ga4gh.VariantServiceOuterClass.SearchVariantsResponse = ga4gh.VariantServiceOuterClass
@@ -115,12 +204,8 @@ object GA4GHutil {
   }
 
   def featureRDDtoJSON(featureRDD: FeatureRDD): String = {
-    val logger = LoggerFactory.getLogger("GA4GHutil")
-    val gaFeatures: Array[ga4gh.SequenceAnnotations.Feature] = featureRDD.rdd.collect.map(a =>
-      {
-        ga4gh.SequenceAnnotations.Feature
-          .newBuilder(featureConverter.convert(a, ConversionStringency.LENIENT, logger)).build()
-      })
+
+    val gaFeatures: Array[ga4gh.SequenceAnnotations.Feature] = featureRDD.rdd.collect.map(a => featureToGAFeature(a))
 
     val result: ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
       .newBuilder().addAllFeatures(gaFeatures.toList.asJava).build()
@@ -147,4 +232,51 @@ object GA4GHutil {
     com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(result)
 
   }
+}
+
+case class SearchVariantsRequestGA4GH(variantSetId: String,
+                                      pageToken: String,
+                                      pageSize: Int,
+                                      referenceName: String,
+                                      callSetIds: Array[String],
+                                      start: Long,
+                                      end: Long) {
+
+  // converts object to JSON byte array. For testing POSTs.
+  def toByteArray(): Array[Byte] = {
+    implicit val formats = DefaultFormats
+    compactRender(decompose(this)).toCharArray.map(_.toByte)
+  }
+
+}
+
+case class SearchFeaturesRequestGA4GH(featureSetId: String,
+                                      pageToken: String,
+                                      pageSize: Int,
+                                      referenceName: String,
+                                      start: Long,
+                                      end: Long) {
+
+  // converts object to JSON byte array. For testing POSTs.
+  def toByteArray(): Array[Byte] = {
+    implicit val formats = DefaultFormats
+    compactRender(decompose(this)).toCharArray.map(_.toByte)
+  }
+
+}
+
+// see proto defintiion: https://github.com/ga4gh/ga4gh-schemas/blob/master/src/main/proto/ga4gh/read_service.proto#L117
+case class SearchReadsRequestGA4GH(pageToken: String,
+                                   pageSize: Int,
+                                   readGroupIds: Array[String],
+                                   referenceId: String,
+                                   start: Long,
+                                   end: Long) {
+
+  // converts object to JSON byte array. For testing POSTs.
+  def toByteArray(): Array[Byte] = {
+    implicit val formats = DefaultFormats
+    compactRender(decompose(this)).toCharArray.map(_.toByte)
+  }
+
 }

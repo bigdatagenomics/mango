@@ -32,18 +32,9 @@ class GA4GHutilSuite extends MangoFunSuite {
 
     val collected = rrdd.rdd.collect()
 
-    // did the converters correctly pull the recordGroupMap as the id?
-    val recordGroupName = rrdd.recordGroups.recordGroupMap.keys.head
-    val converted = GA4GHutil.alignmentRecordRDDtoJSON(rrdd, multipleGroupNames = true).get(recordGroupName)
+    val json = GA4GHutil.alignmentRecordRDDtoJSON(rrdd).get("1")
 
-    val json = converted.replaceAll("\\s", "")
-
-    val builder = ga4gh.ReadServiceOuterClass.SearchReadsResponse.newBuilder()
-
-    com.google.protobuf.util.JsonFormat.parser().merge(json,
-      builder)
-
-    val response = builder.build()
+    val response = GA4GHutil.stringToSearchReadsResponse(json)
 
     assert(response.getAlignmentsCount == collected.length)
   }
@@ -86,12 +77,7 @@ class GA4GHutilSuite extends MangoFunSuite {
 
     val json = GA4GHutil.genotypeRDDtoJSON(grdd)
 
-    val builder = ga4gh.VariantServiceOuterClass
-      .SearchVariantsResponse.newBuilder()
-
-    com.google.protobuf.util.JsonFormat.parser().merge(json,
-      builder)
-    val response = builder.build()
+    val response = GA4GHutil.stringToVariantServiceResponse(json)
 
     assert(response.getVariantsCount == collected.length)
   }
@@ -103,12 +89,7 @@ class GA4GHutilSuite extends MangoFunSuite {
 
     val json = GA4GHutil.variantRDDtoJSON(vrdd)
 
-    val builder = ga4gh.VariantServiceOuterClass
-      .SearchVariantsResponse.newBuilder()
-
-    com.google.protobuf.util.JsonFormat.parser().merge(json,
-      builder)
-    val response = builder.build()
+    val response = GA4GHutil.stringToVariantServiceResponse(json)
 
     assert(response.getVariantsCount == collected.length)
   }
@@ -118,17 +99,13 @@ class GA4GHutilSuite extends MangoFunSuite {
     val frdd: FeatureRDD = sc.loadBed(inputPath)
     val collected = frdd.rdd.collect()
 
-    val json = GA4GHutil.featureRDDtoJSON(frdd).replaceAll("\\s", "")
+    val json = GA4GHutil.featureRDDtoJSON(frdd)
 
-    val builder = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
-      .newBuilder()
-
-    com.google.protobuf.util.JsonFormat.parser().merge(json,
-      builder)
-    val response = builder.build()
+    val response = GA4GHutil.stringToSearchFeaturesResponse(json)
 
     assert(response.getFeaturesCount == collected.length)
 
   }
 
 }
+
