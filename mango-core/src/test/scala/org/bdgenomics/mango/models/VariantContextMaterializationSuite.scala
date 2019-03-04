@@ -81,20 +81,20 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     assert(results.length === 6)
   }
 
-  sparkTest("correctly reassigns contigName") {
+  sparkTest("correctly reassigns referenceName") {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data = new VariantContextMaterialization(sc, List(vcfFile1), sd)
 
     val variant = Variant.newBuilder()
-      .setContigName("20")
+      .setReferenceName("20")
       .setStart(1L)
       .setEnd(2L)
       .setAlternateAllele("A")
       .setReferenceAllele("G")
       .build()
     val json = GenotypeJson(variant, Array("NA12878"))
-    val newJson = data.setContigName(json, "chr20")
-    assert(newJson.variant.getContigName == "chr20")
+    val newJson = data.setReferenceName(json, "chr20")
+    assert(newJson.variant.getReferenceName == "chr20")
   }
 
   sparkTest("returns from file without genotypes") {

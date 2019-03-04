@@ -598,7 +598,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       VizReads.prefetchedRegions = discoverFrequencies(sc)
     }
 
-    val preload = Option(args.preload).getOrElse("").split(',').flatMap(r => LazyMaterialization.getContigPredicate(r))
+    val preload = Option(args.preload).getOrElse("").split(',').flatMap(r => LazyMaterialization.getReferencePredicate(r))
 
     // run discovery mode if it is specified in the startup script
     if (!preload.isEmpty) {

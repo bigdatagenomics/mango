@@ -29,9 +29,9 @@ import net.liftweb.json.Extraction._
 import net.liftweb.json._
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
-import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD, VariantRDD }
-import org.bdgenomics.adam.rdd.feature.FeatureRDD
+import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
+import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset, VariantDataset }
+import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.convert.ga4gh.Ga4ghModule
 import org.bdgenomics.convert.{ ConversionStringency, Converter }
 import org.bdgenomics.formats.avro.AlignmentRecord
@@ -41,7 +41,7 @@ import scala.collection.JavaConversions._
 import org.slf4j.LoggerFactory
 
 /*
- * Converts ADAM RDDs to json strings in GA4GH format.
+ * Converts ADAM datasets to json strings in GA4GH format.
  * See https://github.com/ga4gh/ga4gh-schemas.
  */
 object GA4GHutil {
@@ -146,16 +146,16 @@ object GA4GHutil {
   }
 
   /**
-   * Converts alignmentRecordRDD to GA4GHReadsResponse string
+   * Converts AlignmentRecordDataset to GA4GHReadsResponse string
    *
-   * @param alignmentRecordRDD rdd to convert
+   * @param alignmentRecordDataset dataset to convert
    * @param multipleGroupNames Boolean determining whether to map group names separately
    * @return GA4GHReadsResponse json string
    */
-  def alignmentRecordRDDtoJSON(alignmentRecordRDD: AlignmentRecordRDD,
-                               multipleGroupNames: Boolean = false): java.util.Map[String, String] = {
+  def alignmentRecordDatasetToJSON(alignmentRecordDataset: AlignmentRecordDataset,
+                                   multipleGroupNames: Boolean = false): java.util.Map[String, String] = {
 
-    val gaReads: Array[ReadAlignment] = alignmentRecordRDD.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
+    val gaReads: Array[ReadAlignment] = alignmentRecordDataset.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
     // Group by ReadGroupID, which is set in bdg convert to alignmentRecord's getRecordGroupName(), if it exists, or "1"
     val results: Map[String, ga4gh.ReadServiceOuterClass.SearchReadsResponse] =
@@ -176,14 +176,14 @@ object GA4GHutil {
   }
 
   /**
-   * Converts variantContextRDD to GA4GHVariantResponse
+   * Converts VariantContextDataset to GA4GHVariantResponse
    *
-   * @param variantContextRDD rdd to convert
+   * @param variantContextDataset dataset to convert
    * @return GA4GHVariantResponse json string
    */
-  def variantContextRDDtoJSON(variantContextRDD: VariantContextRDD): String = {
+  def variantContextDatasetToJSON(variantContextDataset: VariantContextDataset): String = {
 
-    val gaVariants: Array[ga4gh.Variants.Variant] = variantContextRDD.rdd.collect.map(a => {
+    val gaVariants: Array[ga4gh.Variants.Variant] = variantContextDataset.rdd.collect.map(a => {
       variantContextToGAVariant(a)
     })
 
@@ -194,18 +194,18 @@ object GA4GHutil {
   }
 
   /**
-   * Converts genotypeRDD to GA4GHVariantResponse
+   * Converts GenotypeDataset to GA4GHVariantResponse
    *
-   * @param genotypeRDD rdd to convert
+   * @param genotypeDataset dataset to convert
    * @return GA4GHVariantResponse json string
    */
-  def genotypeRDDtoJSON(genotypeRDD: GenotypeRDD): String = {
-    variantContextRDDtoJSON(genotypeRDD.toVariantContexts)
+  def genotypeDatasetToJSON(genotypeDataset: GenotypeDataset): String = {
+    variantContextDatasetToJSON(genotypeDataset.toVariantContexts)
   }
 
-  def featureRDDtoJSON(featureRDD: FeatureRDD): String = {
+  def featureDatasetToJSON(featureDataset: FeatureDataset): String = {
 
-    val gaFeatures: Array[ga4gh.SequenceAnnotations.Feature] = featureRDD.rdd.collect.map(a => featureToGAFeature(a))
+    val gaFeatures: Array[ga4gh.SequenceAnnotations.Feature] = featureDataset.rdd.collect.map(a => featureToGAFeature(a))
 
     val result: ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse = ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
       .newBuilder().addAllFeatures(gaFeatures.toList.asJava).build()
@@ -215,14 +215,14 @@ object GA4GHutil {
   }
 
   /**
-   * Converts variantRDD to GA4GHVariantResponse
+   * Converts VariantDataset to GA4GHVariantResponse
    *
-   * @param variantRDD rdd to convert
+   * @param variantDataset dataset to convert
    * @return GA4GHVariantResponse json string
    */
-  def variantRDDtoJSON(variantRDD: VariantRDD): String = {
+  def variantDatasetToJSON(variantDataset: VariantDataset): String = {
     val logger = LoggerFactory.getLogger("GA4GHutil")
-    val gaVariants: Array[ga4gh.Variants.Variant] = variantRDD.rdd.collect.map(a => {
+    val gaVariants: Array[ga4gh.Variants.Variant] = variantDataset.rdd.collect.map(a => {
       ga4gh.Variants.Variant.newBuilder(variantConverter.convert(a, ConversionStringency.LENIENT, logger))
         .build()
     })

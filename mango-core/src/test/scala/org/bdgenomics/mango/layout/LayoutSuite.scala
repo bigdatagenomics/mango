@@ -26,13 +26,13 @@ class LayoutSuite extends MangoFunSuite {
     val variant = Variant.newBuilder()
       .setStart(100L)
       .setEnd(101L)
-      .setContigName("chr1")
+      .setReferenceName("chr1")
       .setReferenceAllele("T")
       .setAlternateAllele("A")
       .build()
 
     val json = VariantJson(variant)
     assert(json.position == variant.getStart)
-    assert(json.contig == variant.getContigName)
+    assert(json.contig == variant.getReferenceName)
   }
 }

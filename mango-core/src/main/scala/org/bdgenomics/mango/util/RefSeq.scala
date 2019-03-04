@@ -45,7 +45,7 @@ object RefSeqFile {
         val tokens = nextLine.split("\t")
 
         val geneId = tokens(1)
-        val contig = tokens(2)
+        val referenceName = tokens(2)
         val strand = tokens(3)
         val start = tokens(4).toLong
         val end = tokens(5).toLong
@@ -79,7 +79,7 @@ object RefSeqFile {
           "blockSizes" -> blockSizes)
 
         val feature = Feature.newBuilder()
-          .setContigName(contig)
+          .setReferenceName(referenceName)
           .setStart(start)
           .setEnd(end)
           .setName(name)

@@ -63,15 +63,15 @@ class GA4GHConverterSuite extends FunSuite {
       .setCigar(cigar)
       .setSequence(sequence)
       .setReadNegativeStrand(false)
-      .setMapq(60)
+      .setMappingQuality(60)
       .setMismatchingPositions(mdtag)
-      .setOldPosition(12L)
-      .setOldCigar("2^AAA3")
-      .setRecordGroupName("rg")
-      .setContigName("myCtg")
+      .setOriginalStart(12L)
+      .setOriginalCigar("2^AAA3")
+      .setReadGroupId("rg")
+      .setReferenceName("myCtg")
 
     if (!nullQuality) {
-      builder.setQual(qual) // no typo, we just don't care
+      builder.setQuality(qual) // no typo, we just don't care
     }
 
     builder
@@ -80,14 +80,14 @@ class GA4GHConverterSuite extends FunSuite {
   test("converting a read without a read group fails with ValidationStringency STRICT") {
     intercept[IllegalArgumentException] {
       GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
-        .setRecordGroupName(null)
+        .setReadGroupId(null)
         .build(), stringency = ValidationStringency.STRICT)
     }
   }
 
   test("converting a read without a read group passes with ValidationStringency LENIENT") {
     val gaRead = GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
-      .setRecordGroupName(null)
+      .setReadGroupId(null)
       .build())
     assert(gaRead.getReadGroupId == GA4GHConverter.placeholder)
   }
@@ -115,10 +115,10 @@ class GA4GHConverterSuite extends FunSuite {
     }
   }
 
-  test("converting a read without a contig fails") {
+  test("converting a read without a reference name fails") {
     intercept[IllegalArgumentException] {
       GA4GHConverter.toGAReadAlignment(makeRead(10L, "10M", "10", 10)
-        .setContigName(null)
+        .setReferenceName(null)
         .build())
     }
   }

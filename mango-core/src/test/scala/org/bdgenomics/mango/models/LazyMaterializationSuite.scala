@@ -86,8 +86,8 @@ class LazyDummy(@transient sc: SparkContext,
       .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
   }
 
-  def setContigName = (r: ReferenceRegion, contig: String) => {
-    ReferenceRegion(contig, r.start, r.end)
+  def setReferenceName = (r: ReferenceRegion, referenceName: String) => {
+    ReferenceRegion(referenceName, r.start, r.end)
     r
   }
   def toJson(data: RDD[(String, ReferenceRegion)]): Map[String, Array[ReferenceRegion]] = {
