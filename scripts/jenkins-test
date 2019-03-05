@@ -184,11 +184,11 @@ then
     for python in ${pythons[*]}
     do
         uuid=$(uuidgen)
-        conda create -q -n mango-build-${uuid} python=${python}
+        conda create -y -q -n mango-build-${uuid} python=${python}
         source activate mango-build-${uuid}
 
         # install npm and node in the venv for mango-viz
-        conda install nodejs
+        conda install -y nodejs
 
         # prepare mango python
         pushd mango-python
@@ -221,9 +221,6 @@ then
         make clean
         popd
 
-    	# copy python targets back
-    	cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
-
         # make sure that the distribution package contains an egg
         # if no assembly jar is found, this will exit with code 1 and fail the build
         tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
@@ -247,6 +244,13 @@ then
             rm -rf ${MANGO_TMP_DIR}
             exit 1
         fi
+
+        # copy python targets back
+        cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
+
+        # deactivate and remove the conda env
+        source deactivate
+        conda remove -y --name mango-build-${uuid} --all
 
     done
 
@@ -285,13 +289,6 @@ then
     popd
 
     rm -rf ${MANGO_TMP_DIR}/${TEST_GENOME}*
-
-    # copy python targets back
-    cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
-
-    # deactivate and remove the conda env
-    source deactivate
-    conda remove -n mango-build-${uuid} --all
 
     # clean up
     rm -rf ${MANGO_TMP_DIR}
