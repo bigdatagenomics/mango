@@ -27,7 +27,7 @@ class NotebookTest(SparkTestCase):
         # these variables are read into mango-python.py
         spark = self.ss
         testMode = True
-        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
+        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam")
         variantFile = self.exampleFile("snv.chr17.7502100-7502500.vcf")
         featureFile = self.exampleFile("chr17.582500-594500.bed")
 
@@ -39,7 +39,7 @@ class NotebookTest(SparkTestCase):
         # these variables are read into mango-python.py
         spark = self.ss
         testMode = True
-        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
+        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam")
 
         # this file is converted from mango-python.coverage.ipynb in the Makefile
         testCoverageFile = self.exampleFile("notebooks/mango-python-coverage.py")
@@ -49,7 +49,7 @@ class NotebookTest(SparkTestCase):
         # these variables are read into mango-python.py
         spark = self.ss
         testMode = True
-        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam.adam")
+        alignmentFile = self.exampleFile("chr17.7500000-7515000.sam")
 
         # this file is converted from mango-python-alignment.ipynb in the Makefile
         testAlignmentFile = self.exampleFile("notebooks/mango-python-alignment.py")

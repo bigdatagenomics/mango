@@ -49,14 +49,14 @@ class AlignmentSummary(object):
     AlignmentSummary provides scrollable visualization of alignments based on genomic regions.
     """
 
-    def __init__(self, spark, ac, alignmentRdd, sample = 1.0):
+    def __init__(self, spark, ac, alignmentDataset, sample = 1.0):
         """
         Initializes an AlignmentSummary class.
 
         Args:
             :param spark: SparkSession
             :param ac: ADAMContext
-            :param alignmentRdd: AlignmentRecordRDD
+            :param alignmentDataset: bdgenomics.adam.Dataset.AlignmentRecoDatasetataset
             :param sample: fraction of reads to sample from
         """
 
@@ -67,8 +67,8 @@ class AlignmentSummary(object):
         self.ss = spark
         self.ac = ac
         self.sample = sample
-        # sample rdd
-        self.rdd = alignmentRdd
+        # sample dataset
+        self.dataset = alignmentDataset
 
         # where to store collected data
         self.coverageDistribution = None
@@ -78,7 +78,7 @@ class AlignmentSummary(object):
 
     def getCoverageDistribution(self, bin_size = 10):
         """
-        Computes coverage distribution for this AlignmentRDD.
+        Computes coverage distribution for this AlignmentDataset.
 
         Args:
             :param bin_size: size to bin coverage by
@@ -89,9 +89,9 @@ class AlignmentSummary(object):
         if self.coverageDistribution == None:
             print("Computing coverage distributions...")
             # pre-sample before computing coverage
-            sampledRdd = self.rdd.transform(lambda rdd: rdd.sample(False, self.sample))
+            sampledDataset = self.dataset.transform(lambda dataset: dataset.sample(False, self.sample))
             self.coverageDistribution = CoverageDistribution(self.ss,   \
-                                                             sampledRdd.toCoverage(), \
+                                                             sampledDataset.toCoverage(), \
                                                              sample = self.sample, \
                                                              bin_size = bin_size,
                                                              pre_sampled = True)
@@ -100,49 +100,49 @@ class AlignmentSummary(object):
 
     def getFragmentDistribution(self):
         """
-        Computes fragment distribution for this AlignmentRDD.
+        Computes fragment distribution for this AlignmentDataset.
 
         Returns:
            FragmentDistribution object
         """
         if self.fragmentDistribution == None:
             print("Computing fragment distributions...")
-            self.fragmentDistribution = FragmentDistribution(self.ss, self.rdd, sample=self.sample)
+            self.fragmentDistribution = FragmentDistribution(self.ss, self.dataset, sample=self.sample)
 
         return self.fragmentDistribution
 
 
     def getMapQDistribution(self):
         """
-        Computes mapping quality distribution for this AlignmentRDD.
+        Computes mapping quality distribution for this AlignmentDataset.
 
         Returns:
            MapQDistribution object
         """
         if self.mapQDistribution == None:
             print("Computing MapQ distributions...")
-            self.mapQDistribution = MapQDistribution(self.ss, self.rdd, sample=self.sample)
+            self.mapQDistribution = MapQDistribution(self.ss, self.dataset, sample=self.sample)
 
         return self.mapQDistribution
 
 
     def getIndelDistribution(self, bin_size=10000000):
         """
-        Computes insertion and deletion distribution for this AlignmentRDD
+        Computes insertion and deletion distribution for this AlignmentDataset
 
         Returns:
            IndelDistribution object
         """
         if self.indelDistribution == None:
             print("Computing Indel distributions...")
-            self.indelDistribution = IndelDistribution(self.ss, self.rdd, bin_size=bin_size, sample=self.sample)
+            self.indelDistribution = IndelDistribution(self.ss, self.dataset, bin_size=bin_size, sample=self.sample)
 
         return self.indelDistribution
 
 
     def viewPileup(self, contig, start, end, reference = 'hg19', label = "Reads", multipleGroupNames = False, showPlot = True):
         """
-        Visualizes a portion of this AlignmentRDD in a scrollable pileup widget
+        Visualizes a portion of this AlignmentDataset in a scrollable pileup widget
 
         Args:
             :param contig: contig of locus to view
@@ -159,12 +159,12 @@ class AlignmentSummary(object):
         """
         contig_trimmed = contig.lstrip(CHR_PREFIX)
 
-        # Filter RDD
-        filtered = self.rdd.transform(lambda r: r.filter(((r.contigName == contig) | (r.contigName == contig_trimmed))
+        # Filter Dataset
+        filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig) | (r.referenceName == contig_trimmed))
                                                                    & (r.start < end) & (r.end > start) & (r.readMapped)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
-        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordRDDtoJSON(filtered._jvmRdd,
+        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordDatasetToJSON(filtered._jvmRdd,
                                                                                                    multipleGroupNames)
 
         # visualize
@@ -190,21 +190,21 @@ class FragmentDistribution(CountDistribution):
     Plotting functionality for visualizing fragment distributions of multi-sample cohorts.
     """
 
-    def __init__(self, ss, alignmentRDD, sample = 1.0):
+    def __init__(self, ss, alignmentDataset, sample = 1.0):
         """
         Initializes a FragmentDistribution class.
-        Computes the fragment distribution of a AlignmentRDD. This RDD can have data for multiple samples.
+        Computes the fragment distribution of a AlignmentDataset. This Dataset can have data for multiple samples.
 
         Args:
             :param ss: global SparkSession.
-            :param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
-            :param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
+            :param alignmentDataset: bdgenomics.adam.Dataset.AlignmentDataset
+            :param sample: Fraction to sample AlignmentDataset. Should be between 0 and 1
         """
 
         self.sc = ss.sparkContext
         self.sample = sample
-        self.rdd = alignmentRDD.toDF().rdd \
-            .map(lambda r: ((r["recordGroupSample"], len(r["sequence"])), 1))
+        self.rdd = alignmentDataset.toDF().rdd \
+            .map(lambda r: ((r["readGroupSampleId"], len(r["sequence"])), 1))
 
         CountDistribution.__init__(self)
 
@@ -214,41 +214,40 @@ class MapQDistribution(CountDistribution):
     Plotting functionality for visualizing mapping quality distributions of multi-sample cohorts.
     """
 
-    def __init__(self, ss, alignmentRDD, sample = 1.0):
+    def __init__(self, ss, alignmentDataset, sample = 1.0):
         """
         Initializes a MapQDistribution class.
-        Computes the mapping quality distribution of an AlignmentRDD. This RDD can have data for multiple samples.
+        Computes the mapping quality distribution of an AlignmentDataset. This Dataset can have data for multiple samples.
 
         Args:
             :param ss: global SparkSession.
-            :param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object.
-            :param sample: Fraction to sample AlignmentRDD. Should be between 0 and 1
+            :param alignmentDataset: A bdgenomics.adam.dataset.AlignmentDataset object.
+            :param sample: Fraction to sample AlignmentDataset. Should be between 0 and 1
         """
 
         self.sc = ss.sparkContext
         self.sample = sample
 
         # filter out reads that are not mappped
-        self.rdd = alignmentRDD.toDF().rdd \
-            .filter(lambda r: (r.readMapped)) \
-            .map(lambda r: ((r["recordGroupSample"], int(r["mapq"] or 0)), 1))
+        self.rdd = alignmentDataset.transform(lambda r: r.filter(r.readMapped)).toDF().rdd \
+            .map(lambda r: ((r["readGroupSampleId"], int(r["mappingQuality"] or 0)), 1))
 
         CountDistribution.__init__(self)
 
 
 class IndelDistribution(object):
     """ IndelDistribution class.
-    IndelDistribution calculates indel distributions on an AlignmentRDD.
+    IndelDistribution calculates indel distributions on an AlignmentDataset.
     """
 
-    def __init__(self, ss, alignmentRDD, sample=1.0, bin_size=10000000):
+    def __init__(self, ss, alignmentDataset, sample=1.0, bin_size=10000000):
         """
         Initializes a IndelDistribution class.
-        Computes the insertiona and deletion distribution of alignmentRDD.
+        Computes the insertiona and deletion distribution of alignmentDataset.
 
         Args:
             :param SparkSession: the global SparkSession
-            :param alignmentRDD: A bdgenomics.adam.rdd.AlignmentRDD object
+            :param alignmentDataset: A bdgenomics.adam.dataset.AlignmentDataset object
             :param bin_size: Division size per bin
         """
         bin_size = int(bin_size)
@@ -257,12 +256,12 @@ class IndelDistribution(object):
         self.sample = sample
 
         # filter alignments without a position
-        filteredAlignments = alignmentRDD.transform(lambda x: x.sample(False, self.sample)) \
-            .toDF().rdd.filter(lambda r: r["start"] != None)
+        filteredAlignments = alignmentDataset.transform(lambda x: x.sample(False, self.sample)) \
+            .transform(lambda x: x.filter(x["start"] >= 0))
 
         # Assign alignments with counter for contigs. Reduce and collect.
-        mappedDistributions = filteredAlignments \
-            .map(lambda r: ((r["contigName"], r["start"] - r["start"]%bin_size), \
+        mappedDistributions = filteredAlignments.toDF().rdd \
+            .map(lambda r: ((r["referenceName"], r["start"] - r["start"]%bin_size), \
                             Counter(dict([(y,x) for x,y in Cigar(r["cigar"]).items()])))) \
             .reduceByKey(lambda x,y: x+y)
 

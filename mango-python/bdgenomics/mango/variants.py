@@ -37,12 +37,16 @@ class VariantSummary(object):
     VariantSummary provides scrollable visualization of variants based on genomic regions.
     """
 
-    def __init__(self, ac, rdd):
+    def __init__(self, ac, dataset):
         """
-        Initializes a GenomicRDD viz class.
+        Initializes a GenomicDataset viz class.
+
+        Args:
+            :param ac: bdgenomics.adamContext.ADAMContext
+            :param dataset: bdgenomics.adam.rdd.VariantDataset
         """
         self.ac = ac
-        self.rdd = rdd
+        self.dataset = dataset
 
     # Takes a bdgenomics.adam.VariantContextRDD and visualizes results
     def viewPileup(self, contig, start, end, reference = 'hg19', label = "Variants", showPlot = True):
@@ -63,11 +67,11 @@ class VariantSummary(object):
         contig_trimmed = contig.lstrip(CHR_PREFIX)
 
         # Filter RDD
-        filtered = self.rdd.transform(lambda r: r.filter(((r.contigName == contig) | (r.contigName == contig_trimmed))
+        filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig) | (r.referenceName == contig_trimmed))
                                                            & (r.start < end) & (r.end > start)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
-        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.variantRDDtoJSON(filtered._jvmRdd)
+        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.variantDatasetToJSON(filtered._jvmRdd)
 
         # visualize
         if (showPlot):

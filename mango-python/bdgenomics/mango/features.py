@@ -37,21 +37,21 @@ class FeatureSummary(object):
     FeatureSummary provides scrollable visualization of features based on genomic regions.
     """
 
-    def __init__(self, ac, rdd):
+    def __init__(self, ac, dataset):
         """
         Initializes a GenomicRDD viz class.
 
         Args:
-            :param ac: ADAMContext
-            :param rdd: AlignmentRecordRDD
+            :param ac: bdgenomics.adam.damContext.ADAMContext
+            :param dataset: bdgenomics.adam.rdd.FeatureDataset
         """
         self.ac = ac
-        self.rdd = rdd
+        self.dataset = dataset
 
     # Takes a bdgenomics.adam.FeatureRDD and visualizes results in pileup format
     def viewPileup(self, contig, start, end, reference = 'hg19', label = "Features", showPlot = True):
         """
-        Visualizes a portion of this FeatureRDD in a scrollable pileup widget
+        Visualizes a portion of this FeatureDataset in a scrollable pileup widget
 
         Args:
             :param contig: contig of locus to view
@@ -67,12 +67,12 @@ class FeatureSummary(object):
 
         contig_trimmed = contig.lstrip(CHR_PREFIX)
 
-        # Filter RDD
-        filtered = self.rdd.transform(lambda r: r.filter(((r.contigName == contig) | (r.contigName == contig_trimmed))
+        # Filter dataset
+        filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig) | (r.referenceName == contig_trimmed))
                                                            & (r.start < end) & (r.end > start)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
-        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.featureRDDtoJSON(filtered._jvmRdd)
+        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.featureDatasetToJSON(filtered._jvmRdd)
 
         # visualize
         if (showPlot):
