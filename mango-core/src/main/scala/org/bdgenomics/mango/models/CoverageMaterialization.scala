@@ -26,7 +26,7 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.bdgenomics.adam.models.{ Coverage, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.CoverageRDD
+import org.bdgenomics.adam.rdd.feature.CoverageDataset
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.utils.misc.Logging
@@ -63,11 +63,11 @@ class CoverageMaterialization(@transient sc: SparkContext,
    * Reset ReferenceName for Coverage
    *
    * @param c Coverage to be modified
-   * @param contig to replace Coverage contigName
+   * @param referenceName to replace Coverage referenceName
    * @return Coverage with new ReferenceRegion
    */
-  def setContigName = (c: Coverage, contig: String) => {
-    c.copy(contigName = contig)
+  def setReferenceName = (c: Coverage, referenceName: String) => {
+    c.copy(referenceName = referenceName)
   }
 
   /**
@@ -107,7 +107,7 @@ class CoverageMaterialization(@transient sc: SparkContext,
     data.collect
       .groupBy(_._1)
       .map(r => (r._1, r._2.map(_._2)))
-      .mapValues(r => r.map(f => PositionCount(f.contigName, f.start, f.end, f.count.toInt)))
+      .mapValues(r => r.map(f => PositionCount(f.referenceName, f.start, f.end, f.count.toInt)))
   }
 
 }
@@ -117,13 +117,13 @@ object CoverageMaterialization {
   val name = "Coverage"
 
   /**
-   * Loads alignment data from ADAM file formats
+   * Loads coverage data from ADAM file formats
    *
    * @param sc SparkContext
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Coverage dataset from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): CoverageRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): CoverageDataset = {
     if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
@@ -143,12 +143,12 @@ object CoverageMaterialization {
    * @param sc SparkContext
    * @param fp filepath to load from
    * @param regions Iterable of  ReferenceRegions to load
-   * @return CoverageRDD of data from the file over specified ReferenceRegion
+   * @return Coverage dataset from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): CoverageRDD = {
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): CoverageDataset = {
     val pred =
       if (regions.isDefined) {
-        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+        val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
         Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
       } else {
         None

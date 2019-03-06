@@ -72,7 +72,7 @@ object GA4GHConverter extends Serializable with Logging {
     builder.setId(null)
 
     // read group
-    val rgName = Option(record.getRecordGroupName)
+    val rgName = Option(record.getReadGroupId)
     stringency match {
       case ValidationStringency.STRICT =>
         require(rgName.isDefined,
@@ -101,8 +101,8 @@ object GA4GHConverter extends Serializable with Logging {
     builder.setFailedVendorQualityChecks(record.getFailedVendorQualityChecks)
     builder.setSecondaryAlignment(record.getSecondaryAlignment)
     builder.setSupplementaryAlignment(record.getSupplementaryAlignment)
-    if (record.getMateContigName != null)
-      builder.setNextMatePosition(new GAPosition(record.getMateContigName, record.getMateAlignmentStart, record.getMateNegativeStrand))
+    if (record.getMateReferenceName != null)
+      builder.setNextMatePosition(new GAPosition(record.getMateReferenceName, record.getMateAlignmentStart, record.getMateNegativeStrand))
     // we don't store the number of reads in a fragment; assume 2 if paired, 1 if not
     val paired = Option(record.getReadPaired)
       .map(b => b: Boolean)
@@ -114,7 +114,7 @@ object GA4GHConverter extends Serializable with Logging {
     builder.setReadNumber(record.getReadInFragment)
 
     // set fragment length
-    Option(record.getInferredInsertSize)
+    Option(record.getInsertSize)
       .map(l => l.intValue: java.lang.Integer)
       .foreach(builder.setFragmentLength)
 
@@ -123,7 +123,7 @@ object GA4GHConverter extends Serializable with Logging {
 
     // qual is an array<int> in ga4ghland, so convert
     // note: avro array<int> --> java.util.List[java.lang.Integer]
-    val qualArray = Option(record.getQual)
+    val qualArray = Option(record.getQuality)
       .map(qual => {
         qual.toList
           .map(c => c.toInt - 33)
@@ -141,22 +141,22 @@ object GA4GHConverter extends Serializable with Logging {
 
         // get values from the ADAM record
         val start = record.getStart
-        val contig = record.getContigName
+        val reference = record.getReferenceName
         val reverse = record.getReadNegativeStrand
 
         // check that they are not null
-        require(start != null && contig != null && reverse != null,
-          "Alignment start/contig/strand bad in %s.".format(record))
+        require(start != null && reference != null && reverse != null,
+          "Alignment start/reference/strand bad in %s.".format(record))
 
         // set position
         laBuilder.setPosition(GAPosition.newBuilder()
-          .setReferenceName(contig)
+          .setReferenceName(reference)
           .setPosition(start.intValue)
           .setReverseStrand(reverse)
           .build())
 
         // set mapq
-        laBuilder.setMappingQuality(record.getMapq)
+        laBuilder.setMappingQuality(record.getMappingQuality)
 
         // convert cigar
         laBuilder.setCigar(convertCigar(record.getCigar))

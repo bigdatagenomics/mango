@@ -29,7 +29,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
+import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.converters.GA4GHConverter
 import org.bdgenomics.mango.layout.PositionCount
@@ -87,11 +87,11 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
    * Reset ReferenceName for AlignmentRecord
    *
    * @param ar AlignmentRecord to be modified
-   * @param contig to replace AlignmentRecord contigName
+   * @param referenceName to replace AlignmentRecord referenceName
    * @return AlignmentRecord with new ReferenceRegion
    */
-  def setContigName = (ar: AlignmentRecord, contig: String) => {
-    ar.setContigName(contig)
+  def setReferenceName = (ar: AlignmentRecord, referenceName: String) => {
+    ar.setReferenceName(referenceName)
     ar
   }
 
@@ -109,7 +109,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
         get(Some(region))
           .flatMap(r => {
             val t: List[Long] = List.range(r._2.getStart, r._2.getEnd)
-            t.map(n => ((ReferenceRegion(r._2.getContigName, n, n + 1), r._1), 1))
+            t.map(n => ((ReferenceRegion(r._2.getReferenceName, n, n + 1), r._1), 1))
               .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
           }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
           .map(r => (r._1._2, PositionCount(r._1._1.referenceName, r._1._1.start, r._1._1.start + 1, r._2)))
@@ -126,7 +126,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[GAReadAlignment]] = {
     AlignmentTimers.collect.time {
       AlignmentTimers.getAlignmentData.time {
-        val filtered = data.filter(r => Option(r._2.mapq).getOrElse(1).asInstanceOf[Int] > 0) // filter mapq 0 reads out
+        val filtered = data.filter(r => Option(r._2.mappingQuality).getOrElse(1).asInstanceOf[Int] > 0) // filter mappingQuality 0 reads out
         if (!filtered.isEmpty())
           filtered.mapValues(r => Array(GA4GHConverter.toGAReadAlignment(r, stringency = ValidationStringency.SILENT)))
             .reduceByKeyLocally(_ ++ _).toMap
@@ -154,16 +154,16 @@ object AlignmentRecordMaterialization extends Logging {
 
   // caches the first steps of loading binned dataset from files to avoid repeating the
   // several minutes long initalization of these binned dataset
-  val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordRDD]
+  val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordDataset]
 
   /**
    * Loads alignment data from bam, sam and ADAM file formats
    * @param sc SparkContext
    * @param regions Iterable of  ReferenceRegions to load
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
     if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
@@ -184,17 +184,17 @@ object AlignmentRecordMaterialization extends Logging {
    * @param sc SparkContext
    * @param regions Iterable of ReferenceRegions to load
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadFromBam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
+  def loadFromBam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
     AlignmentTimers.loadBAMData.time {
       if (regions.isDefined) {
-        // hack to get around issue in hadoop_bam, which throws error if contigName is not found in bam file
+        // hack to get around issue in hadoop_bam, which throws error if referenceName is not found in bam file
         val path = new Path(fp)
         val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))
         val predicateRegions: Iterable[ReferenceRegion] = regions.get
           .flatMap(r => {
-            LazyMaterialization.getContigPredicate(r)
+            LazyMaterialization.getReferencePredicate(r)
           }).filter(r => fileSd.containsReferenceName(r.referenceName))
 
         try {
@@ -217,13 +217,13 @@ object AlignmentRecordMaterialization extends Logging {
    * @param sc SparkContext
    * @param regions Iterable of ReferenceRegions to load
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordRDD = {
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
     AlignmentTimers.loadADAMData.time {
-      val alignmentRecordRDD: AlignmentRecordRDD = if (sc.isPartitioned(fp)) {
+      val alignmentRecordDataset: AlignmentRecordDataset = if (sc.isPartitioned(fp)) {
 
-        // finalRegions includes contigs both with and without "chr" prefix
+        // finalRegions includes references both with and without "chr" prefix
         val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
           .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
             x.start,
@@ -231,7 +231,7 @@ object AlignmentRecordMaterialization extends Logging {
             x.strand))
 
         // load new dataset or retrieve from cache
-        val data: AlignmentRecordRDD = datasetCache.get(fp) match {
+        val data: AlignmentRecordDataset = datasetCache.get(fp) match {
           case Some(ds) => { // if dataset found in datasetCache
             ds
           }
@@ -248,27 +248,27 @@ object AlignmentRecordMaterialization extends Logging {
 
         // remove unmapped reads
         maybeFiltered.transformDataset(d => {
-          d.filter(x => (x.readMapped.getOrElse(false)) && x.mapq.getOrElse(0) > 0)
+          d.filter(x => (x.readMapped.getOrElse(false)) && x.mappingQuality.getOrElse(0) > 0)
         })
 
       } else { // data was not written as partitioned parquet
         val pred =
           if (regions.isDefined) {
-            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
-            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
+            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mappingQuality") > 0))
           } else {
-            Some((BooleanColumn("readMapped") === true) && (IntColumn("mapq") > 0))
+            Some((BooleanColumn("readMapped") === true) && (IntColumn("mappingQuality") > 0))
           }
 
-        val proj = Projection(AlignmentRecordField.contigName, AlignmentRecordField.mapq, AlignmentRecordField.readName,
-          AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.recordGroupName,
+        val proj = Projection(AlignmentRecordField.referenceName, AlignmentRecordField.mappingQuality, AlignmentRecordField.readName,
+          AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.readGroupId,
           AlignmentRecordField.end, AlignmentRecordField.sequence, AlignmentRecordField.cigar, AlignmentRecordField.readNegativeStrand,
-          AlignmentRecordField.readPaired, AlignmentRecordField.recordGroupSample)
+          AlignmentRecordField.readPaired, AlignmentRecordField.readGroupSampleId)
 
         val unpartitionedResult = sc.loadParquetAlignments(fp, optPredicate = pred, optProjection = Some(proj))
         unpartitionedResult
       }
-      return alignmentRecordRDD
+      return alignmentRecordDataset
     }
   }
 }

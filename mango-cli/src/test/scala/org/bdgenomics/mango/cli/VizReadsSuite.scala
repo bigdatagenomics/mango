@@ -39,7 +39,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
   val coverageFile = resourcePath("mouse_chrM.coverage.bed")
 
   // exampleFiles
-  val chr17bam = examplePath("chr17.7500000-7515000.sam.adam")
+  val chr17bam = examplePath("chr17.7500000-7515000.sam")
   val chr17Reference = examplePath("hg19.17.2bit")
   val chr17Vcf = examplePath("ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf")
 
@@ -80,7 +80,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("Reference should throw NotFound error on invalid contig") {
+  sparkTest("Reference should throw NotFound error on invalid reference") {
     implicit val VizReads = runVizReads(args)
     // should return data
     get("/reference/fakeChr?start=1&end=100") {
@@ -128,7 +128,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("Reads should throw NotFound error on invalid contig") {
+  sparkTest("Reads should throw NotFound error on invalid reference") {
     implicit val VizReads = runVizReads(args)
 
     get(s"/reads/${bamKey}/fakeChr?start=1&end=100") {
@@ -223,7 +223,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("Features should throw out of bounds error on invalid contig") {
+  sparkTest("Features should throw out of bounds error on invalid reference") {
     implicit val VizReads = runVizReads(args)
 
     get(s"/features/${featureKey}/fakeChr?start=1&end=100") {
@@ -266,7 +266,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("Coverage should throw out of bounds error on invalid contig") {
+  sparkTest("Coverage should throw out of bounds error on invalid regerence") {
     implicit val VizReads = runVizReads(args)
 
     get(s"/reads/${coverageKey}/fakeChr?start=1&end=100") {

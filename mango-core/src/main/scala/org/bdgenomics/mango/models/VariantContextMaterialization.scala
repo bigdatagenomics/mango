@@ -27,7 +27,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variant.{ GenotypeRDD, VariantContextRDD }
+import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset }
 import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.layout.GenotypeJson
@@ -73,8 +73,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return Variant with new ReferenceRegion
    */
-  def setContigName = (g: GenotypeJson, contig: String) => {
-    g.variant.setContigName(contig)
+  def setReferenceName = (g: GenotypeJson, referenceName: String) => {
+    g.variant.setReferenceName(referenceName)
     g.copy()
   }
 
@@ -134,28 +134,28 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    * @return List of filenames their corresponding Seq of SampleIds.
    */
   def getGenotypeSamples(): List[(String, List[String])] = {
-    files.map(fp => (fp, VariantContextMaterialization.load(sc, fp, None).samples.map(_.getSampleId).toList))
+    files.map(fp => (fp, VariantContextMaterialization.load(sc, fp, None).samples.map(_.getId).toList))
   }
 }
 
 /**
- * VariantContextMaterialization object, used to load VariantContext data into a VariantContextRDD. Supported file
+ * VariantContextMaterialization object, used to load VariantContext data into a VariantContextDataset. Supported file
  * formats are vcf and adam.
  */
 object VariantContextMaterialization {
 
   val name = "VariantContext"
-  val datasetCache = new collection.mutable.HashMap[String, GenotypeRDD]
+  val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
 
   /**
-   * Loads variant data from adam and vcf files into a VariantContextRDD
+   * Loads variant data from adam and vcf files into a VariantContextDataset
    *
    * @param sc SparkContext
    * @param fp filePath to load
    * @param regions Iterable of ReferenceRegions to predicate load
-   * @return VariantContextRDD
+   * @return VariantContextDataset
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
     if (fp.endsWith(".adam")) {
       loadAdam(sc, fp, regions)
     } else {
@@ -172,17 +172,17 @@ object VariantContextMaterialization {
   }
 
   /**
-   * Loads VariantContextRDD from a vcf file. vcf tbi index is required.
+   * Loads VariantContextDataset from a vcf file. vcf tbi index is required.
    *
    * @param sc SparkContext
    * @param fp filePath to vcf file
    * @param regions Iterable of ReferencesRegion to predicate load
-   * @return VariantContextRDD
+   * @return VariantContextDataset
    */
-  def loadVariantContext(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+  def loadVariantContext(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
     if (regions.isDefined) {
       val predicateRegions: Iterable[ReferenceRegion] = regions.get
-        .flatMap(r => LazyMaterialization.getContigPredicate(r))
+        .flatMap(r => LazyMaterialization.getReferencePredicate(r))
       sc.loadIndexedVcf(fp, predicateRegions)
     } else {
       sc.loadVcf(fp)
@@ -195,13 +195,13 @@ object VariantContextMaterialization {
    * @param sc SparkContext
    * @param fp filePath to load variants from
    * @param regions Iterable of  ReferenceRegions to predicate load
-   * @return VariantContextRDD
+   * @return VariantContextDataset
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextRDD = {
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
 
     val variantContext = if (sc.isPartitioned(fp)) {
 
-      // finalRegions includes contigs both with and without "chr" prefix
+      // finalRegions includes references both with and without "chr" prefix
       val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
         .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
           x.start,
@@ -209,7 +209,7 @@ object VariantContextMaterialization {
           x.strand))
 
       // load new dataset or retrieve from cache
-      val data: GenotypeRDD = datasetCache.get(fp) match {
+      val data: GenotypeDataset = datasetCache.get(fp) match {
         case Some(ds) => { // if dataset found in datasetCache
           ds
         }
@@ -220,7 +220,7 @@ object VariantContextMaterialization {
         }
       }
 
-      val maybeFiltered: GenotypeRDD = if (finalRegions.nonEmpty) {
+      val maybeFiltered: GenotypeDataset = if (finalRegions.nonEmpty) {
         data.filterByOverlappingRegions(finalRegions)
       } else data
 
@@ -229,7 +229,7 @@ object VariantContextMaterialization {
     } else {
       val pred =
         if (regions.isDefined) {
-          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getContigPredicate(r)).flatten
+          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
           Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
         } else {
           None
@@ -241,12 +241,12 @@ object VariantContextMaterialization {
   }
 
   /**
-   * Converts VariantContextRDD into RDD of Variants and Genotype SampleIds that can be directly converted to json
+   * Converts VariantContextDataset into RDD of Variants and Genotype SampleIds that can be directly converted to json
    *
-   * @param v VariantContextRDD to Convert
+   * @param v VariantContextDataset to Convert
    * @return Converted json RDD
    */
-  private def toGenotypeJsonRDD(v: VariantContextRDD): RDD[GenotypeJson] = {
+  private def toGenotypeJsonRDD(v: VariantContextDataset): RDD[GenotypeJson] = {
     v.rdd.map(r => {
       // filter out genotypes with only some alt alleles
       val genotypes = r.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)

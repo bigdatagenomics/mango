@@ -139,7 +139,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * Reassigns ReferenceRegion for ClassTag T
    * @return T with new ReferenceRegion
    */
-  def setContigName: (T, String) => T
+  def setReferenceName: (T, String) => T
 
   def stringify(data: Array[S]): String = write(data)
 
@@ -316,7 +316,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
         load(fp, regions).map(v => (k, v))
       }).reduce(_ union _).map(r => {
         val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
-        (region, (r._1, setContigName(r._2, region.referenceName)))
+        (region, (r._1, setReferenceName(r._2, region.referenceName)))
       })
     }
   }
@@ -392,8 +392,8 @@ object LazyMaterialization {
    * @param region ReferenceRegion to modify referenceName
    * @return Array of ReferenceRegions, with and without the "chr" prefix
    */
-  def getContigPredicate(region: ReferenceRegion): Array[ReferenceRegion] = {
-    getContigPredicate(region.referenceName).map(r => region.copy(referenceName = r))
+  def getReferencePredicate(region: ReferenceRegion): Array[ReferenceRegion] = {
+    getReferencePredicate(region.referenceName).map(r => region.copy(referenceName = r))
   }
 
   /**
@@ -403,7 +403,7 @@ object LazyMaterialization {
    * @param referenceName referenceName
    * @return Array of of referencenames, with and without the "chr" prefix
    */
-  def getContigPredicate(referenceName: String): Array[String] = {
+  def getReferencePredicate(referenceName: String): Array[String] = {
     if (referenceName.startsWith("chr")) {
       Array(referenceName, referenceName.drop(3))
     } else {

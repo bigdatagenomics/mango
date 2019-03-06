@@ -42,14 +42,14 @@ class GenotypeSummary(object):
     GenotypeSummary provides visualizations for genotype based summaries.
     """
 
-    def __init__(self, spark, ac, genotypeRdd, sample = 1.0):
+    def __init__(self, spark, ac, genotypeDataset, sample = 1.0):
         """
         Initializes an GenotypeSummary class.
 
         Args:
             :param spark: SparkSession
-            :param ac: ADAMContext
-            :param genotypeRdd: GenotypeRDD
+            :param ac: bdgenomics.adam.damContext.ADAMContext
+            :param genotypeDataset:  bdgenomics.adam.rdd.GenotypeDataset
             :param sample: fraction of reads to sample from
         """
 
@@ -60,8 +60,8 @@ class GenotypeSummary(object):
         self.ss = spark
         self.ac = ac
         self.sample = sample
-        # sample rdd
-        self.genotypeRdd = genotypeRdd
+        # sample dataset
+        self.genotypeDataset = genotypeDataset
 
         # where to store collected data
         self.variantsPerSampleDistribution = None
@@ -80,7 +80,7 @@ class GenotypeSummary(object):
             # pre-sample before computing coverage
 
             self.variantsPerSampleDistribution = VariantsPerSampleDistribution(self.ss, \
-                                                                               self.genotypeRdd, \
+                                                                               self.genotypeDataset, \
                                                                                sample = self.sample)
 
         return self.variantsPerSampleDistribution
@@ -94,7 +94,7 @@ class GenotypeSummary(object):
         """
         if self.hetHomRatioDistribution == None:
             print("Computing (Heterozygote/Homozygote) ratio distribution")
-            self.hetHomRatioDistribution = HetHomRatioDistribution(self.ss, self.genotypeRdd, self.sample)
+            self.hetHomRatioDistribution = HetHomRatioDistribution(self.ss, self.genotypeDataset, self.sample)
 
         return self.hetHomRatioDistribution
 
@@ -107,7 +107,7 @@ class GenotypeSummary(object):
         """
         if self.genotypeCallRatesDistribution == None:
             print("Computing per sample callrate distribution")
-            self.genotypeCallRatesDistribution = GenotypeCallRatesDistribution(self.ss, self.genotypeRdd, self.sample)
+            self.genotypeCallRatesDistribution = GenotypeCallRatesDistribution(self.ss, self.genotypeDataset, self.sample)
 
         return self.genotypeCallRatesDistribution
 
@@ -116,46 +116,46 @@ class VariantsPerSampleDistribution(HistogramDistribution):
     VariantsPerSampleDistribution computes a distribution of the count of variants per sample.
     """
 
-    def __init__(self, ss, genotypeRDD, sample = 1.0):
+    def __init__(self, ss, genotypeDataset, sample = 1.0):
         """
         Initializes a VariantsPerSampleDistributionn class.
-        Computes the coverage distribution of a CoverageRDD. This RDD can have data for multiple samples.
+        Computes the coverage distribution of a CoverageDataset. This dataset can have data for multiple samples.
 
         Args:
             :param ss: global SparkSession.
-            :param genotypeRDD: A bdgenomics.adam.rdd.GenotypeRDD object.
-            :param sample: Fraction to sample GenotypeRDD. Should be between 0 and 1
+            :param genotypeDataset: bdgenomics.adam.rdd.GenotypeDataset
+            :param sample: Fraction to sample GenotypeDataset. Should be between 0 and 1
         """
 
         self.sc = ss.sparkContext
         self.sample = sample
 
-        self.rdd = genotypeRDD.toDF().rdd \
-            .filter(lambda r: ( (r.alleles[0] == u'ALT') | (r.alleles[1] == u'ALT'))) \
+        self.rdd = genotypeDataset.transform(lambda r: r.filter(( (r.alleles[0] == u'ALT') | (r.alleles[1] == u'ALT')))).toDF().rdd \
             .map(lambda r: ((r["sampleId"]), 1))
+
 
         HistogramDistribution.__init__(self)
 
 class HetHomRatioDistribution(object):
     """ HetHomRatioDistribution class.
-    HetHomRatioDistribution computes a distribution of (Heterozygote/Homozygote) ratios from a genotypeRDD.
+    HetHomRatioDistribution computes a distribution of (Heterozygote/Homozygote) ratios from a genotypeDataset.
     """
-    def __init__(self,ss,genotypeRDD, sample = 1.0):
+    def __init__(self,ss,genotypeDataset, sample = 1.0):
         """
         Initializes HetHomRatioDistribution class.
-        Retrieves the call rate and missing rate for each sample in a genotypeRDD
+        Retrieves the call rate and missing rate for each sample in a genotypeDataset
 
         Args:
             :param ss: global SparkSession.
-            :param genotypeRDD: A bdgenomics.adam.rdd.GenotypeRDD object.
-            :param sample: Fraction to sample GenotypeRDD. Should be between 0 and 1
+            :param genotypeDataset: bdgenomics.adam.rdd.GenotypeDataset
+            :param sample: Fraction to sample GenotypeDataset. Should be between 0 and 1
         """
 
         self.sample = sample
         new_col1 = when((col("alleles")[0] == u'REF') & (col("alleles")[1] == u'ALT'),1) \
             .otherwise(when( (col("alleles")[0] == u'ALT') & (col("alleles")[1] == u'ALT'),2))
 
-        genocounts =  genotypeRDD.toDF().sample(False, self.sample) \
+        genocounts =  genotypeDataset.toDF().sample(False, self.sample) \
             .withColumn("hethomclass", new_col1) \
             .groupBy("sampleid", "hethomclass").count().collect()
 
@@ -192,24 +192,24 @@ class HetHomRatioDistribution(object):
 
 class GenotypeCallRatesDistribution(object):
     """ GenotypeCallRatesDistribution class.
-    GenotypeCallRatesDistribution computes a distribution of per-sample genotype call rates from a genotypeRDD.
+    GenotypeCallRatesDistribution computes a distribution of per-sample genotype call rates from a genotypeDataset.
     """
-    def __init__(self,ss,genotypeRDD, sample = 1.0):
+    def __init__(self,ss,genotypeDataset, sample = 1.0):
         """
         Initializes a GenotypeCallRatesDistribution class.
-        Retrieves counts of called and missing genotypes from a genotypeRDD.
+        Retrieves counts of called and missing genotypes from a genotypeDataset.
 
         Args:
             :param ss: SparkContext
-            :param genotypeRDD: bdgenomics genotypeRDD
-            :param sample: Fraction to sample GenotypeRDD. Should be between 0 and 1
+            :param genotypeDataset: bdgenomics.adam.rdd.GenotypeDataset
+            :param sample: Fraction to sample GenotypeDataset. Should be between 0 and 1
         """
 
         self.sample = sample
         new_col1 = when((col("alleles")[0] != u'NO_CALL') ,1) \
             .otherwise(when( (col("alleles")[0] == u'NO_CALL'),2))
 
-        callrateData = genotypeRDD.toDF().sample(False, self.sample) \
+        callrateData = genotypeDataset.toDF().sample(False, self.sample) \
                .withColumn("calledstatus", new_col1) \
                .groupBy("sampleid","calledstatus").count().collect()
 

@@ -25,7 +25,7 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.FeatureRDD
+import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
 import org.bdgenomics.mango.layout.BedRowJson
@@ -64,11 +64,11 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * Reset ReferenceName for Feature
    *
    * @param f Feature to be modified
-   * @param contig to replace Feature contigName
+   * @param referenceName to replace Feature referenceName
    * @return Feature with new ReferenceRegion
    */
-  def setContigName = (f: Feature, contig: String) => {
-    f.setContigName(contig)
+  def setReferenceName = (f: Feature, referenceName: String) => {
+    f.setReferenceName(referenceName)
     f
   }
   /**
@@ -90,7 +90,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
             .asInstanceOf[Double].toInt
           BedRowJson(Option(f.getFeatureId).getOrElse("N/A"),
             Option(f.getFeatureType).getOrElse("N/A"),
-            f.getContigName, f.getStart, f.getEnd,
+            f.getReferenceName, f.getStart, f.getEnd,
             score)
         }))
   }
@@ -135,9 +135,9 @@ object FeatureMaterialization {
    * @param sc SparkContext
    * @param fp filepath to load from
    * @param regions Iterable of ReferenceRegion to load
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureRDD = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, regions)
     else {
       try {
@@ -158,13 +158,13 @@ object FeatureMaterialization {
    * @param sc SparkContext
    * @param regions Iterable of ReferenceRegions to load
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def loadData(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureRDD = {
+  def loadData(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
     // if regions are specified, specifically load regions. Otherwise, load all data
     if (regions.isDefined) {
       val predicateRegions = regions.get
-        .flatMap(r => LazyMaterialization.getContigPredicate(r))
+        .flatMap(r => LazyMaterialization.getReferencePredicate(r))
         .toArray
 
       sc.loadFeatures(fp)
@@ -182,19 +182,19 @@ object FeatureMaterialization {
    * @param sc SparkContext
    * @param regions Iterable of ReferenceRegion to load
    * @param fp filepath to load from
-   * @return RDD of data from the file over specified ReferenceRegion
+   * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureRDD = {
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
     val pred =
       if (regions.isDefined) {
         val predicateRegions: Iterable[ReferenceRegion] = regions.get
-          .flatMap(r => LazyMaterialization.getContigPredicate(r))
+          .flatMap(r => LazyMaterialization.getReferencePredicate(r))
         Some(ResourceUtils.formReferenceRegionPredicate(predicateRegions))
       } else {
         None
       }
 
-    val proj = Projection(FeatureField.featureId, FeatureField.contigName, FeatureField.start, FeatureField.end,
+    val proj = Projection(FeatureField.featureId, FeatureField.referenceName, FeatureField.start, FeatureField.end,
       FeatureField.score, FeatureField.featureType)
     sc.loadParquetFeatures(fp, optPredicate = pred, optProjection = Some(proj))
   }

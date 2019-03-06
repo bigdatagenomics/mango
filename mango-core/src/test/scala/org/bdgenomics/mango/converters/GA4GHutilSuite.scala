@@ -17,37 +17,37 @@
  */
 package org.bdgenomics.mango.converters
 
-import org.bdgenomics.adam.rdd.read.AlignmentRecordRDD
+import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.mango.util.MangoFunSuite
 import org.scalatest.FunSuite
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.FeatureRDD
-import org.bdgenomics.adam.rdd.variant.VariantRDD
+import org.bdgenomics.adam.rdd.feature.FeatureDataset
+import org.bdgenomics.adam.rdd.variant.VariantDataset
 
 class GA4GHutilSuite extends MangoFunSuite {
 
-  sparkTest("create JSON from AlignmentRecordRDD") {
+  sparkTest("create JSON from AlignmentRecordDataset") {
     val inputPath = resourcePath("small.1.sam")
-    val rrdd: AlignmentRecordRDD = sc.loadAlignments(inputPath)
+    val rrdd: AlignmentRecordDataset = sc.loadAlignments(inputPath)
 
     val collected = rrdd.rdd.collect()
 
-    val json = GA4GHutil.alignmentRecordRDDtoJSON(rrdd).get("1")
+    val json = GA4GHutil.alignmentRecordDatasetToJSON(rrdd).get("1")
 
     val response = GA4GHutil.stringToSearchReadsResponse(json)
 
     assert(response.getAlignmentsCount == collected.length)
   }
 
-  sparkTest("create JSON from AlignmentRecordRDD  with 1 sample") {
+  sparkTest("create JSON from AlignmentRecordDataset with 1 sample") {
     val inputPath = resourcePath("small.1.sam")
-    val rrdd: AlignmentRecordRDD = sc.loadAlignments(inputPath)
+    val rrdd: AlignmentRecordDataset = sc.loadAlignments(inputPath)
 
     val collected = rrdd.rdd.collect()
 
-    // did the converters correctly pull the recordGroupMap as the id?
-    val recordGroupName = rrdd.recordGroups.recordGroupMap.keys.head
-    val converted = GA4GHutil.alignmentRecordRDDtoJSON(rrdd, multipleGroupNames = false).get("1")
+    // did the converters correctly pull the reaGroupMap as the id?
+    val readGroupName = rrdd.readGroups.readGroupMap.keys.head
+    val converted = GA4GHutil.alignmentRecordDatasetToJSON(rrdd, multipleGroupNames = false).get("1")
 
     val json = converted.replaceAll("\\s", "")
 
@@ -61,51 +61,48 @@ class GA4GHutilSuite extends MangoFunSuite {
     assert(response.getAlignmentsCount == collected.length)
   }
 
-  sparkTest("create JSON from AlignmentRecordRDD with more than 1 sample") {
+  sparkTest("create JSON from AlignmentRecordDataset with more than 1 sample") {
 
     val inputPath = resourcePath("small.1.sam")
     val samPaths = globPath(inputPath, ".sam")
-    val rrdd: AlignmentRecordRDD = sc.loadAlignments(samPaths)
+    val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPaths)
 
-    assert(GA4GHutil.alignmentRecordRDDtoJSON(rrdd, multipleGroupNames = true).size == 2)
+    assert(GA4GHutil.alignmentRecordDatasetToJSON(rrdd, multipleGroupNames = true).size == 2)
   }
 
-  sparkTest("create JSON with genotypes from VCF using genotypeRDD") {
+  sparkTest("create JSON with genotypes from VCF using GenotypeDataset") {
     val inputPath = resourcePath("truetest.genotypes.vcf")
     val grdd = sc.loadGenotypes(inputPath)
     val collected = sc.loadVariants(inputPath).rdd.collect()
 
-    val json = GA4GHutil.genotypeRDDtoJSON(grdd)
+    val json = GA4GHutil.genotypeDatasetToJSON(grdd)
 
     val response = GA4GHutil.stringToVariantServiceResponse(json)
 
     assert(response.getVariantsCount == collected.length)
   }
 
-  sparkTest("create JSON without genotypes from VCF using variantRDD") {
+  sparkTest("create JSON without genotypes from VCF using VariantDataset") {
     val inputPath = resourcePath("truetest.genotypes.vcf")
-    val vrdd: VariantRDD = sc.loadVariants(inputPath)
+    val vrdd: VariantDataset = sc.loadVariants(inputPath)
     val collected = vrdd.rdd.collect()
 
-    val json = GA4GHutil.variantRDDtoJSON(vrdd)
+    val json = GA4GHutil.variantDatasetToJSON(vrdd)
 
     val response = GA4GHutil.stringToVariantServiceResponse(json)
 
     assert(response.getVariantsCount == collected.length)
   }
 
-  sparkTest("create JSON from Feature") {
+  sparkTest("create JSON from FeatureDataset") {
     val inputPath = resourcePath("smalltest.bed")
-    val frdd: FeatureRDD = sc.loadBed(inputPath)
+    val frdd: FeatureDataset = sc.loadBed(inputPath)
     val collected = frdd.rdd.collect()
 
-    val json = GA4GHutil.featureRDDtoJSON(frdd)
+    val json = GA4GHutil.featureDatasetToJSON(frdd)
 
     val response = GA4GHutil.stringToSearchFeaturesResponse(json)
 
     assert(response.getFeaturesCount == collected.length)
-
   }
-
 }
-
