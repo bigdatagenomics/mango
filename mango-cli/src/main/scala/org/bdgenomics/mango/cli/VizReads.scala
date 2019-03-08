@@ -278,7 +278,7 @@ class VizServlet extends ScalatraServlet {
     }
 
     val variantSamples: Option[Map[String, String]] = try {
-      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.map(_.getSampleId).mkString(","))))
+      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.map(_.getId).mkString(","))))
     } catch {
       case e: Exception => None
     }
