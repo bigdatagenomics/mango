@@ -33,7 +33,6 @@ import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.layout.PositionCount
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.utils.instrumentation.Metrics
@@ -96,29 +95,6 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
     ar
   }
 
-  /*
-   * Gets Frequency over a given region for each specified sample
-   *
-   * @param region: ReferenceRegion to query over
-   *
-   * @return Map[String, Iterable[FreqJson]] Map of [SampleId, Iterable[FreqJson]] which stores each base and its
-   * cooresponding frequency.
-   */
-  def getCoverage(region: ReferenceRegion): Map[String, Array[PositionCount]] = {
-    AlignmentTimers.getCoverageData.time {
-      val covCounts: RDD[(String, PositionCount)] =
-        get(Some(region))
-          .flatMap(r => {
-            val t: List[Long] = List.range(r._2.getStart, r._2.getEnd)
-            t.map(n => ((ReferenceRegion(r._2.getReferenceName, n, n + 1), r._1), 1))
-              .filter(_._1._1.overlaps(region)) // filter out read fragments not overlapping region
-          }).reduceByKey(_ + _) // reduce coverage by combining adjacent frequenct
-          .map(r => (r._1._2, PositionCount(r._1._1.referenceName, r._1._1.start, r._1._1.start + 1, r._2)))
-
-      covCounts.collect.groupBy(_._1).mapValues(_.map(_._2)) // group by sample Id
-    }
-  }
-
   /**
    * Formats an RDD of keyed AlignmentRecords to a GAReadAlignments mapped by key
    * @param data RDD of (id, AlignmentRecord) tuples
@@ -127,7 +103,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   override def toJson(data: RDD[(String, AlignmentRecord)]): Map[String, Array[ReadAlignment]] = {
     AlignmentTimers.collect.time {
       AlignmentTimers.getAlignmentData.time {
-        data.filter(r => Option(r._2.mappingQuality).getOrElse(1).asInstanceOf[Int] > 0)  // filter mappingQuality 0 reads out
+        data.filter(r => Option(r._2.mappingQuality).getOrElse(1).asInstanceOf[Int] > 0) // filter mappingQuality 0 reads out
           .collect.groupBy(_._1).mapValues(r => {
             r.map(a => alignmentRecordToGAReadAlignment(a._2))
           })
@@ -204,7 +180,7 @@ object AlignmentRecordMaterialization extends Logging {
           case e: java.lang.IllegalArgumentException => {
             log.warn(e.getMessage)
             log.warn("No bam index detected. File loading will be slow...")
-            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(regions.get)
+            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)
           }
         }
       } else {

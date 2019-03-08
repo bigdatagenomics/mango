@@ -40,10 +40,10 @@ The properties.txt file should be formatted as follows:
 
 .. code:: bash
 
-sequenceLocation=http://<path_to_remote_2bit_file>.2bit
-refGene=refGene.txt
-chromSizes=<YOUR_GENOME>.chrom.sizes
-cytoband=cytoBand.txt
+  sequenceLocation=http://<path_to_remote_2bit_file>.2bit
+  refGene=refGene.txt
+  chromSizes=<YOUR_GENOME>.chrom.sizes
+  cytoband=cytoBand.txt
 
 Note that the sequenceLocation parameter must link to a remote `TwoBit file <https://genome.ucsc.edu/goldenpath/help/twoBit.html>`__.
 

@@ -278,14 +278,13 @@ class VizServlet extends ScalatraServlet {
     }
 
     val variantSamples: Option[Map[String, String]] = try {
-      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.map(_.getSampleId).mkString(","))))
+      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.map(_.getId).mkString(","))))
     } catch {
       case e: Exception => None
     }
 
     val featureSamples = try {
       Some(VizReads.materializer.getFeatures().get.getFiles.map(r => {
-        VizReads.coveragePaths.foreach(println)
         (LazyMaterialization.filterKeyFromFile(r), VizReads.coveragePaths.contains(r))
       }))
     } catch {
@@ -338,11 +337,12 @@ class VizServlet extends ScalatraServlet {
             }
             // filter data overlapping viewRegion and stringify
             val dataForKey = VizReads.readsCache.get(key)
+
             val data = dataForKey.getOrElse(Array.empty).filter(r => {
               ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
             })
-            val x =
-              results = Some(VizReads.materializer.getReads().get.stringify(data))
+            results = Some(VizReads.materializer.getReads().get.stringify(data))
+
             if (results.isDefined) {
               Ok(results.get)
             } else VizReads.errors.noContent(viewRegion)
@@ -628,8 +628,6 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
         VizReads.materializer.getFeatures().get.get(Some(region)).count()
       if (VizReads.materializer.readsExist)
         VizReads.materializer.getReads().get.get(Some(region)).count()
-      //      if (VizReads.materializer.coveragesExist)
-      //        VizReads.materializer.getCoverage.get.get(Some(region)).count()
       if (VizReads.materializer.variantContextExist)
         VizReads.materializer.getVariantContext().get.get(Some(region)).count()
     }

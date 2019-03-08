@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@jupyter-widgets/base": "^1.0.0",
-    "pileup": "^0.6.10",
+    "pileup": "0.6.11",
     "underscore": "^1.8.3"
   }
 }

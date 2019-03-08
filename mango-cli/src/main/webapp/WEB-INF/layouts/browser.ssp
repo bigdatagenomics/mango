@@ -127,7 +127,7 @@
                     // track for reads
                     tracks.push({
                         viz: pileup.viz.pileup({
-                            hideAlignments: true
+                            hideAlignments: false
                         }),
                         isReference: false,
                         data: data,
