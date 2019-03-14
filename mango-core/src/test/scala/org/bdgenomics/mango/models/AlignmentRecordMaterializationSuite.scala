@@ -40,11 +40,15 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   // test alignment data
   val bamFile = resourcePath("mouse_chrM.bam")
+  val samFile = resourcePath("multi_chr.sam")
+
   val key = LazyMaterialization.filterKeyFromFile(bamFile)
+  val samKey = LazyMaterialization.filterKeyFromFile(samFile)
 
   // test reference data
   var referencePath = resourcePath("mm10_chrM.fa")
   val files = List(bamFile)
+  val samFiles = List(samFile)
 
   sparkTest("create new AlignmentRecordMaterialization") {
     val lazyMat = new AlignmentRecordMaterialization(sc, files, dict)
@@ -94,6 +98,18 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val data = new AlignmentRecordMaterialization(sc, files, dict)
     val region = new ReferenceRegion("M", 90L, 110L)
     val results: Array[ReadAlignment] = data.getJson(region).get(key).get
+
+    val buf = data.stringify(results)
+    val keyData = GA4GHutil.stringToSearchReadsResponse(buf).getAlignmentsList
+
+    assert(keyData.size() == results.length)
+  }
+
+  sparkTest("should get data from unindexed file when referenceName predicates do not match") {
+    val dict = new SequenceDictionary(Vector(SequenceRecord("chr1", 248956422L)))
+    val data = new AlignmentRecordMaterialization(sc, samFiles, dict)
+    val region = new ReferenceRegion("chr1", 26472784L, 26472884L)
+    val results: Array[ReadAlignment] = data.getJson(region).get(samKey).get
 
     val buf = data.stringify(results)
     val keyData = GA4GHutil.stringToSearchReadsResponse(buf).getAlignmentsList

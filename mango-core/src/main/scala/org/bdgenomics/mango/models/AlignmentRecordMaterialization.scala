@@ -180,7 +180,7 @@ object AlignmentRecordMaterialization extends Logging {
           case e: java.lang.IllegalArgumentException => {
             log.warn(e.getMessage)
             log.warn("No bam index detected. File loading will be slow...")
-            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(regions.get)
+            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)
           }
         }
       } else {
