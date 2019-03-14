@@ -81,19 +81,6 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     assert(json(key2).length == 2)
   }
 
-  // TODO
-  //  sparkTest("Bins features over large ranges") {
-  //    val dict = new SequenceDictionary(Vector(SequenceRecord("M", 16699L)))
-  //
-  //    val data = new FeatureMaterialization(sc, List(bedFile, bedFile2), dict)
-  //    val region = new ReferenceRegion("M", 1000L, 1200L)
-  //    val json = data.getJson(region, binning = 200)
-  //    val keyData = parse(data.stringify(json.get(key).get)).extract[Array[BedRowJson]]
-  //    assert(keyData.length == 1)
-  //    assert(keyData.head.start == 1000)
-  //    assert(keyData.head.stop == 1210) // should extend longest feature in bin
-  //  }
-
   sparkTest("fetches multiple regions from load") {
     val region1 = ReferenceRegion("chrM", 100L, 200L)
     val region2 = ReferenceRegion("chrM", 3000L, 3100L)
