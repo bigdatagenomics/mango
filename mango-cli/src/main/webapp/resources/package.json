@@ -4,7 +4,7 @@
   "description": "Mango browser frontend",
   "main": "index.js",
   "dependencies": {
-    "pileup": "/Users/akmorrow/hammerlab/pileup.js"
+    "pileup": "0.6.11"
   },
   "devDependencies": {},
   "scripts": {

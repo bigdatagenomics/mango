@@ -20,6 +20,10 @@
     border-bottom: 1px solid grey;
 }
 
+.pileup-root > .features {
+    min-height: 20px; /* set min height if no data */
+}
+
 /* remove flex */
 .pileup-root {
 	height: inherit;
@@ -42,6 +46,7 @@
 
 .track.genotypes {
     max-height: 200px;
+    min-height: 0px; /* override 300px for tracks */
 }
 
 /* this is is to float Zoom in message for genotypes to match other messages with track label */
