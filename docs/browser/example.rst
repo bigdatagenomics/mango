@@ -66,7 +66,7 @@ This file contains the following command:
 .. code:: bash
 
   bin/mango-submit ./example-files/hg19.genome \
-    -reads ./example-files/chr17.7500000-7515000.sam.adam \
+    -reads ./example-files/chr17.7500000-7515000.sam \
     -variants ./example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf \
     -show_genotypes
 
@@ -80,7 +80,7 @@ An optional alignment file:
 
 .. code:: bash
 
-  -reads ./example-files/chr17.7500000-7515000.sam.adam
+  -reads ./example-files/chr17.7500000-7515000.sam
 
 An optional variant file:
 
@@ -131,7 +131,7 @@ Then, run mango-submit:
 
     ./bin/mango-submit ./example-files/hg19.genome \
            -genes http://www.biodalliance.org/datasets/ensGene.bb \
-           -reads hdfs:///<path_to_examples>/example-files/chr17.7500000-7515000.sam.adam \
+           -reads hdfs:///<path_to_examples>/example-files/chr17.7500000-7515000.sam \
            -variants hdfs:///<path_to_examples>/example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf \
 
 

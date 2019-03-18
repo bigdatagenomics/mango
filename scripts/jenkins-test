@@ -265,7 +265,7 @@ then
     curl \
     --header "Content-type: application/json" \
     --request POST \
-    --data "{\"pageToken\":null,\"pageSize\":200,\"readGroupIds\":[\"chr17_7500000-7515000_sam_adam\"],\"referenceId\":\"chr17\",\"start\":1,\"end\":100}"  \
+    --data "{\"pageToken\":null,\"pageSize\":200,\"readGroupIds\":[\"chr17_7500000-7515000_sam\"],\"referenceId\":\"chr17\",\"start\":1,\"end\":100}"  \
     http://localhost:8080/reads/search
 
     curl \
