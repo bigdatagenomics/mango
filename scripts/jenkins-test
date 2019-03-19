@@ -277,8 +277,8 @@ then
     # get processes with mango prefix
     PROCESSES=( $(ps aux | grep -F 'browser-scripts/run-example.sh' | grep -v -F 'grep' | awk '{ print $2 }') )
 
-    # There should be 2 processes running: 1 for JAVA and 1 for mango-submit script
-    if [ "${#PROCESSES[@]}" -eq 2 ] ; then
+    # There should be processes running for mango-browser
+    if [ "${#PROCESSES[@]}" -gt 0 ] ; then
         echo "Mango Browser Succeeded"
         # kill all Mango Browser related processes
         kill ${PROCESSES}; 
