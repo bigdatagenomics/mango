@@ -17,20 +17,20 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ PrintWriter, StringWriter }
+import java.io.{ BufferedOutputStream, OutputStream, PrintWriter, StringWriter }
 
 import net.liftweb.json.Serialization.write
-import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ VariantContext, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset }
-import org.bdgenomics.formats.avro.{ Variant, GenotypeAllele }
+import org.bdgenomics.formats.avro.{ Sample, Variant, GenotypeAllele }
 import org.bdgenomics.mango.core.util.ResourceUtils
-import org.bdgenomics.mango.layout.GenotypeJson
+import org.slf4j.LoggerFactory
+import scala.collection.JavaConversions._
+import org.bdgenomics.mango.converters.GA4GHutil._
 
 /**
  * Handles loading and tracking of data from persistent storage into memory for Variant data.
@@ -47,85 +47,72 @@ class VariantContextMaterialization(@transient sc: SparkContext,
                                     sd: SequenceDictionary,
                                     repartition: Boolean = false,
                                     prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[GenotypeJson, GenotypeJson](VariantContextMaterialization.name, sc, files, sd, repartition, prefetchSize)
+    extends LazyMaterialization[VariantContext, ga4gh.Variants.Variant](VariantContextMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable {
 
   // placeholder used for ref/alt positions to display in browser
   val variantPlaceholder = "N"
+
+  // TODO this may take a while
+  // Map of filenames to Samples for that file
+  @transient val samples: Map[String, Seq[Sample]] = getGenotypeSamples()
 
   /**
    * Extracts ReferenceRegion from Variant
    *
    * @return extracted ReferenceRegion
    */
-  def getReferenceRegion = (g: GenotypeJson) => ReferenceRegion(g.variant)
+  def getReferenceRegion = (g: VariantContext) => ReferenceRegion(g.position)
 
   /**
-   * Loads VariantContext Data into GenotypeJson format
+   * Reset ReferenceName for Feature
+   *
+   * @param f VariantContext to be modified
+   * @param contig to replace Feature contigName
+   * @return Feature with new ReferenceRegion
+   */
+  def setReferenceName = (f: VariantContext, contig: String) => {
+    val variant = Variant.newBuilder(f.variant.variant)
+      .setReferenceName(contig).build()
+
+    VariantContext(variant, f.genotypes)
+  }
+
+  /**
+   * Loads VariantContext Data
    *
    * @return Generic RDD of data types from file
    */
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) =>
-    VariantContextMaterialization.toGenotypeJsonRDD(VariantContextMaterialization.load(sc, file, regions))
-
-  /**
-   * Reset ReferenceName for Variant
-   *
-   * @return Variant with new ReferenceRegion
-   */
-  def setReferenceName = (g: GenotypeJson, referenceName: String) => {
-    g.variant.setReferenceName(referenceName)
-    g.copy()
-  }
+    VariantContextMaterialization.load(sc, file, regions).rdd
 
   /**
    * Stringifies data from variants to lists of variants over the requested regions
    *
    * @param data RDD of  filtered (key, GenotypeJson)
    * @return Map of (key, json) for the ReferenceRegion specified
-   * N
+   *
    */
-  def toJson(data: RDD[(String, GenotypeJson)]): Map[String, Array[GenotypeJson]] = {
-    data.collect
-      .groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
-  }
-
-  override def stringify(data: Array[GenotypeJson]): String = {
-    write(data.map(_.toString))
+  def toJson(data: RDD[(String, VariantContext)]): Map[String, Array[ga4gh.Variants.Variant]] = {
+    data
+      .collect.groupBy(_._1).mapValues(r =>
+        {
+          r.map(a => variantContextToGAVariant(a._2))
+        })
   }
 
   /**
-   * Formats raw data from RDD to JSON.
-   *
-   * @param region Region to obtain coverage for
-   * @param binning Tells what granularity of coverage to return. Used for large regions
-   * @return JSONified data map
+   * Formats raw data from GA4GH Variants Response to JSON.
+   * @param data An array of GA4GH Variants
+   * @return JSONified data
    */
-  def getJson(region: ReferenceRegion,
-              showGenotypes: Boolean,
-              binning: Int = 1): Map[String, Array[GenotypeJson]] = {
-    val data: RDD[(String, GenotypeJson)] = get(Some(region))
+  def stringify = (data: Array[ga4gh.Variants.Variant]) => {
+    // write message
+    val message = ga4gh.VariantServiceOuterClass
+      .SearchVariantsResponse.newBuilder().addAllVariants(data.toList)
+      .build()
 
-    val binnedData: RDD[(String, GenotypeJson)] =
-      if (binning <= 1) {
-        if (!showGenotypes)
-          data.map(r => (r._1, GenotypeJson(r._2.variant, null)))
-        else data
-      } else {
-        bin(data, binning)
-          .map(r => {
-            // Reset variant to match binned region
-            val start = r._1._2.start
-            val binned = Variant.newBuilder(r._2.variant)
-              .setStart(start)
-              .setEnd(Math.max(r._2.variant.getEnd, start + binning))
-              .setReferenceAllele(variantPlaceholder)
-              .setAlternateAllele(variantPlaceholder)
-              .build()
-            (r._1._1, GenotypeJson(binned))
-          })
-      }
-    toJson(binnedData)
+    com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(message)
   }
 
   /**
@@ -133,8 +120,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return List of filenames their corresponding Seq of SampleIds.
    */
-  def getGenotypeSamples(): List[(String, List[String])] = {
-    files.map(fp => (fp, VariantContextMaterialization.load(sc, fp, None).samples.map(_.getId).toList))
+  def getGenotypeSamples(): Map[String, List[Sample]] = {
+    files.map(fp => (fp, VariantContextMaterialization.load(sc, fp, None).samples.toList)).toMap
   }
 }
 
@@ -199,7 +186,7 @@ object VariantContextMaterialization {
    */
   def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
 
-    val variantContext = if (sc.isPartitioned(fp)) {
+    val variantContext = if (sc.isPartitioned(fp) && regions.isDefined) {
 
       // finalRegions includes references both with and without "chr" prefix
       val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
@@ -238,19 +225,5 @@ object VariantContextMaterialization {
 
     }
     variantContext
-  }
-
-  /**
-   * Converts VariantContextDataset into RDD of Variants and Genotype SampleIds that can be directly converted to json
-   *
-   * @param v VariantContextDataset to Convert
-   * @return Converted json RDD
-   */
-  private def toGenotypeJsonRDD(v: VariantContextDataset): RDD[GenotypeJson] = {
-    v.rdd.map(r => {
-      // filter out genotypes with only some alt alleles
-      val genotypes = r.genotypes.filter(_.getAlleles.toArray.filter(_ != GenotypeAllele.REF).length > 0)
-      new GenotypeJson(r.variant.variant, genotypes.map(_.getSampleId).toArray)
-    })
   }
 }

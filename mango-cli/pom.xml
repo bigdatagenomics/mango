@@ -38,6 +38,28 @@
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <workingDirectory>${project.build.directory}/../src/main/webapp/resources/</workingDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>Run `npm install`</id>
+            <phase>process-resources</phase>
+            <configuration>
+              <executable>npm</executable> <!-- requires npm to run -->
+              <arguments>
+                <argument>install</argument>
+              </arguments>
+            </configuration>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
@@ -101,10 +123,6 @@
   </build>
 
   <dependencies>
-    <dependency>
-      <groupId>net.fnothaft</groupId>
-      <artifactId>ga4gh-format</artifactId>
-    </dependency>
     <dependency>
       <groupId>com.esotericsoftware.kryo</groupId>
       <artifactId>kryo</artifactId>

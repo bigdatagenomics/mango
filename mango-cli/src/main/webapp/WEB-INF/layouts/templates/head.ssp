@@ -11,7 +11,7 @@
     <script src="resources/js/bigSlide.js"></script>
     <script src="resources/js/jquery.autocomplete.min.js"></script>
     <!-- pileup requirements -->
-    <script src="resources/node_modules/pileup/dist/pileup.min.js"></script>
+    <script src="resources/node_modules/pileup/dist/pileup.js"></script>
     <script src="js/formSubmit.js"></script>
     <script src="js/contigWheel.js"></script>
     <link rel="stylesheet" href="resources/node_modules/pileup/style/pileup.css">

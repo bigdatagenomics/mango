@@ -256,16 +256,29 @@ then
 
     # test mango submit
     MANGO_BROWSER_LOGS=mango-submit.log
-    bash -xv ${PROJECT_ROOT}/bin/mango-submit ./example-files/hg19.17.2bit &> ${MANGO_BROWSER_LOGS} &
+    bash -xv ${PROJECT_ROOT}/example-files/browser-scripts/run-example.sh &> ${MANGO_BROWSER_LOGS} &
 
     # sleep for 10 seconds to let mango-browser start up
     sleep 10
 
-    # get processes with mango prefix
-    PROCESSES=( $(ps aux | grep -F '/example-files/hg19.17.2bit' | grep -v -F 'grep' | awk '{ print $2 }') )
+    # make sure server responds to POST for reads and variants
+    curl \
+    --header "Content-type: application/json" \
+    --request POST \
+    --data "{\"pageToken\":null,\"pageSize\":200,\"readGroupIds\":[\"chr17_7500000-7515000_sam\"],\"referenceId\":\"chr17\",\"start\":1,\"end\":100}"  \
+    http://localhost:8080/reads/search
 
-    # There should be 2 processes running: 1 for JAVA and 1 for mango-submit script
-    if [ "${#PROCESSES[@]}" -eq 2 ] ; then
+    curl \
+    --header "Content-type: application/json" \
+    --request POST \
+    --data "{\"variantSetId\":\"ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf\",\"pageToken\":null,\"pageSize\":400,\"referenceName\":\"chr17\",\"callSetIds\":[],\"start\":7500000,\"end\":7515000}"  \
+    http://localhost:8080/variants/search
+
+    # get processes with mango prefix
+    PROCESSES=( $(ps aux | grep -F 'browser-scripts/run-example.sh' | grep -v -F 'grep' | awk '{ print $2 }') )
+
+    # There should be processes running for mango-browser
+    if [ "${#PROCESSES[@]}" -gt 0 ] ; then
         echo "Mango Browser Succeeded"
         # kill all Mango Browser related processes
         kill ${PROCESSES}; 

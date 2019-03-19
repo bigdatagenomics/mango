@@ -31,6 +31,7 @@ variety of platforms.
 
    jupyterWidgets/usage.rst
    browser/example
+   browser/genomes
    mangoPython/example
 
 .. toctree::

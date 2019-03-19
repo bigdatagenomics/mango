@@ -23,13 +23,12 @@ You will see a list of options:
 
 .. code:: bash
 
-   reference                                                       : The reference file to view, required
+   genome                                                          : Path to compressed .genome file. To build a new genome file, run bin/make_genome.
    -cacheSize N                                                    : Bp to cache on driver.
    -coverage VAL                                                   : A list of coverage files to view, separated by commas (,)
    -debugFrontend                                                  : For debugging purposes. Sets front end in source code to avoid recompilation.
    -discover                                                       : This turns on discovery mode on start up.
    -features VAL                                                   : The feature files to view, separated by commas (,)
-   -genes VAL                                                      : Gene URL.
    -h (-help, --help, -?)                                          : Print help
    -parquetIsBinned                                                : This turns on binned parquet pre-fetch warmup step
    -parquet_block_size N                                           : Parquet block size (default = 128mb)
@@ -43,13 +42,12 @@ You will see a list of options:
    -print_metrics                                                  : Print metrics to the log on completion
    -reads VAL                                                      : A list of reads files to view, separated by commas (,)
    -repartition                                                    : Repartitions data to default number of partitions.
-   -show_genotypes                                                 : Shows genotypes if available in variant files.
    -test                                                           : For debugging purposes.
    -variants VAL                                                   : A list of variants files to view, separated by commas (,). Vcf files require a
                                                                      corresponding tbi index.
 
-Note that a reference genome is always required when running the Mango Browser.
-
+Note that a genome file is always required when running the Mango Browser.
+`See how to build a genome <./genomes.html>`__.
 
 Running Mango Browser Locally
 -----------------------------
@@ -67,9 +65,8 @@ This file contains the following command:
 
 .. code:: bash
 
-  bin/mango-submit ./example-files/hg19.17.2bit \
-    -genes http://www.biodalliance.org/datasets/ensGene.bb \
-    -reads ./example-files/chr17.7500000-7515000.sam.adam \
+  bin/mango-submit ./example-files/hg19.genome \
+    -reads ./example-files/chr17.7500000-7515000.sam \
     -variants ./example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf \
     -show_genotypes
 
@@ -77,13 +74,13 @@ This file specifies the required genome reference file:
 
 .. code:: bash
 
-  ./example-files/hg19.17.2bit
+  ./example-files/hg19.genome
 
 An optional alignment file:
 
 .. code:: bash
 
-  -reads ./example-files/chr17.7500000-7515000.sam.adam
+  -reads ./example-files/chr17.7500000-7515000.sam
 
 An optional variant file:
 
@@ -114,7 +111,7 @@ To run Mango browser with user specified Apache Spark parameters, run
 
 ``<Mango-parameters>`` are shown in the output of ``./bin/mango-submit``.
 
-Note that a twobit or fasta reference file is required to run the Mango browser.
+Note that a `genome file <./genomes.html>`__ is required to run the Mango browser.
 
 Running example files on a cluster with HDFS
 --------------------------------------------
@@ -132,9 +129,9 @@ Then, run mango-submit:
 
 .. code:: bash
 
-    ./bin/mango-submit ./example-files/hg19.17.2bit \
+    ./bin/mango-submit ./example-files/hg19.genome \
            -genes http://www.biodalliance.org/datasets/ensGene.bb \
-           -reads hdfs:///<path_to_examples>/example-files/chr17.7500000-7515000.sam.adam \
+           -reads hdfs:///<path_to_examples>/example-files/chr17.7500000-7515000.sam \
            -variants hdfs:///<path_to_examples>/example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf \
 
 

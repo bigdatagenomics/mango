@@ -33,7 +33,11 @@ class MangoKryoRegistrator extends ADAMKryoRegistrator {
     kryo.register(classOf[ArrayBuffer[AlignmentRecord]])
     kryo.register(classOf[ListBuffer[Genotype]])
     kryo.register(classOf[ArrayBuffer[Genotype]])
+    kryo.register(classOf[List[Sample]])
     kryo.register(classOf[AlignmentRecord], new AvroSerializer[AlignmentRecord]())
+    kryo.register(classOf[org.bdgenomics.adam.models.VariantContext],
+      new org.bdgenomics.adam.models.VariantContextSerializer)
+    kryo.register(classOf[org.bdgenomics.formats.avro.Sample], new AvroSerializer[org.bdgenomics.formats.avro.Sample]())
     kryo.register(classOf[Genotype], new AvroSerializer[Genotype]())
     kryo.register(classOf[Variant], new AvroSerializer[Variant]())
     kryo.register(classOf[NucleotideContigFragment], new AvroSerializer[NucleotideContigFragment]())
@@ -42,5 +46,9 @@ class MangoKryoRegistrator extends ADAMKryoRegistrator {
     kryo.register(classOf[Feature], new AvroSerializer[Feature]())
     kryo.register(classOf[ReferencePosition], new ReferencePositionSerializer)
     kryo.register(classOf[TwoBitFile], new TwoBitFileSerializer)
+
+    // scala
+    kryo.register(classOf[scala.Array[org.bdgenomics.formats.avro.Sample]])
+    kryo.register(classOf[scala.List[org.bdgenomics.formats.avro.Sample]])
   }
 }

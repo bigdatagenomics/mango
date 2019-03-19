@@ -358,21 +358,6 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>net.fnothaft</groupId>
-        <artifactId>ga4gh-format</artifactId>
-        <version>0.5.1</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro-ipc</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.esotericsoftware.kryo</groupId>
-            <artifactId>kryo</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>args4j</groupId>
         <artifactId>args4j</artifactId>
         <version>2.0.31</version>
@@ -400,7 +385,7 @@
       <dependency>
         <groupId>net.liftweb</groupId>
         <artifactId>lift-json_${scala.version.prefix}</artifactId>
-        <version>2.6.3</version>
+        <version>3.0.1</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>

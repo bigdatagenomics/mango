@@ -20,6 +20,10 @@
     border-bottom: 1px solid grey;
 }
 
+.pileup-root > .features {
+    min-height: 20px; /* set min height if no data */
+}
+
 /* remove flex */
 .pileup-root {
 	height: inherit;
@@ -42,20 +46,12 @@
 
 .track.genotypes {
     max-height: 200px;
+    min-height: 0px; /* override 300px for tracks */
 }
 
 /* this is is to float Zoom in message for genotypes to match other messages with track label */
 #pileup > div > div.track.genotypes > div.track-content > div > div > .center {
     margin-left: 100px;
-}
-
-.track.pileup {
-    max-height: 400px;
-    min-height: 65px !important; /* leave room for label and gear icon */
-}
-
-.track.features {
-    height: 35px;
 }
 
 /* TODO: this should be fixed in pileup, where genotype height is set to 100% */
