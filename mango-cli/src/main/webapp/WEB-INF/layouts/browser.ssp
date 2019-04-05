@@ -1,14 +1,17 @@
+<% import org.bdgenomics.mango.models.MaterializedFile %>
+<% import org.bdgenomics.adam.models.ReferenceRegion %>
 <%@ val dictionary:     String  %>
 <%@ val twoBitUrl:      String  %>
 <%@ val genes:          Option[String] %>
-<%@ val reads:     Option[List[String]] %>
-<%@ val variants:  Option[Map[String, String]] %> <!-- map of file name and samples to extract genotype ids/names -->
-<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
-<%@ val contig: String %>
-<%@ val start: String %>
-<%@ val end: String %>
+<%@ val reads:     Option[List[MaterializedFile]] %>
+<%@ val variants:  Option[Map[MaterializedFile, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
+<%@ val features:  Option[List[(MaterializedFile, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
+<%@ val region: ReferenceRegion %>
 
-
+<%@ val reads:     Option[List[MaterializedFile]] %>
+<%@ val variants:  Option[Map[MaterializedFile, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
+<%@ val features:  Option[List[(MaterializedFile, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
+<%@ val region: ReferenceRegion %>
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
@@ -22,9 +25,9 @@
 
 <script>
     <!-- Define Variables for Pileup.js -->
-    var contig = '${contig}';
-    var start = ${start};
-    var end = ${end};
+    var contig = '${region.referenceName}';
+    var start = '${region.start}';
+    var end = '${region.end}';
 
     var request = "/sequenceDictionary"
     var xhr = new XMLHttpRequest();
@@ -33,7 +36,7 @@
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4 && xhr.status == 200) {
-            var contigList = JSON.parse(xhr.response);
+            var contigList = JSON.parse(xhr.response); <!-- TODO what is this for? -->
 
             // add reference and genes
             var tracks = [
@@ -68,16 +71,24 @@
             // generate and add variants, if defined
             #if (variants.isDefined)
                 #for (s <- variants.get)
-                    var data = pileup.formats.GAVariant({
-                        endpoint: '',
-                        variantSetId: '${s._1}',
-                        callSetIds: '${s._2}'.split(","),
-                        callSetNames:  '${s._2}'.split(",")
-                    });
+
+                    #if (!s._1.usesSpark)
+                        var data = pileup.formats.vcf({
+                            url: '${s._1.filePath}';
+                        });
+                    #else
+                        var data = pileup.formats.GAVariant({
+                            endpoint: '',
+                            variantSetId: '${s._1.getKey()}',
+                            callSetIds: '${s._2}'.split(","),
+                            callSetNames:  '${s._2}'.split(",")
+                        });
+                    #end
+
                     tracks.push({
                         viz: pileup.viz.variants(),
                         data: data,
-                        name: '${s._1}'
+                        name: '${s._1.getKey()}'
                     });
                     tracks.push({
                         viz: pileup.viz.genotypes(),
@@ -90,21 +101,29 @@
             // add features and coverage
             #if (features.isDefined)
                 #for (s <- features.get)
-                    var data = pileup.formats.GAFeature({
-                    endpoint: '',
-                    featureSetId: '${s._1}'
-                    });
+
+                    #if (!s._1.usesSpark)
+                        var data = pileup.formats.bigBed({
+                            url: '${s._1.filePath}'
+                        });
+                    #else
+                        var data = pileup.formats.GAFeature({
+                            endpoint: '',
+                            featureSetId: '${s._1.getKey()}'
+                        });
+                    #end
+
                     #if (s._2 == true)
                         tracks.push({
                             viz: pileup.viz.coverage(),
                             data: data,
-                            name: '${s._1}'
+                            name: '${s._1.getKey()}'
                         });
                     #else
                         tracks.push({
                             viz: pileup.viz.features(),
                             data: data,
-                            name: '${s._1}'
+                            name: '${s._1.getKey()}'
                         });
                     #end
                 #end
@@ -113,16 +132,27 @@
             // add reads
             #if (reads.isDefined)
                 #for (s <- reads.get)
-                    var data = pileup.formats.GAReadAlignment({
-                        endpoint: '',
-                        readGroupId: '${s}',
-                        killChr: false
-                    });
+                    console.log('${s.filePath}');
+                    console.log('${s.usesSpark}');
+
+                    #if (!s.usesSpark)
+                        var data = pileup.formats.bam({
+                            url: '${s.filePath}',
+                            indexUrl: '${s.indexPath.get}'
+                        });
+                    #else
+                        var data = pileup.formats.GAReadAlignment({
+                            endpoint: '',
+                            readGroupId: '${s.getKey()}',
+                            killChr: false
+                        });
+                    #end
+
                     // track for coverage for reads
                     tracks.push({
                         viz: pileup.viz.coverage(),
                         data: data,
-                        name: '${s}'
+                        name: '${s.getKey()}'
                     });
                     // track for reads
                     tracks.push({
@@ -131,7 +161,7 @@
                         }),
                         isReference: false,
                         data: data,
-                        name: '${s}'
+                        name: '${s.getKey()}'
                     });
                 #end
             #end

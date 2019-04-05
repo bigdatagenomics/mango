@@ -55,7 +55,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 
   // TODO this may take a while
   // Map of filenames to Samples for that file
-  @transient val samples: Map[String, Seq[Sample]] = getGenotypeSamples()
+  @transient val samples: Map[MaterializedFile, Seq[Sample]] = getGenotypeSamples()
 
   /**
    * Extracts ReferenceRegion from Variant
@@ -63,6 +63,14 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    * @return extracted ReferenceRegion
    */
   def getReferenceRegion = (g: VariantContext) => ReferenceRegion(g.position)
+
+  /**
+   * Checks that an http endpoint for a vcf file.
+   * @param endpoint path to http endpoint for vcf file
+   *
+   * @return MaterializedFile containing http endpoint
+   */
+  def createHttpEndpoint = (endpoint: String) => VariantContextMaterialization.createHttpEndpoint(endpoint)
 
   /**
    * Reset ReferenceName for Feature
@@ -120,8 +128,14 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return List of filenames their corresponding Seq of SampleIds.
    */
-  def getGenotypeSamples(): Map[String, List[Sample]] = {
-    files.map(fp => (fp, VariantContextMaterialization.load(sc, fp, None).samples.toList)).toMap
+  def getGenotypeSamples(): Map[MaterializedFile, List[Sample]] = {
+
+    extendedFiles.map(r => {
+      if (!r.usesSpark)
+        (r, List()) // not used by pileup vcf. Return empty.
+      else
+        (r, VariantContextMaterialization.load(sc, r.filePath, None).samples.toList)
+    }).toMap
   }
 }
 
@@ -133,6 +147,24 @@ object VariantContextMaterialization {
 
   val name = "VariantContext"
   val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
+
+  /**
+   * Checks that an http endpoint for a vcf file.
+   * @param endpoint path to http endpoint for vcf file
+   *
+   * @return MaterializedFile containing http endpoint
+   */
+  def createHttpEndpoint(endpoint: String): Option[MaterializedFile] = {
+
+    // should be a bam file
+    require(endpoint.endsWith(".vcf"), s"${endpoint} is not a vcf (.vcf) file.")
+
+    // Check if file exists
+    val responseCode = ResourceUtils.getResponseCode(endpoint)
+    require(responseCode == 200, s"${endpoint} does not exist, got response code ${responseCode}")
+
+    Some(MaterializedFile(endpoint, None, false))
+  }
 
   /**
    * Loads variant data from adam and vcf files into a VariantContextDataset

@@ -84,6 +84,14 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
   def getReferenceRegion = (ar: AlignmentRecord) => ReferenceRegion.unstranded(ar)
 
   /**
+   * Checks that an http endpoint for a bam file is correct and has an index.
+   * @param endpoint path to http endpoint for bam file
+   *
+   * @return MaterializedFile containing http endpoint and http index
+   */
+  def createHttpEndpoint = (endpoint: String) => AlignmentRecordMaterialization.createHttpEndpoint(endpoint)
+
+  /**
    * Reset ReferenceName for AlignmentRecord
    *
    * @param ar AlignmentRecord to be modified
@@ -132,6 +140,31 @@ object AlignmentRecordMaterialization extends Logging {
   // caches the first steps of loading binned dataset from files to avoid repeating the
   // several minutes long initalization of these binned dataset
   val datasetCache = new collection.mutable.HashMap[String, AlignmentRecordDataset]
+
+  /**
+   * Checks that an http endpoint for a bam file is correct and has an index.
+   * @param endpoint path to http endpoint for bam file
+   *
+   * @return MaterializedFile containing http endpoint and http index
+   */
+  def createHttpEndpoint(endpoint: String): Option[MaterializedFile] = {
+
+    // should be a bam file
+    require(endpoint.endsWith(".bam"), s"${endpoint} is not a bam file.")
+
+    // Check if file exists
+    val responseCode = ResourceUtils.getResponseCode(endpoint)
+    require(responseCode == 200, s"${endpoint} does not exist, got response code ${responseCode}")
+
+    var index: Option[String] = None
+    // If AlignmentRecordMaterialization, ping for bam index
+    val indexFile = endpoint + ".bai"
+    val responseCodeIndex = ResourceUtils.getResponseCode(indexFile)
+    require(responseCodeIndex == 200, s"${endpoint}.bai does not exist, got response code ${responseCode}")
+    index = Some(indexFile)
+
+    Some(MaterializedFile(endpoint, index, false))
+  }
 
   /**
    * Loads alignment data from bam, sam and ADAM file formats

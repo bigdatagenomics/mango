@@ -158,4 +158,12 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
   }
 
+  sparkTest("Fails on invalid http endpoint") {
+    val endpoint = "http:fake.vcf"
+    val thrown = intercept[Exception] {
+      VariantContextMaterialization.createHttpEndpoint(endpoint)
+    }
+    assert(thrown.getMessage.contains("http host"))
+  }
+
 }

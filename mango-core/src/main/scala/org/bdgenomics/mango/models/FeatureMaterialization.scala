@@ -64,6 +64,14 @@ class FeatureMaterialization(@transient sc: SparkContext,
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => FeatureMaterialization.load(sc, file, regions).rdd
 
   /**
+   * Checks that an http endpoint for a bigBed file.
+   * @param endpoint path to http endpoint for bigbed file
+   *
+   * @return MaterializedFile containing http endpoint
+   */
+  def createHttpEndpoint = (endpoint: String) => FeatureMaterialization.createHttpEndpoint(endpoint)
+
+  /**
    * Reset ReferenceName for Feature
    *
    * @param f Feature to be modified
@@ -100,6 +108,24 @@ class FeatureMaterialization(@transient sc: SparkContext,
 object FeatureMaterialization {
 
   val name = "Feature"
+
+  /**
+   * Checks that an http endpoint for a bigBed file.
+   * @param endpoint path to http endpoint for bigbed file
+   *
+   * @return MaterializedFile containing http endpoint
+   */
+  def createHttpEndpoint(endpoint: String): Option[MaterializedFile] = {
+
+    // should be a bam file
+    require(endpoint.endsWith(".bb"), s"${endpoint} is not a bigBed (.bb) file.")
+
+    // Check if file exists
+    val responseCode = ResourceUtils.getResponseCode(endpoint)
+    require(responseCode == 200, s"${endpoint} does not exist, got response code ${responseCode}")
+
+    Some(MaterializedFile(endpoint, None, false))
+  }
 
   /**
    * Formats raw data from GA4GH Variants Response to JSON.

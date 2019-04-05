@@ -105,6 +105,23 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     assert(keyData.size() == results.length)
   }
 
+  sparkTest("Creates http endpoint") {
+    val endpoint = "http://s3.amazonaws.com/1000genomes/phase1/data/NA19661/exome_alignment/NA19661.mapped.illumina.mosaik.MXL.exome.20110411.bam"
+    val materializedFile = AlignmentRecordMaterialization.createHttpEndpoint(endpoint)
+    assert(materializedFile.get.indexPath != None)
+    assert(materializedFile.get.filePath == endpoint)
+    assert(materializedFile.get.usesSpark == false)
+  }
+
+  sparkTest("Fails on invalid http endpoint") {
+    val endpoint = "http:fake.bam"
+
+    val thrown = intercept[Exception] {
+      AlignmentRecordMaterialization.createHttpEndpoint(endpoint)
+    }
+    assert(thrown.getMessage.contains("http host"))
+  }
+
   sparkTest("should get data from unindexed file when referenceName predicates do not match") {
     val dict = new SequenceDictionary(Vector(SequenceRecord("chr1", 248956422L)))
     val data = new AlignmentRecordMaterialization(sc, samFiles, dict)

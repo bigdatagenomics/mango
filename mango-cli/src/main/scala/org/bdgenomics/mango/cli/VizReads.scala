@@ -271,21 +271,21 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
 
     // generate file keys for front end
-    val readsSamples: Option[List[String]] = try {
-      Some(VizReads.materializer.getReads().get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
+    val readsSamples: Option[List[MaterializedFile]] = try {
+      Some(VizReads.materializer.getReads().get.getFiles(false))
     } catch {
       case e: Exception => None
     }
 
-    val variantSamples: Option[Map[String, String]] = try {
-      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (LazyMaterialization.filterKeyFromFile(r._1), r._2.map(_.getId).mkString(","))))
+    val variantSamples: Option[Map[MaterializedFile, String]] = try {
+      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (r._1, r._2.map(_.getId).mkString(","))))
     } catch {
       case e: Exception => None
     }
 
-    val featureSamples = try {
-      Some(VizReads.materializer.getFeatures().get.getFiles.map(r => {
-        (LazyMaterialization.filterKeyFromFile(r), VizReads.coveragePaths.contains(r))
+    val featureSamples: Option[List[(MaterializedFile, Boolean)]] = try {
+      Some(VizReads.materializer.getFeatures().get.getFiles(false).map(r => {
+        (r, VizReads.coveragePaths.contains(r))
       }))
     } catch {
       case e: Exception => None
@@ -298,9 +298,7 @@ class VizServlet extends ScalatraServlet {
         "reads" -> readsSamples,
         "variants" -> variantSamples,
         "features" -> featureSamples,
-        "contig" -> session("referenceRegion").asInstanceOf[ReferenceRegion].referenceName,
-        "start" -> session("referenceRegion").asInstanceOf[ReferenceRegion].start.toString,
-        "end" -> session("referenceRegion").asInstanceOf[ReferenceRegion].end.toString))
+        "region" -> session("referenceRegion").asInstanceOf[ReferenceRegion]))
   }
 
   // used in browser.ssp to set contig list for wheel

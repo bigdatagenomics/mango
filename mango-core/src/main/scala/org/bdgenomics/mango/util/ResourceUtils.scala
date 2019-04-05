@@ -64,10 +64,11 @@ object ResourceUtils {
 
   /**
    * Checks URL to see if file exists
-   * @param urlString http or ftp URL
+   * @param urlString http URL
    * @return status code whether file exists. 200 -> OK, 404 -> missing
    */
   def getResponseCode(urlString: String): Int = {
+    require(urlString.startsWith("http"), s"Cannot get response on a non-http file ${urlString}")
     val u = new java.net.URL(urlString)
     val huc = u.openConnection().asInstanceOf[HttpURLConnection]
     huc.setRequestMethod("GET")

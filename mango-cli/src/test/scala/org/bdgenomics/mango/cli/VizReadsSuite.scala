@@ -323,6 +323,22 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
+  sparkTest("Should not trigger Spark requests for http files") {
+
+    val args = new VizReadsArgs()
+    args.genomePath = genomeFile
+    args.testMode = true
+    args.readsPaths = "http://fakebam.bam"
+
+    implicit val VizReads = runVizReads(args)
+
+    val coverageBody = SearchFeaturesRequestGA4GH("fakeBam", "null", 200, LazyMaterialization.filterKeyFromFile(args.readsPaths), 0, 1200).toByteArray()
+
+    post("/reads/search", coverageBody, requestHeader) {
+      assert(status == NotFound().status.code)
+    }
+  }
+
   /** Example files **/
   sparkTest("should run example files") {
 

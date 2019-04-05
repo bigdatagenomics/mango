@@ -42,6 +42,10 @@ object LazyMaterializationTimers extends Metrics {
 
 }
 
+case class MaterializedFile(filePath: String, indexPath: Option[String], usesSpark: Boolean) {
+  def getKey(): String = LazyMaterialization.filterKeyFromFile(filePath)
+}
+
 /**
  * Tracks regions of data already in memory and loads regions as needed.
  *
@@ -66,42 +70,30 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
   def setMemoryFraction(fraction: Double) =
     memoryFraction = fraction
 
-  // add access for http or ftp files
-  val extendedFiles = files.map(file => {
-    if (file.startsWith("http") || file.startsWith("ftp")) {
+  // add access for httpfiles
+  val extendedFiles: List[MaterializedFile] = files.map(file => {
+    if (file.startsWith("http")) {
+      // materialized specific endpoint
+      createHttpEndpoint(file)
 
-      // Check if file exists
-      val responseCode = ResourceUtils.getResponseCode(file)
-      require(responseCode == 200, s"${file} does not exist, got response code ${responseCode}")
+    } else if (file.startsWith("ftp")) {
+      throw new IllegalAccessError(s"ftp protocol not supported for ${file}")
 
-      sc.addFile(file)
+    } else Some(MaterializedFile(file, None, true))
+  }).flatten
 
-      // hack for permissions. Must set directory containing files
-      // to be executable. This should be in the user's path.
-      val localPath = sc.getConf.getOption("spark.local.dir")
-      require(localPath.isDefined, "Must set spark.local.dir if accessing http or ftp files")
+  /**
+   * Gets files for this materialization structure.
+   * @param onlyMaterialized boolean. If true, only gets files that are managed by SparkSession
+   * @return List of Materialized files
+   */
+  def getFiles(onlyMaterialized: Boolean): List[MaterializedFile] = {
+    if (onlyMaterialized)
+      extendedFiles.filter(r => r.usesSpark)
+    else
+      extendedFiles
+  }
 
-      val local_dir = new File(localPath.get)
-      local_dir.listFiles.filter(r => r.getName.split("/").last.startsWith("spark-"))
-        .foreach(r => r.setExecutable(true, false))
-
-      // If AlignmentRecordMaterialization, ping for bam index and add File
-      if (name == AlignmentRecordMaterialization.name) {
-        val indexFile = file + ".bai"
-        val responseCodeIndex = ResourceUtils.getResponseCode(indexFile)
-        if (responseCodeIndex == 200)
-          sc.addFile(file + ".bai")
-        else
-          log.warn(s"bai index not found for ${file}")
-      }
-
-      // files will be added locally to a tmp location by Spark
-      var tmp = SparkFiles.get(file.split("/").last)
-      s"file://${tmp}"
-    } else file
-  })
-
-  def getFiles: List[String] = extendedFiles
   var intRDD: IntervalRDD[ReferenceRegion, (String, T)] = null
 
   /**
@@ -109,8 +101,8 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @return
    */
   def getSizeInBytes: Long = {
-    getFiles.map(fp => {
-      val path = new Path(fp)
+    getFiles(true).map(fp => {
+      val path = new Path(fp.filePath)
       // list all files in case of directory
       val iter = path.getFileSystem(sc.hadoopConfiguration).listFiles(path, false)
       var len = 0L
@@ -138,6 +130,13 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @return T with new ReferenceRegion
    */
   def setReferenceName: (T, String) => T
+
+  /**
+   * Verifies whether http protocol is correct
+   *
+   * @return Boolean true if valid, false otherwise
+   */
+  def createHttpEndpoint: (String) => Option[MaterializedFile]
 
   def stringify: (Array[S]) => String
 
@@ -208,7 +207,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
           val seqRecord = sd(region.referenceName)
           seqRecord match {
             case Some(_) => {
-              val missing = bookkeep.getMissingRegions(region, getFiles).toIterable
+              val missing = bookkeep.getMissingRegions(region, getFiles(true).map(_.filePath)).toIterable
               if (!missing.isEmpty) {
                 put(missing)
               }
@@ -228,7 +227,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
           val data = loadAllFiles(None)
 
           // tag entire sequence dictionary
-          bookkeep.rememberValues(sd, getFiles)
+          bookkeep.rememberValues(sd, getFiles(true).map(_.filePath))
 
           // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
           intRDD = partitionIntervalRDD(data, repartition)
@@ -258,7 +257,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
       val data = loadAllFiles(Some(regions))
 
       // tag regions as found, even if there is no data
-      filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
+      filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles(true).map(_.filePath)))
 
       // insert into IntervalRDD if there is data
       if (!data.isEmpty()) {
@@ -308,8 +307,8 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
 
     LazyMaterializationTimers.loadFiles.time {
       // get data for all files
-
-      getFiles.map(fp => {
+      getFiles(true).map(mf => {
+        val fp = mf.filePath
         val k = LazyMaterialization.filterKeyFromFile(fp)
         load(fp, regions).map(v => (k, v))
       }).reduce(_ union _).map(r => {

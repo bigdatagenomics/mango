@@ -24,7 +24,6 @@ import ga4gh.ReadServiceOuterClass.SearchReadsResponse
 import ga4gh.Reads.ReadAlignment
 import ga4gh.SequenceAnnotationServiceOuterClass.SearchFeaturesResponse
 import ga4gh.VariantServiceOuterClass.SearchVariantsResponse
-import net.codingwell.scalaguice.ScalaModule
 import net.liftweb.json.Extraction._
 import net.liftweb.json._
 import org.bdgenomics.adam.models.VariantContext

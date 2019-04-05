@@ -66,6 +66,11 @@ class LazyMaterializationSuite extends MangoFunSuite {
     assert(!lazyDummy.bookkeep.queue.contains("chrM"))
   }
 
+  sparkTest("Should not add http files to spark") {
+    val lazyDummy = new LazyDummy(sc, List("http://httpfile.bam"), sd)
+    assert(lazyDummy.getFiles(true).size == 0)
+  }
+
 }
 
 /**
@@ -90,6 +95,8 @@ class LazyDummy(@transient sc: SparkContext,
     // empty
     ""
   }
+
+  def createHttpEndpoint = (endpoint: String) => None
 
   def setReferenceName = (r: ReferenceRegion, referenceName: String) => {
     ReferenceRegion(referenceName, r.start, r.end)

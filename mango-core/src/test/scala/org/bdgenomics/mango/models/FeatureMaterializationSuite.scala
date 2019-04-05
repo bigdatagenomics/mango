@@ -90,4 +90,12 @@ class FeatureMaterializationSuite extends MangoFunSuite {
     val data = FeatureMaterialization.load(sc, bedFile, regions)
     assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
   }
+
+  sparkTest("Fails on invalid http endpoint") {
+    val endpoint = "http:fake.bb"
+    val thrown = intercept[Exception] {
+      FeatureMaterialization.createHttpEndpoint(endpoint)
+    }
+    assert(thrown.getMessage.contains("http host"))
+  }
 }
