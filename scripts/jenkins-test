@@ -39,21 +39,6 @@ fi
 
 set -e
 
-# are we testing for spark 2.2.3? if so, we need to rewrite our poms first
-if [ ${SPARK_VERSION} == 2.2.3 ];
-then
-
-    # shouldn't be able to move to spark 2 twice
-    set +e
-    ./scripts/move_to_spark_2.sh
-    if [[ $? == 0 ]];
-    then
-        echo "We have already moved to Spark 2, so running move_to_spark_2.sh a second time should fail, but error code was 0 (success)."
-        exit 1
-    fi
-    set -e
-fi
-
 # are we testing for scala 2.11? if so, we need to rewrite our poms to 2.11 first
 if [ ${SCALAVER} == 2.11 ];
 then
@@ -129,7 +114,7 @@ find . -name "*.bak" -exec rm -f {} \;
 
 # run integration tests
 # prebuilt spark distributions are scala 2.11 for spark 2.x
-if [[ ${SPARK_VERSION} == 2.2.3 && ${SCALAVER} == 2.11 ]];
+if [[ ${SCALAVER} == 2.11 ]];
 then
 
     # make a temp directory
