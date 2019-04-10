@@ -368,11 +368,11 @@
         <!--<artifactId>kryo</artifactId>-->
         <!--<version>2.24.0</version>-->
       <!--</dependency>-->
-      <!--<dependency>-->
-        <!--<groupId>com.github.samtools</groupId>-->
-        <!--<artifactId>htsjdk</artifactId>-->
-        <!--<version>${htsjdk.version}</version>-->
-      <!--</dependency>-->
+      <dependency>
+        <groupId>com.github.samtools</groupId>
+        <artifactId>htsjdk</artifactId>
+        <version>${htsjdk.version}</version>
+      </dependency>
       <dependency>
         <groupId>commons-configuration</groupId>
         <artifactId>commons-configuration</artifactId>

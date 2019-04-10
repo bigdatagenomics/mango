@@ -17,14 +17,18 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ PrintWriter, StringWriter }
+import java.io.{ File, PrintWriter, StringWriter }
+import java.net.URL
+import java.nio.file.Path
 
-import htsjdk.samtools.ValidationStringency
+import htsjdk.samtools.util.{ HttpUtils, SamRecordIntervalIteratorFactory }
+import htsjdk.samtools._
 import net.liftweb.json.Extraction._
 import net.liftweb.json._
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.LongWritable
 import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.parquet.filter2.predicate.FilterPredicate
+import org.apache.parquet.hadoop.util.ContextUtil
 import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -33,11 +37,13 @@ import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.mango.converters.SAMRecordConverter
 import org.bdgenomics.mango.core.util.ResourceUtils
-import org.bdgenomics.utils.misc.Logging
+import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
 import org.bdgenomics.utils.instrumentation.Metrics
 import ga4gh.Reads.ReadAlignment
 import net.liftweb.json.Serialization._
+import org.seqdoop.hadoop_bam.{ SAMRecordWritable, BAMInputFormat }
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.JavaConversions._
 import scala.reflect._
@@ -177,7 +183,7 @@ object AlignmentRecordMaterialization extends Logging {
     if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
-        AlignmentRecordMaterialization.loadFromBam(sc, fp, regions)
+        AlignmentRecordMaterialization.loadBamFromHDFS(sc, fp, regions)
           .transform(rdd => rdd.filter(_.getReadMapped))
       } catch {
         case e: Exception => {
@@ -189,6 +195,60 @@ object AlignmentRecordMaterialization extends Logging {
     }
   }
 
+  def loadBam(fp: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
+
+    val reader = SamReaderFactory.makeDefault().open(new File(fp))
+
+    val dictionary = reader.getFileHeader.getSequenceDictionary
+
+    // modify chr prefix, if this file uses chr prefixes.
+    val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
+
+    val queries: Iterable[QueryInterval] = regions.map(r => {
+      val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
+      new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
+        modified.start.toInt, modified.end.toInt)
+    })
+
+    val t = reader.query(queries.toArray, false)
+
+    val samRecordConverter = new SAMRecordConverter
+
+    t.map(p => samRecordConverter.convert(p))
+  }
+
+  def loadSam(fp: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
+    throw new Exception("Not implemented")
+  }
+
+  def loadHttpFile(url: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
+
+    val reader = SamReaderFactory.makeDefault().open(new java.nio.file.Path(createURL(url)))
+
+    val dictionary = reader.getFileHeader.getSequenceDictionary
+
+    // modify chr prefix, if this file uses chr prefixes.
+    val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
+
+    val queries: Iterable[QueryInterval] = regions.map(r => {
+      val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
+      new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
+        modified.start.toInt, modified.end.toInt)
+    })
+
+    val t = reader.query(queries.toArray, false)
+
+    val samRecordConverter = new SAMRecordConverter
+
+    t.map(p => samRecordConverter.convert(p))
+  }
+
+  def createURL(urlString: String): URL = {
+
+    return new URL(urlString.trim())
+
+  }
+
   /**
    * Loads data from bam files (indexed or unindexed) from persistent storage
    * @param sc SparkContext
@@ -196,11 +256,11 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadFromBam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
+  def loadBamFromHDFS(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
     AlignmentTimers.loadBAMData.time {
       if (regions.isDefined) {
         // hack to get around issue in hadoop_bam, which throws error if referenceName is not found in bam file
-        val path = new Path(fp)
+        val path = new org.apache.hadoop.fs.Path(fp)
         val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))
         val predicateRegions: Iterable[ReferenceRegion] = regions.get
           .flatMap(r => {

@@ -105,23 +105,6 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     assert(keyData.size() == results.length)
   }
 
-  sparkTest("Creates http endpoint") {
-    val endpoint = "http://s3.amazonaws.com/1000genomes/phase1/data/NA19661/exome_alignment/NA19661.mapped.illumina.mosaik.MXL.exome.20110411.bam"
-    val materializedFile = AlignmentRecordMaterialization.createHttpEndpoint(endpoint)
-    assert(materializedFile.get.indexPath != None)
-    assert(materializedFile.get.filePath == endpoint)
-    assert(materializedFile.get.usesSpark == false)
-  }
-
-  sparkTest("Fails on invalid http endpoint") {
-    val endpoint = "http:fake.bam"
-
-    val thrown = intercept[Exception] {
-      AlignmentRecordMaterialization.createHttpEndpoint(endpoint)
-    }
-    assert(thrown.getMessage.contains("http host"))
-  }
-
   sparkTest("should get data from unindexed file when referenceName predicates do not match") {
     val dict = new SequenceDictionary(Vector(SequenceRecord("chr1", 248956422L)))
     val data = new AlignmentRecordMaterialization(sc, samFiles, dict)
@@ -132,6 +115,27 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val keyData = GA4GHutil.stringToSearchReadsResponse(buf).getAlignmentsList
 
     assert(keyData.size() == results.length)
+  }
+
+  test("Should load local bam file without Spark") {
+    val region = new ReferenceRegion("chrM", 90L, 110L)
+    val data = AlignmentRecordMaterialization.loadBam(bamFile, Iterable(region))
+    assert(data.size == 1156)
+  }
+
+  test("Should load local bam files with incorrect prefixes file") {
+    val region = new ReferenceRegion("M", 90L, 110L)
+    val data = AlignmentRecordMaterialization.loadBam(bamFile, Iterable(region))
+    assert(data.size == 1156)
+  }
+
+  test("Should load http bam file without Spark") {
+    val bamString = "http://1000genomes.s3.amazonaws.com/phase3/data/HG01879/exome_alignment/HG01879.mapped.ILLUMINA.bwa.ACB.exome.20120522.bam"
+
+    val region = new ReferenceRegion("M", 90L, 110L)
+    val data = AlignmentRecordMaterialization.loadHttpFile(bamString, Iterable(region))
+    assert(data.size == 10)
+
   }
 
 }
