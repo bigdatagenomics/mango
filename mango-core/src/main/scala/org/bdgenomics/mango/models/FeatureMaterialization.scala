@@ -61,7 +61,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
    */
   def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
 
-  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => FeatureMaterialization.load(sc, file, regions).rdd
+  def load = (file: String, regions: Iterable[ReferenceRegion]) => FeatureMaterialization.load(sc, file, regions).rdd
 
   /**
    * Checks that an http endpoint for a bigBed file.
@@ -151,7 +151,7 @@ object FeatureMaterialization {
    * @param regions Iterable of ReferenceRegion to load
    * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
+  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureDataset = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, regions)
     else {
       try {
@@ -174,20 +174,20 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def loadData(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
+  def loadData(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureDataset = {
     // if regions are specified, specifically load regions. Otherwise, load all data
-    if (regions.isDefined) {
-      val predicateRegions = regions.get
-        .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-        .toArray
+    //    if (regions.isDefined) {
+    val predicateRegions = regions
+      .flatMap(r => LazyMaterialization.getReferencePredicate(r))
+      .toArray
 
-      sc.loadFeatures(fp)
-        .transform(rdd => rdd.filter(g =>
-          !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
+    sc.loadFeatures(fp)
+      .transform(rdd => rdd.filter(g =>
+        !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
 
-    } else {
-      sc.loadFeatures(fp)
-    }
+    //    } else {
+    //      sc.loadFeatures(fp)
+    //    }
   }
 
   /**
@@ -198,16 +198,16 @@ object FeatureMaterialization {
    * @param fp filepath to load from
    * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
-    val pred =
-      if (regions.isDefined) {
-        val predicateRegions: Iterable[ReferenceRegion] = regions.get
-          .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-        Some(ResourceUtils.formReferenceRegionPredicate(predicateRegions))
-      } else {
-        None
-      }
-
+  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureDataset = {
+    val pred = {
+      //      if (regions.isDefined) {
+      val predicateRegions: Iterable[ReferenceRegion] = regions
+        .flatMap(r => LazyMaterialization.getReferencePredicate(r))
+      Some(ResourceUtils.formReferenceRegionPredicate(predicateRegions))
+      //      } else {
+      //        None
+      //      }
+    }
     val proj = Projection(FeatureField.featureId, FeatureField.referenceName, FeatureField.start, FeatureField.end,
       FeatureField.score, FeatureField.featureType)
     sc.loadParquetFeatures(fp, optPredicate = pred, optProjection = Some(proj))

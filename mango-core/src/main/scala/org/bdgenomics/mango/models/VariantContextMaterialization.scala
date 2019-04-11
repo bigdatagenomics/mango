@@ -28,6 +28,7 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset }
 import org.bdgenomics.formats.avro.{ Sample, Variant, GenotypeAllele }
 import org.bdgenomics.mango.core.util.ResourceUtils
+import org.bdgenomics.mango.io.VcfReader
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions._
 import org.bdgenomics.mango.converters.GA4GHutil._
@@ -91,7 +92,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return Generic RDD of data types from file
    */
-  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) =>
+  def load = (file: String, regions: Iterable[ReferenceRegion]) =>
     VariantContextMaterialization.load(sc, file, regions).rdd
 
   /**
@@ -146,7 +147,7 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 object VariantContextMaterialization {
 
   val name = "VariantContext"
-  val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
+  // TODO what  val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
 
   /**
    * Checks that an http endpoint for a vcf file.
@@ -174,9 +175,9 @@ object VariantContextMaterialization {
    * @param regions Iterable of ReferenceRegions to predicate load
    * @return VariantContextDataset
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
+  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
     if (fp.endsWith(".adam")) {
-      loadAdam(sc, fp, regions)
+      VcfReader.loadHDFS(sc, fp, regions)
     } else {
       try {
         loadVariantContext(sc, fp, regions)
@@ -198,64 +199,13 @@ object VariantContextMaterialization {
    * @param regions Iterable of ReferencesRegion to predicate load
    * @return VariantContextDataset
    */
-  def loadVariantContext(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
-    if (regions.isDefined) {
-      val predicateRegions: Iterable[ReferenceRegion] = regions.get
-        .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-      sc.loadIndexedVcf(fp, predicateRegions)
-    } else {
-      sc.loadVcf(fp)
-    }
-  }
-
-  /**
-   * Loads adam variant files
-   *
-   * @param sc SparkContext
-   * @param fp filePath to load variants from
-   * @param regions Iterable of  ReferenceRegions to predicate load
-   * @return VariantContextDataset
-   */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
-
-    val variantContext = if (sc.isPartitioned(fp) && regions.isDefined) {
-
-      // finalRegions includes references both with and without "chr" prefix
-      val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
-        .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
-          x.start,
-          x.end,
-          x.strand))
-
-      // load new dataset or retrieve from cache
-      val data: GenotypeDataset = datasetCache.get(fp) match {
-        case Some(ds) => { // if dataset found in datasetCache
-          ds
-        }
-        case _ => {
-          // load dataset into cache and use use it
-          datasetCache(fp) = sc.loadPartitionedParquetGenotypes(fp)
-          datasetCache(fp)
-        }
-      }
-
-      val maybeFiltered: GenotypeDataset = if (finalRegions.nonEmpty) {
-        data.filterByOverlappingRegions(finalRegions)
-      } else data
-
-      maybeFiltered.toVariantContexts()
-
-    } else {
-      val pred =
-        if (regions.isDefined) {
-          val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
-          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
-        } else {
-          None
-        }
-      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts()
-
-    }
-    variantContext
+  def loadVariantContext(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
+    //    if (regions.isDefined) {
+    val predicateRegions: Iterable[ReferenceRegion] = regions
+      .flatMap(r => LazyMaterialization.getReferencePredicate(r))
+    sc.loadIndexedVcf(fp, predicateRegions)
+    //    } else {
+    //      sc.loadVcf(fp)
+    //    }
   }
 }

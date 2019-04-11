@@ -117,7 +117,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * Used to generically load data from all file types
    * @return Generic RDD of data types from file
    */
-  def load: (String, Option[Iterable[ReferenceRegion]]) => RDD[T]
+  def load: (String, Iterable[ReferenceRegion]) => RDD[T]
 
   /**
    * Extracts reference region from data type T
@@ -254,7 +254,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
       // filter out regions that are not found in the sequence dictionary
       val filteredRegions = regions.filter(r => sd(r.referenceName).isDefined)
 
-      val data = loadAllFiles(Some(regions))
+      val data = loadAllFiles(regions)
 
       // tag regions as found, even if there is no data
       filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles(true).map(_.filePath)))
@@ -301,7 +301,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @param regions Optional region to fetch. If none, fetches all data
    * @return RDD of data. Primary index is ReferenceRegion and secondary index is filename.
    */
-  private def loadAllFiles(regions: Option[Iterable[ReferenceRegion]]): RDD[(ReferenceRegion, (String, T))] = {
+  private def loadAllFiles(regions: Iterable[ReferenceRegion]): RDD[(ReferenceRegion, (String, T))] = {
     // do we need to modify the chromosome prefix?
     val hasChrPrefix = sd.records.head.name.startsWith("chr")
 

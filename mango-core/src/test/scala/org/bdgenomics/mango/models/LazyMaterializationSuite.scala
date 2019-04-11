@@ -85,8 +85,8 @@ class LazyDummy(@transient sc: SparkContext,
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 
-  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => {
-    val region = regions.get.head
+  def load = (file: String, regions: Iterable[ReferenceRegion]) => {
+    val region = regions.head
     sc.parallelize(Array.range(region.start.toInt, region.end.toInt)
       .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
   }

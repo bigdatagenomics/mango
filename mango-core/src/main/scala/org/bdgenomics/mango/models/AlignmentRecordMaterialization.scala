@@ -19,7 +19,6 @@ package org.bdgenomics.mango.models
 
 import java.io.{ File, PrintWriter, StringWriter }
 import java.net.URL
-import java.nio.file.Path
 
 import htsjdk.samtools.util.{ HttpUtils, SamRecordIntervalIteratorFactory }
 import htsjdk.samtools._
@@ -39,6 +38,7 @@ import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.converters.SAMRecordConverter
 import org.bdgenomics.mango.core.util.ResourceUtils
+import org.bdgenomics.mango.io.BamReader
 import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
 import org.bdgenomics.utils.instrumentation.Metrics
 import ga4gh.Reads.ReadAlignment
@@ -80,7 +80,7 @@ class AlignmentRecordMaterialization(@transient sc: SparkContext,
     extends LazyMaterialization[AlignmentRecord, ReadAlignment](AlignmentRecordMaterialization.name, sc, files, sd, repartition, prefetchSize)
     with Serializable with Logging {
 
-  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => AlignmentRecordMaterialization.load(sc, file, regions).rdd
+  def load = (file: String, regions: Iterable[ReferenceRegion]) => AlignmentRecordMaterialization.load(sc, file, regions).rdd
 
   /**
    * Extracts ReferenceRegion from AlignmentRecord
@@ -179,11 +179,11 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
+  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): AlignmentRecordDataset = {
     if (fp.endsWith(".adam")) loadAdam(sc, fp, regions)
     else {
       try {
-        AlignmentRecordMaterialization.loadBamFromHDFS(sc, fp, regions)
+        BamReader.loadHDFS(sc, fp, regions)
           .transform(rdd => rdd.filter(_.getReadMapped))
       } catch {
         case e: Exception => {
@@ -195,93 +195,6 @@ object AlignmentRecordMaterialization extends Logging {
     }
   }
 
-  def loadBam(fp: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
-
-    val reader = SamReaderFactory.makeDefault().open(new File(fp))
-
-    val dictionary = reader.getFileHeader.getSequenceDictionary
-
-    // modify chr prefix, if this file uses chr prefixes.
-    val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
-
-    val queries: Iterable[QueryInterval] = regions.map(r => {
-      val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-      new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
-        modified.start.toInt, modified.end.toInt)
-    })
-
-    val t = reader.query(queries.toArray, false)
-
-    val samRecordConverter = new SAMRecordConverter
-
-    t.map(p => samRecordConverter.convert(p))
-  }
-
-  def loadSam(fp: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
-    throw new Exception("Not implemented")
-  }
-
-  def loadHttpFile(url: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
-
-    val reader = SamReaderFactory.makeDefault().open(new java.nio.file.Path(createURL(url)))
-
-    val dictionary = reader.getFileHeader.getSequenceDictionary
-
-    // modify chr prefix, if this file uses chr prefixes.
-    val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
-
-    val queries: Iterable[QueryInterval] = regions.map(r => {
-      val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-      new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
-        modified.start.toInt, modified.end.toInt)
-    })
-
-    val t = reader.query(queries.toArray, false)
-
-    val samRecordConverter = new SAMRecordConverter
-
-    t.map(p => samRecordConverter.convert(p))
-  }
-
-  def createURL(urlString: String): URL = {
-
-    return new URL(urlString.trim())
-
-  }
-
-  /**
-   * Loads data from bam files (indexed or unindexed) from persistent storage
-   * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegions to load
-   * @param fp filepath to load from
-   * @return Alignment dataset from the file over specified ReferenceRegion
-   */
-  def loadBamFromHDFS(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
-    AlignmentTimers.loadBAMData.time {
-      if (regions.isDefined) {
-        // hack to get around issue in hadoop_bam, which throws error if referenceName is not found in bam file
-        val path = new org.apache.hadoop.fs.Path(fp)
-        val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))
-        val predicateRegions: Iterable[ReferenceRegion] = regions.get
-          .flatMap(r => {
-            LazyMaterialization.getReferencePredicate(r)
-          }).filter(r => fileSd.containsReferenceName(r.referenceName))
-
-        try {
-          sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
-        } catch {
-          case e: java.lang.IllegalArgumentException => {
-            log.warn(e.getMessage)
-            log.warn("No bam index detected. File loading will be slow...")
-            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)
-          }
-        }
-      } else {
-        sc.loadBam(fp, stringency = ValidationStringency.SILENT)
-      }
-    }
-  }
-
   /**
    * Loads ADAM data using predicate pushdowns
    * @param sc SparkContext
@@ -289,12 +202,12 @@ object AlignmentRecordMaterialization extends Logging {
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): AlignmentRecordDataset = {
+  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): AlignmentRecordDataset = {
     AlignmentTimers.loadADAMData.time {
       val alignmentRecordDataset: AlignmentRecordDataset = if (sc.isPartitioned(fp)) {
 
         // finalRegions includes references both with and without "chr" prefix
-        val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
+        val finalRegions: Iterable[ReferenceRegion] = regions ++ regions
           .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
             x.start,
             x.end,
@@ -322,13 +235,14 @@ object AlignmentRecordMaterialization extends Logging {
         })
 
       } else { // data was not written as partitioned parquet
-        val pred =
-          if (regions.isDefined) {
-            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
-            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mappingQuality") > 0))
-          } else {
-            Some((BooleanColumn("readMapped") === true) && (IntColumn("mappingQuality") > 0))
-          }
+        val pred = {
+          //          if (regions.isDefined) {
+          val prefixRegions: Iterable[ReferenceRegion] = regions.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
+          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions) && (BooleanColumn("readMapped") === true) && (IntColumn("mappingQuality") > 0))
+          //          } else {
+          //            Some((BooleanColumn("readMapped") === true) && (IntColumn("mappingQuality") > 0))
+          //          }
+        }
 
         val proj = Projection(AlignmentRecordField.referenceName, AlignmentRecordField.mappingQuality, AlignmentRecordField.readName,
           AlignmentRecordField.start, AlignmentRecordField.readMapped, AlignmentRecordField.readGroupId,

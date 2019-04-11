@@ -86,9 +86,9 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   }
 
   sparkTest("fetches multiple regions from load") {
-    val regions = Some(Iterable(ReferenceRegion("chrM", 90L, 110L), ReferenceRegion("chrM", 10100L, 10300L)))
-    val data1 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 90L, 110L))))
-    val data2 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 10100L, 10300L))))
+    val regions = Iterable(ReferenceRegion("chrM", 90L, 110L), ReferenceRegion("chrM", 10100L, 10300L))
+    val data1 = AlignmentRecordMaterialization.load(sc, bamFile, Iterable(ReferenceRegion("chrM", 90L, 110L)))
+    val data2 = AlignmentRecordMaterialization.load(sc, bamFile, Iterable(ReferenceRegion("chrM", 10100L, 10300L)))
     val data = AlignmentRecordMaterialization.load(sc, bamFile, regions)
     assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
   }
@@ -115,27 +115,6 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val keyData = GA4GHutil.stringToSearchReadsResponse(buf).getAlignmentsList
 
     assert(keyData.size() == results.length)
-  }
-
-  test("Should load local bam file without Spark") {
-    val region = new ReferenceRegion("chrM", 90L, 110L)
-    val data = AlignmentRecordMaterialization.loadBam(bamFile, Iterable(region))
-    assert(data.size == 1156)
-  }
-
-  test("Should load local bam files with incorrect prefixes file") {
-    val region = new ReferenceRegion("M", 90L, 110L)
-    val data = AlignmentRecordMaterialization.loadBam(bamFile, Iterable(region))
-    assert(data.size == 1156)
-  }
-
-  test("Should load http bam file without Spark") {
-    val bamString = "http://1000genomes.s3.amazonaws.com/phase3/data/HG01879/exome_alignment/HG01879.mapped.ILLUMINA.bwa.ACB.exome.20120522.bam"
-
-    val region = new ReferenceRegion("M", 90L, 110L)
-    val data = AlignmentRecordMaterialization.loadHttpFile(bamString, Iterable(region))
-    assert(data.size == 10)
-
   }
 
 }
