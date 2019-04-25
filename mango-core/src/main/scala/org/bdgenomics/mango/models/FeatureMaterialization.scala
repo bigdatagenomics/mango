@@ -29,6 +29,7 @@ import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.converters.GA4GHutil
 import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import org.bdgenomics.mango.io.BedReader
 import org.bdgenomics.utils.misc.Logging
 import java.io.{ StringWriter, PrintWriter }
 import scala.collection.JavaConversions._
@@ -155,7 +156,7 @@ object FeatureMaterialization {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, regions)
     else {
       try {
-        FeatureMaterialization.loadData(sc, fp, regions)
+        BedReader.loadHDFS(sc, fp, regions)
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -164,30 +165,6 @@ object FeatureMaterialization {
         }
       }
     }
-  }
-
-  /**
-   * Loads data from bam files (indexed or unindexed) from persistent storage
-   *
-   * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegions to load
-   * @param fp filepath to load from
-   * @return Feature dataset from the file over specified ReferenceRegion
-   */
-  def loadData(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureDataset = {
-    // if regions are specified, specifically load regions. Otherwise, load all data
-    //    if (regions.isDefined) {
-    val predicateRegions = regions
-      .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-      .toArray
-
-    sc.loadFeatures(fp)
-      .transform(rdd => rdd.filter(g =>
-        !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
-
-    //    } else {
-    //      sc.loadFeatures(fp)
-    //    }
   }
 
   /**

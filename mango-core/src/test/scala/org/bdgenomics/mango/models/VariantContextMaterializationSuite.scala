@@ -32,7 +32,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     SequenceRecord("chrM", 20000L),
     SequenceRecord("20", 90000L)))
 
-  // test vcf data'
+  // test vcf data
   val vcfFile1 = resourcePath("truetest.genotypes.vcf")
   val vcfFile2 = resourcePath("bqsr1.vcf")
 

@@ -18,51 +18,64 @@
 
 package org.bdgenomics.mango.io
 
-import ga4gh.Reads
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json._
 
-class BamReaderSuite extends MangoFunSuite {
+class VcfReaderSuite extends MangoFunSuite {
 
   implicit val formats = DefaultFormats
 
-  // test alignment data
-  val bamFile = resourcePath("mouse_chrM.bam")
+  // test vcf data
+  val vcfFile = resourcePath("truetest.genotypes.vcf")
+  val vcfFileGz = resourcePath("small.vcf.gz")
 
-  test("Should load local bam file") {
-    val region = new ReferenceRegion("chrM", 90L, 110L)
-    val data = BamReader.loadLocal(bamFile, Iterable(region))
-    assert(data.size == 1156)
+  test("Should load local vcf file") {
+    val region = new ReferenceRegion("chrM", 0, 999)
+    val data = VcfReader.loadLocal(vcfFile, Iterable(region)).toList
+    assert(data.size == 7)
   }
 
-  test("Should load local bam files with incorrect prefixes file") {
-    val region = new ReferenceRegion("M", 90L, 110L)
-    val data = BamReader.loadLocal(bamFile, Iterable(region))
-    assert(data.size == 1156)
+  test("Should load local vcf files with incorrect prefixes file") {
+    val region = new ReferenceRegion("M", 0, 999)
+    val data = VcfReader.loadLocal(vcfFile, Iterable(region)).toList
+    assert(data.size == 7)
+  }
+
+  test("Should load genotypes") {
+    val region = new ReferenceRegion("chrM", 0L, 100L)
+    val data = VcfReader.loadLocal(vcfFile, Iterable(region))
+
+    assert(data.map(_.genotypes).flatten.size == 21)
+  }
+
+  test("loads gzipped vcfs") {
+    val region = new ReferenceRegion("chr1", 0L, 63736L)
+    val data = VcfReader.loadLocal(vcfFileGz, Iterable(region))
+    assert(data.size == 4)
   }
 
   sparkTest("Should load data from HDFS using Spark") {
     val region = new ReferenceRegion("chrM", 90L, 91L)
-    val data = BamReader.loadHDFS(sc, bamFile, Iterable(region))
+    val data = VcfReader.loadHDFS(sc, vcfFile, Iterable(region))
 
-    val data2 = BamReader.loadLocal(bamFile, Iterable(region))
+    val data2 = VcfReader.loadLocal(vcfFile, Iterable(region))
 
     assert(data.rdd.count == data2.size)
   }
 
-  //  test("Should load http bam file") {
-  //    val bamString = "http://1000genomes.s3.amazonaws.com/phase3/data/NA12878/exome_alignment/NA12878.chrom11.ILLUMINA.bwa.CEU.exome.20121211.bam"
+  //  test("Should load http vcf file") {
+  //    val bamString = "http://1000genomes.s3.amazonaws.com/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
   //    val region = new ReferenceRegion("chr11", 67401049L, 67401225L) // chr11 PPP1CA locus
-  //    val count = BamReader.loadHttp(bamString, Iterable(region)).size
+  //    val count = VcfReader.loadHttp(bamString, Iterable(region)).size
   //
   //    assert(count == 14) // should have two reads (verified against original file)
   //
   //  }
   //
-  //  test("Should load s3 bam file") {
-  //    val bamString = "s3://1000genomes/phase3/data/NA12878/exome_alignment/NA12878.chrom11.ILLUMINA.bwa.CEU.exome.20121211.bam"
+  //  test("Should load s3 vcf file") {
+  //    val bamString = "s3://1000genomes/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
   //
   //    val region = new ReferenceRegion("chr11", 67401049L, 67401225L) // chr11 PPP1CA locus
   //    val data = BamReader.loadS3(bamString, Iterable(region))

@@ -143,11 +143,12 @@ class VariantContextMaterialization(@transient sc: SparkContext,
 /**
  * VariantContextMaterialization object, used to load VariantContext data into a VariantContextDataset. Supported file
  * formats are vcf and adam.
+ * formats are vcf and adam.
  */
 object VariantContextMaterialization {
 
   val name = "VariantContext"
-  // TODO what  val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
+  val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
 
   /**
    * Checks that an http endpoint for a vcf file.
@@ -177,10 +178,10 @@ object VariantContextMaterialization {
    */
   def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
     if (fp.endsWith(".adam")) {
-      VcfReader.loadHDFS(sc, fp, regions)
+      loadAdam(sc, fp, regions)
     } else {
       try {
-        loadVariantContext(sc, fp, regions)
+        VcfReader.loadHDFS(sc, fp, regions)
       } catch {
         case e: Exception => {
           val sw = new StringWriter
@@ -192,20 +193,51 @@ object VariantContextMaterialization {
   }
 
   /**
-   * Loads VariantContextDataset from a vcf file. vcf tbi index is required.
+   * Loads adam variant files
    *
    * @param sc SparkContext
-   * @param fp filePath to vcf file
-   * @param regions Iterable of ReferencesRegion to predicate load
+   * @param fp filePath to load variants from
+   * @param regions Iterable of  ReferenceRegions to predicate load
    * @return VariantContextDataset
    */
-  def loadVariantContext(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
-    //    if (regions.isDefined) {
-    val predicateRegions: Iterable[ReferenceRegion] = regions
-      .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-    sc.loadIndexedVcf(fp, predicateRegions)
-    //    } else {
-    //      sc.loadVcf(fp)
-    //    }
+  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
+
+    val variantContext = if (sc.isPartitioned(fp)) {
+
+      // finalRegions includes references both with and without "chr" prefix
+      val finalRegions: Iterable[ReferenceRegion] = regions ++ regions
+        .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
+          x.start,
+          x.end,
+          x.strand))
+
+      // load new dataset or retrieve from cache
+      val data: GenotypeDataset = datasetCache.get(fp) match {
+        case Some(ds) => { // if dataset found in datasetCache
+          ds
+        }
+        case _ => {
+          // load dataset into cache and use use it
+          datasetCache(fp) = sc.loadPartitionedParquetGenotypes(fp)
+          datasetCache(fp)
+        }
+      }
+
+      val maybeFiltered: GenotypeDataset = if (finalRegions.nonEmpty) {
+        data.filterByOverlappingRegions(finalRegions)
+      } else data
+
+      maybeFiltered.toVariantContexts()
+
+    } else {
+      val pred =
+        {
+          val prefixRegions: Iterable[ReferenceRegion] = regions.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
+          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+        }
+      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts()
+
+    }
+    variantContext
   }
 }
