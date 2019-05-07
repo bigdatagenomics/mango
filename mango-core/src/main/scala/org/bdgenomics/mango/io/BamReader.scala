@@ -20,12 +20,13 @@ package org.bdgenomics.mango.io
 
 import java.io.File
 
-import htsjdk.samtools.{ SamInputResource, ValidationStringency, QueryInterval, SamReaderFactory }
+import htsjdk.samtools.{ QueryInterval, SAMRecord, SamInputResource, SamReaderFactory, ValidationStringency }
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
+import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.mango.converters.SAMRecordConverter
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
+
 import scala.collection.JavaConversions._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
@@ -34,84 +35,118 @@ import org.bdgenomics.mango.models.LazyMaterialization
 
 object BamReader extends GenomicReader[AlignmentRecord, AlignmentRecordDataset] with Logging {
 
+  def suffixes = Array(".bam", ".sam")
+
   def getBamIndex(path: String): String = {
     path + ".bai"
   }
 
-  def loadLocal(fp: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
+  /**
+   * Loads records from bam or sam file overlapping queried reference regions.
+   *
+   * @param fp filepath
+   * @param regions Iterator of ReferenceRegions to query
+   * @param local Boolean specifying whether file is local or remote.
+   * @return Iterator of AlignmentRecords
+   */
+  def load(fp: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[AlignmentRecord] = {
+
+    // if not valid throw Exception
+    if (!isValidSuffix(fp)) {
+      invalidFileException(fp)
+    }
 
     val indexUrl = getBamIndex(fp)
 
-    val reader = SamReaderFactory.makeDefault().open(SamInputResource.of(new File(fp)).index(new File(indexUrl)))
+    val reader = if (local) {
+      if (fp.endsWith(".bam"))
+        SamReaderFactory.makeDefault().open(SamInputResource.of(new File(fp)).index(new File(indexUrl)))
+      else
+        SamReaderFactory.makeDefault().open(SamInputResource.of(new File(fp)))
+    } else {
+      SamReaderFactory.makeDefault().open(
+        SamInputResource.of(new java.net.URL(fp)).index(new java.net.URL(indexUrl)))
+    }
 
     val dictionary = reader.getFileHeader.getSequenceDictionary
 
-    // modify chr prefix, if this file uses chr prefixes.
-    val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr") // TODO bad do not call .head
-
-    val queries: Iterable[QueryInterval] = regions.map(r => {
-      val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-      new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
-        modified.start.toInt, modified.end.toInt)
-    })
-
-    val t = reader.query(queries.toArray, false)
-
-    val samRecordConverter = new SAMRecordConverter
-
-    val results = t.map(p => samRecordConverter.convert(p)).toArray
-
-    reader.close()
-
-    results.toIterator //TODO this is pretty dumb. Remove after figuring out open/closing issue
-  }
-
-  def loadHttp(url: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
-
-    val indexUrl = getBamIndex(url)
-
-    val reader = SamReaderFactory.makeDefault().open(
-      SamInputResource.of(new java.net.URL(url)).index(new java.net.URL(indexUrl)))
-
-    val dictionary = reader.getFileHeader.getSequenceDictionary
+    // no valid dictionary. Cannot query or filter data.
+    if (dictionary.getSequences.isEmpty) {
+      return Iterator[AlignmentRecord]()
+    }
 
     // modify chr prefix, if this file uses chr prefixes.
     val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
 
-    val queries: Iterable[QueryInterval] = regions.map(r => {
+    val queries: Array[QueryInterval] = regions.map(r => {
       val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-      new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
-        modified.start.toInt, modified.end.toInt)
-    })
 
-    val t = reader.query(queries.toArray, false)
+      val contig = dictionary.getSequence(modified.referenceName)
+      // check if contig is in dictionary. If not in dictionary, corresponding records will not be in the file.
+      if (contig != null)
+        Some(new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
+          modified.start.toInt, modified.end.toInt))
+      else
+        None
+
+    }).toArray.flatten
 
     val samRecordConverter = new SAMRecordConverter
 
-    val results = t.map(p => samRecordConverter.convert(p)).toArray
+    if (reader.hasIndex) {
+      val t = reader.query(queries, false)
 
-    reader.close()
+      val results = t.map(p => samRecordConverter.convert(p)).toArray
 
-    results.toIterator //TODO this is pretty dumb. Remove after figuring out open/closing issue
+      reader.close()
+
+      results.toIterator //TODO this is pretty dumb. Remove after figuring out open/closing issue
+
+    } else {
+      val iter: Iterator[SAMRecord] = reader.iterator()
+
+      val samRecords: Array[SAMRecord] = iter.toArray.map(r => {
+        val overlaps = queries.filter(q => q.overlaps(new QueryInterval(dictionary.getSequence(r.getContig).getSequenceIndex,
+          r.getStart, r.getEnd))).size > 0
+        if (overlaps)
+          Some(r)
+        else None
+      }).flatten
+
+      // close reader after records have been searched
+      reader.close()
+
+      // map SamRecords to ADAM
+      samRecords.map(p => samRecordConverter.convert(p)).toIterator
+    }
+  }
+
+  /**
+   * *
+   * Loads remote http file.
+   *
+   * @param url remote path to file
+   * @param regions regions to filter file
+   * @return Iterator of filtered AlignmentRecords
+   */
+  def loadHttp(url: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
+    load(url, regions, false)
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from s3.
+   *
    * @param regions Iterable of ReferenceRegions to load
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
   def loadS3(path: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
     throw new Exception("Not implemented")
-    // https://docs.aws.amazon.com/AmazonS3/latest/dev/RetrievingObjectUsingJava.html
-
-    // https://www.programcreek.com/java-api-examples/?api=com.amazonaws.services.s3.AmazonS3URI
-
-    // https://github.com/samtools/htsjdk/issues/635
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from HDFS.
+   *
    * @param sc SparkContext
    * @param regions Iterable of ReferenceRegions to load
    * @param fp filepath to load from

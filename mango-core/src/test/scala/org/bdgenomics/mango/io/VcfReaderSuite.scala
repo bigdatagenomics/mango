@@ -33,26 +33,43 @@ class VcfReaderSuite extends MangoFunSuite {
 
   test("Should load local vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
-    val data = VcfReader.loadLocal(vcfFile, Iterable(region)).toList
+    val data = VcfReader.load(vcfFile, Iterable(region)).toList
     assert(data.size == 7)
+  }
+
+  test("Fails on files that are not vcf or vcf.gz") {
+    val region = new ReferenceRegion("chrM", 90L, 110L)
+
+    val thrown = intercept[Exception] {
+      VcfReader.load("myfile.badSuffix", Iterable(region))
+    }
+    assert(thrown.getMessage.contains("myfile.badSuffix"))
+  }
+
+  test("Should return empty on invalid chromosome") {
+    val region = new ReferenceRegion("chrT", 90L, 110L)
+    val data = VcfReader.load(vcfFile, Iterable(region))
+    assert(data.size == 0)
   }
 
   test("Should load local vcf files with incorrect prefixes file") {
     val region = new ReferenceRegion("M", 0, 999)
-    val data = VcfReader.loadLocal(vcfFile, Iterable(region)).toList
+    val data = VcfReader.load(vcfFile, Iterable(region)).toList
     assert(data.size == 7)
   }
 
   test("Should load genotypes") {
     val region = new ReferenceRegion("chrM", 0L, 100L)
-    val data = VcfReader.loadLocal(vcfFile, Iterable(region))
+    val data = VcfReader.load(vcfFile, Iterable(region))
 
     assert(data.map(_.genotypes).flatten.size == 21)
   }
 
   test("loads gzipped vcfs") {
     val region = new ReferenceRegion("chr1", 0L, 63736L)
-    val data = VcfReader.loadLocal(vcfFileGz, Iterable(region))
+    //    val data = VcfReader.load(vcfFileGz, Iterable(region))
+    val data = VcfReader.load(resourcePath("small.vcf.gz"), Iterable(region))
+
     assert(data.size == 4)
   }
 
@@ -60,20 +77,20 @@ class VcfReaderSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 90L, 91L)
     val data = VcfReader.loadHDFS(sc, vcfFile, Iterable(region))
 
-    val data2 = VcfReader.loadLocal(vcfFile, Iterable(region))
+    val data2 = VcfReader.load(vcfFile, Iterable(region))
 
     assert(data.rdd.count == data2.size)
   }
 
-  //  test("Should load http vcf file") {
-  //    val bamString = "http://1000genomes.s3.amazonaws.com/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
-  //    val region = new ReferenceRegion("chr11", 67401049L, 67401225L) // chr11 PPP1CA locus
-  //    val count = VcfReader.loadHttp(bamString, Iterable(region)).size
-  //
-  //    assert(count == 14) // should have two reads (verified against original file)
-  //
-  //  }
-  //
+  test("Should load http vcf file") {
+    val bamString = "http://1000genomes.s3.amazonaws.com/phase1/analysis_results/integrated_call_sets/ALL.chr22.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
+    val region = new ReferenceRegion("chr22", 25595080, 25603694)
+    val count = VcfReader.loadHttp(bamString, Iterable(region)).size
+
+    assert(count == 147)
+
+  }
+
   //  test("Should load s3 vcf file") {
   //    val bamString = "s3://1000genomes/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
   //

@@ -34,34 +34,52 @@ class BedReaderSuite extends MangoFunSuite {
 
   test("Should load local bed file") {
     val region = new ReferenceRegion("chrM", 0, 3000)
-    val data = BedReader.loadLocal(bedFile, Iterable(region)).toList
+    val data = BedReader.load(bedFile, Iterable(region)).toList
     assert(data.size == 3)
   }
 
-  test("Should load local bigBed file") {
-    val region = new ReferenceRegion("chrM", 0, 3000)
-    val data = BedReader.loadLocal(bbFile, Iterable(region)).toList
-    assert(data.size == 4)
+  test("Fails on files that are not bed format") {
+    val region = new ReferenceRegion("chrM", 90L, 110L)
+
+    val thrown = intercept[Exception] {
+      BedReader.load("myfile.badSuffix", Iterable(region))
+    }
+    assert(thrown.getMessage.contains("myfile.badSuffix"))
+  }
+
+  test("Should return empty on invalid chromosome") {
+    val region = new ReferenceRegion("chrT", 90L, 110L)
+    val data = BedReader.load(bedFile, Iterable(region))
+    assert(data.size == 0)
   }
 
   test("Should load local narrowPeak file") {
     val region = new ReferenceRegion("chr1", 0, 26472859)
-    val data = BedReader.loadLocal(narrowPeakFile, Iterable(region)).toList
+    val data = BedReader.load(narrowPeakFile, Iterable(region)).toList
     assert(data.size == 4)
   }
 
   test("Should load local bed files with incorrect prefixes file") {
     val region = new ReferenceRegion("M", 0, 2000)
-    val data = BedReader.loadLocal(bedFile, Iterable(region)).toList
+    val data = BedReader.load(bedFile, Iterable(region)).toList
     assert(data.size == 2)
   }
 
   sparkTest("Should load data from HDFS using Spark") {
     val region = new ReferenceRegion("chrM", 90L, 91L)
     val data = BedReader.loadHDFS(sc, bedFile, Iterable(region))
-    val data2 = BedReader.loadLocal(bedFile, Iterable(region))
+    val data2 = BedReader.load(bedFile, Iterable(region))
 
     assert(data.rdd.count == data2.size)
+  }
+
+  test("Should load remote bed file") {
+    val url = "https://www.encodeproject.org/files/ENCFF499IRL/@@download/ENCFF499IRL.bed.gz"
+
+    val region = new ReferenceRegion("chr4", 86264, 86895)
+    val data = BedReader.loadHttp(url, Iterable(region)).toList
+    print(data.size)
+    assert(data.size < 77)
   }
 
 }

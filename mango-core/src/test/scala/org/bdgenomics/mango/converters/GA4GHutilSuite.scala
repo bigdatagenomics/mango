@@ -26,9 +26,10 @@ import org.bdgenomics.adam.rdd.variant.VariantDataset
 
 class GA4GHutilSuite extends MangoFunSuite {
 
+  val samPath = resourcePath("small.1.sam")
+
   sparkTest("create JSON from AlignmentRecordDataset") {
-    val inputPath = resourcePath("small.1.sam")
-    val rrdd: AlignmentRecordDataset = sc.loadAlignments(inputPath)
+    val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPath)
 
     val collected = rrdd.rdd.collect()
 
@@ -40,8 +41,7 @@ class GA4GHutilSuite extends MangoFunSuite {
   }
 
   sparkTest("create JSON from AlignmentRecordDataset with 1 sample") {
-    val inputPath = resourcePath("small.1.sam")
-    val rrdd: AlignmentRecordDataset = sc.loadAlignments(inputPath)
+    val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPath)
 
     val collected = rrdd.rdd.collect()
 
@@ -63,8 +63,7 @@ class GA4GHutilSuite extends MangoFunSuite {
 
   sparkTest("create JSON from AlignmentRecordDataset with more than 1 sample") {
 
-    val inputPath = resourcePath("small.1.sam")
-    val samPaths = globPath(inputPath, ".sam")
+    val samPaths = globPath(samPath, "small*.sam")
     val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPaths)
 
     assert(GA4GHutil.alignmentRecordDatasetToJSON(rrdd, multipleGroupNames = true).size == 2)

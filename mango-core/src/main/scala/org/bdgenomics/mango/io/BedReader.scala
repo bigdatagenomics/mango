@@ -37,21 +37,29 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 
 object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
 
+  def suffixes = Array(".bed", ".bed.gz", ".narrowPeak")
+
   val codec: BEDCodec = new BEDCodec()
 
-  def loadLocal(fp: String, regions: Iterable[ReferenceRegion]): Iterator[Feature] = {
+  def load(fp: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[Feature] = {
 
-    //    val bedReader: AbstractFeatureReader[BEDFeature, LineIterator] =
+    // if not valid throw Exception
+    if (!isValidSuffix(fp)) {
+      invalidFileException(fp)
+    }
+
+    // reader must be called before createIndex is called
     val reader = AbstractFeatureReader.getFeatureReader(fp, codec, false)
 
-    // create index file, if it does not exist
-    createIndex(fp, codec)
+    if (local) {
+      // create index file, if it does not exist
+      createIndex(fp, codec)
+    }
 
     val dictionary = reader.getSequenceNames()
 
     val queries =
       if (!dictionary.isEmpty) {
-        println(dictionary)
 
         // modify chr prefix, if this file uses chr prefixes.
         val hasChrPrefix = dictionary.get(0).startsWith("chr")
@@ -65,31 +73,41 @@ object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
         }).flatten
       }
 
-    require(reader.isQueryable, "bed file must be queriable. Is it missing an index file?")
-
-    //    val results = queries.map(r => reader.query(r.referenceName, r.start.toInt, r.end.toInt).toList)
-    val results = queries.map(r => reader.query(r.referenceName, r.start.toInt, r.end.toInt).toList)
-
-    reader.close()
+    val results: Iterable[BEDFeature] =
+      if (reader.isQueryable) {
+        val tmp = queries.map(r => reader.query(r.referenceName, r.start.toInt, r.end.toInt).toList)
+        reader.close()
+        tmp.flatten
+      } else {
+        // in the case where file is remote and doesnt have an index, still want to get data
+        // TODO: really inefficient. the data should be only pulled once
+        val iter: Iterator[BEDFeature] = reader.iterator()
+        reader.close()
+        iter.map(r => {
+          val overlaps = queries.filter(q => q.overlaps(ReferenceRegion(r.getContig, r.getStart, r.getEnd))).size > 0
+          if (overlaps)
+            Some(r)
+          else None
+        }).flatten.toIterable
+      }
 
     // map results to ADAM features
-    results.flatten.map(r => Feature.newBuilder()
-      //      .setSource(r.getName) TODO
+    results.map(r => Feature.newBuilder()
       .setFeatureType(r.getType)
       .setReferenceName(r.getContig)
       .setStart(r.getStart.toLong)
       .setEnd(r.getEnd.toLong).build()).toIterator
-
   }
 
   def loadHttp(url: String, regions: Iterable[ReferenceRegion]): Iterator[Feature] = {
-    throw new Exception("Not implemented")
+    load(url, regions, false)
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from s3.
+   *
    * @param regions Iterable of ReferenceRegions to load
-   * @param fp filepath to load from
+   * @param path filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
   def loadS3(path: String, regions: Iterable[ReferenceRegion]): Iterator[Feature] = {
@@ -118,7 +136,7 @@ object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
   private def createIndex(fp: String, codec: BEDCodec) = {
 
     val file = new java.io.File(fp)
-    val idxFile = new java.io.File(file + ".idx") // TODO check for other index ends
+    val idxFile = new java.io.File(file + ".idx")
 
     // do not re-generate index file
     if (!idxFile.exists()) {
@@ -128,16 +146,16 @@ object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
       // Create the index
       val idx: Index = IndexFactory.createIntervalIndex(file, codec)
 
-      var stream: LittleEndianOutputStream = null;
+      var stream: LittleEndianOutputStream = null
       try {
-        stream = new LittleEndianOutputStream(new BufferedOutputStream(new FileOutputStream(idxFile)));
-        idx.write(stream);
+        stream = new LittleEndianOutputStream(new BufferedOutputStream(new FileOutputStream(idxFile)))
+        idx.write(stream)
       } finally {
         if (stream != null) {
-          stream.close();
+          stream.close()
         }
       }
-      idxFile.deleteOnExit();
+      idxFile.deleteOnExit()
     }
   }
 }

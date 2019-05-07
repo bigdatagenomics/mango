@@ -18,6 +18,7 @@
 
 package org.bdgenomics.mango.io
 
+import java.io.FileNotFoundException
 import java.net.URL
 
 import org.apache.spark.SparkContext
@@ -30,7 +31,23 @@ import org.bdgenomics.adam.models.ReferenceRegion
  */
 trait GenomicReader[R, D] {
 
-  def loadLocal(path: String, regions: Iterable[ReferenceRegion]): Iterator[R]
+  // Valid filename suffixes
+  def suffixes: Array[String]
+
+  /**
+   * Checks if file has valid suffix.
+   * @param path file path
+   * @return boolean whether path is valid
+   */
+  def isValidSuffix(path: String): Boolean = {
+    !suffixes.filter(s => path.endsWith(s)).isEmpty
+  }
+
+  def invalidFileException(fp: String): Exception = {
+    throw new FileNotFoundException(s"${fp} has invalid extension for available extensions ${suffixes.mkString(", ")}")
+  }
+
+  def load(path: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[R]
 
   def loadHttp(path: String, regions: Iterable[ReferenceRegion]): Iterator[R]
 

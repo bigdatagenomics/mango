@@ -18,19 +18,16 @@
 
 package org.bdgenomics.mango.io
 
-import java.io.{ BufferedInputStream, FileOutputStream, BufferedOutputStream }
-import java.nio.file.Path
-import java.util.zip.GZIPInputStream
+import java.io.{ BufferedOutputStream, FileOutputStream }
 
-import com.google.common.io.Resources
 import htsjdk.samtools.ValidationStringency
-import htsjdk.samtools.seekablestream.{ ByteArraySeekableStream, SeekableStream }
+import htsjdk.samtools.util.BlockCompressedInputStream
 import htsjdk.tribble.index.IndexFactory
 import htsjdk.tribble.index.tabix.TabixFormat
 import htsjdk.tribble.readers.LineIterator
 import htsjdk.tribble.util.LittleEndianOutputStream
 import htsjdk.variant.variantcontext.{ VariantContext => HtsjdkVariantContext }
-import htsjdk.variant.vcf.{ VCFHeader, VCFHeaderLine, VCFCodec, VCFFileReader }
+import htsjdk.variant.vcf.{ VCFCodec, VCFFileReader, VCFHeader, VCFHeaderLine }
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.converters.VariantContextConverter
 import org.bdgenomics.adam.rdd.variant.VariantContextDataset
@@ -38,22 +35,42 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.models.{ ReferenceRegion, VariantContext => ADAMVariantContext }
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.misc.Logging
+
 import scala.collection.JavaConversions._
 import htsjdk.tribble.index.Index
 import htsjdk.tribble.AbstractFeatureReader
 
 object VcfReader extends GenomicReader[ADAMVariantContext, VariantContextDataset] with Logging {
 
+  def suffixes = Array(".vcf", ".vcf.gz")
+
   val codec = new VCFCodec()
 
-  def loadLocal(fp: String, regions: Iterable[ReferenceRegion]): Iterator[ADAMVariantContext] = {
+  /**
+   * *
+   * Loads records from vcf or compressed vcf files overlapping queried reference regions.
+   *
+   * @param fp filepath
+   * @param regions Iterator of ReferenceRegions to query
+   * @param local Boolean specifying whether file is local or remote.
+   * @return Iterator of VariantContext
+   */
+  def load(fp: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[ADAMVariantContext] = {
+
+    // if not valid throw Exception
+    if (!isValidSuffix(fp)) {
+      invalidFileException(fp)
+    }
 
     val isGzipped = fp.endsWith(".gz")
 
-    // create index file
-    createIndex(fp, codec)
+    if (local) {
+      // create index file
+      createIndex(fp, codec)
+    }
 
-    val vcfReader: AbstractFeatureReader[HtsjdkVariantContext, LineIterator] = AbstractFeatureReader.getFeatureReader(fp, codec)
+    val vcfReader: AbstractFeatureReader[HtsjdkVariantContext, LineIterator] =
+      AbstractFeatureReader.getFeatureReader(fp, codec, true)
 
     val queries =
       try {
@@ -74,9 +91,9 @@ object VcfReader extends GenomicReader[ADAMVariantContext, VariantContextDataset
 
     val results: Iterable[HtsjdkVariantContext] =
       if (isGzipped)
-        queries.map(r => vcfReader.query(r.referenceName, r.start.toInt + 1, r.end.toInt).toList).flatten
+        queries.map(r => vcfReader.query(r.referenceName, r.start.toInt + 1, r.end.toInt).toList).flatten // +1 because tabixReader subtracts 1
       else
-        queries.map(r => vcfReader.query(r.referenceName, r.start.toInt, r.end.toInt).toList).flatten // max because tabixReader subtracts 1
+        queries.map(r => vcfReader.query(r.referenceName, r.start.toInt, r.end.toInt).toList).flatten
 
     val header: VCFHeader = vcfReader.getHeader().asInstanceOf[VCFHeader]
 
@@ -89,44 +106,27 @@ object VcfReader extends GenomicReader[ADAMVariantContext, VariantContextDataset
     results.map(r => converter.convert(r)).flatten.toIterator
   }
 
+  /**
+   * *
+   * Loads remote http file.
+   *
+   * @param url remote path to file
+   * @param regions regions to filter file
+   * @return Iterator of filtered VariantContext
+   */
   def loadHttp(url: String, regions: Iterable[ReferenceRegion]): Iterator[ADAMVariantContext] = {
-
-    // TODO
-    val reader = new VCFFileReader(new java.io.File(url), false)
-
-    val dictionary = reader.getFileHeader.getSequenceDictionary
-
-    // modify chr prefix, if this file uses chr prefixes.
-    val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
-
-    val queries = regions.map(r => {
-      LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-    })
-
-    val results = queries.map(r => reader.query(r.referenceName, r.start.toInt, r.end.toInt).toList)
-
-    reader.close()
-
-    val converter = new VariantContextConverter(
-      getHeaderLines(reader.getFileHeader),
-      ValidationStringency.LENIENT, false)
-
-    results.flatten.map(r => converter.convert(r)).flatten.toIterator
+    load(url, regions, local = false)
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from s3.
+   *
    * @param regions Iterable of ReferenceRegions to load
-   * @param fp filepath to load from
+   * @param path filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
   def loadS3(path: String, regions: Iterable[ReferenceRegion]): Iterator[ADAMVariantContext] = {
     throw new Exception("Not implemented")
-    // https://docs.aws.amazon.com/AmazonS3/latest/dev/RetrievingObjectUsingJava.html
-
-    // https://www.programcreek.com/java-api-examples/?api=com.amazonaws.services.s3.AmazonS3URI
-
-    // https://github.com/samtools/htsjdk/issues/635
   }
 
   /**
@@ -142,7 +142,13 @@ object VcfReader extends GenomicReader[ADAMVariantContext, VariantContextDataset
     sc.loadIndexedVcf(fp, predicateRegions)
   }
 
-  private def createIndex(fp: String, codec: VCFCodec) = {
+  /**
+   * Generates an index for a VCF file.
+   * @param fp path to VCF or compressed VCF file
+   * @param codec VCFCodec
+   * @return path to index file
+   */
+  private def createIndex(fp: String, codec: VCFCodec): String = {
 
     val file = new java.io.File(fp)
     val isGzipped = fp.endsWith(".gz")
@@ -154,27 +160,38 @@ object VcfReader extends GenomicReader[ADAMVariantContext, VariantContextDataset
       log.warn(s"No index file for ${file.getAbsolutePath} found. Generating ${idxFile.getAbsolutePath}...")
 
       // Create the index
-      val idx: Index =
-        if (!isGzipped) {
-          IndexFactory.createIntervalIndex(file, codec)
-        } else {
-          IndexFactory.createTabixIndex(file, new VCFCodec(),
-            TabixFormat.VCF,
-            new VCFFileReader(file, false).getFileHeader().getSequenceDictionary())
+      if (!isGzipped) {
+        val idx = IndexFactory.createIntervalIndex(file, codec)
 
+        // TODO maybe not writing correctly
+        var stream: LittleEndianOutputStream = null
+        try {
+          stream = new LittleEndianOutputStream(new BufferedOutputStream(new FileOutputStream(idxFile)))
+          idx.write(stream)
+        } finally {
+          if (stream != null) {
+            stream.close()
+          }
         }
+        idxFile.deleteOnExit()
 
-      var stream: LittleEndianOutputStream = null
-      try {
-        stream = new LittleEndianOutputStream(new BufferedOutputStream(new FileOutputStream(idxFile)))
-        idx.write(stream)
-      } finally {
-        if (stream != null) {
-          stream.close()
-        }
+      } else {
+
+        // get sequences from header for index file
+        val tmpReader = new VCFFileReader(file, false)
+        val sequences = tmpReader.getFileHeader().getSequenceDictionary()
+        tmpReader.close()
+
+        val idx = IndexFactory.createTabixIndex(file, new VCFCodec(),
+          TabixFormat.VCF, sequences)
+
+        idx.write(idxFile)
+
+        idxFile.deleteOnExit()
       }
-      idxFile.deleteOnExit()
+
     }
+    idxFile.getAbsolutePath
   }
 
   // TODO already defined in ADAM in VariantContextConverter line 266
@@ -182,11 +199,6 @@ object VcfReader extends GenomicReader[ADAMVariantContext, VariantContextDataset
     (header.getFilterLines ++
       header.getFormatHeaderLines ++
       header.getInfoHeaderLines ++
-      header.getOtherHeaderLines).toSeq
+      header.getOtherHeaderLines)
   }
-
-  private def seekableStream(resource: String): SeekableStream = {
-    new ByteArraySeekableStream(Resources.toByteArray(ClassLoader.getSystemClassLoader().getResource(resource)))
-  }
-
 }
