@@ -18,14 +18,16 @@
 package org.bdgenomics.mango.cli
 
 import java.net.URI
+
+import ga4gh.Common.Strand
 import ga4gh.Reads.ReadAlignment
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ SequenceRecord, ReferencePosition, ReferenceRegion, SequenceDictionary }
+import org.bdgenomics.adam.models.{ ReferencePosition, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.mango.cli.util.Materializer
-import org.bdgenomics.mango.converters.{ SearchFeaturesRequestGA4GH, SearchVariantsRequestGA4GH, SearchReadsRequestGA4GH }
-import org.bdgenomics.mango.core.util.{ Genome, GenomeConfig, VizUtils, VizCacheIndicator }
+import org.bdgenomics.mango.converters.{ SearchFeaturesRequestGA4GH, SearchReadsRequestGA4GH, SearchVariantsRequestGA4GH }
+import org.bdgenomics.mango.core.util.{ Genome, GenomeConfig, VizCacheIndicator, VizUtils }
 import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.models._
 import org.bdgenomics.utils.cli._
@@ -38,7 +40,10 @@ import org.eclipse.jetty.util.resource.Resource
 import org.fusesource.scalate.TemplateEngine
 import org.kohsuke.args4j.{ Argument, Option => Args4jOption }
 import org.scalatra._
+
 import scala.io.Source
+import net.liftweb.json.JsonAST._
+import net.liftweb.json.Extraction._
 
 object VizTimers extends Metrics {
   //HTTP requests
@@ -229,6 +234,40 @@ class VizReadsArgs extends Args4jBase with ParquetArgs {
 
 }
 
+/**
+ * Holds arguments for browser template.
+ *
+ * @param dictionary String of comma delimited Reference Regions.
+ * @param twoBitUrl String of url to twobit reference.
+ * @param genes Optional gene endpoint
+ * @param reads Optional List of read IDs for endpoint
+ * @param variants Optional Map of variant IDs and corresponding comma delimited genotype names
+ * @param features Optional Map of feature IDs and boolean that determines whether track is coverage
+ * @param referenceName contig referenceName for starting location in browser
+ * @param start start position for location in browser
+ * @param end end position for location in browser
+ */
+case class BrowserArgs(dictionary: String,
+                       twoBitUrl: String,
+                       genes: Option[String],
+                       reads: Option[List[String]],
+                       variants: Option[Map[String, String]],
+                       features: Option[Map[String, Boolean]],
+                       referenceName: String,
+                       start: Long,
+                       end: Long) {
+
+  def toMap(): Map[String, Any] = {
+    Map("dictionary" -> dictionary,
+      "twoBitUrl" -> twoBitUrl,
+      "genes" -> genes,
+      "reads" -> reads,
+      "variants" -> variants,
+      "features" -> features,
+      "region" -> ReferenceRegion(referenceName, start, end))
+  }
+}
+
 class VizServlet extends ScalatraServlet {
   implicit val formats = net.liftweb.json.DefaultFormats
 
@@ -246,9 +285,20 @@ class VizServlet extends ScalatraServlet {
     // set initial referenceRegion so it is defined. pick first chromosome to view
     val firstChr = VizReads.genome.chromSizes.records.head.name
     session("referenceRegion") = ReferenceRegion(firstChr, 1, 100)
-    templateEngine.layout("/WEB-INF/layouts/overall.ssp",
-      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.genome.chromSizes),
-        "regions" -> VizReads.formatClickableRegions(VizReads.prefetchedRegions)))
+
+    val args = Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.genome.chromSizes),
+      "regions" -> VizReads.formatClickableRegions(VizReads.prefetchedRegions))
+
+    try {
+      templateEngine.layout("/WEB-INF/layouts/overall.ssp", args)
+    } catch {
+      case e: Exception => {
+        println(e.getMessage)
+        // for testing purposes in VizReadsSuite
+        NotFound(net.liftweb.json.compactRender(decompose(args)))
+      }
+    }
+
   }
 
   // Used to set the viewRegion in the backend when a user clicks on the home page
@@ -271,34 +321,49 @@ class VizServlet extends ScalatraServlet {
     val templateEngine = new TemplateEngine
 
     // generate file keys for front end
-    val readsSamples: Option[List[MaterializedFile]] = try {
-      Some(VizReads.materializer.getReads().get.getFiles(false))
+    val readsSamples: Option[List[String]] = try {
+      Some(VizReads.materializer.getReads().get.getFiles.map(r => LazyMaterialization.filterKeyFromFile(r)))
     } catch {
       case e: Exception => None
     }
 
-    val variantSamples: Option[Map[MaterializedFile, String]] = try {
-      Some(VizReads.materializer.getVariantContext().get.samples.map(r => (r._1, r._2.map(_.getId).mkString(","))))
-    } catch {
-      case e: Exception => None
-    }
-
-    val featureSamples: Option[List[(MaterializedFile, Boolean)]] = try {
-      Some(VizReads.materializer.getFeatures().get.getFiles(false).map(r => {
-        (r, VizReads.coveragePaths.contains(r))
+    val variantSamples: Option[Map[String, String]] = try {
+      Some(VizReads.materializer.getVariantContext().get.samples.map(r => {
+        (LazyMaterialization.filterKeyFromFile(r._1), r._2.map(_.getId).mkString(","))
       }))
     } catch {
       case e: Exception => None
     }
 
-    templateEngine.layout("/WEB-INF/layouts/browser.ssp",
-      Map("dictionary" -> VizReads.formatDictionaryOpts(VizReads.genome.chromSizes),
-        "twoBitUrl" -> VizReads.genome.twoBitPath,
-        "genes" -> (if (VizReads.genome.genes.isDefined) Some(VizReads.GENES_REQUEST) else None),
-        "reads" -> readsSamples,
-        "variants" -> variantSamples,
-        "features" -> featureSamples,
-        "region" -> session("referenceRegion").asInstanceOf[ReferenceRegion]))
+    val featureSamples: Option[Map[String, Boolean]] = try {
+      Some(VizReads.materializer.getFeatures().get.getFiles.map(r => {
+        (LazyMaterialization.filterKeyFromFile(r), VizReads.coveragePaths.contains(r))
+      }).toMap)
+    } catch {
+      case e: Exception => None
+    }
+
+    val region = session("referenceRegion").asInstanceOf[ReferenceRegion]
+    val args = BrowserArgs(VizReads.formatDictionaryOpts(VizReads.genome.chromSizes),
+      VizReads.genome.twoBitPath,
+      (if (VizReads.genome.genes.isDefined) Some(VizReads.GENES_REQUEST) else None),
+      readsSamples,
+      variantSamples,
+      featureSamples,
+      region.referenceName,
+      region.start,
+      region.end)
+
+    try {
+      templateEngine.layout("/WEB-INF/layouts/browser.ssp",
+        args.toMap())
+    } catch {
+      case e: Exception => {
+        println(e.getMessage)
+        // for testing purposes in VizReadsSuite
+        NotFound(net.liftweb.json.compactRender(decompose(args)))
+      }
+    }
   }
 
   // used in browser.ssp to set contig list for wheel
@@ -532,7 +597,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (readsPaths.nonEmpty) {
         object readsWait
         VizReads.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
-        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.genome.chromSizes, args.repartition, Some(prefetch)))
+        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.genome.chromSizes, Some(prefetch)))
       } else None
     } else None
   }
@@ -548,7 +613,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
       if (variantsPaths.nonEmpty) {
         object variantsWait
         VizReads.syncObject += (VariantContextMaterialization.name -> variantsWait)
-        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.genome.chromSizes, args.repartition, Some(prefetch)))
+        Some(new VariantContextMaterialization(sc, variantsPaths, VizReads.genome.chromSizes, Some(prefetch)))
       } else None
     } else None
   }
@@ -576,7 +641,7 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   }
 
   /**
-   * Runs total data scan over all feature and variant files, calculating the normalied frequency at all
+   * Runs total data scan over all feature and variant files, calculating the normalized frequency at all
    * windows in the genome.
    *
    * @return Returns list of windowed regions in the genome and their corresponding normalized frequencies
@@ -623,11 +688,11 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
 
     for (region <- regions) {
       if (VizReads.materializer.featuresExist)
-        VizReads.materializer.getFeatures().get.get(Some(region)).count()
+        VizReads.materializer.getFeatures().get.get(Some(region))
       if (VizReads.materializer.readsExist)
-        VizReads.materializer.getReads().get.get(Some(region)).count()
+        VizReads.materializer.getReads().get.get(Some(region))
       if (VizReads.materializer.variantContextExist)
-        VizReads.materializer.getVariantContext().get.get(Some(region)).count()
+        VizReads.materializer.getVariantContext().get.get(Some(region))
     }
   }
 

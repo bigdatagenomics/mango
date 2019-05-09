@@ -31,6 +31,7 @@ trait MangoFunSuite extends SparkFunSuite with FunSuiteLike {
   override val properties: Map[String, String] = Map(
     ("spark.serializer", "org.apache.spark.serializer.KryoSerializer"),
     ("spark.kryo.registrator", "org.bdgenomics.mango.serialization.MangoKryoRegistrator"),
+    ("spark.kryoserializer.buffer.max", "200m"),
     ("spark.kryo.referenceTracking", "true"))
 
   def resourcePath(path: String) = ClassLoader.getSystemClassLoader.getResource(path).getFile

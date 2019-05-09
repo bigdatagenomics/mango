@@ -23,16 +23,38 @@ import java.net.URL
 
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.ReferenceRegion
+import org.bdgenomics.adam.rdd.GenomicDataset
 
 /**
- *
+ * @tparam H File header
  * @tparam R SpecificRecord
- * @tparam D Genomic Dataset
+ * @tparam D GenomicDataset
  */
-trait GenomicReader[R, D] {
+trait GenomicReader[H, R, D] {
 
   // Valid filename suffixes
   def suffixes: Array[String]
+
+  /**
+   * Loads file from local filesystem, http or hdfs.
+   *
+   * @param fp url to file
+   * @param regions Iterable of ReferenceRegions
+   * @param sc Optional SparkContext, only used for HDFS files
+   * @return Array of Specific Records
+   */
+  def loadFromSource(fp: String, regions: Option[Iterable[ReferenceRegion]], sc: Option[SparkContext] = None): Array[R] = {
+
+    if (new java.io.File(fp).exists) { // if fp exists in local filesystem, load locally
+      load(fp, regions, true)._2
+    } else if (fp.startsWith("http")) {
+      // http file
+      load(fp, regions, false)._2
+    } else {
+      require(sc.isDefined, "HDFS requires a SparkContext to run")
+      loadHDFS(sc.get, fp, regions)._2
+    }
+  }
 
   /**
    * Checks if file has valid suffix.
@@ -47,13 +69,11 @@ trait GenomicReader[R, D] {
     throw new FileNotFoundException(s"${fp} has invalid extension for available extensions ${suffixes.mkString(", ")}")
   }
 
-  def load(path: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[R]
+  def load(path: String, regions: Option[Iterable[ReferenceRegion]], local: Boolean): Tuple2[H, Array[R]]
 
-  def loadHttp(path: String, regions: Iterable[ReferenceRegion]): Iterator[R]
+  def loadS3(path: String, regions: Option[Iterable[ReferenceRegion]]): Tuple2[H, Array[R]]
 
-  def loadS3(path: String, regions: Iterable[ReferenceRegion]): Iterator[R]
-
-  def loadHDFS(sc: SparkContext, path: String, regions: Iterable[ReferenceRegion]): D
+  def loadHDFS(sc: SparkContext, path: String, regions: Option[Iterable[ReferenceRegion]]): Tuple2[D, Array[R]]
 
   // helper functions
   def createURL(urlString: String): URL = {

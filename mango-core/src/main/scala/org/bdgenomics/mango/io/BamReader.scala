@@ -20,7 +20,7 @@ package org.bdgenomics.mango.io
 
 import java.io.File
 
-import htsjdk.samtools.{ QueryInterval, SAMRecord, SamInputResource, SamReaderFactory, ValidationStringency }
+import htsjdk.samtools.{ QueryInterval, SAMFileHeader, SAMRecord, SamInputResource, SamReaderFactory, ValidationStringency }
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.formats.avro.AlignmentRecord
@@ -33,7 +33,7 @@ import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.mango.models.LazyMaterialization
 
-object BamReader extends GenomicReader[AlignmentRecord, AlignmentRecordDataset] with Logging {
+object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, AlignmentRecordDataset] with Logging {
 
   def suffixes = Array(".bam", ".sam")
 
@@ -45,11 +45,11 @@ object BamReader extends GenomicReader[AlignmentRecord, AlignmentRecordDataset] 
    * Loads records from bam or sam file overlapping queried reference regions.
    *
    * @param fp filepath
-   * @param regions Iterator of ReferenceRegions to query
+   * @param regionsOpt Option of iterator of ReferenceRegions to query
    * @param local Boolean specifying whether file is local or remote.
    * @return Iterator of AlignmentRecords
    */
-  def load(fp: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[AlignmentRecord] = {
+  def load(fp: String, regionsOpt: Option[Iterable[ReferenceRegion]], local: Boolean): Tuple2[SAMFileHeader, Array[AlignmentRecord]] = {
 
     // if not valid throw Exception
     if (!isValidSuffix(fp)) {
@@ -61,7 +61,7 @@ object BamReader extends GenomicReader[AlignmentRecord, AlignmentRecordDataset] 
     val reader = if (local) {
       if (fp.endsWith(".bam"))
         SamReaderFactory.makeDefault().open(SamInputResource.of(new File(fp)).index(new File(indexUrl)))
-      else
+      else // sam file
         SamReaderFactory.makeDefault().open(SamInputResource.of(new File(fp)))
     } else {
       SamReaderFactory.makeDefault().open(
@@ -72,75 +72,76 @@ object BamReader extends GenomicReader[AlignmentRecord, AlignmentRecordDataset] 
 
     // no valid dictionary. Cannot query or filter data.
     if (dictionary.getSequences.isEmpty) {
-      return Iterator[AlignmentRecord]()
+      return (reader.getFileHeader, Array[AlignmentRecord]())
     }
 
     // modify chr prefix, if this file uses chr prefixes.
     val hasChrPrefix = dictionary.getSequences.head.getSequenceName.startsWith("chr")
 
-    val queries: Array[QueryInterval] = regions.map(r => {
-      val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-
-      val contig = dictionary.getSequence(modified.referenceName)
-      // check if contig is in dictionary. If not in dictionary, corresponding records will not be in the file.
-      if (contig != null)
-        Some(new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
-          modified.start.toInt, modified.end.toInt))
-      else
-        None
-
-    }).toArray.flatten
-
     val samRecordConverter = new SAMRecordConverter
 
-    if (reader.hasIndex) {
-      val t = reader.query(queries, false)
+    if (regionsOpt.isDefined) {
+      val regions = regionsOpt.get
+      val queries: Array[QueryInterval] = regions.map(r => {
+        val modified = LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
 
-      val results = t.map(p => samRecordConverter.convert(p)).toArray
+        val contig = dictionary.getSequence(modified.referenceName)
+        // check if contig is in dictionary. If not in dictionary, corresponding records will not be in the file.
+        if (contig != null)
+          Some(new QueryInterval(dictionary.getSequence(modified.referenceName).getSequenceIndex,
+            modified.start.toInt, modified.end.toInt))
+        else
+          None
+      }).toArray.flatten
 
-      reader.close()
+      if (reader.hasIndex) {
 
-      results.toIterator //TODO this is pretty dumb. Remove after figuring out open/closing issue
+        val results = reader.query(queries, false).map(p =>
+          try {
+            Some(samRecordConverter.convert(p)) // filter out reads with conversion issues
+          } catch {
+            case e: Exception => None
+          }).toArray.flatten
 
+        reader.close()
+
+        (reader.getFileHeader, results)
+
+      } else {
+        val iter: Iterator[SAMRecord] = reader.iterator()
+
+        val samRecords: Array[SAMRecord] = iter.toArray.filter(!_.getReadUnmappedFlag) // read should be mapped
+          .map(r => {
+            val overlaps = queries.filter(q => q.overlaps(new QueryInterval(dictionary.getSequence(r.getContig).getSequenceIndex,
+              r.getStart, r.getEnd))).size > 0
+            if (overlaps)
+              Some(r)
+            else None
+          }).flatten
+
+        // close reader after records have been searched
+        reader.close()
+
+        // map SamRecords to ADAM
+        (reader.getFileHeader, samRecords.map(p => samRecordConverter.convert(p)))
+      }
     } else {
-      val iter: Iterator[SAMRecord] = reader.iterator()
+      val samRecords = reader.iterator().toArray
+      reader.close
 
-      val samRecords: Array[SAMRecord] = iter.toArray.map(r => {
-        val overlaps = queries.filter(q => q.overlaps(new QueryInterval(dictionary.getSequence(r.getContig).getSequenceIndex,
-          r.getStart, r.getEnd))).size > 0
-        if (overlaps)
-          Some(r)
-        else None
-      }).flatten
-
-      // close reader after records have been searched
-      reader.close()
-
-      // map SamRecords to ADAM
-      samRecords.map(p => samRecordConverter.convert(p)).toIterator
+      (reader.getFileHeader, samRecords.map(p => samRecordConverter.convert(p)))
     }
-  }
 
-  /**
-   * *
-   * Loads remote http file.
-   *
-   * @param url remote path to file
-   * @param regions regions to filter file
-   * @return Iterator of filtered AlignmentRecords
-   */
-  def loadHttp(url: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
-    load(url, regions, false)
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from s3.
    *
-   * @param regions Iterable of ReferenceRegions to load
-   * @param fp filepath to load from
+   * @param regionsOpt Option of iterable of ReferenceRegions to load
+   * @param path filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadS3(path: String, regions: Iterable[ReferenceRegion]): Iterator[AlignmentRecord] = {
+  def loadS3(path: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[SAMFileHeader, Array[AlignmentRecord]] = {
     throw new Exception("Not implemented")
   }
 
@@ -148,28 +149,37 @@ object BamReader extends GenomicReader[AlignmentRecord, AlignmentRecordDataset] 
    * Loads data from bam files (indexed or unindexed) from HDFS.
    *
    * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegions to load
+   * @param regionsOpt Iterable of ReferenceRegions to load
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadHDFS(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): AlignmentRecordDataset = {
+  def loadHDFS(@transient sc: SparkContext, fp: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[AlignmentRecordDataset, Array[AlignmentRecord]] = {
     // hack to get around issue in hadoop_bam, which throws error if referenceName is not found in bam file
     val path = new org.apache.hadoop.fs.Path(fp)
     val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))
 
-    // start -1 because off by 1 error. IE. if fetching location 90-91, won't get alignments that start at 89.
-    val predicateRegions: Iterable[ReferenceRegion] = regions.flatMap(r => {
-      LazyMaterialization.getReferencePredicate(r).map(r => r.copy(start = Math.max(0, r.start - 1)))
-    }).filter(r => fileSd.containsReferenceName(r.referenceName))
+    val dataset =
+      if (regionsOpt.isDefined) {
+        val regions = regionsOpt.get
+        // start -1 because off by 1 error. IE. if fetching location 90-91, won't get alignments that start at 89.
+        val predicateRegions: Iterable[ReferenceRegion] = regions.flatMap(r => {
+          LazyMaterialization.getReferencePredicate(r).map(r => r.copy(start = Math.max(0, r.start - 1)))
+        }).filter(r => fileSd.containsReferenceName(r.referenceName))
 
-    try {
-      sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
-    } catch {
-      case e: java.lang.IllegalArgumentException => {
-        log.warn(e.getMessage)
-        log.warn("No bam index detected. File loading will be slow...")
-        sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)
+        try {
+          sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
+        } catch {
+          case e: java.lang.IllegalArgumentException => {
+            log.warn(e.getMessage)
+            log.warn("No bam index detected. File loading will be slow...")
+            sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)
+          }
+        }
+      } else {
+        sc.loadBam(fp, stringency = ValidationStringency.SILENT)
       }
-    }
+
+    (dataset, dataset.rdd.collect)
+
   }
 }

@@ -33,7 +33,12 @@ class VcfReaderSuite extends MangoFunSuite {
 
   test("Should load local vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
-    val data = VcfReader.load(vcfFile, Iterable(region)).toList
+    val data = VcfReader.load(vcfFile, Some(Iterable(region)), true)._2
+    assert(data.size == 7)
+  }
+
+  test("Should load all records when region is not defined") {
+    val data = VcfReader.load(vcfFile, None, true)._2
     assert(data.size == 7)
   }
 
@@ -41,56 +46,56 @@ class VcfReaderSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 90L, 110L)
 
     val thrown = intercept[Exception] {
-      VcfReader.load("myfile.badSuffix", Iterable(region))
+      VcfReader.load("myfile.badSuffix", Some(Iterable(region)), true)
     }
     assert(thrown.getMessage.contains("myfile.badSuffix"))
   }
 
   test("Should return empty on invalid chromosome") {
     val region = new ReferenceRegion("chrT", 90L, 110L)
-    val data = VcfReader.load(vcfFile, Iterable(region))
+    val data = VcfReader.load(vcfFile, Some(Iterable(region)), true)._2
     assert(data.size == 0)
   }
 
   test("Should load local vcf files with incorrect prefixes file") {
     val region = new ReferenceRegion("M", 0, 999)
-    val data = VcfReader.load(vcfFile, Iterable(region)).toList
+    val data = VcfReader.load(vcfFile, Some(Iterable(region)), true)._2
     assert(data.size == 7)
   }
 
   test("Should load genotypes") {
     val region = new ReferenceRegion("chrM", 0L, 100L)
-    val data = VcfReader.load(vcfFile, Iterable(region))
+    val data = VcfReader.load(vcfFile, Some(Iterable(region)), true)._2
 
     assert(data.map(_.genotypes).flatten.size == 21)
   }
 
   test("loads gzipped vcfs") {
     val region = new ReferenceRegion("chr1", 0L, 63736L)
-    //    val data = VcfReader.load(vcfFileGz, Iterable(region))
-    val data = VcfReader.load(resourcePath("small.vcf.gz"), Iterable(region))
+    val data = VcfReader.load(vcfFileGz, Some(Iterable(region)), true)._2
 
     assert(data.size == 4)
   }
 
   sparkTest("Should load data from HDFS using Spark") {
     val region = new ReferenceRegion("chrM", 90L, 91L)
-    val data = VcfReader.loadHDFS(sc, vcfFile, Iterable(region))
+    val data = VcfReader.loadHDFS(sc, vcfFile, Some(Iterable(region)))._2
 
-    val data2 = VcfReader.load(vcfFile, Iterable(region))
+    val data2 = VcfReader.load(vcfFile, Some(Iterable(region)), true)._2
 
-    assert(data.rdd.count == data2.size)
+    assert(data.length == data2.size)
   }
 
   test("Should load http vcf file") {
     val bamString = "http://1000genomes.s3.amazonaws.com/phase1/analysis_results/integrated_call_sets/ALL.chr22.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
     val region = new ReferenceRegion("chr22", 25595080, 25603694)
-    val count = VcfReader.loadHttp(bamString, Iterable(region)).size
+    val count = VcfReader.load(bamString, Some(Iterable(region)), false)._2.size
 
     assert(count == 147)
 
   }
 
+  //  TODO
   //  test("Should load s3 vcf file") {
   //    val bamString = "s3://1000genomes/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
   //

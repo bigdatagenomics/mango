@@ -29,57 +29,63 @@ class BedReaderSuite extends MangoFunSuite {
 
   // test vcf data
   val bedFile = resourcePath("smalltest.bed")
-  val bbFile = resourcePath("ensembl.chr17.bb")
   val narrowPeakFile = resourcePath("small.1.sorted.narrowPeak")
 
   test("Should load local bed file") {
     val region = new ReferenceRegion("chrM", 0, 3000)
-    val data = BedReader.load(bedFile, Iterable(region)).toList
+    val data = BedReader.load(bedFile, Some(Iterable(region)), true)._2
     assert(data.size == 3)
+  }
+
+  test("Should load all records when region is not specified") {
+    val data = BedReader.load(bedFile, None, true)._2
+    assert(data.size == 4)
   }
 
   test("Fails on files that are not bed format") {
     val region = new ReferenceRegion("chrM", 90L, 110L)
 
     val thrown = intercept[Exception] {
-      BedReader.load("myfile.badSuffix", Iterable(region))
+      BedReader.load("myfile.badSuffix", Some(Iterable(region)), true)._2
     }
     assert(thrown.getMessage.contains("myfile.badSuffix"))
   }
 
   test("Should return empty on invalid chromosome") {
     val region = new ReferenceRegion("chrT", 90L, 110L)
-    val data = BedReader.load(bedFile, Iterable(region))
+    val data = BedReader.load(bedFile, Some(Iterable(region)), true)._2
     assert(data.size == 0)
   }
 
   test("Should load local narrowPeak file") {
     val region = new ReferenceRegion("chr1", 0, 26472859)
-    val data = BedReader.load(narrowPeakFile, Iterable(region)).toList
+    val data = BedReader.load(narrowPeakFile, Some(Iterable(region)), true)._2
     assert(data.size == 4)
   }
 
   test("Should load local bed files with incorrect prefixes file") {
     val region = new ReferenceRegion("M", 0, 2000)
-    val data = BedReader.load(bedFile, Iterable(region)).toList
+    val data = BedReader.load(bedFile, Some(Iterable(region)), true)._2
     assert(data.size == 2)
   }
 
   sparkTest("Should load data from HDFS using Spark") {
-    val region = new ReferenceRegion("chrM", 90L, 91L)
-    val data = BedReader.loadHDFS(sc, bedFile, Iterable(region))
-    val data2 = BedReader.load(bedFile, Iterable(region))
+    val region = new ReferenceRegion("chrM", 0L, 2000L)
+    val data = BedReader.loadHDFS(sc, bedFile, Some(Iterable(region)))._2
+    val data2 = BedReader.load(bedFile, Some(Iterable(region)), true)._2
 
-    assert(data.rdd.count == data2.size)
+    assert(data.length == data2.length)
+    assert(data.head.getStart == data2.head.getStart) // should be on the same index
+    assert(data.head.getEnd == data2.head.getEnd) // should be on the same index
+
   }
 
   test("Should load remote bed file") {
     val url = "https://www.encodeproject.org/files/ENCFF499IRL/@@download/ENCFF499IRL.bed.gz"
 
     val region = new ReferenceRegion("chr4", 86264, 86895)
-    val data = BedReader.loadHttp(url, Iterable(region)).toList
-    print(data.size)
-    assert(data.size < 77)
+    val data = BedReader.load(url, Some(Iterable(region)), false)._2
+    assert(data.size == 1)
   }
 
 }

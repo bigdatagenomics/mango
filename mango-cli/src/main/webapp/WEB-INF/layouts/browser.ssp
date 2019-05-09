@@ -1,16 +1,15 @@
-<% import org.bdgenomics.mango.models.MaterializedFile %>
 <% import org.bdgenomics.adam.models.ReferenceRegion %>
 <%@ val dictionary:     String  %>
 <%@ val twoBitUrl:      String  %>
 <%@ val genes:          Option[String] %>
-<%@ val reads:     Option[List[MaterializedFile]] %>
-<%@ val variants:  Option[Map[MaterializedFile, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
-<%@ val features:  Option[List[(MaterializedFile, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
+<%@ val reads:     Option[List[String]] %>
+<%@ val variants:  Option[Map[String, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
+<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
 <%@ val region: ReferenceRegion %>
 
-<%@ val reads:     Option[List[MaterializedFile]] %>
-<%@ val variants:  Option[Map[MaterializedFile, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
-<%@ val features:  Option[List[(MaterializedFile, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
+<%@ val reads:     Option[List[String]] %>
+<%@ val variants:  Option[Map[String, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
+<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
 <%@ val region: ReferenceRegion %>
 
 <html xmlns="http://www.w3.org/1999/html">
@@ -26,8 +25,8 @@
 <script>
     <!-- Define Variables for Pileup.js -->
     var contig = '${region.referenceName}';
-    var start = '${region.start}';
-    var end = '${region.end}';
+    var start = parseInt('${region.start}'.replace(/,/g, ""));
+    var end = parseInt('${region.end}'.replace(/,/g, ""));
 
     var request = "/sequenceDictionary"
     var xhr = new XMLHttpRequest();
@@ -72,23 +71,17 @@
             #if (variants.isDefined)
                 #for (s <- variants.get)
 
-                    #if (!s._1.usesSpark)
-                        var data = pileup.formats.vcf({
-                            url: '${s._1.filePath}';
-                        });
-                    #else
-                        var data = pileup.formats.GAVariant({
-                            endpoint: '',
-                            variantSetId: '${s._1.getKey()}',
-                            callSetIds: '${s._2}'.split(","),
-                            callSetNames:  '${s._2}'.split(",")
-                        });
-                    #end
+                    var data = pileup.formats.GAVariant({
+                        endpoint: '',
+                        variantSetId: '${s._1}',
+                        callSetIds: '${s._2}'.split(","),
+                        callSetNames:  '${s._2}'.split(",")
+                    });
 
                     tracks.push({
                         viz: pileup.viz.variants(),
                         data: data,
-                        name: '${s._1.getKey()}'
+                        name: '${s._1}'
                     });
                     tracks.push({
                         viz: pileup.viz.genotypes(),
@@ -102,28 +95,22 @@
             #if (features.isDefined)
                 #for (s <- features.get)
 
-                    #if (!s._1.usesSpark)
-                        var data = pileup.formats.bigBed({
-                            url: '${s._1.filePath}'
-                        });
-                    #else
-                        var data = pileup.formats.GAFeature({
-                            endpoint: '',
-                            featureSetId: '${s._1.getKey()}'
-                        });
-                    #end
+                    var data = pileup.formats.GAFeature({
+                        endpoint: '',
+                        featureSetId: '${s._1}'
+                    });
 
                     #if (s._2 == true)
                         tracks.push({
                             viz: pileup.viz.coverage(),
                             data: data,
-                            name: '${s._1.getKey()}'
+                            name: '${s._1}'
                         });
                     #else
                         tracks.push({
                             viz: pileup.viz.features(),
                             data: data,
-                            name: '${s._1.getKey()}'
+                            name: '${s._1}'
                         });
                     #end
                 #end
@@ -132,27 +119,18 @@
             // add reads
             #if (reads.isDefined)
                 #for (s <- reads.get)
-                    console.log('${s.filePath}');
-                    console.log('${s.usesSpark}');
 
-                    #if (!s.usesSpark)
-                        var data = pileup.formats.bam({
-                            url: '${s.filePath}',
-                            indexUrl: '${s.indexPath.get}'
-                        });
-                    #else
-                        var data = pileup.formats.GAReadAlignment({
-                            endpoint: '',
-                            readGroupId: '${s.getKey()}',
-                            killChr: false
-                        });
-                    #end
+                    var data = pileup.formats.GAReadAlignment({
+                        endpoint: '',
+                        readGroupId: '${s}',
+                        killChr: false
+                    });
 
                     // track for coverage for reads
                     tracks.push({
                         viz: pileup.viz.coverage(),
                         data: data,
-                        name: '${s.getKey()}'
+                        name: '${s}'
                     });
                     // track for reads
                     tracks.push({
@@ -161,7 +139,7 @@
                         }),
                         isReference: false,
                         data: data,
-                        name: '${s.getKey()}'
+                        name: '${s}'
                     });
                 #end
             #end

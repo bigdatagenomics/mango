@@ -18,30 +18,31 @@
 
 package org.bdgenomics.mango.io
 
-import java.io.{ FileOutputStream, BufferedOutputStream, File }
+import java.io.{ BufferedOutputStream, File, FileOutputStream }
 
 import htsjdk.tribble.index.tabix.TabixFormat
 import htsjdk.tribble.util.LittleEndianOutputStream
-import htsjdk.tribble.{ TribbleException, AbstractFeatureReader }
-import htsjdk.tribble.bed.{ BEDFeature, BEDCodec }
+import htsjdk.tribble.{ AbstractFeatureReader, FeatureCodecHeader, TribbleException }
+import htsjdk.tribble.bed.{ BEDCodec, BEDFeature }
 import htsjdk.tribble.readers.LineIterator
 import org.apache.spark.SparkContext
-import org.bdgenomics.adam.models.{ ReferenceRegion }
-import org.bdgenomics.adam.rdd.feature.FeatureDataset
+import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.misc.Logging
-import htsjdk.tribble.index.{ IndexFactory, Index }
+import htsjdk.tribble.index.{ Index, IndexFactory }
+
 import scala.collection.JavaConversions._
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.feature.FeatureDataset
 
-object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
+object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDataset] with Logging {
 
   def suffixes = Array(".bed", ".bed.gz", ".narrowPeak")
 
-  val codec: BEDCodec = new BEDCodec()
+  def load(fp: String, regionsOpt: Option[Iterable[ReferenceRegion]], local: Boolean): Tuple2[FeatureCodecHeader, Array[Feature]] = {
 
-  def load(fp: String, regions: Iterable[ReferenceRegion], local: Boolean = true): Iterator[Feature] = {
+    val codec: BEDCodec = new BEDCodec()
 
     // if not valid throw Exception
     if (!isValidSuffix(fp)) {
@@ -58,49 +59,54 @@ object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
 
     val dictionary = reader.getSequenceNames()
 
-    val queries =
-      if (!dictionary.isEmpty) {
+    val results =
+      if (regionsOpt.isDefined) {
+        val queries =
+          if (!dictionary.isEmpty) {
 
-        // modify chr prefix, if this file uses chr prefixes.
-        val hasChrPrefix = dictionary.get(0).startsWith("chr")
+            // modify chr prefix, if this file uses chr prefixes.
+            val hasChrPrefix = dictionary.get(0).startsWith("chr")
 
-        regions.map(r => {
-          LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
-        })
+            regionsOpt.get.map(r => {
+              LazyMaterialization.modifyChrPrefix(r, hasChrPrefix)
+            })
+          } else {
+            // take all possible combinations of ReferenceRegions
+            regionsOpt.get.map(r => {
+              Iterable(LazyMaterialization.modifyChrPrefix(r, true), LazyMaterialization.modifyChrPrefix(r, false))
+            }).flatten
+          }
+
+        if (reader.isQueryable) {
+          val tmp = queries.map(r => reader.query(r.referenceName, r.start.toInt, r.end.toInt).toList)
+          reader.close()
+          tmp.flatten
+        } else {
+          // in the case where file is remote and doesn't have an index, still want to get data
+          val iter: Iterator[BEDFeature] = reader.iterator()
+          reader.close()
+          iter.map(r => {
+            val overlaps = queries.filter(q => q.overlaps(ReferenceRegion(r.getContig, r.getStart, r.getEnd))).size > 0
+            if (overlaps)
+              Some(r)
+            else None
+          }).flatten
+        }
       } else {
-        regions.map(r => {
-          Iterable(LazyMaterialization.modifyChrPrefix(r, true), LazyMaterialization.modifyChrPrefix(r, false))
-        }).flatten
-      }
-
-    val results: Iterable[BEDFeature] =
-      if (reader.isQueryable) {
-        val tmp = queries.map(r => reader.query(r.referenceName, r.start.toInt, r.end.toInt).toList)
-        reader.close()
-        tmp.flatten
-      } else {
-        // in the case where file is remote and doesnt have an index, still want to get data
-        // TODO: really inefficient. the data should be only pulled once
+        // no regions specified, so return all records
         val iter: Iterator[BEDFeature] = reader.iterator()
         reader.close()
-        iter.map(r => {
-          val overlaps = queries.filter(q => q.overlaps(ReferenceRegion(r.getContig, r.getStart, r.getEnd))).size > 0
-          if (overlaps)
-            Some(r)
-          else None
-        }).flatten.toIterable
+        iter
       }
 
     // map results to ADAM features
-    results.map(r => Feature.newBuilder()
+    val features = results.map(r => Feature.newBuilder()
       .setFeatureType(r.getType)
       .setReferenceName(r.getContig)
-      .setStart(r.getStart.toLong)
-      .setEnd(r.getEnd.toLong).build()).toIterator
-  }
+      .setStart(r.getStart.toLong - 1) // move to 0 indexed to match HDFS results
+      .setEnd(r.getEnd.toLong).build()).toArray
 
-  def loadHttp(url: String, regions: Iterable[ReferenceRegion]): Iterator[Feature] = {
-    load(url, regions, false)
+    (reader.getHeader().asInstanceOf[FeatureCodecHeader], features)
   }
 
   /**
@@ -110,27 +116,34 @@ object BedReader extends GenomicReader[Feature, FeatureDataset] with Logging {
    * @param path filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadS3(path: String, regions: Iterable[ReferenceRegion]): Iterator[Feature] = {
+  def loadS3(path: String, regions: Option[Iterable[ReferenceRegion]]): Tuple2[FeatureCodecHeader, Array[Feature]] = {
     throw new Exception("Not implemented")
-
   }
 
   /**
    * Loads data from bam files (indexed or unindexed) from HDFS.
    * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegions to load
+   * @param regionsOpt Option of Iterable of ReferenceRegions to load
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadHDFS(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): FeatureDataset = {
+  def loadHDFS(sc: SparkContext, fp: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[FeatureDataset, Array[Feature]] = {
     // if regions are specified, specifically load regions. Otherwise, load all data
-    val predicateRegions = regions
-      .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-      .toArray
+    val dataset =
+      if (regionsOpt.isDefined) {
+        val regions = regionsOpt.get
+        val predicateRegions = regions
+          .flatMap(r => LazyMaterialization.getReferencePredicate(r))
+          .toArray
 
-    sc.loadFeatures(fp)
-      .transform(rdd => rdd.filter(g =>
-        !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
+        sc.loadFeatures(fp)
+          .transform(rdd => rdd.filter(g =>
+            !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
+      } else { // no regions defined. return all records.
+        sc.loadFeatures(fp)
+      }
+
+    (dataset, dataset.rdd.collect)
   }
 
   private def createIndex(fp: String, codec: BEDCodec) = {

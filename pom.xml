@@ -609,11 +609,11 @@
         <artifactId>scalatra-scalatest_${scala.version.prefix}</artifactId>
         <version>${scalatra.version}</version>
       </dependency>
-      <!--<dependency>-->
-        <!--<groupId>org.scalatra</groupId>-->
-        <!--<artifactId>scalatra-specs2_${scala.version.prefix}</artifactId>-->
-        <!--<version>${scalatra.version}</version>-->
-      <!--</dependency>-->
+      <dependency>
+        <groupId>org.scalatra</groupId>
+        <artifactId>scalatra-specs2_${scala.version.prefix}</artifactId>
+        <version>${scalatra.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.scalatra.scalate</groupId>
         <artifactId>scalate-core_${scala.version.prefix}</artifactId>

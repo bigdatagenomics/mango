@@ -17,11 +17,8 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ BufferedOutputStream, OutputStream, PrintWriter, StringWriter }
-
 import net.liftweb.json.Serialization.write
 import org.apache.spark._
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ VariantContext, ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -39,24 +36,21 @@ import org.bdgenomics.mango.converters.GA4GHutil._
  * @param sc SparkContext
  * @param files list files to materialize
  * @param sd the sequence dictionary associated with the file records
- * @param repartition whether to repartition data to the default number of partitions
  * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
  * @see LazyMaterialization.scala
  */
 class VariantContextMaterialization(@transient sc: SparkContext,
                                     files: List[String],
                                     sd: SequenceDictionary,
-                                    repartition: Boolean = false,
                                     prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[VariantContext, ga4gh.Variants.Variant](VariantContextMaterialization.name, sc, files, sd, repartition, prefetchSize)
+    extends LazyMaterialization[VariantContext, ga4gh.Variants.Variant](VariantContextMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable {
 
   // placeholder used for ref/alt positions to display in browser
   val variantPlaceholder = "N"
 
-  // TODO this may take a while
   // Map of filenames to Samples for that file
-  @transient val samples: Map[MaterializedFile, Seq[Sample]] = getGenotypeSamples()
+  @transient val samples: Map[String, Seq[Sample]] = getGenotypeSamples()
 
   /**
    * Extracts ReferenceRegion from Variant
@@ -66,17 +60,9 @@ class VariantContextMaterialization(@transient sc: SparkContext,
   def getReferenceRegion = (g: VariantContext) => ReferenceRegion(g.position)
 
   /**
-   * Checks that an http endpoint for a vcf file.
-   * @param endpoint path to http endpoint for vcf file
-   *
-   * @return MaterializedFile containing http endpoint
-   */
-  def createHttpEndpoint = (endpoint: String) => VariantContextMaterialization.createHttpEndpoint(endpoint)
-
-  /**
    * Reset ReferenceName for Feature
    *
-   * @param f VariantContext to be modified
+   * @param f      VariantContext to be modified
    * @param contig to replace Feature contigName
    * @return Feature with new ReferenceRegion
    */
@@ -92,8 +78,8 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return Generic RDD of data types from file
    */
-  def load = (file: String, regions: Iterable[ReferenceRegion]) =>
-    VariantContextMaterialization.load(sc, file, regions).rdd
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) =>
+    VariantContextMaterialization.load(sc, file, regions)._2
 
   /**
    * Stringifies data from variants to lists of variants over the requested regions
@@ -102,16 +88,15 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    * @return Map of (key, json) for the ReferenceRegion specified
    *
    */
-  def toJson(data: RDD[(String, VariantContext)]): Map[String, Array[ga4gh.Variants.Variant]] = {
-    data
-      .collect.groupBy(_._1).mapValues(r =>
-        {
-          r.map(a => variantContextToGAVariant(a._2))
-        })
+  def toJson(data: Array[(String, VariantContext)]): Map[String, Array[ga4gh.Variants.Variant]] = {
+    data.groupBy(_._1).mapValues(r => {
+      r.map(a => variantContextToGAVariant(a._2))
+    })
   }
 
   /**
    * Formats raw data from GA4GH Variants Response to JSON.
+   *
    * @param data An array of GA4GH Variants
    * @return JSONified data
    */
@@ -129,44 +114,20 @@ class VariantContextMaterialization(@transient sc: SparkContext,
    *
    * @return List of filenames their corresponding Seq of SampleIds.
    */
-  def getGenotypeSamples(): Map[MaterializedFile, List[Sample]] = {
+  def getGenotypeSamples(): Map[String, List[Sample]] = {
 
-    extendedFiles.map(r => {
-      if (!r.usesSpark)
-        (r, List()) // not used by pileup vcf. Return empty.
-      else
-        (r, VariantContextMaterialization.load(sc, r.filePath, None).samples.toList)
-    }).toMap
+    files.map(fp => (fp, VariantContextMaterialization.load(sc, fp, Some(Iterable()))._1.toList)).toMap
   }
 }
 
 /**
  * VariantContextMaterialization object, used to load VariantContext data into a VariantContextDataset. Supported file
  * formats are vcf and adam.
- * formats are vcf and adam.
  */
 object VariantContextMaterialization {
 
   val name = "VariantContext"
   val datasetCache = new collection.mutable.HashMap[String, GenotypeDataset]
-
-  /**
-   * Checks that an http endpoint for a vcf file.
-   * @param endpoint path to http endpoint for vcf file
-   *
-   * @return MaterializedFile containing http endpoint
-   */
-  def createHttpEndpoint(endpoint: String): Option[MaterializedFile] = {
-
-    // should be a bam file
-    require(endpoint.endsWith(".vcf"), s"${endpoint} is not a vcf (.vcf) file.")
-
-    // Check if file exists
-    val responseCode = ResourceUtils.getResponseCode(endpoint)
-    require(responseCode == 200, s"${endpoint} does not exist, got response code ${responseCode}")
-
-    Some(MaterializedFile(endpoint, None, false))
-  }
 
   /**
    * Loads variant data from adam and vcf files into a VariantContextDataset
@@ -176,19 +137,12 @@ object VariantContextMaterialization {
    * @param regions Iterable of ReferenceRegions to predicate load
    * @return VariantContextDataset
    */
-  def load(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): Tuple2[Seq[Sample], Array[VariantContext]] = {
     if (fp.endsWith(".adam")) {
-      loadAdam(sc, fp, regions)
+      val results = loadAdam(sc, fp, regions)
+      (results.samples, results.rdd.collect())
     } else {
-      try {
-        VcfReader.loadHDFS(sc, fp, regions)
-      } catch {
-        case e: Exception => {
-          val sw = new StringWriter
-          e.printStackTrace(new PrintWriter(sw))
-          throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
-        }
-      }
+      VcfReader.loadDataAndSamplesFromSource(fp, regions, Some(sc))
     }
   }
 
@@ -200,44 +154,67 @@ object VariantContextMaterialization {
    * @param regions Iterable of  ReferenceRegions to predicate load
    * @return VariantContextDataset
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Iterable[ReferenceRegion]): VariantContextDataset = {
+  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): VariantContextDataset = {
 
-    val variantContext = if (sc.isPartitioned(fp)) {
+    val variantContext =
+      if (regions.isDefined) {
+        if (sc.isPartitioned(fp)) {
 
-      // finalRegions includes references both with and without "chr" prefix
-      val finalRegions: Iterable[ReferenceRegion] = regions ++ regions
-        .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
-          x.start,
-          x.end,
-          x.strand))
+          // finalRegions includes references both with and without "chr" prefix
+          val finalRegions: Iterable[ReferenceRegion] = regions.get ++ regions.get
+            .map(x => ReferenceRegion(x.referenceName.replaceFirst("""^chr""", """"""),
+              x.start,
+              x.end,
+              x.strand))
 
-      // load new dataset or retrieve from cache
-      val data: GenotypeDataset = datasetCache.get(fp) match {
-        case Some(ds) => { // if dataset found in datasetCache
-          ds
+          // load new dataset or retrieve from cache
+          val data: GenotypeDataset = datasetCache.get(fp) match {
+            case Some(ds) => { // if dataset found in datasetCache
+              ds
+            }
+            case _ => {
+              // load dataset into cache and use use it
+              datasetCache(fp) = sc.loadPartitionedParquetGenotypes(fp)
+              datasetCache(fp)
+            }
+          }
+
+          val maybeFiltered: GenotypeDataset = if (finalRegions.nonEmpty) {
+            data.filterByOverlappingRegions(finalRegions)
+          } else data
+
+          maybeFiltered.toVariantContexts()
+
+        } else {
+          val pred = {
+            val prefixRegions: Iterable[ReferenceRegion] = regions.get.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
+            Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
+          }
+          sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts()
+
         }
-        case _ => {
-          // load dataset into cache and use use it
-          datasetCache(fp) = sc.loadPartitionedParquetGenotypes(fp)
-          datasetCache(fp)
+      } else {
+        if (sc.isPartitioned(fp)) {
+
+          // load new dataset or retrieve from cache
+          val data: GenotypeDataset = datasetCache.get(fp) match {
+            case Some(ds) => { // if dataset found in datasetCache
+              ds
+            }
+            case _ => {
+              // load dataset into cache and use use it
+              datasetCache(fp) = sc.loadPartitionedParquetGenotypes(fp)
+              datasetCache(fp)
+            }
+          }
+
+          data.toVariantContexts()
+
+        } else {
+          sc.loadGenotypes(fp).toVariantContexts()
         }
       }
 
-      val maybeFiltered: GenotypeDataset = if (finalRegions.nonEmpty) {
-        data.filterByOverlappingRegions(finalRegions)
-      } else data
-
-      maybeFiltered.toVariantContexts()
-
-    } else {
-      val pred =
-        {
-          val prefixRegions: Iterable[ReferenceRegion] = regions.map(r => LazyMaterialization.getReferencePredicate(r)).flatten
-          Some(ResourceUtils.formReferenceRegionPredicate(prefixRegions))
-        }
-      sc.loadParquetGenotypes(fp, optPredicate = pred).toVariantContexts()
-
-    }
     variantContext
   }
 }

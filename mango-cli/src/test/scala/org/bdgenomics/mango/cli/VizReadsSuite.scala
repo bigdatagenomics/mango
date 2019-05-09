@@ -17,13 +17,15 @@
  */
 package org.bdgenomics.mango.cli
 
-import org.bdgenomics.mango.converters.{ GA4GHutil, SearchFeaturesRequestGA4GH, SearchVariantsRequestGA4GH, SearchReadsRequestGA4GH }
+import org.bdgenomics.mango.converters.{ GA4GHutil, SearchFeaturesRequestGA4GH, SearchReadsRequestGA4GH, SearchVariantsRequestGA4GH }
 import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.mango.util.MangoFunSuite
 import org.scalatra.{ NotFound, Ok }
 import org.scalatra.test.scalatest.ScalatraSuite
 import net.liftweb.json._
 
+import org.junit.Test
+@org.junit.runner.RunWith(value = classOf[org.scalatest.junit.JUnitRunner])
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   implicit val formats = DefaultFormats
@@ -77,6 +79,32 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     get("/quit") {
       assert(status == Ok("").status.code)
     }
+  }
+
+  sparkTest("Should get browser and overall template information") {
+
+    get("/browser") {
+      val args = response.getContent()
+      val browserArgs = parse(args).extract[BrowserArgs]
+      assert(browserArgs.twoBitUrl == "http://hgdownload.cse.ucsc.edu/goldenPath/mm10/bigZips/mm10.2bit")
+      assert(browserArgs.genes == Some("REFSEQ_REQUEST"))
+      assert(browserArgs.reads == None)
+      assert(browserArgs.variants.isDefined)
+      assert(browserArgs.variants.get.head._2.split(",").deep == Array("NA00001", "NA00002", "NA00003").deep)
+      assert(browserArgs.features.isDefined)
+      assert(browserArgs.features.get.head._2 == false)
+      assert(browserArgs.features.get.last._2 == true)
+    }
+
+    get("/overall") {
+      val args = response.getContent()
+      val map = parse(args).extract[Map[String, String]]
+
+      val discoveryRegions = map("regions").split(",")
+      assert(discoveryRegions.length == 1) // one region at the beginning of chrM
+      assert(map("dictionary").split(",").length == 66) // should be 66 chromosomes
+    }
+
   }
 
   /** Reads tests **/
@@ -323,19 +351,24 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     }
   }
 
-  sparkTest("Should not trigger Spark requests for http files") {
+  sparkTest("Should trigger requests for http files") {
 
     val args = new VizReadsArgs()
     args.genomePath = genomeFile
     args.testMode = true
-    args.readsPaths = "http://fakebam.bam"
+    args.variantsPaths = "http://s3.amazonaws.com/1000genomes/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz"
+    val vcfKey = LazyMaterialization.filterKeyFromFile(args.variantsPaths)
 
     implicit val VizReads = runVizReads(args)
+    val variantsBody = SearchVariantsRequestGA4GH(vcfKey, "null", 200, "chr1", Array(), 169327640, 169332871).toByteArray()
 
-    val coverageBody = SearchFeaturesRequestGA4GH("fakeBam", "null", 200, LazyMaterialization.filterKeyFromFile(args.readsPaths), 0, 1200).toByteArray()
+    post("/variants/search", variantsBody, requestHeader) {
+      assert(status == Ok().status.code)
 
-    post("/reads/search", coverageBody, requestHeader) {
-      assert(status == NotFound().status.code)
+      val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
+        .getVariantsList
+
+      assert(json.size > 0)
     }
   }
 

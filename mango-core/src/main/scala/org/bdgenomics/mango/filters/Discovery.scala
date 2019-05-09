@@ -41,26 +41,20 @@ case class Discovery(sd: SequenceDictionary) extends Serializable {
 
   /**
    * Gets aggregated, normalized frequencies at all locations of the genome. These regions are specified
-   * by the regions variable.
+   * by the ReferenceRegion.
    *
-   * @param data data to calculate frequenies for
+   * @param data data to calculate frequencies for
    * @return Array of windowed ReferenceRegions and their corresponding normalized frequencies.
    */
-  def getFrequencies(data: RDD[ReferenceRegion]): Array[(ReferenceRegion, Double)] = {
-    val regionsB = data.context.broadcast(regions)
+  def getFrequencies(data: Array[ReferenceRegion]): Array[(ReferenceRegion, Double)] = {
 
-    val frequencies = data.mapPartitions(iter => {
-      // find all regions that overlap regions in sequence dictionary
-      val arr = iter.flatMap(f => regionsB.value.filter(r => f.overlaps(r))).map((_, 1)).toArray
-      arr.groupBy(_._1) // group by ReferenceRegion
-        .map(r => (r._1, r._2.map(a => a._2).sum)).toIterator // reduce and sum by ReferenceRegion
-    }).reduceByKey(_ + _).collect
-
-    regionsB.unpersist()
+    val frequencies: Map[ReferenceRegion, Int] = data.flatMap(f => regions.filter(r => f.overlaps(r))).map((_, 1))
+      .groupBy(_._1) // group by ReferenceRegion
+      .map(r => (r._1, r._2.map(_._2).sum)) // reduce and sum by ReferenceRegion
 
     // normalize frequencies
     val max = frequencies.map(_._2).reduceOption(_ max _).getOrElse(1)
-    frequencies.map(r => (r._1, r._2.toDouble / max))
+    frequencies.mapValues(r => r.toDouble / max).toArray
   }
 
 }
