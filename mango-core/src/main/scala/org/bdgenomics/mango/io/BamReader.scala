@@ -171,7 +171,7 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
         try {
           sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
         } catch {
-          case e: java.lang.IllegalArgumentException => {
+          case e: Exception => { // IllegalArgumentException if local or FileNotFoundException if hdfs
             log.warn(e.getMessage)
             log.warn("No bam index detected. File loading will be slow...")
             sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)

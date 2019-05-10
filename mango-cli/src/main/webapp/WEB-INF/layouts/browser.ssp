@@ -4,12 +4,7 @@
 <%@ val genes:          Option[String] %>
 <%@ val reads:     Option[List[String]] %>
 <%@ val variants:  Option[Map[String, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
-<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
-<%@ val region: ReferenceRegion %>
-
-<%@ val reads:     Option[List[String]] %>
-<%@ val variants:  Option[Map[String, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
-<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
+<%@ val features:  Option[Map[String, Boolean]] %> <!-- if true, then the track should be a coverage track -->
 <%@ val region: ReferenceRegion %>
 
 <html xmlns="http://www.w3.org/1999/html">
