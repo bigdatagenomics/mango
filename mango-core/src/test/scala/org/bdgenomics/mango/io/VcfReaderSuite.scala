@@ -37,6 +37,12 @@ class VcfReaderSuite extends MangoFunSuite {
     assert(data.size == 7)
   }
 
+  test("Gets file header") {
+    val region = new ReferenceRegion("chrM", 90L, 110L)
+    val header = VcfReader.load(vcfFileGz, Some(Iterable(region)), true)._1
+    assert(header.getSequenceDictionary.getSequences.toArray.length == 1)
+  }
+
   test("Should load all records when region is not defined") {
     val data = VcfReader.load(vcfFile, None, true)._2
     assert(data.size == 7)

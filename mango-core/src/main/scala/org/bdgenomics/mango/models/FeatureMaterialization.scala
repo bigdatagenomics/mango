@@ -19,22 +19,16 @@ package org.bdgenomics.mango.models
 
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.converters.GA4GHutil
-import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.io.BedReader
 import org.bdgenomics.utils.misc.Logging
-import java.io.{ StringWriter, PrintWriter }
 import scala.collection.JavaConversions._
-
-import org.slf4j.LoggerFactory
 
 /**
  * Handles loading and tracking of data from persistent storage into memory for Feature data.

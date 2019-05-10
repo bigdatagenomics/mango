@@ -26,6 +26,9 @@ import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.adam.rdd.GenomicDataset
 
 /**
+ * Trait for specifying functions for loading data from remote or local
+ * genomic file formats (vcf, bed, bam, narrowPeak)
+ *
  * @tparam H File header
  * @tparam R SpecificRecord
  * @tparam D GenomicDataset
@@ -75,7 +78,11 @@ trait GenomicReader[H, R, D] {
 
   def loadHDFS(sc: SparkContext, path: String, regions: Option[Iterable[ReferenceRegion]]): Tuple2[D, Array[R]]
 
-  // helper functions
+  /**
+   * Helper function for generating URL from string
+   * @param urlString URL string
+   * @return URL
+   */
   def createURL(urlString: String): URL = {
 
     return new URL(urlString.trim())

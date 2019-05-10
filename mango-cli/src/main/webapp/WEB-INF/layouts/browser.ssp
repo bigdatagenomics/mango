@@ -25,6 +25,7 @@
 <script>
     <!-- Define Variables for Pileup.js -->
     var contig = '${region.referenceName}';
+    // convert start and end to valid int
     var start = parseInt('${region.start}'.replace(/,/g, ""));
     var end = parseInt('${region.end}'.replace(/,/g, ""));
 
@@ -35,7 +36,6 @@
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4 && xhr.status == 200) {
-            var contigList = JSON.parse(xhr.response); <!-- TODO what is this for? -->
 
             // add reference and genes
             var tracks = [

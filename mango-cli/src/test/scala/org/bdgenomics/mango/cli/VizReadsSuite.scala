@@ -368,7 +368,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
 
-      assert(json.size > 0)
+      assert(json.size == 61)
     }
   }
 

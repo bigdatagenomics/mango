@@ -38,6 +38,12 @@ class BamReaderSuite extends MangoFunSuite {
     assert(data.size == 1156)
   }
 
+  test("Gets file header") {
+    val region = new ReferenceRegion("chrM", 90L, 110L)
+    val header = BamReader.load(bamFile, Some(Iterable(region)), true)._1
+    assert(header.getSequenceDictionary.getSequences.toArray.length == 66)
+  }
+
   test("loads all data when region is not specified") {
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val data = BamReader.load(samFile, None, true)._2
@@ -97,7 +103,7 @@ class BamReaderSuite extends MangoFunSuite {
     assert(count == 14)
   }
 
-  //
+  //  TODO
   //  test("Should load s3 bam file") {
   //    val bamString = "s3://1000genomes/phase3/data/NA12878/exome_alignment/NA12878.chrom11.ILLUMINA.bwa.CEU.exome.20121211.bam"
   //

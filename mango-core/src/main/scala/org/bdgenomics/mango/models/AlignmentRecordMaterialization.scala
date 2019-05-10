@@ -17,39 +17,22 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.{ File, PrintWriter, StringWriter }
-import java.net.URL
-
-import htsjdk.samtools.util.{ HttpUtils, SamRecordIntervalIteratorFactory }
-import htsjdk.samtools._
-import net.liftweb.json.Extraction._
-import net.liftweb.json._
-import org.apache.hadoop.io.LongWritable
 import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.parquet.filter2.predicate.FilterPredicate
-import org.apache.parquet.hadoop.util.ContextUtil
-import org.apache.parquet.io.api.Binary
 import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.adam.projections.{ AlignmentRecordField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
 import org.bdgenomics.formats.avro.AlignmentRecord
-import org.bdgenomics.mango.converters.SAMRecordConverter
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.io.BamReader
-import org.bdgenomics.utils.misc.{ HadoopUtil, Logging }
+import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.utils.instrumentation.Metrics
 import ga4gh.Reads.ReadAlignment
+import net.liftweb.json.Extraction._
 import net.liftweb.json.Serialization._
-import org.seqdoop.hadoop_bam.{ SAMRecordWritable, BAMInputFormat }
-import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.JavaConversions._
-import scala.reflect._
 import org.bdgenomics.mango.converters.GA4GHutil._
-
-import scala.reflect.ClassTag
 
 // metric variables
 object AlignmentTimers extends Metrics {

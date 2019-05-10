@@ -123,21 +123,6 @@
   </build>
 
   <dependencies>
-    <!--<dependency>-->
-      <!--<groupId>com.esotericsoftware.kryo</groupId>-->
-      <!--<artifactId>kryo</artifactId>-->
-      <!--<scope>compile</scope>-->
-    <!--</dependency>-->
-    <!--<dependency>-->
-      <!--<groupId>com.github.samtools</groupId>-->
-      <!--<artifactId>htsjdk</artifactId>-->
-      <!--<scope>compile</scope>-->
-    <!--</dependency>-->
-    <!--<dependency>-->
-      <!--<groupId>it.unimi.dsi</groupId>-->
-      <!--<artifactId>fastutil</artifactId>-->
-      <!--<scope>compile</scope>-->
-    <!--</dependency>-->
     <dependency>
       <groupId>net.liftweb</groupId>
       <artifactId>lift-json_${scala.version.prefix}</artifactId>
@@ -181,12 +166,6 @@
       <artifactId>adam-core${spark.version.prefix}${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
-    <!--<dependency>-->
-      <!--<groupId>org.bdgenomics.adam</groupId>-->
-      <!--<artifactId>adam-core${spark.version.prefix}${scala.version.prefix}</artifactId>-->
-      <!--<type>test-jar</type>-->
-      <!--<scope>test</scope>-->
-    <!--</dependency>-->
     <dependency>
       <groupId>org.bdgenomics.bdg-formats</groupId>
       <artifactId>bdg-formats</artifactId>
@@ -202,11 +181,6 @@
       <artifactId>utils-intervalrdd${spark.version.prefix}${scala.version.prefix}</artifactId>
       <scope>compile</scope>
     </dependency>
-    <!--<dependency>-->
-      <!--<groupId>org.bdgenomics.utils</groupId>-->
-      <!--<artifactId>utils-io${spark.version.prefix}${scala.version.prefix}</artifactId>-->
-      <!--<scope>compile</scope>-->
-    <!--</dependency>-->
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
       <artifactId>utils-metrics${spark.version.prefix}${scala.version.prefix}</artifactId>
@@ -258,10 +232,5 @@
       <artifactId>mango-core</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <!--<dependency>-->
-      <!--<groupId>org.seqdoop</groupId>-->
-      <!--<artifactId>hadoop-bam</artifactId>-->
-      <!--<scope>compile</scope>-->
-    <!--</dependency>-->
   </dependencies>
 </project>

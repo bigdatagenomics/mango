@@ -20,13 +20,11 @@ package org.bdgenomics.mango.models
 import net.liftweb.json.Serialization.write
 import org.apache.spark._
 import org.bdgenomics.adam.models.{ VariantContext, ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.adam.projections.{ Projection, VariantField }
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset }
-import org.bdgenomics.formats.avro.{ Sample, Variant, GenotypeAllele }
+import org.bdgenomics.formats.avro.{ Sample, Variant }
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.io.VcfReader
-import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions._
 import org.bdgenomics.mango.converters.GA4GHutil._
 

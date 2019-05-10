@@ -68,11 +68,13 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
         SamInputResource.of(new java.net.URL(fp)).index(new java.net.URL(indexUrl)))
     }
 
-    val dictionary = reader.getFileHeader.getSequenceDictionary
+    val header = reader.getFileHeader
+    val dictionary = header.getSequenceDictionary
 
     // no valid dictionary. Cannot query or filter data.
     if (dictionary.getSequences.isEmpty) {
-      return (reader.getFileHeader, Array[AlignmentRecord]())
+      reader.close()
+      return (header, Array[AlignmentRecord]())
     }
 
     // modify chr prefix, if this file uses chr prefixes.
@@ -105,7 +107,7 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
 
         reader.close()
 
-        (reader.getFileHeader, results)
+        (header, results)
 
       } else {
         val iter: Iterator[SAMRecord] = reader.iterator()
@@ -123,13 +125,13 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
         reader.close()
 
         // map SamRecords to ADAM
-        (reader.getFileHeader, samRecords.map(p => samRecordConverter.convert(p)))
+        (header, samRecords.map(p => samRecordConverter.convert(p)))
       }
     } else {
       val samRecords = reader.iterator().toArray
       reader.close
 
-      (reader.getFileHeader, samRecords.map(p => samRecordConverter.convert(p)))
+      (header, samRecords.map(p => samRecordConverter.convert(p)))
     }
 
   }

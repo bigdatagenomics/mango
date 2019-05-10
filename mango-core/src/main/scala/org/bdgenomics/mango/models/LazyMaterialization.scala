@@ -17,14 +17,9 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.File
-
-import org.apache.hadoop.fs.Path
-import org.apache.spark.{ HashPartitioner, SparkContext }
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.interval.array.IntervalArray
@@ -195,19 +190,19 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
   def put(regions: Iterable[ReferenceRegion]) = {
     checkMemory()
 
-    //    LazyMaterializationTimers.put.time {
+    LazyMaterializationTimers.put.time {
 
-    // filter out regions that are not found in the sequence dictionary
-    val filteredRegions = regions.filter(r => sd(r.referenceName).isDefined)
+      // filter out regions that are not found in the sequence dictionary
+      val filteredRegions = regions.filter(r => sd(r.referenceName).isDefined)
 
-    val data = loadAllFiles(Some(regions))
+      val data = loadAllFiles(Some(regions))
 
-    // tag regions as found, even if there is no data
-    filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
+      // tag regions as found, even if there is no data
+      filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
 
-    intArray = intArray.insert(data.toIterator)
+      intArray = intArray.insert(data.toIterator)
 
-    //    }
+    }
   }
 
   /**

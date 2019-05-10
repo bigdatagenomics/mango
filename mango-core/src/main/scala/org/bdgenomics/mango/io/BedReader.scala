@@ -57,6 +57,7 @@ object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDatas
       createIndex(fp, codec)
     }
 
+    val header = reader.getHeader().asInstanceOf[FeatureCodecHeader]
     val dictionary = reader.getSequenceNames()
 
     val results =
@@ -106,7 +107,7 @@ object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDatas
       .setStart(r.getStart.toLong - 1) // move to 0 indexed to match HDFS results
       .setEnd(r.getEnd.toLong).build()).toArray
 
-    (reader.getHeader().asInstanceOf[FeatureCodecHeader], features)
+    (header, features)
   }
 
   /**

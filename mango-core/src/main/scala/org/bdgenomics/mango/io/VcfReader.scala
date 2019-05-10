@@ -36,7 +36,6 @@ import org.bdgenomics.mango.models.LazyMaterialization
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.formats.avro.Sample
 import scala.collection.JavaConversions._
-import htsjdk.tribble.index.Index
 import htsjdk.tribble.AbstractFeatureReader
 
 object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantContextDataset] with Logging {
@@ -241,7 +240,7 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
   }
 
   // TODO already defined in ADAM in VariantContextConverter line 266
-  private def getHeaderLines(header: VCFHeader): Seq[VCFHeaderLine] = {
+  def getHeaderLines(header: VCFHeader): Seq[VCFHeaderLine] = {
     (header.getFilterLines ++
       header.getFormatHeaderLines ++
       header.getInfoHeaderLines ++
