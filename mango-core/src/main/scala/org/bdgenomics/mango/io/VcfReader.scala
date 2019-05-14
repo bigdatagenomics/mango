@@ -40,7 +40,10 @@ import htsjdk.tribble.AbstractFeatureReader
 
 object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantContextDataset] with Logging {
 
-  def suffixes = Array(".vcf", ".vcf.gz")
+  def suffixes = Array(".vcf", ".vcf.gz", "bgzf.gz", "vcf.bgz")
+
+  def isCompressed(fp: String): Boolean = fp.endsWith(".gz") | fp.endsWith("vcf.bgz")
+
 
   /**
    * Loads file from local filesystem, http or hdfs.
@@ -102,8 +105,6 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
       invalidFileException(fp)
     }
 
-    val isGzipped = fp.endsWith(".gz")
-
     if (local) {
       // create index file
       createIndex(fp, codec)
@@ -135,7 +136,7 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
             }
           }
 
-        if (isGzipped)
+        if (isCompressed(fp))
           queries.map(r => vcfReader.query(r.referenceName, r.start.toInt + 1, r.end.toInt).toList).flatten // +1 because tabixReader subtracts 1
         else
           queries.map(r => vcfReader.query(r.referenceName, r.start.toInt, r.end.toInt).toList).flatten
@@ -197,16 +198,15 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
   private def createIndex(fp: String, codec: VCFCodec): String = {
 
     val file = new java.io.File(fp)
-    val isGzipped = fp.endsWith(".gz")
 
-    val idxFile: java.io.File = if (isGzipped) new java.io.File(file + ".tbi") else new java.io.File(file + ".idx")
+    val idxFile: java.io.File = if (isCompressed(fp)) new java.io.File(file + ".tbi") else new java.io.File(file + ".idx")
 
     // do not re-generate index file
     if (!idxFile.exists()) {
       log.warn(s"No index file for ${file.getAbsolutePath} found. Generating ${idxFile.getAbsolutePath}...")
 
       // Create the index
-      if (!isGzipped) {
+      if (!isCompressed(fp)) {
         val idx = IndexFactory.createIntervalIndex(file, codec)
 
         var stream: LittleEndianOutputStream = null

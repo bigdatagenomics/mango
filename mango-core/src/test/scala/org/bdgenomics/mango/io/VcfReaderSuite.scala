@@ -31,6 +31,10 @@ class VcfReaderSuite extends MangoFunSuite {
   val vcfFile = resourcePath("truetest.genotypes.vcf")
   val vcfFileGz = resourcePath("small.vcf.gz")
 
+  val testFile = resourcePath("test.vcf")
+  val bgzFile = resourcePath("test.vcf.bgz")
+  val compressedBgzFile = resourcePath("test.vcf.bgzf.gz")
+
   test("Should load local vcf file") {
     val region = new ReferenceRegion("chrM", 0, 999)
     val data = VcfReader.load(vcfFile, Some(Iterable(region)), true)._2
@@ -41,6 +45,32 @@ class VcfReaderSuite extends MangoFunSuite {
     val region = new ReferenceRegion("chrM", 90L, 110L)
     val header = VcfReader.load(vcfFileGz, Some(Iterable(region)), true)._1
     assert(header.getSequenceDictionary.getSequences.toArray.length == 1)
+  }
+
+  test("Should load bgz file") {
+    val region = new ReferenceRegion("chr20", 14360L, 17340L)
+    val x1 = VcfReader.load(bgzFile, Some(Iterable(region)), true)
+    val data2 = VcfReader.load(testFile, Some(Iterable(region)), true)._2
+
+    val header1 = x1._1
+    val data1 = x1._2
+    assert(header1.getSequenceDictionary.getSequences.toArray.length == 1)
+    assert(data1.size == 2)
+    assert(data1.size == data2.size)
+    assert(data1(0).position.start == data2(0).position.start)
+  }
+
+  test("Should load compressed bgz file") {
+    val region = new ReferenceRegion("chr20", 14360L, 17340L)
+    val x1 = VcfReader.load(compressedBgzFile, Some(Iterable(region)), true)
+    val data2 = VcfReader.load(testFile, Some(Iterable(region)), true)._2
+
+    val header1 = x1._1
+    val data1 = x1._2
+    assert(header1.getSequenceDictionary.getSequences.toArray.length == 1)
+    assert(data1.size == 2)
+    assert(data1.size == data2.size)
+    assert(data1(0).position.start == data2(0).position.start)
   }
 
   test("Should load all records when region is not defined") {
