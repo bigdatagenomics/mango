@@ -22,6 +22,13 @@ import bdgenomics.mango.pileup as pileup
 
 class MangoVizTest(unittest.TestCase):
 
+    def test_genotypes(self):
+        track = pileup.Track(viz="genotypes", label="myGenotypes", source=pileup.sources.VcfDataSource('{}'))
+
+        x = pileup.PileupViewer(locus="chr22:21340030-21340150", reference="hg19", tracks=[track])
+        assert(x.reference == 'hg19')
+        assert(x.tracks[0] == track)
+
     def test_features(self):
         track = pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHFeatureJson('{}'))
 
