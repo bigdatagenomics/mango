@@ -57,11 +57,8 @@ This example shows how to visualize variants through a Jupyter widget.
 
 .. code:: python
 
-    variantsJson = pd.read_json("./data/variants.ga4gh.chr1.10000-11000.json")
-    GA4GHVariantJson = variantsJson.to_json()
-
     # make variant track
-    tracks=[Track(viz="variants", label="my Variants", source=pileup.sources.GA4GHVariantJson(GA4GHVariantJson))]
+    tracks=[Track(viz="variants", label="my Variants", source=pileup.sources.VcfDataSource("./data/genodata.v3.vcf"))]
 
     # render tracks in widget
     variants = pileup.PileupViewer(locus="chr1:10436-10564", reference="hg19", tracks=tracks)
@@ -72,7 +69,6 @@ This example shows how to visualize variants through a Jupyter widget.
 
 Feature Example
 ---------------
-
 
 This example shows how to visualize features through a Jupyter widget.
 
@@ -90,3 +86,19 @@ This example shows how to visualize features through a Jupyter widget.
 
 .. image:: ../img/jupyterWidgets/featureWidget.png
 
+
+Genotype Example
+---------------
+
+This example shows how to visualize genotypes through a Jupyter widget.
+
+.. code:: python
+
+    # make genotype track
+    tracks=[Track(viz="features", label="my Features", source=pileup.sources.VcfDataSource(./data/genodata.v3.vcf))]
+
+    # render tracks in widget
+    genotypes = pileup.PileupViewer(locus="chr22:21340030-21340150", reference="hg19", tracks=tracks)
+    genotypes
+
+.. image:: ../img/jupyterWidgets/genotypeWidget.png
