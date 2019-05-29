@@ -58,7 +58,7 @@ This example shows how to visualize variants through a Jupyter widget.
 .. code:: python
 
     # make variant track
-    tracks=[Track(viz="variants", label="my Variants", source=pileup.sources.VcfDataSource("./data/genodata.v3.vcf"))]
+    tracks=[Track(viz="variants", label="my Variants", source=pileup.sources.VcfDataSource("/path/to_vcf.vcf"))]
 
     # render tracks in widget
     variants = pileup.PileupViewer(locus="chr1:10436-10564", reference="hg19", tracks=tracks)
@@ -95,7 +95,7 @@ This example shows how to visualize genotypes through a Jupyter widget.
 .. code:: python
 
     # make genotype track
-    tracks=[Track(viz="features", label="my Features", source=pileup.sources.VcfDataSource(./data/genodata.v3.vcf))]
+    tracks=[Track(viz="genotypes", label="my Genotypes", source=pileup.sources.VcfDataSource("/path/to_vcf.vcf"))]
 
     # render tracks in widget
     genotypes = pileup.PileupViewer(locus="chr22:21340030-21340150", reference="hg19", tracks=tracks)
