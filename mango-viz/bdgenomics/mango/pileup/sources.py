@@ -224,7 +224,8 @@ vizNames = {
     'genome':[TwoBitDataSource.name],
     'genes': [BigBedDataSource.name],
     'scale':[],
-    'location': []
+    'location': [],
+    'genotypes': [VcfDataSource.name, GA4GHVariantJson.name, GA4GHVariantSource.name]
 }
 
 # dictionary of source ids accepted by pileup and corresponding source classes
