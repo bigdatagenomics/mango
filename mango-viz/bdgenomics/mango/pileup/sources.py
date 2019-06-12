@@ -38,6 +38,7 @@ Sources specify where the genomic data comes from. Sources can come from a url, 
     GA4GHVariantSource
     GA4GHFeatureSource
 """
+from bdgenomics.mango.pileup.utils import *
 
 # generic data source for pileup.js
 class Source:
@@ -78,6 +79,20 @@ class jsonString(Source):
 
         #: dictionary containing source elements (viz, source, sourceOptions, label)
         self.dict_ = json
+
+class DataFrameSource(Source):
+    
+    def __init__(self, dataframe):
+        """Initializes modin dataframe. Converts it to raw json. 
+
+        Args:
+            :param dataframe: modin dataframe
+        """
+        feature_transformed_json = parse_bed(dataframe.to_json())
+        self.dict_ = feature_transformed_json
+        
+    #: name that pileup.js uses to identify sources --> temporary
+    name = 'featureJson'
 
 
 # can be used for TwoBit, vcf, BigBedDataSource, or BamDataSource
@@ -143,7 +158,7 @@ class BigBedDataSource(FileSource):
     #: name that pileup.js uses to identify sources
     name = 'bigBed'
 
-    
+
 # json built sources
 class GA4GHAlignmentJson(jsonString): 
     """ Initializes GA4GH Alignment JSON.
@@ -240,5 +255,7 @@ sourceNames = {
     GA4GHAlignmentSource.name:  GA4GHAlignmentSource,
     GA4GHVariantSource.name:    GA4GHVariantSource,
     GA4GHFeatureSource.name:    GA4GHFeatureSource,
+    DataFrameSource.name:       DataFrameSource
+
 }
 
