@@ -38,6 +38,7 @@ Sources specify where the genomic data comes from. Sources can come from a url, 
     GA4GHVariantSource
     GA4GHFeatureSource
 """
+
 from bdgenomics.mango.io import *
 
 # generic data source for pileup.js
@@ -93,9 +94,8 @@ class DataFrameSource(Source):
         
         #: name that pileup.js uses to identify sources --> temporary
         self.name = dataframe._pileup_visualization
-    
-    
-       
+
+        
 
 # can be used for TwoBit, vcf, BigBedDataSource, or BamDataSource
 class FileSource(Source):  
