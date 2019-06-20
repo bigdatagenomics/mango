@@ -74,7 +74,12 @@ test: check_build_reqs
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	# run lint and flow for js
 	pushd bdgenomics/mango/js \
-		&& npm run lint 
+		&& npm run lint
+
+
+pypi: clean sdist
+	set -x \
+	&& $(python) setup.py egg_info sdist bdist_egg upload
 
 # clean
 clean:
