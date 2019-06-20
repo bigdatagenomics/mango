@@ -1,74 +1,50 @@
 import json
+def parse_bed_dataframe(dataframe):
+    """ Transforms a dataframe with bed information to a GA4GHFeature JSON String
 
-def parse_bed(json_input):
-    """ Converts a bed JSON string to a GA4GHFeature JSON String
-    
     Args:
-        :param str: JSON string containing bed data
+        :param dataframe: dataframe containing bed data
+
     """
-    #vars
-    first_start, first_end, first_chr = "", "", ""
-    s_dict, e_dict, chr_dict = {}, {}, {}
-    colon_index, parens_index = 0, 0
-    json_output = ""
+    #check whether correct column names are passed into dataframe
+    df_cols = list(dataframe.columns)
+    valid_columns = True
+    for name in ("chrom", "chromStart", "chromEnd"):
+        if name not in df_cols:
+            valid_columns = False
 
-    #clean string
-    json_input = json_input.replace(" ","")
-    json_input = json_input[1:]
-    
-    #loading reference chromosome
+    if not valid_columns:
+        #assume no names passed in and take first 3 columns as chrom, chromStart, chromEnd
+        chrom, chrom_start, chom_end = df_cols[:3]    
 
-    #first chromosome
-    colon_index = json_input.find(":")
-    first_chr= json_input[:colon_index].replace("""\"""","")
-    json_input = json_input[colon_index + 1:]
+        chrom_starts = [int(chrom_start)] + (list(dataframe[chrom_start]))
+        chrom_ends = [int(chom_end)] + (list(dataframe[chom_end]))
+        chromosomes = [chrom] + (list(dataframe[chrom]))
+        
+        return build_json_from_bed(chrom_starts, chrom_ends, chromosomes)
+    else:
+        chromosomes = list(dataframe["chrom"])
+        chrom_starts = list(dataframe["chromStart"])
+        chrom_ends = list(dataframe["chromEnd"])
+
+        return build_json_from_bed(chrom_starts, chrom_ends, chromosomes)
     
-    #load all but first ref chromosome into dictionary
-    parens_index  = json_input.find("}")
-    chr_dict = json.loads(json_input[:parens_index + 1])
-    json_input = json_input[parens_index + 2:]
-    
-    #add first start value in range 
-    colon_index = json_input.find(":")
-    first_start = json_input[:colon_index].replace("""\"""","")
-    json_input = json_input[colon_index + 1:]
-    
-    #load rest into dictionary
-    parens_index = json_input.find("}")
-    s_dict = json.loads(json_input[:parens_index + 1])
-    json_input = json_input[parens_index + 2:]
-    
-    #add first end range value 
-    colon_index = json_input.find(":")
-    first_end = json_input[:colon_index].replace("""\"""","")
-    json_input = json_input[colon_index + 1:]
-    
-    #load rest into dictionary
-    parens_index = json_input.find("}")
-    e_dict = json.loads(json_input[:parens_index + 1])
-    json_input = json_input[parens_index + 2:]
-    
-    return build_json_from_bed(first_start, first_end, first_chr, s_dict, e_dict, chr_dict)
-    
-def build_json_from_bed(first_start, first_end, first_chr, s_dict, e_dict, chr_dict):
-    """ dConverts a parsed bed file into a json string in GA4GH schema.
+def build_json_from_bed(chrom_starts, chrom_ends, chromosomes):
+    """ Converts a parsed bed file into a json string in GA4GH schema.
         
     Args: 
-        :param str: first start range
-        :param str: first end range
-        :param str: first reference chromosome
-        :param dict: start range values
-        :param dict: dictionary of 
+        :param list: start range values
+        :param list: end range values
+        :param list: chromosome range values
     
     """
-    bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+first_chr+"\"", "\""+str(first_start)+"\"", "\""+str(first_end)+"\"")
     json_ga4gh = "{\"features\":["
-    for i in range(len(chr_dict) + 1):
-        if i < len(chr_dict):
+    for i in range(len(chromosomes)+1):
+        if i < len(chromosomes):
+            bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+chromosomes[i]+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"")
             json_ga4gh = json_ga4gh + "{" + bed_content + "},"
-            bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+chr_dict[str(i)]+"\"", "\""+str(s_dict[str(i)])+"\"", "\""+str(e_dict[str(i)])+"\"")
         else:
-            json_ga4gh = json_ga4gh + "{" + bed_content + "}"
+            json_ga4gh = json_ga4gh[:len(json_ga4gh)-1]
             
     
     #ending json

@@ -83,12 +83,12 @@ class jsonString(Source):
 class DataFrameSource(Source):
     
     def __init__(self, dataframe):
-        """Initializes modin dataframe. Converts it to raw json. 
+        """Initializes dataframe. Converts it to raw json. 
 
         Args:
-            :param dataframe: modin dataframe
+            :param dataframe: dataframe
         """
-        feature_transformed_json = parse_bed(dataframe.to_json())
+        feature_transformed_json = parse_bed_dataframe(dataframe)
         self.dict_ = feature_transformed_json
         
     #: name that pileup.js uses to identify sources --> temporary
