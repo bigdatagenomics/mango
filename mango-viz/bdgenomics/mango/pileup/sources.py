@@ -89,6 +89,7 @@ class DataFrameSource(Source):
         Args:
             :param dataframe: dataframe
         """
+
         feature_transformed_json = dataframe._mango_to_json
         self.dict_ = feature_transformed_json
         
