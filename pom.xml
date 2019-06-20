@@ -16,22 +16,22 @@
   <name>mango</name>
 
   <properties>
-    <adam.version>0.26.0</adam.version>
+    <adam.version>0.27.0</adam.version>
     <avro.version>1.8.2</avro.version>
     <bdg-formats.version>0.12.0</bdg-formats.version>
     <bdg-utils.version>0.2.13</bdg-utils.version>
     <convert.version>0.6.0</convert.version>
     <java.version>1.8</java.version>
-    <jetty.version>9.4.15.v20190215</jetty.version>
+    <jetty.version>9.4.17.v20190418</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
     <hadoop.version>2.7.5</hadoop.version>
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
     <htsjdk.version>2.16.1</htsjdk.version>
-    <parquet.version>1.8.3</parquet.version>
+    <parquet.version>1.10.1</parquet.version>
     <scala.version>2.11.12</scala.version>
     <scala.version.prefix>2.11</scala.version.prefix>
     <scalatra.version>2.4.1</scalatra.version>
-    <spark.version>2.3.3</spark.version>
+    <spark.version>2.4.3</spark.version>
     <spark.version.prefix>-spark2_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
@@ -707,37 +707,6 @@
       </modules>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>3.1.0</version>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>shade</goal>
-                </goals>
-                <configuration>
-                  <relocations>
-                    <relocation>
-                      <pattern>com.google.protobuf</pattern>
-                      <shadedPattern>shaded.com.google.protobuf</shadedPattern>
-                    </relocation>
-                  </relocations>
-                  <filters>
-                    <filter>
-                      <artifact>*:*</artifact>
-                      <excludes>
-                        <exclude>META-INF/*.SF</exclude>
-                        <exclude>META-INF/*.DSA</exclude>
-                        <exclude>META-INF/*.RSA</exclude>
-                      </excludes>
-                    </filter>
-                  </filters>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
