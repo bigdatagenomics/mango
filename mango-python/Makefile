@@ -53,6 +53,13 @@ sdist_name:=mango-$(mango_version).tar.gz
 current_commit:=$(shell git log --pretty=oneline -n 1 -- $(pwd) | cut -f1 -d " ")
 dirty:=$(shell (git diff --exit-code && git diff --cached --exit-code) > /dev/null || printf -- --DIRTY)
 
+# test paths for pyspark
+PY4J_ZIP:=$(shell ls -1 "${SPARK_HOME}/python/lib" | grep py4j)
+PYTHONPATH:=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/$(PY4J_ZIP):$${PYTHONPATH}
+ASSEMBLY_DIR:=../mango-assembly/target
+ASSEMBLY_JAR=$(shell ls -1 $(ASSEMBLY_DIR)| grep ^mango-assembly[0-9A-Za-z\_\.-]*\.jar$ | grep -v javadoc | grep -v sources || true)
+PYSPARK_SUBMIT_ARGS="--jars $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) --driver-class-path $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) pyspark-shell"
+
 green=\033[0;32m
 normal=\033[0m\n
 red=\033[0;31m
@@ -79,36 +86,26 @@ clean_sdist:
 
 
 test: check_build_reqs
-	PY4J_ZIP=$(shell ls -1 "${SPARK_HOME}/python/lib" | grep py4j)
-	PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/$(PY4J_ZIP):$(PYTHONPATH)
-	ASSEMBLY_DIR=../mango-assembly/target
-	ASSEMBLY_JAR=$(shell ls -1 $(ASSEMBLY_DIR)| grep ^mango-assembly[0-9A-Za-z\_\.-]*\.jar$ | grep -v javadoc | grep -v sources || true)
-	PYSPARK_SUBMIT_ARGS="--jars $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) --driver-class-path $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) pyspark-shell"
-	export PYTHONPATH
-	export PYSPARK_SUBMIT_ARGS
 	pushd ../example-files/notebooks \
 		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
 		&& jupyter nbconvert --to python mango-python-alignment.ipynb \
 		&& jupyter nbconvert --to python mango-viz.ipynb \
-    && jupyter nbconvert --to python mango-python-variants.ipynb
+		&& jupyter nbconvert --to python mango-python-variants.ipynb
 	mkdir -p target
-	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
+	export PYTHONPATH=$(PYTHONPATH) \
+	&& export PYSPARK_SUBMIT_ARGS=$(PYSPARK_SUBMIT_ARGS) \
+	&& $(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	pushd ../example-files/notebooks \
 		&& rm mango-python-coverage.py \
 		&& rm mango-python-alignment.py \
 		&& rm mango-viz.py \
-    && rm mango-python-variants.py
+		&& rm mango-python-variants.py
 	exit
 
 
 pypi: check_clean_working_copy
 	set -x \
-	&& tag_build=`$(python) -c 'pass;\
-	    from version import version as v;\
-	    from pkg_resources import parse_version as pv;\
-	    import os;\
-	    print "--tag-build=.dev" + os.getenv("BUILD_NUMBER") if pv(v).is_prerelease else ""'` \
-	&& $(python) setup.py egg_info $$tag_build sdist bdist_egg upload
+	&& $(python) setup.py egg_info sdist bdist_egg upload
 clean_pypi:
 	- rm -rf build/
 
