@@ -155,6 +155,15 @@ then
     tar xzvf ${SPARK}-bin-${HADOOP}.tgz
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 
+    # add pyspark to the python path
+    PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
+    export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
+
+    # put mango jar on the pyspark path
+    ASSEMBLY_DIR="${MANGO_TMP_DIR}/mango-assembly/target"
+    ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
+    export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
+
     # create a conda environment for python build, if necessary
     pythons=( 2.7 3.6 )
     for python in ${pythons[*]}

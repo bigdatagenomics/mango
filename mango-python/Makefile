@@ -86,13 +86,6 @@ clean_sdist:
 
 
 test: check_build_reqs
-	PY4J_ZIP=$(shell ls -1 "${SPARK_HOME}/python/lib" | grep py4j)
-	PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/$(PY4J_ZIP):$(PYTHONPATH)
-	ASSEMBLY_DIR=../mango-assembly/target
-	ASSEMBLY_JAR=$(shell ls -1 $(ASSEMBLY_DIR)| grep ^mango-assembly[0-9A-Za-z\_\.-]*\.jar$ | grep -v javadoc | grep -v sources || true)
-	PYSPARK_SUBMIT_ARGS="--jars $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) --driver-class-path $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) pyspark-shell"
-	export PYTHONPATH
-	export PYSPARK_SUBMIT_ARGS
 	pushd ../example-files/notebooks \
 		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
 		&& jupyter nbconvert --to python mango-python-alignment.ipynb \
@@ -112,7 +105,12 @@ test: check_build_reqs
 
 pypi: check_clean_working_copy
 	set -x \
-	&& $(python) setup.py egg_info sdist bdist_egg upload
+	&& tag_build=`$(python) -c 'pass;\
+	    from version import version as v;\
+	    from pkg_resources import parse_version as pv;\
+	    import os;\
+	    print "--tag-build=.dev" + os.getenv("BUILD_NUMBER") if pv(v).is_prerelease else ""'` \
+	&& $(python) setup.py egg_info $$tag_build sdist bdist_egg upload
 clean_pypi:
 	- rm -rf build/
 
@@ -121,9 +119,6 @@ clean: clean_develop clean_pypi
 
 
 check_build_reqs:
-    ifndef SPARK_HOME
-    	$(error SPARK_HOME is undefined)
-    endif
 	@$(python) -c 'import pytest' \
 		|| ( printf "$(redpip)Build requirements are missing. Run 'make prepare' to install them.$(normal)" ; false )
 
