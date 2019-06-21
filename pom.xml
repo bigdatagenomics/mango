@@ -465,6 +465,7 @@
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_${scala.version.prefix}</artifactId>
         <version>${spark.version}</version>
+        <scope>provided</scope>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -707,6 +708,11 @@
       </modules>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.2.0</version>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
