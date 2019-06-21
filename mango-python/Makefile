@@ -86,13 +86,6 @@ clean_sdist:
 
 
 test: check_build_reqs
-	PY4J_ZIP=$(shell ls -1 "${SPARK_HOME}/python/lib" | grep py4j)
-	PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/$(PY4J_ZIP):$(PYTHONPATH)
-	ASSEMBLY_DIR=../mango-assembly/target
-	ASSEMBLY_JAR=$(shell ls -1 $(ASSEMBLY_DIR)| grep ^mango-assembly[0-9A-Za-z\_\.-]*\.jar$ | grep -v javadoc | grep -v sources || true)
-	PYSPARK_SUBMIT_ARGS="--jars $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) --driver-class-path $(ASSEMBLY_DIR)/$(ASSEMBLY_JAR) pyspark-shell"
-	export PYTHONPATH
-	export PYSPARK_SUBMIT_ARGS
 	pushd ../example-files/notebooks \
 		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
 		&& jupyter nbconvert --to python mango-python-alignment.ipynb \
