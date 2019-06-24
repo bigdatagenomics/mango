@@ -1,11 +1,14 @@
 Jupyter Widget Usage
 ====================
 
+The Mango widgets are Jupyter widgets built on `pileup.js <https://github.com/hammerlab/pileup.js>`__ .
+The widgets support visualizations for alignments, features,
+variants, and genotypes in a Jupyter Notebook.
 
 Installation
 ------------
 
-First, install bdgenomics.mango.pileup, a Jupyter Widget:
+First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
 
 
 .. code:: bash
@@ -88,7 +91,7 @@ This example shows how to visualize features through a Jupyter widget.
 
 
 Genotype Example
----------------
+----------------
 
 This example shows how to visualize genotypes through a Jupyter widget.
 
