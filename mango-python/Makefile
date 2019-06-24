@@ -105,12 +105,7 @@ test: check_build_reqs
 
 pypi: check_clean_working_copy
 	set -x \
-	&& tag_build=`$(python) -c 'pass;\
-	    from version import version as v;\
-	    from pkg_resources import parse_version as pv;\
-	    import os;\
-	    print "--tag-build=.dev" + os.getenv("BUILD_NUMBER") if pv(v).is_prerelease else ""'` \
-	&& $(python) setup.py egg_info $$tag_build sdist bdist_egg upload
+	&& $(python) setup.py egg_info sdist bdist_egg upload
 clean_pypi:
 	- rm -rf build/
 
@@ -119,6 +114,9 @@ clean: clean_develop clean_pypi
 
 
 check_build_reqs:
+    ifndef SPARK_HOME
+    	$(error SPARK_HOME is undefined)
+    endif
 	@$(python) -c 'import pytest' \
 		|| ( printf "$(redpip)Build requirements are missing. Run 'make prepare' to install them.$(normal)" ; false )
 
