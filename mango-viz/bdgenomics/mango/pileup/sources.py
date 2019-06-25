@@ -38,7 +38,7 @@ Sources specify where the genomic data comes from. Sources can come from a url, 
     GA4GHVariantSource
     GA4GHFeatureSource
 """
-from bdgenomics.mango.pileup.utils import *
+from bdgenomics.io.utils import *
 
 # generic data source for pileup.js
 class Source:
