@@ -29,6 +29,7 @@ class NotebookTest(SparkTestCase):
         testMode = True
         alignmentFile = self.exampleFile("chr17.7500000-7515000.sam")
         variantFile = self.exampleFile("snv.chr17.7502100-7502500.vcf")
+        genotypeFile = self.exampleFile("genodata.v3.vcf")
         featureFile = self.exampleFile("chr17.582500-594500.bed")
 
         # this file is converted from ipynb in make test

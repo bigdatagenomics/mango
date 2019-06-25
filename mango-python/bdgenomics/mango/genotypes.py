@@ -30,9 +30,11 @@ Genotypes
    GenotypeCallRatesDistribution
 """
 
+import bdgenomics.mango.pileup as pileup
 from bdgenomics.mango.pileup.track import *
 from pyspark.sql.functions import col, expr, when
 
+from .utils import *
 from .distribution import HistogramDistribution
 import matplotlib.pyplot as plt
 plt.rcdefaults()
@@ -110,6 +112,39 @@ class GenotypeSummary(object):
             self.genotypeCallRatesDistribution = GenotypeCallRatesDistribution(self.ss, self.genotypeDataset, self.sample)
 
         return self.genotypeCallRatesDistribution
+
+    # Takes a bdgenomics.adam.VariantContextRDD and visualizes results
+    def viewPileup(self, contig, start, end, reference = 'hg19', label = "Genotypes", showPlot = True):
+        """
+        Visualizes a portion of this GenotypeRDD in a scrollable pileup widget
+
+        Args:
+            :param contig: contig of locus to view
+            :param start: start position of locus to view
+            :param end: end position of locus to view
+            reference: genome build. Default is hg19
+            label: name of genotype track
+            showPlot: Disables widget, used for testing. Default is true.
+
+        Returns:
+            pileup view for genotypes
+        """
+        contig_trimmed = contig.lstrip(CHR_PREFIX)
+
+        # Filter dataset
+        filtered = self.genotypeDataset.transform(lambda r: r.filter(((r.referenceName == contig) | (r.referenceName == contig_trimmed))
+                                                           & (r.start < end) & (r.end > start)))
+
+        # convert to GA4GH JSON to be consumed by mango-viz module
+        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.genotypeDatasetToJSON(filtered._jvmRdd)
+
+        # visualize
+        if (showPlot):
+            # make variant track
+            tracks=[Track(viz="genotypes", label=label, source=pileup.sources.GA4GHVariantJson(json))]
+            locus="%s:%i-%i" % (contig, start, end)
+            return pileup.PileupViewer(locus=locus, reference=reference, tracks=tracks)
+
 
 class VariantsPerSampleDistribution(HistogramDistribution):
     """ VariantsPerSampleDistribution class.

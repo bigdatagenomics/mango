@@ -1,6 +1,6 @@
 {
   "name": "bdgenomics.mango.pileup",
-  "version": "0.0.2a0",
+  "version": "0.0.3a0",
   "description": "pileup",
   "author": "Alyssa Morrow",
   "main": "src/index.js",

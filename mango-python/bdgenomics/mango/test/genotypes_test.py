@@ -82,3 +82,21 @@ class GenotypesTest(SparkTestCase):
 
         expected = [6, 8, 8, 1, 7, 8]
         assert(sum(data) == sum(expected))
+
+    def test_visualize_genotypes(self):
+        # load file
+        ac = ADAMContext(self.ss)
+        testFile = self.resourceFile("genodata.v3.test.vcf")
+
+        # read features
+        genotypes = ac.loadGenotypes(testFile)
+
+        gs =  GenotypeSummary(self.ss, ac, genotypes)
+
+        contig = "chr22"
+        start = 21079600
+        end = 21079700
+
+        x = gs.viewPileup(contig, start, end)
+        assert(x != None)
+
