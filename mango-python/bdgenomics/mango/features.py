@@ -65,10 +65,10 @@ class FeatureSummary(object):
             pileup view for features
         """
 
-        contig_trimmed = contig.lstrip(CHR_PREFIX)
+        contig_trimmed, contig_full = formatContig(contig)
 
         # Filter dataset
-        filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig) | (r.referenceName == contig_trimmed))
+        filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig_full) | (r.referenceName == contig_trimmed))
                                                            & (r.start < end) & (r.end > start)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
