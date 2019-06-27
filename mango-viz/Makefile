@@ -48,6 +48,7 @@ develop:
 	rm -rf bdgenomics/mango/js/dist
 	rm -rf bdgenomics.mango.pileup.egg-info/
 	- $(pip) install -v -e .$(extras)
+	- $(jupyter) nbextension uninstall pileup
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
