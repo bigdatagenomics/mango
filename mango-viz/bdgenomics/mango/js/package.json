@@ -1,6 +1,6 @@
 {
   "name": "bdgenomics.mango.pileup",
-  "version": "0.0.2a0",
+  "version": "0.0.3a0",
   "description": "pileup",
   "author": "Alyssa Morrow",
   "main": "src/index.js",
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@jupyter-widgets/base": "^1.0.0",
-    "pileup": "0.6.11",
+    "pileup": "0.6.12",
     "underscore": "^1.8.3"
   }
 }

@@ -146,7 +146,7 @@ Using SPARK_SUBMIT=/Applications/spark-1.6.1-bin-hadoop2.4/bin/spark-submit
 
 ## Running the Mango browser on Amazon AWS
 
-The Mango Documentation includes instructions for running the Mango browser on [Amazon AWS[(https://bdg-mango.readthedocs.io/en/latest/cloud/emr.html#running-the-mango-browser-on-emr-with-docker).
+The Mango Documentation includes instructions for running the Mango browser on [Amazon AWS](https://bdg-mango.readthedocs.io/en/latest/cloud/emr.html#running-the-mango-browser-on-emr-with-docker).
 These instructions can be leveraged to visualize genomic datasets staged in Amazon S3.
 
 

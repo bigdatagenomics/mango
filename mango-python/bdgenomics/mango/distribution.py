@@ -46,6 +46,8 @@ class CountDistribution:
     sample = 1.0
     #: Whether rdd has already been sampled.
     pre_sampled = False
+    #: Seed for sampling
+    seed = 0
 
 
     def __init__(self):
@@ -61,7 +63,7 @@ class CountDistribution:
 
         # sample RDD if sample is specified AND rdd has not been pre-sampled
         if self.sample < 1 and not self.pre_sampled:
-            self.rdd = self.rdd.sample(False, self.sample)
+            self.rdd = self.rdd.sample(False, self.sample, self.seed)
 
         # Assign each RDD with counter. Reduce and collect.
         collectedCounts = self.rdd.reduceByKey(lambda x,y: x+y) \
@@ -149,6 +151,8 @@ class HistogramDistribution:
     sample = 1.0
     #: Whether rdd has already been sampled.
     pre_sampled = False
+    #: Sampling seed
+    seed = 0
 
 
     def __init__(self):
@@ -164,7 +168,7 @@ class HistogramDistribution:
 
         # sample RDD if sample is specified AND rdd has not been pre-sampled
         if self.sample < 1 and not self.pre_sampled:
-            self.rdd = self.rdd.sample(False, self.sample)
+            self.rdd = self.rdd.sample(False, self.sample, self.seed)
 
         # Assign each RDD with counter. Reduce and collect.
         collectedCounts = self.rdd.reduceByKey(lambda x,y: x+y) \

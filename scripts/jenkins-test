@@ -39,21 +39,6 @@ fi
 
 set -e
 
-# are we testing for spark 2.2.3? if so, we need to rewrite our poms first
-if [ ${SPARK_VERSION} == 2.2.3 ];
-then
-
-    # shouldn't be able to move to spark 2 twice
-    set +e
-    ./scripts/move_to_spark_2.sh
-    if [[ $? == 0 ]];
-    then
-        echo "We have already moved to Spark 2, so running move_to_spark_2.sh a second time should fail, but error code was 0 (success)."
-        exit 1
-    fi
-    set -e
-fi
-
 # are we testing for scala 2.11? if so, we need to rewrite our poms to 2.11 first
 if [ ${SCALAVER} == 2.11 ];
 then
@@ -129,7 +114,7 @@ find . -name "*.bak" -exec rm -f {} \;
 
 # run integration tests
 # prebuilt spark distributions are scala 2.11 for spark 2.x
-if [[ ${SPARK_VERSION} == 2.2.3 && ${SCALAVER} == 2.11 ]];
+if [[ ${SCALAVER} == 2.11 ]];
 then
 
     # make a temp directory
@@ -169,15 +154,6 @@ then
 
     tar xzvf ${SPARK}-bin-${HADOOP}.tgz
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
-
-    # add pyspark to the python path
-    PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
-    export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
-
-    # put mango jar on the pyspark path
-    ASSEMBLY_DIR="${MANGO_TMP_DIR}/mango-assembly/target"
-    ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
-    export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
 
     # create a conda environment for python build, if necessary
     pythons=( 2.7 3.6 )
@@ -262,17 +238,27 @@ then
     sleep 10
 
     # make sure server responds to POST for reads and variants
-    curl \
+    curl -s -N \
     --header "Content-type: application/json" \
     --request POST \
     --data "{\"pageToken\":null,\"pageSize\":200,\"readGroupIds\":[\"chr17_7500000-7515000_sam\"],\"referenceId\":\"chr17\",\"start\":1,\"end\":100}"  \
-    http://localhost:8080/reads/search
+    http://localhost:8080/reads/search | grep alignments
 
-    curl \
-    --header "Content-type: application/json" \
-    --request POST \
-    --data "{\"variantSetId\":\"ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf\",\"pageToken\":null,\"pageSize\":400,\"referenceName\":\"chr17\",\"callSetIds\":[],\"start\":7500000,\"end\":7515000}"  \
-    http://localhost:8080/variants/search
+    if [[ $? != 0 ]]; then
+        echo "invalid alignments"
+        exit 1
+    fi
+
+    curl -s -N \
+        --header "Content-type: application/json" \
+        --request POST \
+        --data "{\"variantSetId\":\"ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf\",\"pageToken\":null,\"pageSize\":400,\"referenceName\":\"chr17\",\"callSetIds\":[],\"start\":7500000,\"end\":7515000}"  \
+        http://localhost:8080/variants/search | grep variants
+
+    if [[ $? != 0 ]]; then
+        echo "invalid variants"
+        exit 1
+    fi
 
     # get processes with mango prefix
     PROCESSES=( $(ps aux | grep -F 'browser-scripts/run-example.sh' | grep -v -F 'grep' | awk '{ print $2 }') )

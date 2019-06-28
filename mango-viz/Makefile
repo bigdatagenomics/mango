@@ -48,6 +48,7 @@ develop:
 	rm -rf bdgenomics/mango/js/dist
 	rm -rf bdgenomics.mango.pileup.egg-info/
 	- $(pip) install -v -e .$(extras)
+	- $(jupyter) nbextension uninstall pileup
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
@@ -74,7 +75,12 @@ test: check_build_reqs
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	# run lint and flow for js
 	pushd bdgenomics/mango/js \
-		&& npm run lint 
+		&& npm run lint
+
+
+pypi: clean sdist
+	set -x \
+	&& $(python) setup.py egg_info sdist bdist_egg upload
 
 # clean
 clean:
