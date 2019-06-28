@@ -1,34 +1,45 @@
 Running Mango from Amazon EMR
 =============================
 
-`Amazon EMR <https://aws.amazon.com/emr/>`__ provides a pre-built Hadoop and Spark distribution that allows users to easily deploy and test Mango.
+`Amazon Elatic Map Reduce (EMR) <https://aws.amazon.com/emr/>`__ provides a pre-built Hadoop and Spark distribution that allows users to easily deploy and run Mango.
+This documentation explains how to configure requirements to connect with AWS on your local machine, and how to run Mango
+on AWS.
 
 Before you Start
 ----------------
 
-`Set up an EC2 key pair <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair>`__.
+You will first need to set up an EC2 compare and configure the AWS cli using your pair. This will allow you
+to create clusters and ssh into your machines from the command line.
 
-You will also need to install the AWS cli to ssh into your machines:
+1. `Set up an EC2 key pair <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair>`__.
+   This keypair allows you to securely access instances on AWS using a private key.
+2. `Install the AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__
+3. `Configure the AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html>`__
 
-1. `Install the AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__
-2. `Configure the AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html>`__
+
+This will allow you to access AWS using your credentials.
 
 
 Running Mango through Docker
 ============================
 
-This section explains how to run the Mango browser and the Mango notebook through Docker on Amazon EMR.
+This section explains how to run the Mango browser and the Mango notebook through `Docker <https://www.docker.com/>`__ on Amazon EMR.
+Using Docker allows users to quickly get Mango up and running without needing to configure different environment variables on
+their cluster. If you need more flexibility in configuration, see Running Mango standalone_.
 
 Creating a Cluster
 ------------------
 
-Through the aws command line, create a new cluster:
+First, you must configure an EMR cluster. This can be done using the `AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__.
+
+
+Through the command line, create a new cluster:
 
 .. code:: bash
 
   aws emr create-cluster
-  --release-label emr-5.18.0 \
-  --name 'emr-5.18.0 Mango example' \
+  --release-label emr-5.24.1 \
+  --name 'emr-5.24.1 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark  \
   --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
@@ -40,8 +51,23 @@ Through the aws command line, create a new cluster:
   --bootstrap-actions \
   Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-docker-emr5.sh"
 
+Note the instance counts:
 
-The bootstrap action will download docker and required scripts, available on your master node in EMR in directory /home/hadoop/mango-scripts.
+.. code:: bash
+
+    InstanceGroupType=CORE,InstanceCount=4,InstanceType=c3.4xlarge
+
+In this example, we have set the number of instance counts, or the number of workers, to 4. If you are using larger or
+smaller workloads, you should scale this number up or down accordingly. Note that more instances will cost more money.
+
+The bootstrap action:
+
+.. code:: bash
+
+  --bootstrap-actions \
+  Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-docker-emr5.sh"
+
+will download docker and required scripts. These scripts will be available on your EMR master node in the directory ``/home/hadoop/mango-scripts``.
 
 
 Enabling a Web Connection
@@ -54,11 +80,15 @@ Note that for accessing the recommended 8157 port for FoxyProxy (as well as port
 To do this, navigate to **Security and access** in your Cluster EMR manager. Click on **Security groups for Master**. Add a inbound new rule for ssh port 22 and a new TCP rule for
 the port configured in FoxyProxy inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
 
-Alternatively,  `you can set up an ssh tunnel on the master node <https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-ssh-tunnel-local.html>`__.
+TODO add image of port forwarding (on desktop)
 
 Connecting to Cluster
 ---------------------
+
+TODO trouble connecting? https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/
 To ssh into your cluster, navigate to your EMR cluster in AWS console and click on 'ssh'. This will give you the command you need to ssh into the cluster.
+
+TODO maybe get an image of this (on desktop)
 
 Accessing the Web UI
 --------------------
@@ -88,6 +118,7 @@ You can access Spark applications through this UI when they are running.
 Running the Mango Browser on EMR with Docker
 --------------------------------------------
 
+TODO this all needs to be replaced.
 To run Mango Browser on EMR on top of Docker, you will first need to download a reference (staged either locally or on HDFS). For example, first get the chr17 reference:
 
 .. code:: bash
@@ -105,14 +136,13 @@ Now that you have a reference, you can run Mango browser:
 
 Note: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
 
-
+TODO talk about genome
 
 You can then run Mango browser on HDFS files:
 
 .. code:: bash
 
-  ./run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
-    -genes http://www.biodalliance.org/datasets/ensGene.bb \
+  ./run-browser.sh <SPARK_ARGS> -- ./example-files/hg19.genome \
     -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 
@@ -159,6 +189,8 @@ You can then reference the file through the following code in Mango notebook:
 
   ac.loadAlignments('hdfs:///user/hadoop/<my_file.bam>')
 
+.. _standalone:
+
 Running Mango Standalone
 ========================
 
@@ -171,11 +203,11 @@ Through the AWS command line, create a new cluster:
 
 .. code:: bash
 
-  VERSION=0.0.2
+  VERSION=0.0.3
 
   aws emr create-cluster
-  --release-label emr-5.18.0 \
-  --name 'emr-5.18.0 Mango example' \
+  --release-label emr-5.24.1 \
+  --name 'emr-5.24.1 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark Name=JupyterHub  \
   --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \

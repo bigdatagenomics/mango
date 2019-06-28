@@ -38,8 +38,8 @@ wget -O /home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipy
 
 
 # install mango python libraries and enable extension
-sudo pip install bdgenomics.mango
 sudo pip install bdgenomics.mango.pileup
+sudo pip install bdgenomics.mango
 /usr/local/bin/jupyter nbextension enable --py widgetsnbextension
 /usr/local/bin/jupyter nbextension install --py --symlink --user bdgenomics.mango.pileup
 /usr/local/bin/jupyter nbextension enable bdgenomics.mango.pileup --user --py
