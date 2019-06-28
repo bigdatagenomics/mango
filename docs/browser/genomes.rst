@@ -2,9 +2,10 @@ Building a Genome
 =================
 
 The Mango browser requires a remote `TwoBit reference file <https://genome.ucsc.edu/goldenpath/help/twoBit.html>`__, a local
- `gene file <http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refGene.txt.gz>`__`, and a local `chromosome size file
- <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.chrom.sizes>`__` to run. These
-files are downloaded from `UCSC Genome Browser downloads <http://hgdownload.cse.ucsc.edu>`__.
+`gene file <http://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/refGene.txt.gz>`__, and a local
+`chromosome size file <http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.chrom.sizes>`__ to run.
+
+These files are downloaded from `UCSC Genome Browser downloads <http://hgdownload.cse.ucsc.edu>`__.
 
 
 Assembling a Default Genome File

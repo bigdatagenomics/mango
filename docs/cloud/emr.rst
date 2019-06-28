@@ -1,20 +1,20 @@
 Running Mango from Amazon EMR
 =============================
 
-`Amazon Elatic Map Reduce (EMR) <https://aws.amazon.com/emr/>`__ provides a pre-built Hadoop and Spark distribution that allows users to easily deploy and run Mango.
+`Amazon Elatic Map Reduce (EMR) <https://aws.amazon.com/emr/>`__ provides pre-built Hadoop and Spark distributions which allows users to easily deploy and run Mango.
 This documentation explains how to configure requirements to connect with AWS on your local machine, and how to run Mango
 on AWS.
 
 Before you Start
 ----------------
 
-You will first need to set up an EC2 compare and configure the AWS cli using your pair. This will allow you
+You will first need to set up an EC2 compare and configure the AWS Command Line Interface (AWS CLI) using your pair. This will allow you
 to create clusters and ssh into your machines from the command line.
 
 1. `Set up an EC2 key pair <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair>`__.
    This keypair allows you to securely access instances on AWS using a private key.
-2. `Install the AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__
-3. `Configure the AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html>`__
+2. `Install the AWS CLI <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__
+3. `Configure the AWS CLI <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html>`__
 
 
 This will allow you to access AWS using your credentials.
@@ -30,7 +30,7 @@ their cluster. If you need more flexibility in configuration, see Running Mango 
 Creating a Cluster
 ------------------
 
-First, you must configure an EMR cluster. This can be done using the `AWS cli <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__.
+First, you must configure an EMR cluster. This can be done using the `AWS CLI <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__.
 
 
 Through the command line, create a new cluster:
@@ -38,8 +38,8 @@ Through the command line, create a new cluster:
 .. code:: bash
 
   aws emr create-cluster
-  --release-label emr-5.24.1 \
-  --name 'emr-5.24.1 Mango example' \
+  --release-label emr-5.24.0 \
+  --name 'emr-5.24.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark  \
   --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
@@ -72,23 +72,28 @@ will download docker and required scripts. These scripts will be available on yo
 
 Enabling a Web Connection
 --------------------------
-To view the Spark UI, notebook, and browser, you must setup a web connection for the cluster. To do so, navigate to your Amazon EMR Page and click on **Enable Web Connection** and follow these instructions.
+To view the Spark UI, notebook, and browser, you must setup a web connection for the cluster. To do so, navigate to your Amazon EMR
+Clusters page, click your started cluster, and click on **Enable Web Connection** and follow the instructions for enabling a connection.
 
 .. image:: ../img/EMR/enable_web_connection.png
 
-Note that for accessing the recommended 8157 port for FoxyProxy (as well as port 22 for ssh), you will have to expose these ports in the security group for the master node.
+These instructions will require you to install the `FoxyProxy <https://getfoxyproxy.org/>`__ addon in your web browser.
+Note that for accessing the recommended 8157 port using FoxyProxy (as well as port 22 for ssh), you will have to
+`expose these ports <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/authorizing-access-to-an-instance.html>`__
+in the security group for the master node.
+
 To do this, navigate to **Security and access** in your Cluster EMR manager. Click on **Security groups for Master**. Add a inbound new rule for ssh port 22 and a new TCP rule for
 the port configured in FoxyProxy inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
 
-TODO add image of port forwarding (on desktop)
+.. image:: ../img/EMR/AWS_security_groups.png
 
 Connecting to Cluster
 ---------------------
 
-TODO trouble connecting? https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/
-To ssh into your cluster, navigate to your EMR cluster in AWS console and click on 'ssh'. This will give you the command you need to ssh into the cluster.
+To ssh into your cluster, navigate to your EMR cluster in AWS console and click on 'ssh'. This will give you the command
+you need to `ssh into the cluster <https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/>`__`.
 
-TODO maybe get an image of this (on desktop)
+.. image:: ../img/EMR/ssh_master.png
 
 Accessing the Web UI
 --------------------
@@ -118,31 +123,30 @@ You can access Spark applications through this UI when they are running.
 Running the Mango Browser on EMR with Docker
 --------------------------------------------
 
-TODO this all needs to be replaced.
-To run Mango Browser on EMR on top of Docker, you will first need to download a reference (staged either locally or on HDFS). For example, first get the chr17 reference:
+To run Mango Browser on EMR on top of Docker, you will first need to configure a reference. To create a reference, see
+`Building a Genome <../browser/genomes.html>`__.
+
+Simply run:
 
 .. code:: bash
 
-  wget http://hgdownload.cse.ucsc.edu/goldenpath/hg19/chromosomes/chr17.fa.gz
-  gunzip chr17.fa.gz
-  hdfs dfs -put chr17.fa
+  <Mango_distribution_path>/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
 
-Now that you have a reference, you can run Mango browser:
+This will save a file called <GENOME_NAME.genome> to your <OUTPUT_LOCATION> Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
-  /home/hadoop/mango-scripts/run-browser.sh <SPARK_ARGS> -- hdfs:///user/hadoop/chr17.fa \
+  /home/hadoop/mango-scripts/run-browser.sh <SPARK_ARGS> -- <OUTPUT_LOCATION>/<GENOME_PATH>.genome \
     -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 Note: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
 
-TODO talk about genome
 
 You can then run Mango browser on HDFS files:
 
 .. code:: bash
 
-  ./run-browser.sh <SPARK_ARGS> -- ./example-files/hg19.genome \
+  ./run-browser.sh <SPARK_ARGS> -- <OUTPUT_LOCATION>/<GENOME_PATH>.genome \
     -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 
@@ -206,8 +210,8 @@ Through the AWS command line, create a new cluster:
   VERSION=0.0.3
 
   aws emr create-cluster
-  --release-label emr-5.24.1 \
-  --name 'emr-5.24.1 Mango example' \
+  --release-label emr-5.24.0 \
+  --name 'emr-5.24.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark Name=JupyterHub  \
   --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
@@ -234,29 +238,33 @@ Finally, make sure you set your SPARK_HOME env:
 Running Mango Browser on EMR
 ----------------------------
 
-To run Mango Browser on EMR, you will first need to download a reference (staged either locally or on HDFS). For example, first get the hg19 2bit reference:
+To run Mango Browser on EMR on top of Docker, you will first need to configure a reference. To create a reference, see
+`Building a Genome <../browser/genomes.html>`__.
+
+Simply run:
 
 .. code:: bash
 
-  wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.2bit
+  <Mango_distribution_path>/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
 
-Now that you have a reference, you can run Mango browser:
+This will save a file called <GENOME_NAME.genome> to your <OUTPUT_LOCATION> Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
-  /home/hadoop//mango-distribution-${VERSION}/bin/mango-submit <SPARK_ARGS>  \
-    --packages net.fnothaft:jsr203-s3a:0.0.2 \
-    -- /<absolute_local_path_to_reference_file>/hg19.2bit \
-    -genes http://www.biodalliance.org/datasets/ensGene.bb \
-    -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam \
-    -port 8081
+    /home/hadoop/mango-distribution-${VERSION}/bin/run-browser-emr.sh \
+               --  \
+                <path_to_genome>/hg19.genome \
+               -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam \
+               -port 8080
+
+To visualize data in the NA19685 exome, navigate to ``chr17:7,569,720-7,592,868``. Here, you will see reads surrounding TP53.
 
 Note: Pulling data from s3a has high latency, and thus slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
 The package net.fnothaft:jsr203-s3a:0.0.2 used above is required for loading files from s3a. This is not required if you are only accessing data from HDFS.
 
 If you have not `established a web connection <#enabling-a-web-connection>`__, set up an `ssh tunnel on the master node to view the browser at port 8081 <https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-ssh-tunnel-local.html>`__.
 
-In the browser, navigate to a gene (ie. TP53, chr17-chr17:7,510,400-7,533,590) with exome data to view results.
+In the browser, navigate to a ``TP53, chr17:7,510,400-7,533,590`` with exome data to view results.
 
 
 Running Mango Notebook on EMR
@@ -266,18 +274,17 @@ To run Mango Notebook on EMR, run the mango-notebook script:
 
 .. code:: bash
 
-  # set CLASSPATH for Spark
-  EXTRA_CLASSPATH=/usr/lib/hadoop-lzo/lib/*:/usr/lib/hadoop/hadoop-aws.jar:/usr/share/aws/aws-java-sdk/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/java/Hive-JSON-Serde/hive-openx-serde.jar:/usr/share/aws/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:/usr/share/aws/emr/s3select/lib/emr-s3-select-spark-connector.jar
-
-
-  /home/hadoop/mango-distribution-${VERSION}/bin/mango-notebook \
-        --packages net.fnothaft:jsr203-s3a:0.0.2 \
-  	    --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
-        --conf fs.s3a.connection.maximum=50000 \
-        --conf spark.driver.extraClassPath=file:////home/hadoop/.ivy2/jars/net.fnothaft_jsr203-s3a-0.0.2.jar:${EXTRA_CLASSPATH} \
-        --conf spark.executor.extraClassPath=${EXTRA_CLASSPATH} \
+  /home/hadoop/mango-distribution-${VERSION}/bin/run-notebook-emr.sh \
         -- --no-browser \
         <NOTEBOOK_ARGS>
 
 Note that the extra NOTEBOOK_ARGS run the notebook detached from the browser so you can
 `set up an ssh tunnel on the master node to view the notebook <https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-ssh-tunnel-local.html>`__.
+
+To set up an ssh tunnel, type:
+
+.. code:: bash
+
+    ssh -i ~/MyKeyPair.pem -NfL localhost:<JUPYTER_PORT>:localhost:<LOCAL_PORT> hadoop@my_ec2_instance.us-west-1.compute.amazonaws.com
+
+
