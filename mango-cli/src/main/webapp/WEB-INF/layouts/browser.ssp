@@ -1,14 +1,11 @@
+<% import org.bdgenomics.adam.models.ReferenceRegion %>
 <%@ val dictionary:     String  %>
 <%@ val twoBitUrl:      String  %>
 <%@ val genes:          Option[String] %>
 <%@ val reads:     Option[List[String]] %>
-<%@ val variants:  Option[Map[String, String]] %> <!-- map of file name and samples to extract genotype ids/names -->
-<%@ val features:  Option[List[(String, Boolean)]] %> <!-- if true, then the track should be a coverage track -->
-<%@ val contig: String %>
-<%@ val start: String %>
-<%@ val end: String %>
-
-
+<%@ val variants:  Option[Map[String, String]] %>     <!-- map of file name and samples to extract genotype ids/names -->
+<%@ val features:  Option[Map[String, Boolean]] %> <!-- if true, then the track should be a coverage track -->
+<%@ val region: ReferenceRegion %>
 
 <html xmlns="http://www.w3.org/1999/html">
 <% render("templates/head.ssp") %>
@@ -22,9 +19,10 @@
 
 <script>
     <!-- Define Variables for Pileup.js -->
-    var contig = '${contig}';
-    var start = ${start};
-    var end = ${end};
+    var contig = '${region.referenceName}';
+    // convert start and end to valid int
+    var start = parseInt('${region.start}'.replace(/,/g, ""));
+    var end = parseInt('${region.end}'.replace(/,/g, ""));
 
     var request = "/sequenceDictionary"
     var xhr = new XMLHttpRequest();
@@ -33,7 +31,6 @@
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4 && xhr.status == 200) {
-            var contigList = JSON.parse(xhr.response);
 
             // add reference and genes
             var tracks = [
@@ -68,12 +65,14 @@
             // generate and add variants, if defined
             #if (variants.isDefined)
                 #for (s <- variants.get)
+
                     var data = pileup.formats.GAVariant({
                         endpoint: '',
                         variantSetId: '${s._1}',
                         callSetIds: '${s._2}'.split(","),
                         callSetNames:  '${s._2}'.split(",")
                     });
+
                     tracks.push({
                         viz: pileup.viz.variants(),
                         data: data,
@@ -90,10 +89,12 @@
             // add features and coverage
             #if (features.isDefined)
                 #for (s <- features.get)
+
                     var data = pileup.formats.GAFeature({
-                    endpoint: '',
-                    featureSetId: '${s._1}'
+                        endpoint: '',
+                        featureSetId: '${s._1}'
                     });
+
                     #if (s._2 == true)
                         tracks.push({
                             viz: pileup.viz.coverage(),
@@ -113,11 +114,13 @@
             // add reads
             #if (reads.isDefined)
                 #for (s <- reads.get)
+
                     var data = pileup.formats.GAReadAlignment({
                         endpoint: '',
                         readGroupId: '${s}',
                         killChr: false
                     });
+
                     // track for coverage for reads
                     tracks.push({
                         viz: pileup.viz.coverage(),

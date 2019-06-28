@@ -17,19 +17,15 @@
  */
 package org.bdgenomics.mango.models
 
-import java.io.File
-
-import org.apache.hadoop.fs.Path
-import org.apache.spark.{ HashPartitioner, SparkContext }
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkFiles
-import org.apache.spark.storage.StorageLevel
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.util.Bookkeep
-import org.bdgenomics.utils.interval.rdd.IntervalRDD
 import org.bdgenomics.utils.instrumentation.Metrics
+import org.bdgenomics.utils.interval.array.IntervalArray
 import org.bdgenomics.utils.misc.Logging
+import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator
+
 import scala.reflect.ClassTag
 
 // metric variables
@@ -49,83 +45,35 @@ object LazyMaterializationTimers extends Metrics {
  * @param sc SparkContext
  * @param files list files to materialize
  * @param sd the sequence dictionary associated with the file records
- * @param repartition whether to repartition data to default number of partitions
- * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 1000000
+ * @param prefetchSize the number of base pairs to prefetch in executors. Defaults to 100000
  */
 abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
                                                              @transient sc: SparkContext,
                                                              files: List[String],
                                                              sd: SequenceDictionary,
-                                                             repartition: Boolean,
                                                              prefetchSize: Option[Long] = None) extends Serializable with Logging {
   @transient implicit val formats = net.liftweb.json.DefaultFormats
 
-  val bookkeep = new Bookkeep(prefetchSize.getOrElse(sd.records.map(_.length).max))
+  val bookkeep = new Bookkeep(prefetchSize.getOrElse(100000))
   var memoryFraction = 0.85 // default caching fraction
 
   def setMemoryFraction(fraction: Double) =
     memoryFraction = fraction
 
-  // add access for http or ftp files
-  val extendedFiles = files.map(file => {
-    if (file.startsWith("http") || file.startsWith("ftp")) {
-
-      // Check if file exists
-      val responseCode = ResourceUtils.getResponseCode(file)
-      require(responseCode == 200, s"${file} does not exist, got response code ${responseCode}")
-
-      sc.addFile(file)
-
-      // hack for permissions. Must set directory containing files
-      // to be executable. This should be in the user's path.
-      val localPath = sc.getConf.getOption("spark.local.dir")
-      require(localPath.isDefined, "Must set spark.local.dir if accessing http or ftp files")
-
-      val local_dir = new File(localPath.get)
-      local_dir.listFiles.filter(r => r.getName.split("/").last.startsWith("spark-"))
-        .foreach(r => r.setExecutable(true, false))
-
-      // If AlignmentRecordMaterialization, ping for bam index and add File
-      if (name == AlignmentRecordMaterialization.name) {
-        val indexFile = file + ".bai"
-        val responseCodeIndex = ResourceUtils.getResponseCode(indexFile)
-        if (responseCodeIndex == 200)
-          sc.addFile(file + ".bai")
-        else
-          log.warn(s"bai index not found for ${file}")
-      }
-
-      // files will be added locally to a tmp location by Spark
-      var tmp = SparkFiles.get(file.split("/").last)
-      s"file://${tmp}"
-    } else file
-  })
-
-  def getFiles: List[String] = extendedFiles
-  var intRDD: IntervalRDD[ReferenceRegion, (String, T)] = null
-
   /**
-   * Gets file size on disk from hadoop ecosystem
-   * @return
+   * Gets files for this materialization structure.
+   * @return List of Materialized files
    */
-  def getSizeInBytes: Long = {
-    getFiles.map(fp => {
-      val path = new Path(fp)
-      // list all files in case of directory
-      val iter = path.getFileSystem(sc.hadoopConfiguration).listFiles(path, false)
-      var len = 0L
-      while (iter.hasNext) {
-        len = len + iter.next().getLen
-      }
-      len
-    }).reduce(_ + _)
-  }
+  def getFiles: List[String] = files
+
+  var intArray: IntervalArray[ReferenceRegion, (String, T)] =
+    IntervalArray[ReferenceRegion, (String, T)](Array[(ReferenceRegion, (String, T))](), 40000L, true)
 
   /**
    * Used to generically load data from all file types
    * @return Generic RDD of data types from file
    */
-  def load: (String, Option[Iterable[ReferenceRegion]]) => RDD[T]
+  def load: (String, Option[Iterable[ReferenceRegion]]) => Array[T]
 
   /**
    * Extracts reference region from data type T
@@ -143,10 +91,10 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
 
   /**
    * Stringify T classtag to json
-   * @param rdd RDD of elements keyed by String
+   * @param iter RDD of elements keyed by String
    * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def toJson(rdd: RDD[(String, T)]): Map[String, Array[S]]
+  def toJson(data: Array[(String, T)]): Map[String, Array[S]]
 
   /**
    * gets dictionary
@@ -200,7 +148,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @param regionOpt: ReferenceRegion to fetch
    * @return Map of sampleIds and corresponding JSON
    */
-  def get(regionOpt: Option[ReferenceRegion] = None): RDD[(String, T)] = {
+  def get(regionOpt: Option[ReferenceRegion] = None): Array[(String, T)] = {
     LazyMaterializationTimers.get.time {
       regionOpt match {
         case Some(_) => {
@@ -208,16 +156,11 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
           val seqRecord = sd(region.referenceName)
           seqRecord match {
             case Some(_) => {
-              val missing = bookkeep.getMissingRegions(region, getFiles).toIterable
+              val missing = bookkeep.getMissingRegions(region, getFiles)
               if (!missing.isEmpty) {
-                put(missing)
+                put(missing) // put data into interval array
               }
-              if (intRDD != null) {
-                intRDD.filterByInterval(region).toRDD.map(_._2)
-              } else {
-                sc.emptyRDD
-              }
-
+              intArray.get(region).toArray.sortBy(_._1).map(_._2)
             }
             case None => {
               throw new Exception(s"${region} not found in dictionary")
@@ -230,11 +173,8 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
           // tag entire sequence dictionary
           bookkeep.rememberValues(sd, getFiles)
 
-          // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
-          intRDD = partitionIntervalRDD(data, repartition)
-          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-          intRDD.setName(name)
-          intRDD.toRDD.map(_._2)
+          intArray = intArray.insert(data.toIterator)
+          data.map(_._2).toArray
         }
       }
     }
@@ -260,36 +200,8 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
       // tag regions as found, even if there is no data
       filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
 
-      // insert into IntervalRDD if there is data
-      if (!data.isEmpty()) {
-        if (intRDD == null) {
-          // we must repartition in case the data we are adding has no partitioner (i.e., empty RDD)
-          intRDD = partitionIntervalRDD(data, repartition)
-          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-        } else {
-          val t = intRDD
-          intRDD = intRDD.multiputRDD(data)
-          t.unpersist(true)
-          intRDD.persist(StorageLevel.MEMORY_AND_DISK)
-        }
-        intRDD.setName(name)
-      }
-    }
-  }
+      intArray = intArray.insert(data.toIterator)
 
-  /**
-   * Repartitions data to default parallelism and returns as a repartitioned IntervalRDD
-   *
-   * @param data Keyed RDD of ReferenceRegion, (Keyvalue, data) pair
-   * @return new Interval RDD of repartitioned data
-   */
-  private def partitionIntervalRDD(data: RDD[(ReferenceRegion, (String, T))], repartition: Boolean): IntervalRDD[ReferenceRegion, (String, T)] = {
-    if (data.getNumPartitions != sc.defaultParallelism && repartition) {
-      log.warn(s"Warning data partitioner of size ${data.getNumPartitions} " +
-        s"does not equal default of ${sc.defaultParallelism}. Repartitioning..")
-      IntervalRDD(data.partitionBy(new HashPartitioner(sc.defaultParallelism)))
-    } else {
-      IntervalRDD(data)
     }
   }
 
@@ -302,17 +214,17 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @param regions Optional region to fetch. If none, fetches all data
    * @return RDD of data. Primary index is ReferenceRegion and secondary index is filename.
    */
-  private def loadAllFiles(regions: Option[Iterable[ReferenceRegion]]): RDD[(ReferenceRegion, (String, T))] = {
+  private def loadAllFiles(regions: Option[Iterable[ReferenceRegion]]): List[(ReferenceRegion, (String, T))] = {
     // do we need to modify the chromosome prefix?
     val hasChrPrefix = sd.records.head.name.startsWith("chr")
 
     LazyMaterializationTimers.loadFiles.time {
       // get data for all files
-
       getFiles.map(fp => {
         val k = LazyMaterialization.filterKeyFromFile(fp)
-        load(fp, regions).map(v => (k, v))
-      }).reduce(_ union _).map(r => {
+        val t = load(fp, regions)
+        t.map(v => (k, v))
+      }).flatten.map(r => {
         val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
         (region, (r._1, setReferenceName(r._2, region.referenceName)))
       })
@@ -320,22 +232,20 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
   }
 
   /**
-   * Checks memory across all executors
+   * Checks memory
    * @return
    */
   private def checkMemory() = {
     LazyMaterializationTimers.checkMemory.time {
 
-      val mem = sc.getExecutorMemoryStatus
-      val (total, available) = mem.map(_._2)
-        .reduce((e1, e2) => (e1._1 + e2._1, e1._2 + e2._2))
-      val fraction: Double = (total - available).toFloat / total
+      val size = ObjectSizeCalculator.getObjectSize(intArray)
+      val fraction = (size.toDouble) / Runtime.getRuntime().totalMemory()
 
-      // if memory usage exceeds 85%, drop last viewed chromosome
+      // if memory usage exceeds memoryFraction, drop last viewed chromosome
       if (fraction > memoryFraction) {
-        val dropped = bookkeep.dropValues()
+        val dropped = bookkeep.dropValues() // drop last chromosome
         log.warn(s"memory limit exceeded. Dropping ${dropped} from cache")
-        intRDD = intRDD.filter(_._1.referenceName != dropped)
+        intArray = intArray.filter(_._1.referenceName != dropped)
       }
     }
   }

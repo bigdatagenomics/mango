@@ -56,11 +56,11 @@ class LazyMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Should check and clear memory") {
     val lazyDummy = new LazyDummy(sc, List("FakeFile"), sd)
-    lazyDummy.setMemoryFraction(0.0000001) // this is a very low test value
-    lazyDummy.get(Some(ReferenceRegion("chrM", 0, 10L))).count
+    lazyDummy.setMemoryFraction(0.00000000001) // this is a very low test value
+    lazyDummy.get(Some(ReferenceRegion("chrM", 0, 10L))).size
     assert(lazyDummy.bookkeep.queue.contains("chrM"))
 
-    lazyDummy.get(Some(ReferenceRegion("20", 0, 10L))).count
+    lazyDummy.get(Some(ReferenceRegion("20", 0, 10L))).size
 
     // these calls should have removed chrM from cache
     assert(!lazyDummy.bookkeep.queue.contains("chrM"))
@@ -76,14 +76,14 @@ class LazyMaterializationSuite extends MangoFunSuite {
  */
 class LazyDummy(@transient sc: SparkContext,
                 files: List[String],
-                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion, ReferenceRegion]("TestRDD", sc, files, sd, false, Some(100L)) with Serializable {
+                sd: SequenceDictionary) extends LazyMaterialization[ReferenceRegion, ReferenceRegion]("TestRDD", sc, files, sd, Some(100L)) with Serializable {
 
   def getReferenceRegion = (r: ReferenceRegion) => r
 
   def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => {
     val region = regions.get.head
-    sc.parallelize(Array.range(region.start.toInt, region.end.toInt)
-      .map(r => ReferenceRegion(region.referenceName, r, r + 1)))
+    Array.range(region.start.toInt, region.end.toInt)
+      .map(r => ReferenceRegion(region.referenceName, r, r + 1))
   }
 
   def stringify = (data: Array[ReferenceRegion]) => {
@@ -96,8 +96,8 @@ class LazyDummy(@transient sc: SparkContext,
     r
   }
 
-  def toJson(data: RDD[(String, ReferenceRegion)]): Map[String, Array[ReferenceRegion]] = {
-    data.collect.groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
+  def toJson(data: Array[(String, ReferenceRegion)]): Map[String, Array[ReferenceRegion]] = {
+    data.groupBy(_._1).map(r => (r._1, r._2.map(_._2)))
   }
 
 }

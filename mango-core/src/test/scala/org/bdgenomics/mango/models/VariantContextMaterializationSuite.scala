@@ -32,7 +32,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     SequenceRecord("chrM", 20000L),
     SequenceRecord("20", 90000L)))
 
-  // test vcf data'
+  // test vcf data
   val vcfFile1 = resourcePath("truetest.genotypes.vcf")
   val vcfFile2 = resourcePath("bqsr1.vcf")
 
@@ -61,6 +61,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val samples = data.samples
 
     assert(samples.size == 1)
+    assert(samples.head._2.size == 3)
   }
 
   sparkTest("Can extract json") {
@@ -150,12 +151,12 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
   sparkTest("fetches multiple regions from load") {
     val region1 = ReferenceRegion("chrM", 10L, 30L)
     val region2 = ReferenceRegion("chrM", 50L, 60L)
-    val regions = Some(Iterable(region1, region2))
-    val data1 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region1)))
-    val data2 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region2)))
-    val data = VariantContextMaterialization.load(sc, vcfFile1, regions)
+    val regions = Iterable(region1, region2)
+    val data1 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region1)))._2
+    val data2 = VariantContextMaterialization.load(sc, vcfFile1, Some(Iterable(region2)))._2
+    val data = VariantContextMaterialization.load(sc, vcfFile1, Some(regions))._2
 
-    assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
+    assert(data.length == data1.length + data2.length)
   }
 
 }
