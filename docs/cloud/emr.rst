@@ -32,7 +32,6 @@ Creating a Cluster
 
 First, you must configure an EMR cluster. This can be done using the `AWS CLI <https://docs.aws.amazon.com/cli/latest/userguide/installing.html>`__.
 
-
 Through the command line, create a new cluster:
 
 .. code:: bash
@@ -87,13 +86,16 @@ the port configured in FoxyProxy inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
 
 .. image:: ../img/EMR/AWS_security_groups.png
 
+
 Connecting to Cluster
 ---------------------
 
 To ssh into your cluster, navigate to your EMR cluster in AWS console and click on 'ssh'. This will give you the command
-you need to `ssh into the cluster <https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/>`__`.
+you need to `ssh into the cluster <https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/>`__.
 
 .. image:: ../img/EMR/ssh_master.png
+
+TODO maybe get an image of this (on desktop)
 
 Accessing the Web UI
 --------------------
@@ -128,6 +130,7 @@ To run Mango Browser on EMR on top of Docker, you will first need to configure a
 
 Simply run:
 
+
 .. code:: bash
 
   <Mango_distribution_path>/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
@@ -140,7 +143,6 @@ This will save a file called <GENOME_NAME.genome> to your <OUTPUT_LOCATION> Now 
     -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 Note: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
-
 
 You can then run Mango browser on HDFS files:
 
