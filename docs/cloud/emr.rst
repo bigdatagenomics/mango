@@ -86,7 +86,6 @@ the port configured in FoxyProxy inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
 
 .. image:: ../img/EMR/AWS_security_groups.png
 
-
 Connecting to Cluster
 ---------------------
 
@@ -94,8 +93,6 @@ To ssh into your cluster, navigate to your EMR cluster in AWS console and click 
 you need to `ssh into the cluster <https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/>`__.
 
 .. image:: ../img/EMR/ssh_master.png
-
-TODO maybe get an image of this (on desktop)
 
 Accessing the Web UI
 --------------------
@@ -129,7 +126,6 @@ To run Mango Browser on EMR on top of Docker, you will first need to configure a
 `Building a Genome <../browser/genomes.html>`__.
 
 Simply run:
-
 
 .. code:: bash
 
