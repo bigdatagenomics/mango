@@ -86,11 +86,13 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   }
 
   sparkTest("fetches multiple regions from load") {
-    val regions = Some(Iterable(ReferenceRegion("chrM", 90L, 110L), ReferenceRegion("chrM", 10100L, 10300L)))
+    val regions = Iterable(ReferenceRegion("chrM", 90L, 110L), ReferenceRegion("chrM", 10100L, 10300L))
     val data1 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 90L, 110L))))
     val data2 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 10100L, 10300L))))
-    val data = AlignmentRecordMaterialization.load(sc, bamFile, regions)
-    assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
+    val data = AlignmentRecordMaterialization.load(sc, bamFile, Some(regions))
+
+    assert(data.length == data1.length + data2.length)
+
   }
 
   sparkTest("Should handle chromosomes with different prefixes") {

@@ -47,6 +47,11 @@ class FeatureMaterializationSuite extends MangoFunSuite {
 
     val json = data.getJson(region)
     assert(json.contains(key) && json(key).length == 2)
+
+    val buf = data.stringify(json.get(key).get)
+
+    val keyData = GA4GHutil.stringToSearchFeaturesResponse(buf).getFeaturesList
+    assert(keyData.head.getStart == 1107)
   }
 
   sparkTest("can fetch multiple files") {
@@ -84,10 +89,10 @@ class FeatureMaterializationSuite extends MangoFunSuite {
   sparkTest("fetches multiple regions from load") {
     val region1 = ReferenceRegion("chrM", 100L, 200L)
     val region2 = ReferenceRegion("chrM", 3000L, 3100L)
-    val regions = Some(Iterable(region1, region2))
+    val regions = Iterable(region1, region2)
     val data1 = FeatureMaterialization.load(sc, bedFile, Some(Iterable(region1)))
     val data2 = FeatureMaterialization.load(sc, bedFile, Some(Iterable(region1)))
-    val data = FeatureMaterialization.load(sc, bedFile, regions)
-    assert(data.rdd.count == data1.rdd.count + data2.rdd.count)
+    val data = FeatureMaterialization.load(sc, bedFile, Some(regions))
+    assert(data.length == data1.length + data2.length)
   }
 }

@@ -19,21 +19,16 @@ package org.bdgenomics.mango.models
 
 import net.liftweb.json.Serialization.write
 import org.apache.parquet.filter2.dsl.Dsl._
-import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.converters.GA4GHutil
-import org.bdgenomics.mango.core.util.{ ResourceUtils, VizUtils }
+import org.bdgenomics.mango.core.util.ResourceUtils
+import org.bdgenomics.mango.io.BedReader
 import org.bdgenomics.utils.misc.Logging
-import java.io.{ StringWriter, PrintWriter }
 import scala.collection.JavaConversions._
-
-import org.slf4j.LoggerFactory
 
 /**
  * Handles loading and tracking of data from persistent storage into memory for Feature data.
@@ -50,7 +45,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
                              sd: SequenceDictionary,
                              repartition: Boolean = false,
                              prefetchSize: Option[Long] = None)
-    extends LazyMaterialization[Feature, ga4gh.SequenceAnnotations.Feature](FeatureMaterialization.name, sc, files, sd, repartition, prefetchSize)
+    extends LazyMaterialization[Feature, ga4gh.SequenceAnnotations.Feature](FeatureMaterialization.name, sc, files, sd, prefetchSize)
     with Serializable with Logging {
 
   /**
@@ -61,7 +56,7 @@ class FeatureMaterialization(@transient sc: SparkContext,
    */
   def getReferenceRegion = (f: Feature) => ReferenceRegion.unstranded(f)
 
-  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => FeatureMaterialization.load(sc, file, regions).rdd
+  def load = (file: String, regions: Option[Iterable[ReferenceRegion]]) => FeatureMaterialization.load(sc, file, regions)
 
   /**
    * Reset ReferenceName for Feature
@@ -80,12 +75,11 @@ class FeatureMaterialization(@transient sc: SparkContext,
    * @param data RDD (sampleId, Feature)
    * @return Map of (key, json) for the ReferenceRegion specified
    */
-  def toJson(data: RDD[(String, Feature)]): Map[String, Array[ga4gh.SequenceAnnotations.Feature]] = {
-    data
-      .collect.groupBy(_._1).mapValues(r =>
-        {
-          r.map(a => GA4GHutil.featureToGAFeature(a._2))
-        })
+  def toJson(data: Array[(String, Feature)]): Map[String, Array[ga4gh.SequenceAnnotations.Feature]] = {
+    data.groupBy(_._1).mapValues(r =>
+      {
+        r.map(a => GA4GHutil.featureToGAFeature(a._2))
+      })
   }
 
   /**
@@ -125,65 +119,34 @@ object FeatureMaterialization {
    * @param regions Iterable of ReferenceRegion to load
    * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
+  def load(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): Array[Feature] = {
     if (fp.endsWith(".adam")) FeatureMaterialization.loadAdam(sc, fp, regions)
-    else {
-      try {
-        FeatureMaterialization.loadData(sc, fp, regions)
-      } catch {
-        case e: Exception => {
-          val sw = new StringWriter
-          e.printStackTrace(new PrintWriter(sw))
-          throw UnsupportedFileException("File type not supported. Stack trace: " + sw.toString)
-        }
-      }
-    }
-  }
-
-  /**
-   * Loads data from bam files (indexed or unindexed) from persistent storage
-   *
-   * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegions to load
-   * @param fp filepath to load from
-   * @return Feature dataset from the file over specified ReferenceRegion
-   */
-  def loadData(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
-    // if regions are specified, specifically load regions. Otherwise, load all data
-    if (regions.isDefined) {
-      val predicateRegions = regions.get
-        .flatMap(r => LazyMaterialization.getReferencePredicate(r))
-        .toArray
-
-      sc.loadFeatures(fp)
-        .transform(rdd => rdd.filter(g =>
-          !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
-
-    } else {
-      sc.loadFeatures(fp)
-    }
+    else BedReader.loadFromSource(fp, regions, Some(sc))
   }
 
   /**
    * Loads ADAM data using predicate pushdowns
    *
    * @param sc SparkContext
-   * @param regions Iterable of ReferenceRegion to load
+   * @param regionsOpt Iterable of ReferenceRegion to load
    * @param fp filepath to load from
    * @return Feature dataset from the file over specified ReferenceRegion
    */
-  def loadAdam(sc: SparkContext, fp: String, regions: Option[Iterable[ReferenceRegion]]): FeatureDataset = {
-    val pred =
-      if (regions.isDefined) {
-        val predicateRegions: Iterable[ReferenceRegion] = regions.get
+  def loadAdam(sc: SparkContext, fp: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Array[Feature] = {
+    if (regionsOpt.isDefined) {
+      val regions = regionsOpt.get
+      val pred = {
+        val predicateRegions: Iterable[ReferenceRegion] = regions
           .flatMap(r => LazyMaterialization.getReferencePredicate(r))
         Some(ResourceUtils.formReferenceRegionPredicate(predicateRegions))
-      } else {
-        None
       }
-
-    val proj = Projection(FeatureField.featureId, FeatureField.referenceName, FeatureField.start, FeatureField.end,
-      FeatureField.score, FeatureField.featureType)
-    sc.loadParquetFeatures(fp, optPredicate = pred, optProjection = Some(proj))
+      val proj = Projection(FeatureField.featureId, FeatureField.referenceName, FeatureField.start, FeatureField.end,
+        FeatureField.score, FeatureField.featureType)
+      sc.loadParquetFeatures(fp, optPredicate = pred, optProjection = Some(proj)).rdd.collect()
+    } else {
+      val proj = Projection(FeatureField.featureId, FeatureField.referenceName, FeatureField.start, FeatureField.end,
+        FeatureField.score, FeatureField.featureType)
+      sc.loadParquetFeatures(fp, optProjection = Some(proj)).rdd.collect()
+    }
   }
 }
