@@ -62,8 +62,10 @@ class Track(TraitType):
             :param kwargs: Should contain viz, optional source, optional label.
 
         """
+        
+
+
         for key, value in kwargs.items():
-            
             if key == "viz":
                 if value not in vizNames.keys():
                     raise RuntimeError('Invalid track visualization %s. Available tracks include %s' % (value, vizNames.keys()))
