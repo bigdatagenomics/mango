@@ -6,10 +6,6 @@ DD=False  # DD is "double dash"
 PRE_DD=()
 POST_DD=()
 
-# by default, runs mango browser (mango-submit)
-# to override to mango-notebook,
-# run docker with --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
-ENTRYPOINT="--entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook"
 for ARG in "$@"; do
  shift
  if [[ $ARG == "--" ]]; then
