@@ -47,7 +47,7 @@ def real_dir_name(p, n=1):
 
 path_to_dir = os.path.dirname(os.path.abspath(__file__))
 
-bdgVersion = '0.0.1'
+bdgVersion = '0.0.3'
 
 # -- General configuration ------------------------------------------------
 

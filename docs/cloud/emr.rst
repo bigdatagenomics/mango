@@ -122,37 +122,33 @@ You can access Spark applications through this UI when they are running.
 Running the Mango Browser on EMR with Docker
 --------------------------------------------
 
-To run Mango Browser on EMR on top of Docker, you will first need to configure a reference. To create a reference, see
-`Building a Genome <../browser/genomes.html>`__.
+To run Mango Browser on EMR on top of Docker with the hg19 genome run:
 
-Simply run:
 
 .. code:: bash
 
-  <Mango_distribution_path>/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
-
-This will save a file called <GENOME_NAME.genome> to your <OUTPUT_LOCATION> Now that you have a reference, you can run Mango browser:
-
-.. code:: bash
-
-  /home/hadoop/mango-scripts/run-browser.sh <SPARK_ARGS> -- <OUTPUT_LOCATION>/<GENOME_PATH>.genome \
+  /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- /opt/cgl-docker-lib/mango/example-files/hg19.genome \
     -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
-Note: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
+This will run Mango with the pre-built hg19 genome, which is in the docker container.
 
+TODO: To run the Mango browser with a different genome ...
+
+
+``Note``: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
 You can then run Mango browser on HDFS files:
 
 .. code:: bash
 
-  ./run-browser.sh <SPARK_ARGS> -- <OUTPUT_LOCATION>/<GENOME_PATH>.genome \
+  /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- /opt/cgl-docker-lib/mango/example-files/hg19.genome \
     -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 
-Note: The first time Docker may take a while to set up.
+``Note``: The first time Docker may take a while to set up.
 
-Navigate to <PUBLIC_MASTER_DNS>:8080 to access the browser.
+Navigate to <PUBLIC_MASTER_DNS>:8081 to access the browser.
 
-In the browser, navigate to a gene (ie. TP53, chr17-chr17:7,510,400-7,533,590) with exome data to view results.
+In the browser, navigate to a ``TP53, chr17-chr17:7,510,400-7,533,590`` to view exome data.
 
 
 Running Mango Notebook on EMR with Docker
@@ -223,7 +219,7 @@ Through the AWS command line, create a new cluster:
 
 Where $VERSION specifies the Mango version available in the `Maven central repository <https://search.maven.org/search?q=g:org.bdgenomics.mango>`__.
 
-The bootstrap action will download Mango distribution code, and an example notebook file for the Mango notebook will
+This bootstrap action will download Mango distribution code, and an example notebook file for the Mango notebook will
 be available at /home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb.
 
 Finally, make sure you set your SPARK_HOME env:
