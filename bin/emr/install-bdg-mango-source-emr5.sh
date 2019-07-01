@@ -4,11 +4,9 @@ set -x -e
 # AWS EMR bootstrap script for
 # for installing Mango (https://github.com/bigdatagenomics/mango) on AWS EMR 5+
 #
-# 2018-10-29  - Alyssa Morrow akmorrow@berkeley.edu
+# 2019-06-28  - Alyssa Morrow akmorrow@berkeley.edu
 #
 
-# parameter that specifies version
-VERSION=$1
 
 # check for master node
 IS_MASTER=false
@@ -18,6 +16,17 @@ then
 
 fi
 
+# install git and maven
+sudo yum install git
+
+# install maven 3.3.9
+wget http://mirror.olnevhost.net/pub/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+tar xvf apache-maven-3.3.9-bin.tar.gz
+sudo mv apache-maven-3.3.9  /usr/local/apache-maven
+
+export M2_HOME=/usr/local/apache-maven
+export M2=$M2_HOME/bin
+export PATH=$M2:$PATH
 
 export SPARK_HOME=/usr/lib/spark
 
@@ -25,17 +34,17 @@ export SPARK_HOME=/usr/lib/spark
 mkdir -p /home/hadoop/.ivy2/jars
 wget -O /home/hadoop/.ivy2/jars/jsr203-s3a-0.0.2.jar http://central.maven.org/maven2/net/fnothaft/jsr203-s3a/0.0.2/jsr203-s3a-0.0.2.jar
 
-# pull and extract distribution code
-wget -O /home/hadoop/mango-distribution-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution/${VERSION}/mango-distribution-${VERSION}-bin.tar.gz
-tar xzvf /home/hadoop/mango-distribution-bin.tar.gz --directory /home/hadoop/
-rm /home/hadoop/mango-distribution-bin.tar.gz
 
+# install node.js and npm
+sudo yum install -y gcc-c++ make
+curl -sL https://rpm.nodesource.com/setup_6.x | sudo -E bash -
+sudo yum install nodejs
 
-mkdir -p /home/hadoop/mango-distribution-${VERSION}/notebooks
-
-# download 1000 genomes example notebook
-wget -O /home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb https://raw.githubusercontent.com/bigdatagenomics/mango/master/example-files/notebooks/aws-1000genomes.ipynb
-
+# pull and build source code
+cd /home/hadoop
+git clone https://github.com/bigdatagenomics/mango.git
+cd mango
+mvn clean package -DskipTests
 
 # install mango python libraries and enable extension
 sudo pip install bdgenomics.mango.pileup

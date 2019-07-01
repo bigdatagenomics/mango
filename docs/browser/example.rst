@@ -67,8 +67,7 @@ This file contains the following command:
 
   bin/mango-submit ./example-files/hg19.genome \
     -reads ./example-files/chr17.7500000-7515000.sam \
-    -variants ./example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf \
-    -show_genotypes
+    -variants ./example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
 
 This file specifies the required genome reference file:
 
@@ -88,13 +87,9 @@ An optional variant file:
 
   -variants ./example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
 
-The option to show genotypes from the variants file:
 
-.. code:: bash
-
-       -show_genotypes
-
-Once the example script is running, navigate to localhost:8080 to view the Mango browser.
+Once the example script is running, navigate to localhost:8080 to view the Mango browser. Navigate to ``chr17:7500000-7515000``
+to view data.
 
 Running Mango Browser with Parameters
 -------------------------------------

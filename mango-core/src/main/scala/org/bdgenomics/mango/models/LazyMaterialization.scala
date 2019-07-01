@@ -19,12 +19,12 @@ package org.bdgenomics.mango.models
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.util.SizeEstimator
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.util.Bookkeep
 import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.interval.array.IntervalArray
 import org.bdgenomics.utils.misc.Logging
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator
 
 import scala.reflect.ClassTag
 
@@ -238,7 +238,7 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
   private def checkMemory() = {
     LazyMaterializationTimers.checkMemory.time {
 
-      val size = ObjectSizeCalculator.getObjectSize(intArray)
+      val size = SizeEstimator.estimate(intArray)
       val fraction = (size.toDouble) / Runtime.getRuntime().totalMemory()
 
       // if memory usage exceeds memoryFraction, drop last viewed chromosome
