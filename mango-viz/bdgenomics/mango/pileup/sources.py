@@ -88,7 +88,7 @@ class DataFrameSource(Source):
         Args:
             :param dataframe: dataframe
         """
-        feature_transformed_json = read_bed(dataframe)._mango_to_json
+        feature_transformed_json = dataframe._mango_to_json
         self.dict_ = feature_transformed_json
         
     #: name that pileup.js uses to identify sources --> temporary
