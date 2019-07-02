@@ -5,6 +5,12 @@ set -e -x -v
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
 
+# make a temp directory for installing/downloading jars to
+MANGO_TMP_DIR=$(mktemp -d -t mangoTestXXXXXXX)
+
+MANGO_TMP_DIR=$MANGO_TMP_DIR/deleteMePleaseThisIsNoLongerNeeded
+mkdir $MANGO_TMP_DIR
+
 # add this tempdir to the poms...
 find . -name pom.xml \
     -exec sed -i.bak \
@@ -18,6 +24,23 @@ export MAVEN_OPTS="-Xmx1536m -XX:MaxPermSize=1g -Dfile.encoding=utf-8"
 DIR=$( cd $( dirname ${BASH_SOURCE[0]} ) && pwd )
 PROJECT_ROOT=${DIR}/..
 VERSION=$(grep "<version>" ${PROJECT_ROOT}/pom.xml  | head -2 | tail -1 | sed 's/ *<version>//g' | sed 's/<\/version>//g')
+
+# unique identifier for conda env
+PYTHON_UUID=$(uuidgen)
+
+# function that deletes conda environments and temporary environments
+function clean_up {
+    # deactivate and remove all mango associated conda envs
+    source deactivate
+    # delete conda env, if it exists
+    conda remove -y --force --name mango-build-${PYTHON_UUID} --all || \
+        echo "conda ENV mango-build-${PYTHON_UUID} does not exist"
+
+    # delete tmp directories
+    rm -rf ${MANGO_TMP_DIR}
+    rm -rf ${MANGO_MVN_TMP_DIR}
+}
+trap clean_up EXIT
 
 # is the hadoop version set?
 if ! [[ ${HADOOP_VERSION} ]];
@@ -117,12 +140,6 @@ find . -name "*.bak" -exec rm -f {} \;
 if [[ ${SCALAVER} == 2.11 ]];
 then
 
-    # make a temp directory
-    MANGO_TMP_DIR=$(mktemp -d -t mangoTestXXXXXXX)
-
-    MANGO_TMP_DIR=$MANGO_TMP_DIR/deleteMePleaseThisIsNoLongerNeeded
-    mkdir $MANGO_TMP_DIR
-
     # set the TMPDIR envar, which is used by python to choose where to make temp directories
     export TMPDIR=${MANGO_TMP_DIR}
 
@@ -159,9 +176,8 @@ then
     pythons=( 2.7 3.6 )
     for python in ${pythons[*]}
     do
-        uuid=$(uuidgen)
-        conda create -y -q -n mango-build-${uuid} python=${python}
-        source activate mango-build-${uuid}
+        conda create -y -q -n mango-build-${PYTHON_UUID} python=${python}
+        source activate mango-build-${PYTHON_UUID}
 
         # install npm and node in the venv for mango-viz
         conda install -y nodejs
@@ -216,8 +232,6 @@ then
         else
             echo "Mango Notebook failed with logs:"
             cat ${MANGO_NOTEBOOK_LOGS}
-            # clean up
-            rm -rf ${MANGO_TMP_DIR}
             exit 1
         fi
 
@@ -226,12 +240,12 @@ then
 
         # deactivate and remove the conda env
         source deactivate
-        conda remove -y --name mango-build-${uuid} --all
+        conda remove -y --name mango-build-${PYTHON_UUID} --all
 
     done
 
     # test mango submit
-    MANGO_BROWSER_LOGS=mango-submit.log
+    MANGO_BROWSER_LOGS=${MANGO_TMP_DIR}/mango-submit.log
     bash -xv ${PROJECT_ROOT}/example-files/browser-scripts/run-example.sh &> ${MANGO_BROWSER_LOGS} &
 
     # sleep for 10 seconds to let mango-browser start up
@@ -271,8 +285,6 @@ then
     else
         echo "Mango Browser failed with logs:"
         cat ${MANGO_BROWSER_LOGS}
-        # clean up
-        rm -rf ${MANGO_TMP_DIR}
         exit 1
     fi
 
@@ -286,12 +298,6 @@ then
     cat properties.txt
     cat ${TEST_GENOME}.chrom.sizes
     popd
-
-    rm -rf ${MANGO_TMP_DIR}/${TEST_GENOME}*
-
-    # clean up
-    rm -rf ${MANGO_TMP_DIR}
-
 fi
 
 echo
