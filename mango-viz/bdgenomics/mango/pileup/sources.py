@@ -38,8 +38,12 @@ Sources specify where the genomic data comes from. Sources can come from a url, 
     GA4GHVariantSource
     GA4GHFeatureSource
 """
+<<<<<<< HEAD
 
 from bdgenomics.mango.io import *
+=======
+from bdgenomics.io.io import *
+>>>>>>> 9f6c493... sources.py changes
 
 # generic data source for pileup.js
 class Source:
@@ -89,8 +93,12 @@ class DataFrameSource(Source):
         Args:
             :param dataframe: dataframe
         """
+<<<<<<< HEAD
 
         feature_transformed_json = dataframe._mango_to_json
+=======
+        feature_transformed_json = read_bed(dataframe)._mango_to_json
+>>>>>>> 9f6c493... sources.py changes
         self.dict_ = feature_transformed_json
         
         #: name that pileup.js uses to identify sources --> temporary
