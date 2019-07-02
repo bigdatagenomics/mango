@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-version_info = (0, 0, '3a1')
+version_info = (0, 0, '3')
 __version__ = '.'.join(map(str, version_info))
 
 if __name__ == '__main__':
