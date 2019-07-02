@@ -8,8 +8,10 @@ on AWS.
 Before you Start
 ----------------
 
-You will first need to set up an EC2 compare and configure the AWS Command Line Interface (AWS CLI) using your pair. This will allow you
-to create clusters and ssh into your machines from the command line.
+You will first need to set up an EC2 key pair and configure the AWS Command Line Interface (AWS CLI) using your key.
+This will allow you to create clusters and ssh into your machine from the command line.
+
+First, follow the following configuration steps:
 
 1. `Set up an EC2 key pair <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair>`__.
    This keypair allows you to securely access instances on AWS using a private key.
@@ -81,7 +83,7 @@ Note that for accessing the recommended 8157 port using FoxyProxy (as well as po
 `expose these ports <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/authorizing-access-to-an-instance.html>`__
 in the security group for the master node.
 
-To do this, navigate to **Security and access** in your Cluster EMR manager. Click on **Security groups for Master**. Add a inbound new rule for ssh port 22 and a new TCP rule for
+To expose required ports on the master node, navigate to **Security and access** in your Cluster EMR manager. Click on **Security groups for Master**. Add a inbound new rule for ssh port 22 and a new TCP rule for
 the port configured in FoxyProxy inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
 
 .. image:: ../img/EMR/AWS_security_groups.png
@@ -89,7 +91,7 @@ the port configured in FoxyProxy inbound to <YOUR_PUBLIC_IP_ADDRESS>/32.
 Connecting to Cluster
 ---------------------
 
-To ssh into your cluster, navigate to your EMR cluster in AWS console and click on 'ssh'. This will give you the command
+To ssh into your cluster, navigate to your EMR cluster in AWS console and click on ``ssh``. This will give you the command
 you need to `ssh into the cluster <https://aws.amazon.com/premiumsupport/knowledge-center/ec2-linux-ssh-troubleshooting/>`__.
 
 .. image:: ../img/EMR/ssh_master.png
@@ -97,13 +99,14 @@ you need to `ssh into the cluster <https://aws.amazon.com/premiumsupport/knowled
 Accessing the Web UI
 --------------------
 
-Click on "Enable Web Connection" in the AWS cluster console and run the ssh command for accessing the UIs through your browser. The command line argument will look like this:
+Click on **Enable Web Connection** in the AWS cluster console and run the ssh command for accessing the UIs through your browser.
+The command line argument will look like this:
 
 .. code:: bash
 
  ssh -i ~/MyKey.pem -ND <PORT_NUM> hadoop@<PUBLIC_MASTER_DNS>
 
-Where <PORT_NUM> is the configured port in FoxyProxy, and hadoop@<PUBLIC_MASTER_DNS> is the address you use
+Where <PORT_NUM> is the configured port in FoxyProxy (default is 8157), and hadoop@<PUBLIC_MASTER_DNS> is the address you use
 to ssh into the master cluster node. Let this run throughout your session.
 
 Testing your Configuration
@@ -130,13 +133,34 @@ To run Mango Browser on EMR on top of Docker with the hg19 genome run:
   /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- /opt/cgl-docker-lib/mango/example-files/hg19.genome \
     -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
-This will run Mango with the pre-built hg19 genome, which is in the docker container.
 
-TODO: To run the Mango browser with a different genome ...
+Navigate to <PUBLIC_MASTER_DNS>:8081 to access the browser. In the browser, navigate to ``TP53, chr17-chr17:7,510,400-7,533,590`` to view exome data.
+
+The previous command runs Mango with the pre-built hg19 genome, which is in the docker container.
+To run the Mango browser with a different genome in Mango (ie. hg18), you will first have to
+`create a reference genome <../browser/genomes.html>`__.
+
+To create a reference genome with docker, run:
+
+.. code:: bash
+
+    /home/hadoop/mango-scripts/make-genome-docker.sh hg18 <output_directory>
+
+This script will create a ``.genome`` file and save it to <output_directory> on the master host.
+
+You can then run the Mango browser using your new genome:
+
+.. code:: bash
+
+    /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- <output_directory>/hg18.genome
 
 
-``Note``: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
-You can then run Mango browser on HDFS files:
+The ``run-browser-docker.sh`` script mounts the location of your new genome file, making it accessible to the docker container.
+
+
+**Note**: s3a latency slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
+
+You can then run the Mango browser on HDFS files:
 
 .. code:: bash
 
@@ -144,34 +168,31 @@ You can then run Mango browser on HDFS files:
     -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 
-``Note``: The first time Docker may take a while to set up.
-
-Navigate to <PUBLIC_MASTER_DNS>:8081 to access the browser.
-
-In the browser, navigate to a ``TP53, chr17-chr17:7,510,400-7,533,590`` to view exome data.
+**Note**: The first time Docker may take a while to set up.
 
 
 Running Mango Notebook on EMR with Docker
 -----------------------------------------
 
-To run Mango Notebook on EMR on top of Docker, run the run-notebook script:
+To run the Mango Notebook on EMR on top of Docker, run the ``run-notebook`` script:
 
 .. code:: bash
 
   # Run the Notebook
-  /home/hadoop/run-notebook.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
+  /home/hadoop/mango-scripts/run-notebook.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
 
 Where <SPARK_ARGS> are Spark specific arguments and <NOTEBOOK_ARGS> are Jupyter notebook specific arguments.
-For example:
+Example Spark arguments are shown in the following example:
 
 .. code:: bash
 
   ./run-notebook.sh --master yarn --num-executors 64 --executor-memory 30g --
 
-Note: It will take a couple minutes on startup for the Docker configuration to complete.
+**Note**: It will take a couple minutes on startup for the Docker configuration to complete.
 
 
-Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal. An example notebook for EMR can be found at /opt/cgl-docker-lib/mango/example-files/notebooks/aws-1000genomes.ipynb.
+Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal.
+An example notebook for EMR can be found at ```/opt/cgl-docker-lib/mango/example-files/notebooks/aws-1000genomes.ipynb``.
 
 Accessing files in the Mango notebook from HDFS
 -----------------------------------------------
@@ -241,7 +262,8 @@ Simply run:
 
   <Mango_distribution_path>/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
 
-This will save a file called <GENOME_NAME.genome> to your <OUTPUT_LOCATION> Now that you have a reference, you can run Mango browser:
+This will save a file called ``<GENOME_NAME>.genome`` to your ``<OUTPUT_LOCATION>``.
+Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
@@ -253,8 +275,8 @@ This will save a file called <GENOME_NAME.genome> to your <OUTPUT_LOCATION> Now 
 
 To visualize data in the NA19685 exome, navigate to ``chr17:7,569,720-7,592,868``. Here, you will see reads surrounding TP53.
 
-Note: Pulling data from s3a has high latency, and thus slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
-The package net.fnothaft:jsr203-s3a:0.0.2 used above is required for loading files from s3a. This is not required if you are only accessing data from HDFS.
+**Note**: Pulling data from s3a has high latency, and thus slows down Mango browser. For interactive queries, you can first `transfer s3a files to HDFS <https://docs.aws.amazon.com/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html>`__.
+The package ``net.fnothaft:jsr203-s3a:0.0.2`` used above is required for loading files from s3a. This is not required if you are only accessing data from HDFS.
 
 If you have not `established a web connection <#enabling-a-web-connection>`__, set up an `ssh tunnel on the master node to view the browser at port 8081 <https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-ssh-tunnel-local.html>`__.
 
@@ -269,16 +291,7 @@ To run Mango Notebook on EMR, run the mango-notebook script:
 .. code:: bash
 
   /home/hadoop/mango-distribution-${VERSION}/bin/run-notebook-emr.sh \
-        -- --no-browser \
-        <NOTEBOOK_ARGS>
+        -- <NOTEBOOK_ARGS>
 
-Note that the extra NOTEBOOK_ARGS run the notebook detached from the browser so you can
-`set up an ssh tunnel on the master node to view the notebook <https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-ssh-tunnel-local.html>`__.
-
-To set up an ssh tunnel, type:
-
-.. code:: bash
-
-    ssh -i ~/MyKeyPair.pem -NfL localhost:<JUPYTER_PORT>:localhost:<LOCAL_PORT> hadoop@my_ec2_instance.us-west-1.compute.amazonaws.com
-
-
+If you have `established a web connection <#enabling-a-web-connection>`__, you will now be able to access
+the Mango notebook at ``<PUBLIC_MASTER_DNS>:8888``.

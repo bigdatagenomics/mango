@@ -4,7 +4,7 @@ set -x -e
 # AWS EMR bootstrap script for
 # for installing Mango (https://github.com/bigdatagenomics/mango) on AWS EMR 5+
 #
-# 2016-3-12  - Alyssa Morrow akmorrow@berkeley.edu, initial version
+# 2019-7-01  - Alyssa Morrow akmorrow@berkeley.edu, Mango 0.0.3
 #
 
 # check for master node
@@ -31,6 +31,10 @@ if [ "$IS_MASTER" = true ]; then
   # Download the file for Mango notebook
   wget -O /home/hadoop/mango-scripts/run-notebook-docker.sh https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/emr/run-notebook-docker.sh
   chmod u+x /home/hadoop/mango-scripts/run-notebook-docker.sh
+
+  # Download the file for creating Mango genomes
+  wget -O /home/hadoop/mango-scripts/make-genome-docker.sh https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/emr/make-genome-docker.sh
+  chmod u+x /home/hadoop/mango-scripts/make-genome-docker.sh
 
 fi
 
