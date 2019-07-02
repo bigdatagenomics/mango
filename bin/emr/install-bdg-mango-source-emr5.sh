@@ -35,9 +35,9 @@ mkdir -p /home/hadoop/.ivy2/jars
 wget -O /home/hadoop/.ivy2/jars/jsr203-s3a-0.0.2.jar http://central.maven.org/maven2/net/fnothaft/jsr203-s3a/0.0.2/jsr203-s3a-0.0.2.jar
 
 
-# install node.js and npm
+# install node.js 8.X and npm
 sudo yum install -y gcc-c++ make
-curl -sL https://rpm.nodesource.com/setup_6.x | sudo -E bash -
+curl -sL https://rpm.nodesource.com/setup_8.x | sudo -E bash -
 sudo yum install nodejs
 
 # pull and build source code

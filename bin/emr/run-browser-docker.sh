@@ -26,6 +26,15 @@ done
 PRE_DD_ARGS="${PRE_DD[@]}"
 POST_DD_ARGS="${POST_DD[@]}"
 
+# get location of genome file
+ARRAY=($POST_DD_ARGS)
+GENOME_FILE_LOCATION=${ARRAY[0]}
+
+# if genome file is no the host, then mount it for docker to access
+if [ -f "$GENOME_FILE_LOCATION" ]; then
+    GENOME_FILE_MNT="-v ${GENOME_FILE_LOCATION}:${GENOME_FILE_LOCATION}"
+fi
+
 export SPARK_HOME=/usr/lib/spark
 export SPARK_CONF_DIR=/usr/lib/spark/conf
 export HADOOP_HOME=/usr/lib/hadoop
@@ -48,8 +57,10 @@ EXTRA_CLASSPATH=/usr/lib/hadoop/hadoop-aws*:${AWS_SDK}/*:/usr/lib/hadoop-lzo/lib
 
 SPARK_LIBRARY_PATH=${SPARK_LIBRARY_PATH}:${HADOOP_LZO}/native
 
+
 sudo docker run \
  --net=host \
+      ${GENOME_FILE_MNT} \
       -v ${SPARK_HOME}:${SPARK_HOME} \
       -v ${SPARK_CONF_DIR}:${SPARK_CONF_DIR} \
       -v ${HADOOP_HOME}:${HADOOP_HOME} \
