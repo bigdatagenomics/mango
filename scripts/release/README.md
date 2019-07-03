@@ -4,10 +4,9 @@ Notes for release managers
 This document describes how to make an Mango release.
 
 First, make sure you have:
-- Updated the pom.xml for the new version
-- Updated the distributions in bin/emr and bin/gce to reflect the new versions.
+- Manually update the mango-python and mango-viz versions
 
-Setup your environment
+Setup your environment:
 1. Copy (or incorporate) the settings.xml file to ```~/.m2/settings.xml```
 2. Request the Mango packager private GPG key
 3. Edit the username, password, etc in ```~/.m2/settings.xml```
@@ -24,4 +23,5 @@ After the release is rsynced to the Maven Central repository, confirm checksums 
 
 Be sure to announce the release on the ADAM mailing list and Twitter (@bigdatagenomics).
 
-Additionally, once the release is done, you will need to bump the mango-python and mango-viz development versions on trunk.
+Additionally, once the release is done, you will need to bump the mango-python and mango-viz development versions on trunk and
+release them on pypi. The README's in these submodules explain how to do this.
