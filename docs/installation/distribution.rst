@@ -14,8 +14,10 @@ To fetch Mango distribution, run:
 
 .. code:: bash
 
-      wget -O mango-distribution-0.0.1-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution/0.0.1/mango-distribution-0.0.1-bin.tar.gz
-      tar xzvf mango-distribution-0.0.1-bin.tar.gz
+      VERSION=0.0.3
+
+      wget -O mango-distribution-${VERSION}-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution/${VERSION}/mango-distribution-${VERSION}-bin.tar.gz
+      tar xzvf mango-distribution-${VERSION}-bin.tar.gz
 
 
 
@@ -33,7 +35,7 @@ Then run Mango notebook or Mango browser:
 
 .. code:: bash
 
-      cd mango-distribution-0.0.1
+      cd mango-distribution-${VERSION}
       ./bin/mango-notebook
       ./bin/mango-submit
 

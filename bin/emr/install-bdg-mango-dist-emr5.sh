@@ -9,6 +9,7 @@ set -x -e
 
 # parameter that specifies version
 VERSION=$1
+OUTPUT_DIR=/home/hadoop
 
 # check for master node
 IS_MASTER=false
@@ -18,23 +19,45 @@ then
 
 fi
 
-
 export SPARK_HOME=/usr/lib/spark
 
 # required to read files from s3a. Hack for pyspark requirements.
-mkdir -p /home/hadoop/.ivy2/jars
-wget -O /home/hadoop/.ivy2/jars/jsr203-s3a-0.0.2.jar http://central.maven.org/maven2/net/fnothaft/jsr203-s3a/0.0.2/jsr203-s3a-0.0.2.jar
+mkdir -p ${OUTPUT_DIR}/.ivy2/jars
+wget -O ${OUTPUT_DIR}/.ivy2/jars/jsr203-s3a-0.0.2.jar http://central.maven.org/maven2/net/fnothaft/jsr203-s3a/0.0.2/jsr203-s3a-0.0.2.jar
+
+
+
+# if version is a SNAPSHOT, pull from the sonotype repository
+if [[ ${VERSION} == *"SNAPSHOT"* ]]; then
+
+    classifier=-bin
+    type=tar.gz
+    repo=snapshots
+
+    base="https://oss.sonatype.org/content/repositories/snapshots/org/bdgenomics/mango/mango-distribution"
+    timestamp=`curl -s "${base}/${VERSION}/maven-metadata.xml" | xmllint --xpath "string(//timestamp)" -`
+    buildnumber=`curl -s "${base}/${VERSION}/maven-metadata.xml" | xmllint --xpath "string(//buildNumber)" -`
+    MANGO_DIST="${base}/${VERSION}/mango-distribution-${VERSION%-SNAPSHOT}-${timestamp}-${buildnumber}${classifier}.${type}"
+
+else
+    REPO_PREFIX="https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution"
+    MANGO_DIST=${REPO_PREFIX}/${VERSION}/mango-distribution-${VERSION}-bin.tar.gz
+fi
+
+echo $MANGO_DIST
 
 # pull and extract distribution code
-wget -O /home/hadoop/mango-distribution-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/bdgenomics/mango/mango-distribution/${VERSION}/mango-distribution-${VERSION}-bin.tar.gz
-tar xzvf /home/hadoop/mango-distribution-bin.tar.gz --directory /home/hadoop/
-rm /home/hadoop/mango-distribution-bin.tar.gz
+wget -O ${OUTPUT_DIR}/mango-distribution-bin.tar.gz $MANGO_DIST
+tar xzvf ${OUTPUT_DIR}/mango-distribution-bin.tar.gz --directory ${OUTPUT_DIR}
+rm ${OUTPUT_DIR}/mango-distribution-bin.tar.gz
 
+# rename mango for EMR easy access
+mv ${OUTPUT_DIR}/mango-distribution* ${OUTPUT_DIR}/mango
 
-mkdir -p /home/hadoop/mango-distribution-${VERSION}/notebooks
+mkdir -p ${OUTPUT_DIR}/mango/notebooks
 
 # download 1000 genomes example notebook
-wget -O /home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb https://raw.githubusercontent.com/bigdatagenomics/mango/master/example-files/notebooks/aws-1000genomes.ipynb
+wget -O ${OUTPUT_DIR}/mango/notebooks/aws-1000genomes.ipynb https://raw.githubusercontent.com/bigdatagenomics/mango/master/example-files/notebooks/aws-1000genomes.ipynb
 
 
 # install mango python libraries and enable extension
