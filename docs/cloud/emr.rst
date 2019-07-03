@@ -174,12 +174,12 @@ You can then run the Mango browser on HDFS files:
 Running Mango Notebook on EMR with Docker
 -----------------------------------------
 
-To run the Mango Notebook on EMR on top of Docker, run the ``run-notebook`` script:
+To run the Mango Notebook on EMR on top of Docker, run the ``run-notebook-docker`` script:
 
 .. code:: bash
 
   # Run the Notebook
-  /home/hadoop/mango-scripts/run-notebook.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
+  /home/hadoop/mango-scripts/run-notebook-docker.sh <SPARK_ARGS> -- <NOTEBOOK_ARGS>
 
 Where <SPARK_ARGS> are Spark specific arguments and <NOTEBOOK_ARGS> are Jupyter notebook specific arguments.
 Example Spark arguments are shown in the following example:
@@ -260,7 +260,7 @@ Simply run:
 
 .. code:: bash
 
-  <Mango_distribution_path>/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
+  /home/hadoop/mango/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
 
 This will save a file called ``<GENOME_NAME>.genome`` to your ``<OUTPUT_LOCATION>``.
 Now that you have a reference, you can run Mango browser:

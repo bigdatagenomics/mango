@@ -50,13 +50,14 @@ echo $MANGO_DIST
 wget -O ${OUTPUT_DIR}/mango-distribution-bin.tar.gz $MANGO_DIST
 tar xzvf ${OUTPUT_DIR}/mango-distribution-bin.tar.gz --directory ${OUTPUT_DIR}
 rm ${OUTPUT_DIR}/mango-distribution-bin.tar.gz
+
 # rename mango for EMR easy access
 mv ${OUTPUT_DIR}/mango-distribution* ${OUTPUT_DIR}/mango
 
-mkdir -p ${OUTPUT_DIR}/mango-distribution-${VERSION}/notebooks
+mkdir -p ${OUTPUT_DIR}/mango/notebooks
 
 # download 1000 genomes example notebook
-wget -O ${OUTPUT_DIR}/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb https://raw.githubusercontent.com/bigdatagenomics/mango/master/example-files/notebooks/aws-1000genomes.ipynb
+wget -O ${OUTPUT_DIR}/mango/notebooks/aws-1000genomes.ipynb https://raw.githubusercontent.com/bigdatagenomics/mango/master/example-files/notebooks/aws-1000genomes.ipynb
 
 
 # install mango python libraries and enable extension
