@@ -45,7 +45,7 @@
         <executions>
           <execution>
             <id>Run `npm install`</id>
-            <phase>process-resources</phase>
+            <phase>prepare-package</phase>
             <configuration>
               <executable>npm</executable> <!-- requires npm to run -->
               <arguments>
@@ -112,14 +112,28 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-resources</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/webapp</directory>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
-    <resources>
-      <resource>
-        <directory>src/main/webapp</directory>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
-
   </build>
 
   <dependencies>
