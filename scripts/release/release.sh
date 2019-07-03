@@ -1,23 +1,25 @@
 #!/bin/sh
 
 # do we have enough arguments?
-if [ $# < 3 ]; then
+if [ $# -lt 3 ]; then
     echo "Usage:"
     echo
-    echo "./release.sh <release version> <development version>"
+    echo "./release.sh <release version> <development version> <python_boolean>"
     exit 1
 fi
 
 # pick arguments
 release=$1
 devel=$2
+python=$3 # boolean (true or false) determines whether to push python
 
 # get current branch
-branch=$(git status -bs | awk '{ print $2 }' | awk -F'.' '{ print $1 }' | head -n 1)
+branch=$(git status -bs | awk '{ print $2 }' | head -n 1)
 
 commit=$(git log --pretty=format:"%H" | head -n 1)
 echo "releasing from ${commit} on branch ${branch}"
 
+# push branch
 git push origin ${branch}
 
 # do spark 2, scala 2.11 release
@@ -39,42 +41,45 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
-# set up mango-python environment for releasing to pypi
-rm -rf release-venv
-virtualenv release-venv
-. release-venv/bin/activate
-pip install pyspark
-pip install twine
-pip install pypandoc
+# Only push python versions if specified.
+# Note that you have to manually update the versions first.
+if [ $python == "true" ]; then
+    # set up mango-python environment for releasing to pypi
+    rm -rf release-venv
+    virtualenv release-venv
+    . release-venv/bin/activate
+    pip install pyspark
+    pip install twine
+    pip install pypandoc
 
 
-# set up mango-viz environment for releasing to pypi
-pushd mango-viz
+    # set up mango-viz environment for releasing to pypi
+    pushd mango-viz
 
+    # clean any possible extant sdists
+    rm -rf dist
 
-# clean any possible extant sdists
-rm -rf dist
+    # build sdist and push to pypi
+    make clean
+    make pypi
 
-# build sdist and push to pypi
-make clean
-make pypi
+    popd
 
-popd
+    pushd mango-python
 
-pushd mango-python
+    # clean any possible extant sdists
+    rm -rf dist
 
-# clean any possible extant sdists
-rm -rf dist
+    # build sdist and push to pypi
+    make clean_py
+    make pypi
 
-# build sdist and push to pypi
-make clean_py
-make pypi
+    popd
 
-popd
-
-# deactivate the python virtualenv
-deactivate
-rm -rf release-venv
+    # deactivate the python virtualenv
+    deactivate
+    rm -rf release-venv
+fi
 
 if [ $branch = "master" ]; then
   # if original branch was master, update versions on original branch
