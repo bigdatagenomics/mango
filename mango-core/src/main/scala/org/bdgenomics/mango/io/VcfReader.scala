@@ -44,7 +44,6 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
 
   def isCompressed(fp: String): Boolean = fp.endsWith(".gz") | fp.endsWith("vcf.bgz")
 
-
   /**
    * Loads file from local filesystem, http or hdfs.
    *
