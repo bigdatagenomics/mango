@@ -33,12 +33,10 @@ export AWS_SDK=/usr/share/aws
 
 export HIVE_SDK=/usr/share/java/Hive-JSON-Serde
 
-# get UUID name for docker container
-uuid=$(uuidgen)
-DOCKER_CONTAINER_NAME=mango_notebook_${uuid}
+# s3/s3a requirements
+export EXTRA_CLASSPATH=${HADOOP_LZO}/*:${AWS_SDK}/aws-java-sdk/*:${AWS_SDK}/emr/emrfs/conf:${AWS_SDK}/emr/emrfs/lib/*:${AWS_SDK}/emr/emrfs/auxlib/*:${AWS_SDK}/emr/security/conf:${AWS_SDK}/emr/security/lib/*:${AWS_SDK}/hmclient/lib/aws-glue-datacatalog-spark-client.jar:${AWS_SDK}/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:${HIVE_SDK}/*.jar
 
-# s3/s3a commands
-EXTRA_CLASSPATH=${HADOOP_LZO}/*:${AWS_SDK}/aws-java-sdk/*:${AWS_SDK}/emr/emrfs/conf:${AWS_SDK}/emr/emrfs/lib/*:${AWS_SDK}/emr/emrfs/auxlib/*:${AWS_SDK}/emr/security/conf:${AWS_SDK}/emr/security/lib/*:${AWS_SDK}/hmclient/lib/aws-glue-datacatalog-spark-client.jar:${AWS_SDK}/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:${HIVE_SDK}/*.jar
+export SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*"
 
 /home/hadoop/mango/bin/mango-notebook \
       --master yarn \
@@ -48,6 +46,6 @@ EXTRA_CLASSPATH=${HADOOP_LZO}/*:${AWS_SDK}/aws-java-sdk/*:${AWS_SDK}/emr/emrfs/c
       --conf spark.hadoop.hadoopbam.bam.enable-bai-splitter=true \
       --conf spark.driver.extraClassPath=${EXTRA_CLASSPATH} \
       --conf spark.executor.extraClassPath=${EXTRA_CLASSPATH} \
-      $$PRE_DD_ARGS \
+      ${PRE_DD_ARGS} \
       -- --ip=0.0.0.0 --allow-root \
-      $$POST_DD_ARGS
+      ${POST_DD_ARGS}

@@ -267,7 +267,7 @@ Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
-    /home/hadoop/mango-distribution-${VERSION}/bin/run-browser-emr.sh \
+    /home/hadoop/mango/bin/emr/run-browser-emr.sh \
                --  \
                 <path_to_genome>/hg19.genome \
                -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam \
@@ -290,7 +290,7 @@ To run Mango Notebook on EMR, run the mango-notebook script:
 
 .. code:: bash
 
-  /home/hadoop/mango-distribution-${VERSION}/bin/run-notebook-emr.sh \
+  /home/hadoop/mango/bin/emr/run-notebook-emr.sh \
         -- <NOTEBOOK_ARGS>
 
 If you have `established a web connection <#enabling-a-web-connection>`__, you will now be able to access

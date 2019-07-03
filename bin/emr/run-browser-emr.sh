@@ -32,6 +32,6 @@ export SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/u
        --conf spark.kryoserializer.buffer.max=2040 \
        --packages net.fnothaft:jsr203-s3a:0.0.2 \
        --conf spark.hadoop.hadoopbam.bam.enable-bai-splitter=true \
-       $$PRE_DD_ARGS \
+       ${PRE_DD_ARGS} \
        --  \
-	   $POST_DD_ARGS
+	   ${POST_DD_ARGS}
