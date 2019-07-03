@@ -48,17 +48,6 @@ pip install twine
 pip install pypandoc
 
 
-pushd mango-python
-
-# clean any possible extant sdists
-rm -rf dist
-
-# build sdist and push to pypi
-make sdist
-twine upload dist/*.tar.gz
-
-popd
-
 # set up mango-viz environment for releasing to pypi
 pushd mango-viz
 
@@ -67,8 +56,19 @@ pushd mango-viz
 rm -rf dist
 
 # build sdist and push to pypi
-make sdist
-twine upload dist/*.tar.gz
+make clean
+make pypi
+
+popd
+
+pushd mango-python
+
+# clean any possible extant sdists
+rm -rf dist
+
+# build sdist and push to pypi
+make clean_py
+make pypi
 
 popd
 
