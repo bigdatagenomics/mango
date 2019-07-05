@@ -43,6 +43,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.bdgenomics.adam</groupId>
+            <artifactId>adam-shade${spark.version.prefix}${scala.version.prefix}</artifactId>
+            <version>${adam.version}</version>
+          </dependency>
+        </dependencies>
         <configuration>
           <createDependencyReducedPom>false</createDependencyReducedPom>
           <filters>
@@ -69,6 +76,7 @@
                   <shadedPattern>shaded.com.google.protobuf</shadedPattern>
                 </relocation>
               </relocations>
+              <shaderHint>workaround</shaderHint>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
               </transformers>
