@@ -16,17 +16,17 @@
   <name>mango</name>
 
   <properties>
-    <adam.version>0.27.0</adam.version>
+    <adam.version>0.28.0</adam.version>
     <avro.version>1.8.2</avro.version>
-    <bdg-formats.version>0.12.0</bdg-formats.version>
-    <bdg-utils.version>0.2.13</bdg-utils.version>
+    <bdg-formats.version>0.13.0</bdg-formats.version>
+    <bdg-utils.version>0.2.15</bdg-utils.version>
     <convert.version>0.6.0</convert.version>
     <java.version>1.8</java.version>
     <jetty.version>9.4.17.v20190418</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
     <hadoop.version>2.7.5</hadoop.version>
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
-    <htsjdk.version>2.16.1</htsjdk.version>
+    <htsjdk.version>2.18.2</htsjdk.version>
     <parquet.version>1.10.1</parquet.version>
     <scala.version>2.11.12</scala.version>
     <scala.version.prefix>2.11</scala.version.prefix>
@@ -157,7 +157,6 @@
             <useZincServer>true</useZincServer>
             <args>
               <arg>-unchecked</arg>
-              <arg>-optimise</arg>
               <arg>-deprecation</arg>
             </args>
             <jvmArgs>
@@ -180,7 +179,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>2.5.2</version>
+          <version>2.5.3</version>
           <configuration>
             <mavenExecutorId>forked-path</mavenExecutorId>
             <useReleaseProfile>false</useReleaseProfile>
@@ -195,21 +194,26 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>3.1.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.5.1</version>
+          <version>3.8.0</version>
           <configuration>
             <source>${java.version}</source>
             <target>${java.version}</target>
           </configuration>
         </plugin>
         <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.6.0</version>
+        </plugin>
+        <plugin>
           <groupId>pl.project13.maven</groupId>
           <artifactId>git-commit-id-plugin</artifactId>
-          <version>2.2.1</version>
+          <version>2.2.2</version>
           <configuration>
             <gitDescribe>
               <always>true</always>
@@ -225,7 +229,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.4.1</version>
+          <version>3.0.0-M2</version>
           <executions>
             <execution>
               <id>enforce-versions</id>
@@ -250,17 +254,17 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.2</version>
+          <version>3.0.0-M1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>3.1.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.1</version>
+          <version>3.1.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -275,7 +279,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.19.1</version>
+          <version>3.0.0-M3</version>
           <configuration>
             <skipTests>true</skipTests>
           </configuration>
@@ -311,7 +315,7 @@
         <plugin>
           <groupId>org.scalatest</groupId>
           <artifactId>scalatest-maven-plugin</artifactId>
-          <version>1.0</version>
+          <version>2.0.0</version>
           <configuration>
             <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
             <junitxml>.</junitxml>
@@ -361,7 +365,7 @@
       <dependency>
         <groupId>args4j</groupId>
         <artifactId>args4j</artifactId>
-        <version>2.0.31</version>
+        <version>2.33</version>
       </dependency>
       <dependency>
         <groupId>com.github.samtools</groupId>
@@ -418,22 +422,7 @@
       <dependency>
         <groupId>org.apache.parquet</groupId>
         <artifactId>parquet-avro</artifactId>
-        <!--
-            IMPORTANT NOTE
-            ==============
-            Spark 2.2.0 bumps to Parquet 1.8.2, but keeps Avro at 1.7.3. This
-            causes an issue when using parquet-avro 1.8.2, which relies on a
-            method that is new in Avro 1.8.x. The recommended workaround is to
-            pin parquet-avro to 1.8.1, instead of 1.8.2, as described in the
-            Spark 2.2.0 release notes.
-        -->
-        <version>1.8.1</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
+        <version>${parquet.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.parquet</groupId>
@@ -576,7 +565,7 @@
       <dependency>
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest_${scala.version.prefix}</artifactId>
-        <version>2.2.6</version>
+        <version>3.0.7</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
