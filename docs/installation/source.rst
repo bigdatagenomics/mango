@@ -41,14 +41,14 @@ Spark.
 Building for Python
 -------------------
 
-To build and test `Mango’s Python bindings <#python>`__, first set environmental variables pointing to the root of your your Mango and Spark installation directories.
+To build and test `Mango’s Python bindings <#python>`__, first set environmental variables pointing to the root of your Mango and Spark installation directories.
 
 .. code:: bash
 
    export SPARK_HOME = FullPathToSpark
    export MANGO_HOME = FullPathToMango
    
-Next, build mango jars without running tests, by running the following command from the root of the Mango repo install directory:
+Next, build Mango jars without running tests, by running the following command from the root of the Mango repo install directory:
 
 .. code:: bash
 
