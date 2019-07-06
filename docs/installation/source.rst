@@ -1,7 +1,7 @@
 Building Mango from Source
 ==========================
 
-You will need to have `Apache Maven <http://maven.apache.org/>`__
+You will need to have Java 8 and  `Apache Maven <http://maven.apache.org/>`__
 version 3.1.1 or later installed in order to build Mango.
 
     **Note:** The default configuration is for Hadoop 2.7.3. If building
@@ -41,8 +41,43 @@ Spark.
 Building for Python
 -------------------
 
-To build and test `Mango’s Python bindings <#python>`__, enable the
-``python`` profile:
+To build and test `Mango’s Python bindings <#python>`__, first set environmental variables pointing to the root of your your Mango and Spark installation directories.
+
+.. code:: bash
+
+   export SPARK_HOME = FullPathToSpark
+   export MANGO_HOME = FullPathToMango
+   
+Next, build mango jars without running tests, by running the following command from the root of the Mango repo install directory:
+
+.. code:: bash
+
+   mvn clean package  -DskipTests
+
+Additionally, the PySpark dependencies must be on the Python module load path and the Mango JARs must be built and provided to PySpark. This can be done with the following bash commands: 
+
+.. code:: bash
+
+   PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
+   export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
+   ASSEMBLY_DIR="${MANGO_HOME}/mango-assembly/target"
+   ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
+   export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
+
+
+Next, install dependencies using the following commands:
+
+.. code:: bash
+
+   cd mango-python
+   make prepare
+   cd ..
+   cd mango-viz
+   make prepare
+   cd ..
+   
+Finally, run ``maven package`` again, this time enabling the ``python`` profile as well as tests:   
+
 
 .. code:: bash
 
@@ -50,45 +85,4 @@ To build and test `Mango’s Python bindings <#python>`__, enable the
 
 This will enable the ``mango-python`` and ``mango-viz`` module as part of the Mango build.
 This module uses Maven to invoke a Makefile that builds a Python egg and
-runs tests. To build this module, we require either an active `virtualenv <https://virtualenv.pypa.io/en/stable/>`__ environment.
-Note: conda environments do work with jupyter widgets, so are not recommended.
-
-To setup and activate a `virtual environment
-<https://virtualenv.pypa.io/en/stable/userguide/#usage>`__, run:
-
-.. code:: bash
-
-    virtualenv -n venv-mango python=2.7 anaconda
-    source activate venv-mango
-
-
-Additionally, to run tests, the PySpark dependencies must be on the
-Python module load path and the Mango JARs must be built and provided to
-PySpark. This can be done with the following bash commands:
-
-.. code:: bash
-
-    # add pyspark to the python path
-    PY4J_ZIP="$(ls -1 "${SPARK_HOME}/python/lib" | grep py4j)"
-    export PYTHONPATH=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/${PY4J_ZIP}:${PYTHONPATH}
-
-
-    # put mango jar on the pyspark path
-    ASSEMBLY_DIR="${MANGO_HOME}/mango-assembly/target"
-    ASSEMBLY_JAR="$(ls -1 "$ASSEMBLY_DIR" | grep "^mango-assembly[0-9A-Za-z\_\.-]*\.jar$" | grep -v javadoc | grep -v sources || true)"
-    export PYSPARK_SUBMIT_ARGS="--jars ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} --driver-class-path ${ASSEMBLY_DIR}/${ASSEMBLY_JAR} pyspark-shell"
-
-
-This assumes that the `Mango JARs have already been
-built. Additionally, we require
-`pytest <https://docs.pytest.org/en/latest/>`__ to be installed. The
-mango-python makefile can install this dependency. Once you have an
-active virtualenv environment, run:
-
-.. code:: bash
-
-    cd mango-python
-    make prepare
-
-    cd mango-viz
-    make prepare
+runs tests. 
