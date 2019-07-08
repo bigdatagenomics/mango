@@ -76,7 +76,7 @@ Next, install dependencies using the following commands:
    make prepare
    cd ..
    
-Finally, run ``maven package`` again, this time enabling the ``python`` profile as well as tests:   
+Finally, run ``mvn package`` again, this time enabling the ``python`` profile as well as tests:   
 
 
 .. code:: bash
