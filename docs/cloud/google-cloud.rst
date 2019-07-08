@@ -1,7 +1,7 @@
 Running Mango on Google Cloud
 =============================
 
-`Cloud Dataproc <https://cloud.google.com/dataproc/>`__ sets up the basic environment with HDFS and Spark, providing a simple environment to run Mango.
+`Cloud Dataproc <https://cloud.google.com/dataproc/>`__ sets up the basic environment with HDFS and Spark, providing a simple environment in which to run Mango.
 
 Commands in this section will require users to create an account on `Google Cloud <https://cloud.google.com/>`__ and  install the `gcloud cli <https://cloud.google.com/sdk/gcloud/>`__
 
@@ -11,7 +11,7 @@ The necessary `initialization scripts <https://raw.githubusercontent.com/bigdata
 
 In order to access this bucket through the cloud dataproc cluster, it is necessary to give 'billing account manager <https://cloud.google.com/billing/docs/how-to/billing-access>`__ permissions to dataproc-accounts.iam.gserviceaccount.com and compute@developer.gserviceaccount.com through the `IAM console <https://console.cloud.google.com/iam-admin>`__
 
-Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the below installation script
+Create the Cloud Dataproc Cluster (modify the fields as appropriate) with the below installation script:
 
 .. code:: bash
 
@@ -36,7 +36,7 @@ After the above steps are completed, ssh into the master node.
 Running Mango Notebook on a Dataproc Cluster
 --------------------------------------------
 
-Before mango can run, it is recommended to stage datasets into HDFS if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
+Before Mango can run, it is recommended to stage datasets into HDFS if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
 
 .. code:: bash
 
@@ -56,7 +56,7 @@ Once the notebook is running, connect to Mango by setting up a tunnel to your lo
 
     gcloud compute ssh <cluster-name>-m -- -N -L localhost:<local-port>:localhost:8888
 
-You can navigate to notebook through your local browser by pointing it towards http://localhost:<local-port>/. Once in the browser notebook environment, navigate to /opt/cgl-docker-lib/mango/example-files/ to try out the example files after configuring the file paths to read relative to the home directory in HDFS. Public datasets can be accessed by referencing google cloud storage at gs://genomics-public-data/.
+You can navigate to the notebook through your local browser by pointing it towards http://localhost:<local-port>/. Once in the browser notebook environment, navigate to ``/opt/cgl-docker-lib/mango/example-files/`` to try out the example files after configuring the file paths to read relative to the home directory in HDFS. Public datasets can be accessed by referencing google cloud storage at gs://genomics-public-data/.
 
 More information about available public datasets on Google cloud can be found `online <https://cloud.google.com/genomics/v1/public-data>`__
 

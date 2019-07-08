@@ -45,8 +45,8 @@ To build and test `Mango’s Python bindings <#python>`__, first set environment
 
 .. code:: bash
 
-   export SPARK_HOME = FullPathToSpark
-   export MANGO_HOME = FullPathToMango
+   export SPARK_HOME=<PATH_TO_SPARK>
+   export MANGO_HOME=<PATH_TO_MANGO> 
    
 Next, build Mango jars without running tests, by running the following command from the root of the Mango repo install directory:
 

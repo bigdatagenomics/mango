@@ -9,7 +9,7 @@ has open code available at `cgl-docker-lib <https://github.com/BD2KGenomics/cgl-
 Running Mango Browser on Docker
 -------------------------------
 
-To run Mango browser example files on Linux in docker run:
+To run Mango browser example files on Linux in Docker run:
 
 .. code:: bash
 
@@ -41,7 +41,7 @@ To run Mango browser on other local data, you must first mount these files with 
 Running Mango Notebook on Docker
 --------------------------------
 
-To run Mango notebook on Linux in docker run:
+To run Mango notebook on Linux in Docker run:
 
 .. code:: bash
 
@@ -53,4 +53,4 @@ To run Mango notebook on Linux in docker run:
 
 Note: To run Mango notebook on OS X, include the ``-p 8080:8080`` Docker parameter in place of ``--net=host``.
 
-To view examples, navigate to /opt/cgl-docker-lib/mango/example-files. Here, you can access numberous ipython notebook examples.
+To view a number of ipython notebook examples, navigate to: ``/opt/cgl-docker-lib/mango/example-files``.
