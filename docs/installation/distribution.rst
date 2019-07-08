@@ -10,7 +10,7 @@ includes all necessary dependencies, except for Apache Hadoop and Apache
 Spark.
 
 
-To fetch Mango distribution, run:
+To fetch the Mango distribution, run:
 
 .. code:: bash
 

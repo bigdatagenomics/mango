@@ -1,7 +1,7 @@
 Jupyter Widget Usage
 ====================
 
-The Mango widgets are Jupyter widgets built on `pileup.js <https://github.com/hammerlab/pileup.js>`__ .
+The Mango widgets are Jupyter widgets built using `pileup.js <https://github.com/hammerlab/pileup.js>`__ .
 The widgets support visualizations for alignments, features,
 variants, and genotypes in a Jupyter Notebook.
 

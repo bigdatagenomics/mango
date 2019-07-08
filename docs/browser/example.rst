@@ -2,7 +2,7 @@ Mango Browser Examples
 ======================
 
 Mango browser is an HTML based genome browser that runs on local, remote, and cloud staged files.
-The Mango Browser builds on top of `Apache Spark <https://spark.apache.org/>`__ and `scalatra <http://scalatra.org/>`__.
+The Mango Browser utilizes `Apache Spark <https://spark.apache.org/>`__ and `scalatra <http://scalatra.org/>`__.
 
 See `file support <../files/file-support.html>`__ for file types that are supported in the Mango Browser.
 
@@ -10,7 +10,7 @@ See `file support <../files/file-support.html>`__ for file types that are suppor
 Mango Browser Options
 ---------------------
 
-The Mango browser uses the `mango-submit <https://github.com/bigdatagenomics/mango/blob/master/bin/mango-submit>`__ script to start an Apache Spark session and run the Mango Browser.
+The Mango browser uses the `mango-submit <https://github.com/bigdatagenomics/mango/blob/master/bin/mango-submit>`__ script to start an Apache Spark session and launch the Mango Browser.
 The mango-submit script can be found in the `Mango Distribution <../installation/distribution.html>`__ or in the `Mango Github repository <https://github.com/bigdatagenomics/mango>`__.
 
 To see options that can be run with the Mango Submit script, run:
@@ -94,7 +94,7 @@ to view data.
 Running Mango Browser with Parameters
 -------------------------------------
 
-Mango can take in `Apache Spark <https://spark.apache.org/docs/latest/configuration.html>`__ parameters, as well as Mango parameters shown above.
+Mango can accept `Apache Spark <https://spark.apache.org/docs/latest/configuration.html>`__ parameters, as well as Mango parameters shown above.
 
 To run Mango browser with user specified Apache Spark parameters, run
 
@@ -135,7 +135,7 @@ Running on Apache YARN
 ----------------------
 
 YARN is a resource management system for clusters.
-The Mango browser can run on `YARN <https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html>`__ clusters, and requires package org.apache.parquet:parquet-avro:1.8.3.
+The Mango browser can run on `YARN <https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html>`__ clusters, and requires package ``org.apache.parquet:parquet-avro:1.8.3``.
 To run the Mango browser on YARN, include parquet-avro as a package on start-up:
 
 .. code:: bash

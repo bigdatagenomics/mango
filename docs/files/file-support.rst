@@ -24,7 +24,7 @@ Mango supports the following file types:
 Accessing http files through Mango
 -----------------------------------
 
-Mango can copy and read http files. To do so, in mango-submit, set ``spark.local.dir`` to a path in the user's home directory:
+Mango can copy and read http files. To do so, when running ``mango-submit``, set ``spark.local.dir`` to a path in the user's home directory:
 
 .. code:: bash
 
@@ -37,7 +37,7 @@ This will allow Spark to access temporary http files.
 Accessing s3a files through Mango
 ---------------------------------
 
-To access s3a files when running on AWS, you need the net.fnothaft:jsr203-s3a package, and the bam splitter to be enabled:
+To access s3a files when running on AWS, you need the ``net.fnothaft:jsr203-s3a`` package, and the bam splitter to be enabled:
 
 .. code:: bash
 

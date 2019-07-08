@@ -7,7 +7,7 @@ Please `follow the Mango source installation requirements <../installation/sourc
 Debugging the Mango browser frontend
 ------------------------------------
 
-Mango browser uses scalatra for a web server. To interactively modify the frontend browser while running scalatra, use the "-debugFrontend" flag:
+Mango browser uses scalatra as  a web server. To interactively modify the frontend browser while running scalatra, use the "-debugFrontend" flag:
 
 .. code:: bash
 
