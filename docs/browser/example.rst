@@ -4,7 +4,7 @@ Mango Browser Examples
 Mango browser is an HTML based genome browser that runs on local, remote, and cloud staged files.
 The Mango Browser builds on top of `Apache Spark <https://spark.apache.org/>`__ and `scalatra <http://scalatra.org/>`__.
 
-See `file support <../files/file-support.html>`__ for files types that are supported in the Mango Browser.
+See `file support <../files/file-support.html>`__ for file types that are supported in the Mango Browser.
 
 
 Mango Browser Options
@@ -13,7 +13,7 @@ Mango Browser Options
 The Mango browser uses the `mango-submit <https://github.com/bigdatagenomics/mango/blob/master/bin/mango-submit>`__ script to start an Apache Spark session and run the Mango Browser.
 The mango-submit script can be found in the `Mango Distribution <../installation/distribution.html>`__ or in the `Mango Github repository <https://github.com/bigdatagenomics/mango>`__.
 
-To see options that can be run with the Mango Submit script, run
+To see options that can be run with the Mango Submit script, run:
 
 .. code:: bash
 
@@ -113,7 +113,7 @@ Running example files on a cluster with HDFS
 
 The Mango browser can run files that are staged on Hadoop Distributed File System (`HDFS <https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html#Introduction>`__).
 
-To run the example files on a cluster with hdfs, first first put example-files on hdfs.
+To run the example files on a cluster with hdfs, first put example-files on hdfs:
 
 .. code:: bash
 
