@@ -161,12 +161,11 @@ Publishing Group: 647–57.
 
 .. raw:: html
 
-   <div id="ref-vavilapalli13">
+   <div id="ref-Vanderkam16">
 
-Vavilapalli, Vinod Kumar, Arun C Murthy, Chris Douglas, Sharad Agarwal,
-Mahadev Konar, Robert Evans, Thomas Graves, et al. 2013. “Apache Hadoop
-YARN: Yet Another Resource Negotiator.” In *Proceedings of the Symposium
-on Cloud Computing (SoCC ’13)*, 5. ACM.
+Vanderkam, Dan,  B. Arman Aksoy, Isaac Hodes, Jaclyn Perrone, and Jeff 
+Hammerbacher. 2016. “pileup.js: a JavaScript library for interactive 
+and in-browser visualization of genomic data.” In *Bioinformatics*, 32 (15).
 
 .. raw:: html
 
@@ -174,11 +173,12 @@ on Cloud Computing (SoCC ’13)*, 5. ACM.
 
 .. raw:: html
 
-   <div id="ref-Vanderkam16">
+   <div id="ref-vavilapalli13">
 
-Vanderkam, Dan,  B. Arman Aksoy, Isaac Hodes, Jaclyn Perrone, and Jeff 
-Hammerbacher. 2016. “pileup.js: a JavaScript library for interactive 
-and in-browser visualization of genomic data.” In *Bioinformatics*, 32 (15).
+Vavilapalli, Vinod Kumar, Arun C Murthy, Chris Douglas, Sharad Agarwal,
+Mahadev Konar, Robert Evans, Thomas Graves, et al. 2013. “Apache Hadoop
+YARN: Yet Another Resource Negotiator.” In *Proceedings of the Symposium
+on Cloud Computing (SoCC ’13)*, 5. ACM.
 
 .. raw:: html
 
