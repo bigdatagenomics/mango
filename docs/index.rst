@@ -161,6 +161,18 @@ Publishing Group: 647–57.
 
 .. raw:: html
 
+   <div id="ref-Vanderkam16">
+
+Vanderkam, Dan,  B. Arman Aksoy, Isaac Hodes, Jaclyn Perrone, and Jeff 
+Hammerbacher. 2016. “pileup.js: a JavaScript library for interactive 
+and in-browser visualization of genomic data.” In *Bioinformatics*, 32 (15).
+
+.. raw:: html
+
+   </div>
+
+.. raw:: html
+
    <div id="ref-vavilapalli13">
 
 Vavilapalli, Vinod Kumar, Arun C Murthy, Chris Douglas, Sharad Agarwal,
