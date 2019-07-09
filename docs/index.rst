@@ -174,6 +174,18 @@ on Cloud Computing (SoCC ’13)*, 5. ACM.
 
 .. raw:: html
 
+   <div id="ref-Vanderkam16">
+
+Vanderkam, Dan,  B. Arman Aksoy, Isaac Hodes, Jaclyn Perrone, and Jeff 
+Hammerbacher. 2016. “pileup.js: a JavaScript library for interactive 
+and in-browser visualization of genomic data.” In *Bioinformatics*, 32 (15).
+
+.. raw:: html
+
+   </div>
+
+.. raw:: html
+
    <div id="ref-zaharia12">
 
 Zaharia, Matei, Mosharaf Chowdhury, Tathagata Das, Ankur Dave, Justin
