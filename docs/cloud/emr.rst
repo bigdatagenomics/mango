@@ -42,7 +42,7 @@ Through the command line, create a new cluster:
   --release-label emr-5.24.0 \
   --name 'emr-5.24.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark  \
-  --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
+  --ec2-attributes KeyName=<YOUR_EC2_KEY>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
   --instance-groups \
     InstanceGroupType=MASTER,InstanceCount=1,InstanceType=c3.4xlarge \
@@ -51,6 +51,12 @@ Through the command line, create a new cluster:
   --log-uri s3://<your-s3-bucket>/emr-logs/ \
   --bootstrap-actions \
   Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-docker-emr5.sh"
+
+In the code chunk above, set your EC2 key pair name:
+
+.. code:: bash
+
+    --ec2-attributes KeyName=<YOUR_EC2_KEY>
 
 Note the instance counts:
 
@@ -228,7 +234,7 @@ Through the AWS command line, create a new cluster:
   --release-label emr-5.24.0 \
   --name 'emr-5.24.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark Name=JupyterHub  \
-  --ec2-attributes KeyName=<your-ec2-key>,InstanceProfile=EMR_EC2_DefaultRole \
+  --ec2-attributes KeyName=<YOUR_EC2_KEY>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
   --instance-groups \
     InstanceGroupType=MASTER,InstanceCount=1,InstanceType=c3.4xlarge \
