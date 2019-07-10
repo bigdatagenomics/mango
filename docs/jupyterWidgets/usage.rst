@@ -26,7 +26,7 @@ These tutorials show how to create a Jupyter pileup.js widget. An example notebo
 Pileup Example
 --------------
 
-This example shows how to visualize alignments through a Jupyter widget.
+This example shows how to visualize alignments through a Jupyter widget. It is located in ``<PATH_TO_MANGO>/mango-viz/examples/pileup-tutorial.ipynb``.
 
 .. code:: python
 

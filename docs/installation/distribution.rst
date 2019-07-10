@@ -57,3 +57,9 @@ And bdgenomics.mango:
 .. code:: bash
 
     pip install bdgenomics.mango
+
+And bdgenomics.adam:
+
+.. code:: bash
+
+    pip install bdgenomics.adam
