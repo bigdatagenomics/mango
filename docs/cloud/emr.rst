@@ -247,7 +247,7 @@ Through the AWS command line, create a new cluster:
 Where $VERSION specifies the Mango version available in the `Maven central repository <https://search.maven.org/search?q=g:org.bdgenomics.mango>`__.
 
 This bootstrap action will download Mango distribution code, and an example notebook file for the Mango notebook will
-be available at /home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb.
+be available at ``/home/hadoop/mango-distribution-${VERSION}/notebooks/aws-1000genomes.ipynb``.
 
 Finally, make sure you set your SPARK_HOME env:
 
