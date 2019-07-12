@@ -49,19 +49,18 @@ You will see a list of options:
 Note that a genome file is always required when running the Mango Browser.
 `See how to build a genome <./genomes.html>`__.
 
-Running Mango Browser Locally
+Running Mango Browser Examples Locally
 -----------------------------
 
 The `Mango Github repository <https://github.com/bigdatagenomics/mango>`__ contains example scripts and data files for running Mango browser on region chr17:7500000-7515000
-of a single aligment sample. Once `Mango is built <../installation/source.html>`__, you can run the following command
-to view Mango browser:
+of a single aligment sample. Once `Mango is built <../installation/source.html>`__, you can run the following command from the root mango directory to view Mango browser:
 
 .. code:: bash
 
-    ./example-files/browser-scripts/run-example
+    ./example-files/browser-scripts/run-example.sh
 
 
-This file contains the following command:
+This script contains the following command:
 
 .. code:: bash
 
@@ -69,7 +68,7 @@ This file contains the following command:
     -reads ./example-files/chr17.7500000-7515000.sam \
     -variants ./example-files/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
 
-This file specifies the required genome reference file:
+This script specifies the required genome reference file:
 
 .. code:: bash
 
@@ -90,6 +89,18 @@ An optional variant file:
 
 Once the example script is running, navigate to localhost:8080 to view the Mango browser. Navigate to ``chr17:7500000-7515000``
 to view data.
+
+
+There is also another example script at ``./example-files/browser-scripts/run-http-example.sh`` that runs on remote files from Amazon S3.
+
+This script contains the following command:
+
+.. code:: bash
+
+  bin/mango-submit ./example-files/hg19.genome \
+    -variants http://s3.amazonaws.com/1000genomes/phase1/analysis_results/integrated_call_sets/ALL.chr1.integrated_phase1_v3.20101123.snps_indels_svs.genotypes.vcf.gz \
+    -reads http://s3.amazonaws.com/1000genomes/phase1/data/NA19661/exome_alignment/NA19661.mapped.illumina.mosaik.MXL.exome.20110411.bam
+
 
 Running Mango Browser with Parameters
 -------------------------------------

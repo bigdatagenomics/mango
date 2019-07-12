@@ -1,8 +1,8 @@
 Building Mango from Source
 ==========================
 
-You will need to have Java 8 and  `Apache Maven <http://maven.apache.org/>`__
-version 3.1.1 or later installed in order to build Mango.
+You will need to have Java 8, `Apache Maven <http://maven.apache.org/>`__
+version 3.1.1 or later, and `npm <https://www.npmjs.com/get-npm>`__ version 4.0.0 or later installed in order to build Mango.
 
     **Note:** The default configuration is for Hadoop 2.7.3. If building
     against a different version of Hadoop, please pass
@@ -52,7 +52,7 @@ Next, build Mango jars without running tests, by running the following command f
 
 .. code:: bash
 
-   mvn clean package  -DskipTests
+   mvn clean package -DskipTests
 
 Additionally, the PySpark dependencies must be on the Python module load path and the Mango JARs must be built and provided to PySpark. This can be done with the following bash commands: 
 

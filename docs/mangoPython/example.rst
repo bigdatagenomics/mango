@@ -21,6 +21,7 @@ the open port assigned by Jupyter notebook. There are three notebooks that can b
 
 - `example-files/notebooks/mango-python-alignment.ipynb <https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/mango-python-alignment.ipynb>`__
 - `example-files/notebooks/mango-python-coverage.ipynb <https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/mango-python-coverage.ipynb>`__
+- `example-files/notebooks/mango-python-variants.ipynb <https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/mango-python-variants.ipynb>`__
 - `example-files/notebooks/mango-viz.ipynb <https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/mango-viz.ipynb>`__
 
 
