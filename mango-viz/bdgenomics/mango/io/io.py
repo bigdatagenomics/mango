@@ -7,4 +7,4 @@ def read_bed(filepath_or_buffer,
     "blockSizes", "blockStarts"],
     skiprows=None
  ):
-    return BedFile.read(filepath_or_buffer, column_names, skiprows)
+   return BedFile.read(filepath_or_buffer, column_names, skiprows)

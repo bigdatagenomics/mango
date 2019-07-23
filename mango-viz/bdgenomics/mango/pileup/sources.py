@@ -38,7 +38,10 @@ Sources specify where the genomic data comes from. Sources can come from a url, 
     GA4GHVariantSource
     GA4GHFeatureSource
 """
+<<<<<<< HEAD
 
+=======
+>>>>>>> d733871... extended dataframe to include attribute that specifies pileup visualization, updated requirements.txt
 from bdgenomics.mango.io import *
 
 # generic data source for pileup.js
