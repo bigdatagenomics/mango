@@ -29,7 +29,6 @@ class BedFile(GenomicFile):
             chromosomes = list(df["chrom"])
             chrom_starts = list(df["chromStart"])
             chrom_ends = list(df["chromEnd"])
-        #raise NotImplementedError("Implement Me!")
         return (chrom_starts, chrom_ends, chromosomes)
 
     @classmethod
@@ -47,4 +46,7 @@ class BedFile(GenomicFile):
         #ending json
         json_ga4gh = json_ga4gh + "]}"
         return json_ga4gh
-        #raise NotImplementedError("Implement Me!")
+    
+    @classmethod
+    def _visualization(cls, df):
+        return 'featureJson'
