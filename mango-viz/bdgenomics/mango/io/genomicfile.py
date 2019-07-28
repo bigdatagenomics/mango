@@ -16,16 +16,6 @@
 # limitations under the License.
 #
 
-r"""
-=====
-Genomic File
-=====
-.. currentmodule:: bdgenomics.mango.io.genomicfile
-
-Genomic Files specify what kind of file is being visualized.
-
-"""
-
 import modin.pandas as pd
 
 

@@ -1,3 +1,20 @@
+#
+# Licensed to Big Data Genomics (BDG) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional insourceion
+# regarding copyright ownership.  The BDG licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 from .genomicfile import GenomicFile
 
 
@@ -9,26 +26,9 @@ class BedFile(GenomicFile):
 
     @classmethod
     def _parse(cls, df):
-        #check whether correct column names are passed into dataframe
-        df_cols = list(df.columns)
-        valid_columns = True
-        for name in ("chrom", "chromStart", "chromEnd"):
-            if name not in df_cols:
-                valid_columns = False
-
-        if not valid_columns:
-            #assume no names passed in and take first 3 columns as chrom, chromStart, chromEnd
-            chrom, chrom_start, chom_end = df_cols[:3]
-
-            chrom_starts = [int(chrom_start)] + (list(df[chrom_start]))
-            chrom_ends = [int(chom_end)] + (list(df[chom_end]))
-            chromosomes = [chrom] + (list(df[chrom]))
-
-            return build_json_from_bed(chrom_starts, chrom_ends, chromosomes)
-        else:
-            chromosomes = list(df["chrom"])
-            chrom_starts = list(df["chromStart"])
-            chrom_ends = list(df["chromEnd"])
+        chromosomes = list(df["chrom"])
+        chrom_starts = list(df["chromStart"])
+        chrom_ends = list(df["chromEnd"])
         return (chrom_starts, chrom_ends, chromosomes)
 
     @classmethod
