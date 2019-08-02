@@ -17,33 +17,63 @@
 #
 
 import unittest
+import json
 from bdgenomics.mango.io import *
 
 class BedFileTest(unittest.TestCase):
 
     dataframe = io.read_bed("../../../examples/data/chr17.582500-594500.bed")
+    filename = "../../../examples/data/chr17.582500-594500.bed"
 
-    def test_columns():
+    def test_required_columns():
         dataframe_columns = list(dataframe.columns)
         for name in ("chrom", "chromStart", "chromEnd"):
             assert(name in dataframe_columns)
 
-    def test_correct_format():
+     def test_from_dataframe():
         chromosomes = list(dataframe["chrom"])
         chromStart = list(dataframe["chromStart"])
         chromEnd = list(dataframe["chromEnd"])
-        for item in chromsomes:
-            assert(type(item) == str)
-        for item in chromStart:
-            assert(type(item) == int)
-        for item in chromEnd:
-            assert(type(item) == int)
-        
-    def test_to_json():
-        assert(type(dataframe._mango_to_json) == str)
-        
+
+        d1, d2, d3 = dataframe._mango_parse
+        for i in range(len(chromStart)):
+            assert(type(d1[i] == int))
+            assert(d1[i]==chromStart[i])
+
+        for i in range(len(chromEnd)):
+            assert(type(d2[i] == int))
+            assert(d2[i] == chromEnd[i])
+            
+        for i in range(len(chromosomes)):
+            assert(type(d3[i] == int))
+            assert(d3[i] == chromosomes[i])
 
     
+    def validate_num_rows():
+        with open(filename, "r") as ins:
+        lines = []
+        for line in ins:
+            array.append(line)
+        assert(len(lines)== len(dataframe.index))
+
+    def is_valid_json(string):
+        try:
+            json_object = json.loads(string)
+        except ValueError, e:
+            return False
+        return True
+
+    def test_to_json():
+        assert(type(dataframe._mango_to_json) == str)
+        assert(is_valid_json(dataframe._mango_to_json) == True)
+    
+   
+
+
+
+    
+
+
 # Run tests
 if __name__ == '__main__':
     unittest.main()
