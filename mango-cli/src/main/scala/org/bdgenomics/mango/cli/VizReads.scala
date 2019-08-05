@@ -21,6 +21,7 @@ import java.net.URI
 
 import ga4gh.Common.Strand
 import ga4gh.Reads.ReadAlignment
+import grizzled.slf4j.Logging
 import net.liftweb.json.Serialization.write
 import net.liftweb.json._
 import org.apache.spark.SparkContext
@@ -32,7 +33,6 @@ import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.models._
 import org.bdgenomics.utils.cli._
 import org.bdgenomics.utils.instrumentation.Metrics
-import org.bdgenomics.utils.misc.Logging
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
@@ -171,12 +171,12 @@ object VizReads extends BDGCommandCompanion with Logging {
     val thread = new Thread {
       override def run() {
         try {
-          log.info("Shutting down the server")
+          info("Shutting down the server")
           server.stop()
-          log.info("Server has stopped")
+          info("Server has stopped")
         } catch {
           case e: Exception => {
-            log.info("Error when stopping Jetty server: " + e.getMessage, e)
+            info("Error when stopping Jetty server: " + e.getMessage, e)
           }
         }
       }

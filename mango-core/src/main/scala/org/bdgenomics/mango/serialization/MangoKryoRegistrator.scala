@@ -40,7 +40,6 @@ class MangoKryoRegistrator extends ADAMKryoRegistrator {
     kryo.register(classOf[org.bdgenomics.formats.avro.Sample], new AvroSerializer[org.bdgenomics.formats.avro.Sample]())
     kryo.register(classOf[Genotype], new AvroSerializer[Genotype]())
     kryo.register(classOf[Variant], new AvroSerializer[Variant]())
-    kryo.register(classOf[NucleotideContigFragment], new AvroSerializer[NucleotideContigFragment]())
     kryo.register(classOf[Reference], new AvroSerializer[Reference]())
     kryo.register(classOf[Dbxref], new AvroSerializer[Dbxref]())
     kryo.register(classOf[Feature], new AvroSerializer[Feature]())

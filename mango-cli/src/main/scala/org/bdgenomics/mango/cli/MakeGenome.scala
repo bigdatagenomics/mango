@@ -17,10 +17,10 @@
  */
 package org.bdgenomics.mango.cli
 
+import grizzled.slf4j.Logging
 import org.apache.spark.SparkContext
 import org.bdgenomics.mango.core.util.GenomeConfig
 import org.bdgenomics.utils.cli._
-import org.bdgenomics.utils.misc.Logging
 import org.kohsuke.args4j.Argument
 
 /**
@@ -51,6 +51,6 @@ class MakeGenome(protected val args: MakeGenomeArgs) extends BDGSparkCommand[Mak
 
   override def run(sc: SparkContext): Unit = {
     GenomeConfig.saveZippedGenome(args.genome, args.outputPath)
-    log.info(s"Saved genome ${args.genome} to ${args.outputPath}")
+    info(s"Saved genome ${args.genome} to ${args.outputPath}")
   }
 }
