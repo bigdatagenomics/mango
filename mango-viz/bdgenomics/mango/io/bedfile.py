@@ -37,7 +37,7 @@ class BedFile(GenomicFile):
         json_ga4gh = "{\"features\":["
         for i in range(len(chromosomes)+1):
             if i < len(chromosomes):
-                bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+chromosomes[i]+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"")
+                bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+str(chromosomes[i])+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"")
                 json_ga4gh = json_ga4gh + "{" + bed_content + "},"
             else:
                 json_ga4gh = json_ga4gh[:len(json_ga4gh)-1]

@@ -18,19 +18,22 @@
 
 import unittest
 import json
+import pandas as pd
 from bdgenomics.mango.io import *
+import bdgenomics.mango.pileup as pileup
+from bdgenomics.mango.pileup.track import *
 
 class BedFileTest(unittest.TestCase):
-
-    dataframe = io.read_bed("../../../examples/data/chr17.582500-594500.bed")
-    filename = "../../../examples/data/chr17.582500-594500.bed"
-
-    def test_required_columns():
+    global dataframe 
+    dataframe = read_bed("../../../../examples/data/chr17.582500-594500.bed")
+    
+    def test_required_columns(self):
         dataframe_columns = list(dataframe.columns)
         for name in ("chrom", "chromStart", "chromEnd"):
             assert(name in dataframe_columns)
 
-     def test_from_dataframe():
+    def test_column_type(self):
+        #dataframe = read_bed("../../../../examples/data/chr17.582500-594500.bed")
         chromosomes = list(dataframe["chrom"])
         chromStart = list(dataframe["chromStart"])
         chromEnd = list(dataframe["chromEnd"])
@@ -43,37 +46,45 @@ class BedFileTest(unittest.TestCase):
         for i in range(len(chromEnd)):
             assert(type(d2[i] == int))
             assert(d2[i] == chromEnd[i])
-            
+
         for i in range(len(chromosomes)):
             assert(type(d3[i] == int))
             assert(d3[i] == chromosomes[i])
 
     
-    def validate_num_rows():
+    def test_validate_num_rows(self):
+        #dataframe = read_bed("../../../../examples/data/chr17.582500-594500.bed")
+        filename = "../../../../examples/data/chr17.582500-594500.bed"
         with open(filename, "r") as ins:
-        lines = []
-        for line in ins:
-            array.append(line)
-        assert(len(lines)== len(dataframe.index))
+            lines = []
+            for line in ins:
+                lines.append(line)
+            assert(len(lines)== len(dataframe.index))
 
-    def is_valid_json(string):
-        try:
-            json_object = json.loads(string)
-        except ValueError, e:
-            return False
-        return True
+    def test_to_json(self):
 
-    def test_to_json():
+        def is_valid_json(string):
+            try:
+                json_object = json.loads(string)
+            except ValueError:
+                return False
+            return True
+
+        #dataframe = read_bed("../../../../examples/data/chr17.582500-594500.bed")
         assert(type(dataframe._mango_to_json) == str)
         assert(is_valid_json(dataframe._mango_to_json) == True)
+
+    def test_visualization(self):
+        assert(dataframe._pileup_visualization == "featureJson")
+        tracks=[Track(viz="features", label="my features", source=pileup.sources.DataFrameSource(dataframe))]
+        reads = pileup.PileupViewer(locus="chr22:10436-10564", reference="hg19", tracks=tracks)
+        assert(str(type(reads)) == '<class \'bdgenomics.mango.pileup.pileupViewer.PileupViewer\'>')
+
+
     
-   
-
-
-
-    
-
+        
 
 # Run tests
 if __name__ == '__main__':
     unittest.main()
+    

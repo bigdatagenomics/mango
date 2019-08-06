@@ -15,6 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from .io import read_bed
+from .readers import read_bed
 
 __all__ = ["read_bed"]
