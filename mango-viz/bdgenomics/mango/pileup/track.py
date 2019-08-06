@@ -60,7 +60,6 @@ class Track(TraitType):
 
         Args:
             :param kwargs: Should contain viz, optional source, optional label.
-
         """
         
 
