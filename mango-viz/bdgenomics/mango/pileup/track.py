@@ -60,27 +60,26 @@ class Track(TraitType):
 
         Args:
             :param kwargs: Should contain viz, optional source, optional label.
+
         """
-        
-
-
         for key, value in kwargs.items():
+
             if key == "viz":
                 if value not in vizNames.keys():
                     raise RuntimeError('Invalid track visualization %s. Available tracks include %s' % (value, vizNames.keys()))
                 setattr(self, key, value)
-                
+
             elif key == "source":
                 if value.name not in vizNames[kwargs["viz"]]:
-                    raise RuntimeError('Invalid data source %s for track %s' 
+                    raise RuntimeError('Invalid data source %s for track %s'
                                        % (value.name, kwargs["viz"]))
 
                 self.source = kwargs["source"].name
                 self.sourceOptions = kwargs["source"].dict_
             else:
                 setattr(self, key, value)
-        
-              
+
+
 
 def track_to_json(pyTrack, manager):
     """Serialize a Track.

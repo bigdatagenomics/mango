@@ -34,7 +34,7 @@ npm=npm
 node=node
 mango_version:=$(shell $(python) bdgenomics/mango/pileup/_version.py)
 sdist_name:=mango.pileup-$(mango_version).tar.gz
-tests=bdgenomics/mango/pileup/
+tests=bdgenomics/mango/
 extras=
 current_commit:=$(shell git log --pretty=oneline -n 1 -- $(pwd) | cut -f1 -d " ")
 dirty:=$(shell (git diff --exit-code && git diff --cached --exit-code) > /dev/null || printf -- --DIRTY)
@@ -68,8 +68,9 @@ clean_sdist:
 
 
 test: check_build_reqs
-	pushd ../example-files/notebooks \
-		&& jupyter nbconvert --to python mango-viz.ipynb
+	pushd examples \
+		&& jupyter nbconvert --to python pileup-tutorial.ipynb
+
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	# run lint and flow for js
@@ -100,9 +101,7 @@ check_build_reqs:
 
 # installs necessary requirements
 prepare:
-	$(pip) install pytest==2.8.3
-	$(pip) install jupyter==1.0.0
-	$(pip) install ipywidgets==7.0.0
+	$(pip) install -r requirements.txt
 
 	# install node_modules
 	cd bdgenomics/mango/js; \
