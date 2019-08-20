@@ -24,7 +24,7 @@ class VCFFileTest(unittest.TestCase):
     def test_dataframe(self):
         dataframe = read_vcf("../../../../examples/data/genodata.v3.vcf")
         print(dataframe.head())
-        print(dataframe._mango_parse)
+        print(dataframe._mango_to_json)
 
 
     # Run tests

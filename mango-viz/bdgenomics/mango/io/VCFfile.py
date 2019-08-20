@@ -67,16 +67,31 @@ class VCFFile(GenomicFile):
 
     @classmethod
     def _parse(cls, df):
-        return 'class method parse function not implemented'
+        references = list(df["CHROM"])
+        chrom_starts = list(df["POS"])
+        chrom_ends = [item + 1 for item in chrom_starts]
+        return (chrom_starts, chrom_ends, references)
     
     @classmethod
     def _to_json(cls, df):
-        #need to see whether there is a json connection from vcf to mango
-        return 'not implemented, is it necessary?'
+        chrom_starts, chrom_ends, chromosomes = cls._parse(df)
+        json_ga4gh = "{\"variants\":["
+        for i in range(len(chromosomes)+1):
+            if i < len(chromosomes):
+                bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+str(chromosomes[i])+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"")
+                json_ga4gh = json_ga4gh + "{" + bed_content + "},"
+            else:
+                json_ga4gh = json_ga4gh[:len(json_ga4gh)-1]
+
+
+        #ending json
+        json_ga4gh = json_ga4gh + "]}"
+        return json_ga4gh
+        
     
     @classmethod
     def _visualization(cls, df):
-        return 'vcf'
+        return 'variantJson'
 
     @classmethod
     def parse(cls, line):
