@@ -27,7 +27,8 @@ import gzip
 class VCFFile(GenomicFile):
 
     global VCF_HEADER
-    VCF_HEADER = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
+    global NUM_SAMPLES
+    VCF_HEADER = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
     @classmethod
     def _read(cls, filename, large = True):
@@ -46,39 +47,28 @@ class VCFFile(GenomicFile):
             # Count how many comment lines should be skipped.
             comments = cls._count_comments(filename)
             # Return a simple DataFrame without splitting the INFO column.
-            return cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(comments),
-                                names=VCF_HEADER, usecols=range(8))
-
-        # Each column is a list stored as a value in this dict. The keys for this
-        # dict are the VCF column names and the keys in the INFO column.
-        result = OrderedDict()
-        # Parse each line in the VCF file into a dict.
-        for i, line in enumerate(cls.lines(filename)):
-            for key in line.keys():
-                # This key has not been seen yet, so set it to None for all
-                # previous lines.
-                if key not in result:
-                    result[key] = [None] * i
-            # Ensure this row has some value for each column.
-            for key in result.keys():
-                result[key].append(line.get(key, None))
-
-        return cls.dataframe_lib.DataFrame(result)
+            df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(comments))
+            NUM_SAMPLES = len(df.columns) - len(VCF_HEADER)
+            df.columns = VCF_HEADER + [i for i in range(1, NUM_SAMPLES+1)]
+            return df
 
     @classmethod
     def _parse(cls, df):
         references = list(df["CHROM"])
         chrom_starts = list(df["POS"])
         chrom_ends = [item + 1 for item in chrom_starts]
-        return (chrom_starts, chrom_ends, references)
+        reference_bases = list(df["REF"])
+        alternate_bases = list(df["ALT"])
+        ids = list(df["ID"])
+        return (chrom_starts, chrom_ends, references, reference_bases, alternate_bases, ids)
     
     @classmethod
     def _to_json(cls, df):
-        chrom_starts, chrom_ends, chromosomes = cls._parse(df)
+        chrom_starts, chrom_ends, chromosomes, reference_bases, alternate_bases, ids = cls._parse(df)
         json_ga4gh = "{\"variants\":["
         for i in range(len(chromosomes)+1):
             if i < len(chromosomes):
-                bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+str(chromosomes[i])+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"")
+                bed_content = '"referenceName":{}, "start":{}, "end":{}, "referenceBases":{}, "alternateBases":{}, "id":{}'.format("\""+str(chromosomes[i])+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"", "\""+str(reference_bases[i])+"\"", "\""+str(alternate_bases[i])+"\"", "\""+str(ids[i])+"\"")
                 json_ga4gh = json_ga4gh + "{" + bed_content + "},"
             else:
                 json_ga4gh = json_ga4gh[:len(json_ga4gh)-1]
@@ -92,62 +82,6 @@ class VCFFile(GenomicFile):
     @classmethod
     def _visualization(cls, df):
         return 'variantJson'
-
-    @classmethod
-    def parse(cls, line):
-        """
-        Parse a single VCF line and return an OrderedDict.
-
-        """
-        result = OrderedDict()
-
-        fields = line.rstrip().split('\t')
-
-        # Read the values in the first seven columns.
-        for i, col in enumerate(VCF_HEADER[:7]):
-            result[col] = cls._get_value(fields[i])
-
-        # INFO field consists of "key1=value;key2=value;...".
-        infos = fields[7].split(';')
-
-        for i, info in enumerate(infos, 1):
-            # info should be "key=value".
-            try:
-                key, value = info.split('=')
-            # But sometimes it is just "value", so we'll make our own key.
-            except ValueError:
-                key = 'INFO{}'.format(i)
-                value = info
-            # Set the value to None if there is no value.
-            result[key] = cls._get_value(value)
-
-        return result
-
-    
-    @classmethod
-    def lines(cls, filename):
-        """Open an optionally gzipped VCF file and generate an OrderedDict for
-        each line.
-        """
-        fn_open = gzip.open if filename.endswith('.gz') else open
-
-        with fn_open(filename) as fh:
-            for line in fh:
-                if line.startswith('#'):
-                    continue
-                else:
-                    yield cls.parse(line)
-
-    @classmethod
-    def _get_value(cls, value):
-        """Interpret null values and return ``None``. Return a list if the value
-        contains a comma.
-        """
-        if not value or value in ['', '.', 'NA']:
-            return None
-        if ',' in value:
-            return value.split(',')
-        return value
 
     @classmethod
     def _count_comments(cls, filename):
