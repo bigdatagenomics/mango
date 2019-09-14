@@ -79,3 +79,34 @@ Mango can also be run through the notebook form.
 ```
 
 In the jupyter UI, navigate to example-files/notebooks to view examples.
+
+## Running mango in Docker
+
+The Microbrew project is intended to run mango in the cloud as a microservice. For now the Docker image should be created locally only. To work together with docker-compose, that means setting up a local Docker [registry](https://docs.docker.com/registry/deploying/).
+
+# Running a local registry
+
+Start the container:
+```
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+```
+
+Stop it after everything is built:
+```
+docker container stop registry
+```
+
+# Create Docker image
+
+The Docker build uses a plugin for Maven from its [own library](https://docs.docker.com/samples/library/maven/) and copies the files from the `/data` folder into the image. The filename is hard-coded into the Dockerfile: `S288C_reference_sequence_R64-2-1_20150113.fasta`.
+
+```
+docker build -t localhost:5000/microbrewery:0.1 .
+docker push localhost:5000/microbrewery:0.1
+```
+
+# Run Docker Compose
+
+```
+docker-compose up
+```

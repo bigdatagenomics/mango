@@ -38,6 +38,8 @@ mango-viz/mangoviz/static/*
 example-files/metastore_db/*
 
 
+# data for the docker image
+data/
 
 
 # resources for browser

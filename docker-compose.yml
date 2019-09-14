@@ -9,9 +9,6 @@ services:
       - "7077:7077"
     environment:
       - INIT_DAEMON_STEP=setup_spark
-    volumes:
-      - ./:/code
-    working_dir: /code
 
   spark-worker-1:
     image: bde2020/spark-worker:2.4.0-hadoop2.7
@@ -21,8 +18,7 @@ services:
     environment:
       - "SPARK_MASTER=spark://spark-master:7077"
     volumes:
-      - ./:/code
-    working_dir: /code
+      - data:/data
 
   spark-worker-2:
     image: bde2020/spark-worker:2.4.0-hadoop2.7
@@ -32,18 +28,19 @@ services:
     environment:
       - "SPARK_MASTER=spark://spark-master:7077"
     volumes:
-      - ./:/code
-    working_dir: /code
+      - data:/data
 
   spark-submit:
-    image: bde2020/spark-submit
-    command: "bash ./run-microbrew.sh"
+    image: localhost:5000/microbrewery:0.1
+    container_name: mango
     volumes:
-      - ./:/code
-    working_dir: /code
+      - data:/data
     depends_on:
       - spark-master
       - spark-worker-1
       - spark-worker-2
     ports:
       - "9000:8080"
+
+volumes:
+  data:
