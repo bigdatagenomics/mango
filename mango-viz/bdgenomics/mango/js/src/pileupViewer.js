@@ -24,11 +24,48 @@ var PileupViewerModel = widgets.DOMWidgetModel.extend({
 
 // Custom View. Renders the widget model.
 var PileupViewerView = widgets.DOMWidgetView.extend({
+    pileup: null,
+
     render: function() {
       this.data_changed();
+      this.listenTo(this.model, 'change:locus', this._locus_changed, this);
+      this.listenTo(this.model, 'change:msg', this._msg_changed, this);
+    },
+
+    _locus_changed: function() {
+        // TODO share code (copied from below)
+        var contig = this.model.get('locus').split(':')[0];
+        var start =  parseInt(this.model.get('locus').split(':')[1].split('-')[0]);
+        var stop =  parseInt(this.model.get('locus').split(':')[1].split('-')[1]);
+        var range = {contig: contig, start: start, stop: stop};
+
+        this.pileup.setRange(range);
+    },
+
+    _msg_changed: function() {
+        switch(this.model.get('msg')) {
+            case 'zoomIn':
+                console.log("zooming in");
+                this.pileup.zoomIn();
+                // TODO propogate back locus
+                break;
+
+            case 'zoomOut':
+                console.log("zooming out");
+                this.pileup.zoomOut();
+                // TODO propogate back locus
+                break;
+
+            case 'toSVG':
+                console.log("toSVG");
+                var svg = this.pileup.getSVG();
+                console.log(svg);
+                break;
+        }
     },
 
     data_changed: function() {
+        alert("data changed");
 
       // listen for errors so we can bubble them up to the Jupyter interface.
       // TODO: this would ideally be embedded in the widget
@@ -80,7 +117,7 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
       var stop =  parseInt(this.model.get('locus').split(':')[1].split('-')[1]);
       var range = {contig: contig, start: start, stop: stop};
 
-      var p = pileup.create(this.el, {
+      this.pileup = pileup.create(this.el, {
         range: range,
         tracks: sources
       });

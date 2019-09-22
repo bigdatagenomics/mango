@@ -29,6 +29,8 @@ PileupViewer
 import ipywidgets as widgets
 from traitlets import Unicode, Int, List
 from .track import Track, track_list_serialization
+import uuid
+import json
 
 @widgets.register('bdgenomics.mango.pileup.PileupViewer')
 class PileupViewer(widgets.DOMWidget):
@@ -43,8 +45,25 @@ class PileupViewer(widgets.DOMWidget):
     _model_module_version = Unicode('^0.1.0').tag(sync=True)
     # locus with placeholder
     locus=Unicode('chr1:1-50').tag(sync=True)
+    # message for updating js
+    msg=Unicode('').tag(sync=True)
     # string of reference genome.
     reference = Unicode('hg19').tag(sync=True)
     # Array of track elements
     tracks = List(Track()).tag(sync=True, **track_list_serialization)
+    id = uuid.uuid1().int
 
+    def goto(self, locus):
+        self.locus=locus
+
+    def zoomOut(self):
+        self.msg = "zoomOut"
+        print(self.msg)
+
+    def zoomIn(self):
+        self.msg = "zoomIn"
+        print(self.msg)
+
+    def toSVG(self):
+        self.msg = "toSVG"
+        print(self.msg)
