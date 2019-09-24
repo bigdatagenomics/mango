@@ -103,9 +103,11 @@ test: check_build_reqs
 	exit
 
 
-pypi: check_clean_working_copy
+pypi: clean clean_sdist check_clean_working_copy
 	set -x \
-	&& $(python) setup.py egg_info sdist bdist_egg upload
+	&& $(python) setup.py egg_info sdist bdist_egg \
+	&& twine check dist/* \
+	&& twine upload dist/*
 clean_pypi:
 	- rm -rf build/
 

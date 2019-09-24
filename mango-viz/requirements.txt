@@ -1,6 +1,5 @@
 jupyter == 1.0.0
 ipywidgets==7.0.0
 six==1.11.0
-modin==0.5.2
-pandas==0.24.2
+modin[ray]==0.6.1
 pytest==2.8.3
