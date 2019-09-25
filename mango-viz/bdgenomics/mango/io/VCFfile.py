@@ -40,42 +40,55 @@ class VCFFile(GenomicFile):
         :param large:       Use this with large VCF files to skip the ## lines and
                             leave the INFO fields unseparated as a single column.
         """
-        print("this is the filename", filename)
+
         if large:
             # Set the proper argument if the file is compressed.
             comp = 'gzip' if filename.endswith('.gz') else None
             # Count how many comment lines should be skipped.
             comments = cls._count_comments(filename)
             # Return a simple DataFrame without splitting the INFO column.
-            df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(comments))
+            df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(comments-1))
             NUM_SAMPLES = len(df.columns) - len(VCF_HEADER)
             df.columns = VCF_HEADER + [i for i in range(1, NUM_SAMPLES+1)]
-            return df
+            return df       
 
     @classmethod
-    def _parse(cls, df):
-        references = list(df["CHROM"])
-        chrom_starts = list(df["POS"])
-        chrom_ends = [item + 1 for item in chrom_starts]
-        reference_bases = list(df["REF"])
-        alternate_bases = list(df["ALT"])
-        ids = list(df["ID"])
-        return (chrom_starts, chrom_ends, references, reference_bases, alternate_bases, ids)
+    def _getcallinformation(cls, df, row):
+        sample_column_names = df.columns[9:]
+        call_information = '"calls":['
+        for col in sample_column_names:
+            current_call = '{'
+            call_set_name = '"callSetName":"{}",'.format(str(col))
+            info = str(row[col])
+            genotype = '"genotype":["{}","{}"],'.format(info[0], info[2])
+            phaseset = '"phaseset":"True"'
+            current_call = current_call + call_set_name + genotype + phaseset + '},'
+            call_information = call_information + current_call
+        call_information = call_information[:-1] + ']'
+        return call_information
+    
     
     @classmethod
+    def _parse(cls, df):
+        def _buildrow(row):
+            reference_name = row["CHROM"]
+            start = row["POS"]
+            end = start + 1
+            reference_bases = row["REF"]
+            alternate_bases = row["ALT"]
+            ids = row["ID"]
+            call_information = cls._getcallinformation(df, row)
+            content = '"referenceName":"{}", "start":"{}", "end":"{}", "referenceBases":"{}", "alternateBases":"{}", "id":"{}", {}'.format(str(reference_name), str(start), str(end), str(reference_bases), str(alternate_bases), str(ids), call_information)
+            return content
+        return df.apply(_buildrow, axis = 1)
+
+    @classmethod
     def _to_json(cls, df):
-        chrom_starts, chrom_ends, chromosomes, reference_bases, alternate_bases, ids = cls._parse(df)
+        content_series = cls._parse(df)
         json_ga4gh = "{\"variants\":["
-        for i in range(len(chromosomes)+1):
-            if i < len(chromosomes):
-                bed_content = '"referenceName":{}, "start":{}, "end":{}, "referenceBases":{}, "alternateBases":{}, "id":{}'.format("\""+str(chromosomes[i])+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"", "\""+str(reference_bases[i])+"\"", "\""+str(alternate_bases[i])+"\"", "\""+str(ids[i])+"\"")
-                json_ga4gh = json_ga4gh + "{" + bed_content + "},"
-            else:
-                json_ga4gh = json_ga4gh[:len(json_ga4gh)-1]
-
-
-        #ending json
-        json_ga4gh = json_ga4gh + "]}"
+        for line in content_series:
+            json_ga4gh = json_ga4gh + "{" + line + "},"
+        json_ga4gh =  json_ga4gh[:-1] + "]}"
         return json_ga4gh
         
     
