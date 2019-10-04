@@ -26,7 +26,9 @@ MOCK_MODULES = [
     "matplotlib.pyplot",
     "ipywidgets",
     "cigar",
-    "numpy"
+    "numpy",
+    "modin",
+    "modin.pandas"
 
 ]
 

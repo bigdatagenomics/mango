@@ -50,7 +50,7 @@ Note that a genome file is always required when running the Mango Browser.
 `See how to build a genome <./genomes.html>`__.
 
 Running Mango Browser Examples Locally
------------------------------
+--------------------------------------
 
 The `Mango Github repository <https://github.com/bigdatagenomics/mango>`__ contains example scripts and data files for running Mango browser on region chr17:7500000-7515000
 of a single aligment sample. Once `Mango is built <../installation/source.html>`__, you can run the following command from the root mango directory to view Mango browser:
