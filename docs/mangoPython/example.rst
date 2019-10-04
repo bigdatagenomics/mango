@@ -1,6 +1,8 @@
 Mango Python Examples
 =====================
 
+**Note**: Python 2.7 is `dropping support <https://www.anaconda.com/end-of-life-eol-for-python-2-7-is-coming-are-you-ready/>`__ January 1, 2020. For this reason, Mango no longer supports Python 2.
+
 Running Mango Notebook Locally
 ------------------------------
 

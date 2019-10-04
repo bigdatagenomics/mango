@@ -81,8 +81,10 @@ test: check_build_reqs
 
 pypi: clean sdist
 	set -x \
-	&& $(python) setup.py egg_info sdist bdist_egg upload
-
+	&& $(python) setup.py egg_info sdist bdist_egg \
+	&& twine check dist/* \
+	&& twine upload dist/*
+	
 # clean
 clean:
 	rm -rf bdgenomics/mango/js/dist

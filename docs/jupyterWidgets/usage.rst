@@ -1,6 +1,8 @@
 Jupyter Widget Usage
 ====================
 
+**Note**: Python 2.7 is `dropping support <https://www.anaconda.com/end-of-life-eol-for-python-2-7-is-coming-are-you-ready/>`__ January 1, 2020. For this reason, Mango no longer supports Python 2.
+
 The Mango widgets are Jupyter widgets built using `pileup.js <https://github.com/hammerlab/pileup.js>`__ .
 The widgets support visualizations for alignments, features,
 variants, and genotypes in a Jupyter Notebook.

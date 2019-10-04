@@ -38,14 +38,8 @@ install_reqs = parse_requirements('requirements.txt', session='hack')
 
 reqs = [str(ir.req) for ir in install_reqs]
 
-long_description = "!!!!! missing pandoc do not upload to PyPI !!!!"
-try:
-    import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
-except ImportError:
-    print("Could not import pypandoc - required to package bdgenomics.mango", file=sys.stderr)
-except OSError:
-    print("Could not convert - pandoc is not installed", file=sys.stderr)
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 setup(
     name='bdgenomics.mango',
@@ -59,4 +53,5 @@ setup(
         'https://test.pypi.org/simple/bdgenomics-adam/'
     ],
     long_description=long_description,
+    long_description_content_type='text/markdown',
     packages=find_packages(exclude=['*.test.*']))

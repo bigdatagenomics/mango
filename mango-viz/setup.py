@@ -25,6 +25,16 @@ from subprocess import check_call
 import os
 import sys
 
+
+# parse_requirements() returns generator of pip.req.InstallRequirement objects
+try: # for pip >= 10
+    from pip._internal.req import parse_requirements
+except ImportError: # for pip <= 9.0.3
+    from pip.req import parse_requirements
+
+install_reqs = parse_requirements('requirements.txt', session='hack')
+reqs = [str(ir.req) for ir in install_reqs]
+
 here = os.path.dirname(os.path.abspath(__file__))
 node_root = os.path.join(here, 'bdgenomics', 'mango', 'js')
 is_repo = os.path.exists(os.path.join(here, '.git'))
@@ -45,14 +55,8 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-long_description = "!!!!! missing pandoc do not upload to PyPI !!!!"
-try:
-    import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
-except ImportError:
-    print("Could not import pypandoc - required to package bdgenomics.mango", file=sys.stderr)
-except OSError:
-    print("Could not convert - pandoc is not installed", file=sys.stderr)
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 def js_prerelease(command, strict=False):
     """decorator for building minified js/css prior to another command"""
@@ -150,6 +154,7 @@ setup_args = {
     'version': version_ns['__version__'],
     'description': 'bdgenomics.mango.pileup',
     'long_description': long_description,
+    'long_description_content_type': 'text/markdown',
     'include_package_data': True,
     'data_files': [
         ('share/jupyter/nbextensions/pileup', [
@@ -158,9 +163,7 @@ setup_args = {
             'bdgenomics/mango/pileup/static/index.js.map',
         ]),
     ],
-    'install_requires': [
-        'ipywidgets>=6.0.0',
-    ],
+    'install_requires': reqs,
     'packages': find_packages(),
     'zip_safe': False,
     'cmdclass': {
