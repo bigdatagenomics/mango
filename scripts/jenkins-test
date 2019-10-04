@@ -176,7 +176,7 @@ then
     pythons=( 3.6 )
     for python in ${pythons[*]}
     do
-        conda create -y -q -n mango-build-${PYTHON_UUID} python=${python}
+        conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip
         source activate mango-build-${PYTHON_UUID}
 
         # install npm and node in the venv for mango-viz
