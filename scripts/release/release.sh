@@ -8,6 +8,8 @@ if [ $# -lt 3 ]; then
     exit 1
 fi
 
+# if GPG fails, do: export GPG_TTY=$(tty)
+
 # pick arguments
 release=$1 # ie 0.0.1
 devel=$2   # ie 0.0.2-SNAPSHOT
