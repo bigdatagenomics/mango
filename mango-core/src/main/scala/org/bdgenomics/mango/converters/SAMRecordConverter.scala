@@ -91,13 +91,13 @@ class SAMRecordConverter extends Serializable with Logging {
         .setCigar(cigar)
         .setBasesTrimmedFromStart(startTrim)
         .setBasesTrimmedFromEnd(endTrim)
-        .setOriginalQuality(SAMUtils.phredToFastq(samRecord.getOriginalBaseQualities))
+        .setOriginalQualityScores(SAMUtils.phredToFastq(samRecord.getOriginalBaseQualities))
 
       // if the quality string is "*", then we null it in the record
       // or, in other words, we only set the quality string if it is not "*"
       val qual = samRecord.getBaseQualityString
       if (qual != "*") {
-        builder.setQuality(qual)
+        builder.setQualityScores(qual)
       }
 
       // Only set the reference information if the read is aligned, matching the mate reference
