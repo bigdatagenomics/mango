@@ -199,7 +199,7 @@ class HistogramDistribution:
             bins = kwargs.get('bins',100)
 
             f, ax = plt.subplots(figsize=figsize)
-            ax.hist(self.collectedCounts, bins)
+            ax.hist(list(self.collectedCounts), bins)
             return ax, list(self.collectedCounts)
         else:
             return None, list(self.collectedCounts)

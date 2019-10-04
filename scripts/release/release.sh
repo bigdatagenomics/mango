@@ -50,8 +50,6 @@ if [ $python == "true" ]; then
     . release-venv/bin/activate
     pip install pyspark
     pip install twine
-    pip install pypandoc
-
 
     # set up mango-viz environment for releasing to pypi
     pushd mango-viz
