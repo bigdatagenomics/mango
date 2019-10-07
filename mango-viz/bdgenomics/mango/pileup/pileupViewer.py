@@ -45,6 +45,7 @@ class PileupViewer(widgets.DOMWidget):
     _model_module_version = Unicode('^0.1.0').tag(sync=True)
     # locus with placeholder
     locus=Unicode('chr1:1-50').tag(sync=True)
+    svg=Unicode('').tag(sync=True)
     # message for updating js
     msg=Unicode('').tag(sync=True)
     # string of reference genome.
@@ -58,12 +59,13 @@ class PileupViewer(widgets.DOMWidget):
 
     def zoomOut(self):
         self.msg = "zoomOut"
-        print(self.msg)
 
     def zoomIn(self):
         self.msg = "zoomIn"
-        print(self.msg)
 
     def toSVG(self):
         self.msg = "toSVG"
-        print(self.msg)
+
+        print(svg)
+
+        # TODO get svg back here

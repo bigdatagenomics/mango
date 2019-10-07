@@ -43,24 +43,32 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
     },
 
     _msg_changed: function() {
+
         switch(this.model.get('msg')) {
             case 'zoomIn':
                 console.log("zooming in");
                 this.pileup.zoomIn();
                 // TODO propogate back locus
+                console.log(this.pileup.getRange());
+                this.model.set('locus', this.pileup.getRange());
                 break;
 
             case 'zoomOut':
                 console.log("zooming out");
                 this.pileup.zoomOut();
                 // TODO propogate back locus
+                console.log(this.pileup.getRange());
+                this.model.set('locus',this.pileup.getRange());
                 break;
 
             case 'toSVG':
                 console.log("toSVG");
-                var svg = this.pileup.getSVG();
-                console.log(svg);
-                break;
+                this.pileup.getSVG().then(svg => {
+                    console.log(svg);
+                    // TODO: get back to python
+                    this.model.set('svg',svg);
+                    break;
+                });
         }
     },
 
