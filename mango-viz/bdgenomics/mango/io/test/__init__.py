@@ -19,6 +19,7 @@
 
 import os
 import unittest
+from bdgenomics import mango
 
 
 class IOTestCase(unittest.TestCase):
@@ -27,5 +28,5 @@ class IOTestCase(unittest.TestCase):
 
         #mangoRoot = os.path.dirname(os.getcwd())
         #return os.path.join(os.path.join(mangoRoot, "example-files"), file)
-        return "/Users/Abhishek1Mahesh/Desktop/rise_lab/mango/mango/example-files/" + file
+        return "../../../../../example-files/" + file
 

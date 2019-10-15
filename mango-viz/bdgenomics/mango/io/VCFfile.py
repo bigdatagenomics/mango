@@ -81,7 +81,7 @@ class VCFFile(GenomicFile):
             call_information = cls._getcallinformation(row)
             content = '"referenceName":"{}", "start":"{}", "end":"{}", "referenceBases":"{}", "alternateBases":"{}", "id":"{}", {}'.format(str(reference_name), str(start), str(end), str(reference_bases), str(alternate_bases), str(ids), call_information)
             return content
-        return df.apply(_buildrow, axis = 1)
+        return df.apply(_buildrow, axis = 1).squeeze()
 
     @classmethod
     def _to_json(cls, df):
