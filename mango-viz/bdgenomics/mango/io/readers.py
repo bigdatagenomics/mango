@@ -25,3 +25,6 @@ def read_bed(filepath_or_buffer,
     skiprows=None
  ):
    return BedFile.read(filepath_or_buffer, column_names, skiprows)
+
+def read_vcf(filepath_or_buffer):
+    return VCFFile.read(filepath_or_buffer)
