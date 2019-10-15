@@ -30,6 +30,7 @@ class VCFFile(GenomicFile):
     global NUM_SAMPLES
     VCF_HEADER = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
+
     @classmethod
     def _read(cls, filename, large = True):
         """Open an optionally gzipped VCF file and return a pandas.DataFrame with
@@ -45,16 +46,16 @@ class VCFFile(GenomicFile):
             # Set the proper argument if the file is compressed.
             comp = 'gzip' if filename.endswith('.gz') else None
             # Count how many comment lines should be skipped.
-            comments = cls._count_comments(filename)
+            NUM_COMMENTS = cls._count_comments(filename)
             # Return a simple DataFrame without splitting the INFO column.
-            df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(comments-1))
+            df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(NUM_COMMENTS-1))
             NUM_SAMPLES = len(df.columns) - len(VCF_HEADER)
             df.columns = VCF_HEADER + [i for i in range(1, NUM_SAMPLES+1)]
             return df       
 
     @classmethod
-    def _getcallinformation(cls, df, row):
-        sample_column_names = df.columns[9:]
+    def _getcallinformation(cls, row):
+        sample_column_names = row.index[9:]
         call_information = '"calls":['
         for col in sample_column_names:
             current_call = '{'
@@ -77,7 +78,7 @@ class VCFFile(GenomicFile):
             reference_bases = row["REF"]
             alternate_bases = row["ALT"]
             ids = row["ID"]
-            call_information = cls._getcallinformation(df, row)
+            call_information = cls._getcallinformation(row)
             content = '"referenceName":"{}", "start":"{}", "end":"{}", "referenceBases":"{}", "alternateBases":"{}", "id":"{}", {}'.format(str(reference_name), str(start), str(end), str(reference_bases), str(alternate_bases), str(ids), call_information)
             return content
         return df.apply(_buildrow, axis = 1)
@@ -86,9 +87,9 @@ class VCFFile(GenomicFile):
     def _to_json(cls, df):
         content_series = cls._parse(df)
         json_ga4gh = "{\"variants\":["
-        for line in content_series:
-            json_ga4gh = json_ga4gh + "{" + line + "},"
-        json_ga4gh =  json_ga4gh[:-1] + "]}"
+        json_ga4gh += "{" + content_series.str.cat(sep="},{")[:-2]
+        json_ga4gh =  json_ga4gh + "}]}]}"
+        
         return json_ga4gh
         
     
