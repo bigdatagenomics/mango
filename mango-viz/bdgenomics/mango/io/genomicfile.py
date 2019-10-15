@@ -17,10 +17,10 @@
 #
 
 import modin.pandas as pd
-
+import pandas as opd
 
 class GenomicFile(object):
-    dataframe_lib = pd
+    dataframe_lib = opd
 
     @classmethod
     def read(cls, *args, **kwargs):

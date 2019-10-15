@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 from .bedfile import BedFile
+from .VCFfile import VCFFile
 
 
 def read_bed(filepath_or_buffer,
