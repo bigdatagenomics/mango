@@ -16,5 +16,6 @@
 # limitations under the License.
 #
 from .readers import read_bed
+from .readers import read_vcf
 
 __all__ = ["read_bed", "read_vcf"]
