@@ -15,10 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#Contributors:
-#VCF.py
-#Kamil Slowikowski
-#October 30, 2013
+
 
 from .genomicfile import GenomicFile
 from collections import OrderedDict
@@ -35,6 +32,8 @@ class VCFFile(GenomicFile):
     def _read(cls, filename, large = True):
         """Open an optionally gzipped VCF file and return a pandas.DataFrame with
         each INFO field included as a column in the dataframe.
+        
+        Borrowed from https://gist.github.com/slowkow/6215557
 
         Note: Using large=False with large VCF files. It will be painfully slow.
         :param filename:    An optionally gzipped VCF file.

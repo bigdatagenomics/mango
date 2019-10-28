@@ -29,3 +29,4 @@ def read_bed(filepath_or_buffer,
 
 def read_vcf(filepath_or_buffer):
     return VCFFile.read(filepath_or_buffer)
+    

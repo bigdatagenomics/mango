@@ -19,13 +19,12 @@
 import unittest
 import json
 import pandas as pd
-from bdgenomics.mango.io import *
+from bdgenomics.mango.io.readers import read_bed
 import bdgenomics.mango.pileup as pileup
 from bdgenomics.mango.pileup.track import *
 from bdgenomics.mango.io.test import IOTestCase
 
 class BedFileTest(IOTestCase):
-
 
     def test_required_columns(self):
         dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))

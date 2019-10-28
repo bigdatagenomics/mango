@@ -16,11 +16,10 @@
 # limitations under the License.
 #
 
-import modin.pandas as pd
-import pandas as opd
+import modin.pandas as mpd
 
 class GenomicFile(object):
-    dataframe_lib = pd
+    dataframe_lib = mpd
 
     @classmethod
     def read(cls, *args, **kwargs):
