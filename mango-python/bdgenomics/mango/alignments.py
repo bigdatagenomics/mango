@@ -308,10 +308,10 @@ class IndelDistribution(object):
                 values = [x for x in chromosomes.items() if x[0][0] == key]
 
                 # get positions
-                positions = map(lambda x: x[0][1] + offset, values)
+                positions = list(map(lambda x: x[0][1] + offset, values))
 
                 # get counts
-                counts = map(lambda x: x[1], values)
+                counts = list(map(lambda x: x[1], values))
 
                 ax.plot(positions, counts, ls='', marker='.')
 
