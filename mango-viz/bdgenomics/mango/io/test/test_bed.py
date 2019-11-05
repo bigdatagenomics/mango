@@ -25,37 +25,20 @@ from bdgenomics.mango.pileup.track import *
 from bdgenomics.mango.io.test import IOTestCase
 
 class BedFileTest(IOTestCase):
+    global filename
+    filename = "chr17.582500-594500.bed"
+    filename = "all.pos.bed"
+    
 
     def test_required_columns(self):
-        dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))
-
+        dataframe = read_bed(self.exampleFile(filename))
         dataframe_columns = list(dataframe.columns)
         for name in ("chrom", "chromStart", "chromEnd"):
             assert(name in dataframe_columns)
 
-    def test_column_type(self):
-        dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))
-
-        chromosomes = list(dataframe["chrom"])
-        chromStart = list(dataframe["chromStart"])
-        chromEnd = list(dataframe["chromEnd"])
-
-        d1, d2, d3 = dataframe._mango_parse
-        for i in range(len(chromStart)):
-            assert(type(d1[i] == int))
-            assert(d1[i]==chromStart[i])
-
-        for i in range(len(chromEnd)):
-            assert(type(d2[i] == int))
-            assert(d2[i] == chromEnd[i])
-
-        for i in range(len(chromosomes)):
-            assert(type(d3[i] == int))
-            assert(d3[i] == chromosomes[i])
-
     
     def test_validate_num_rows(self):
-        file = self.exampleFile("chr17.582500-594500.bed")
+        file = self.exampleFile(filename)
         dataframe = read_bed(file)
 
         with open(file, "r") as ins:
@@ -65,7 +48,7 @@ class BedFileTest(IOTestCase):
             assert(len(lines)== len(dataframe.index))
 
     def test_to_json(self):
-        dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))
+        dataframe = read_bed(self.exampleFile(filename))
 
         def is_valid_json(string):
             try:
@@ -78,7 +61,7 @@ class BedFileTest(IOTestCase):
         assert(is_valid_json(dataframe._mango_to_json) == True)
 
     def test_visualization(self):
-        dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))
+        dataframe = read_bed(self.exampleFile(filename))
 
         assert(dataframe._pileup_visualization == "featureJson")
         tracks=[Track(viz="features", label="my features", source=pileup.sources.DataFrameSource(dataframe))]
