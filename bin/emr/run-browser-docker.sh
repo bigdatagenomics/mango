@@ -30,7 +30,7 @@ POST_DD_ARGS="${POST_DD[@]}"
 ARRAY=($POST_DD_ARGS)
 GENOME_FILE_LOCATION=${ARRAY[0]}
 
-# if genome file is no the host, then mount it for docker to access
+# if genome file is not on the host, then mount it for docker to access
 if [ -f "$GENOME_FILE_LOCATION" ]; then
     GENOME_FILE_MNT="-v ${GENOME_FILE_LOCATION}:${GENOME_FILE_LOCATION}"
 fi
@@ -81,7 +81,8 @@ sudo docker run \
       -p 8081:8081 \
       -i \
       -t \
-       quay.io/ucsc_cgl/mango:latest \
+      --entrypoint=mango-submit \
+       quay.io/biocontainers/mango:0.0.5--py_3 \
        --master yarn \
        --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
        --conf fs.s3a.connection.maximum=50000 \

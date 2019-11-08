@@ -20,9 +20,10 @@ variety of platforms.
 
 .. toctree::
    :caption: Installation
-   :maxdepth: 2
+   :maxdepth: 3
 
    installation/source
+   installation/conda
    installation/distribution
 
 .. toctree::

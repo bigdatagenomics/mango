@@ -19,7 +19,7 @@ sudo service docker start
 sudo usermod -a -G docker hadoop
 
 # pull image
-sudo docker pull quay.io/ucsc_cgl/mango:latest
+sudo docker pull quay.io/biocontainers/mango:0.0.5--py_3
 
 if [ "$IS_MASTER" = true ]; then
   mkdir -p /home/hadoop/mango-scripts

@@ -15,7 +15,7 @@ POST_DD=()
 # by default, runs mango browser (mango-submit)
 # to override to mango-notebook,
 # run docker with --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
-ENTRYPOINT="--entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook"
+ENTRYPOINT="--entrypoint=mango-notebook"
 for ARG in "$@"; do
  shift
  if [[ $ARG == "--" ]]; then
@@ -75,7 +75,7 @@ sudo docker run \
       -i \
       -t \
       $ENTRYPOINT \
-      quay.io/ucsc_cgl/mango:latest \
+      quay.io/biocontainers/mango:0.0.5--py_3 \
       --master yarn \
       --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
       --packages net.fnothaft:jsr203-s3a:0.0.2 \

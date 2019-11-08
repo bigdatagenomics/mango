@@ -25,6 +25,6 @@ docker run \
       -i \
       -t \
       -v ${OUTPUT_DIR}:${OUTPUT_DIR} \
-      --entrypoint=/opt/cgl-docker-lib/mango/bin/make_genome \
-       quay.io/ucsc_cgl/mango:latest \
+      --entrypoint=make_genome \
+       quay.io/biocontainers/mango:0.0.5--py_3 \
        $ARGS

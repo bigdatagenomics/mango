@@ -28,7 +28,10 @@ MOCK_MODULES = [
     "cigar",
     "numpy",
     "modin",
-    "modin.pandas"
+    "modin.pandas",
+    "pyspark",
+    "pyspark.sql",
+    "pyspark.sql.functions"
 
 ]
 
@@ -49,7 +52,7 @@ def real_dir_name(p, n=1):
 
 path_to_dir = os.path.dirname(os.path.abspath(__file__))
 
-bdgVersion = '0.0.3'
+bdgVersion = '0.0.5'
 
 # -- General configuration ------------------------------------------------
 

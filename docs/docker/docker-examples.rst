@@ -3,27 +3,35 @@ Running Mango from Docker
 
 Running Mango from Docker requires `Docker to be installed <https://docs.docker.com/>`__.
 
-Mango is available on Docker through `biocontainers <https://quay.io/repository/biocontainers/mango>`__ and
-has open code available at `cgl-docker-lib <https://github.com/BD2KGenomics/cgl-docker-lib>`__.
+Mango is available on Docker through `biocontainers <https://biocontainers.pro/#/tools/mango>`__ and
+is available at `quay.io <https://quay.io/repository/biocontainers/mango>`__.
+
+To pull the Mango docker container, run:
+
+.. code:: bash
+
+   docker pull quay.io/biocontainers/mango:0.0.5--py_3
+
 
 Running Mango Browser on Docker
 -------------------------------
 
 To run Mango browser example files on Linux in Docker run:
 
-# TODO 10/28/2019 why does :latest not work?
-
 To run Mango browser on local data, you must first mount these files with the ``Docker -v`` flag. For example, if you have local files stored at ``<example-file-path>``:
 
 .. code:: bash
 
+    LOCAL_EXAMPLE_FILES=<path_to_example_files>
+    DOCKER_EXAMPLE_FILES=<path_in_docker_container>
+
     docker run -it -p 8080:8080 \
-        -v <example-file-path>:<docker-container-path> \
+        -v $LOCAL_EXAMPLE_FILES:$DOCKER_EXAMPLE_FILES \
         --entrypoint=mango-submit \
-        quay.io/biocontainers/mango:0.0.5--py_1 \
-        -- <docker-container-path>/hg19.genome \
-        -reads <docker-container-path>/chr17.7500000-7515000.sam.adam \
-        -variants <docker-container-path>/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
+        quay.io/biocontainers/mango:0.0.5--py_3 \
+        -- $DOCKER_EXAMPLE_FILES/hg19.genome \
+        -reads $DOCKER_EXAMPLE_FILES/chr17.7500000-7515000.sam \
+        -variants $DOCKER_EXAMPLE_FILES/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
 
 To create a reference, see `Building a Genome <../browser/genomes.html>`__.
 
@@ -38,7 +46,7 @@ To run Mango notebook on Linux in Docker run:
     docker run --net=host -it -p 8888:8888 \
         -e SPARK_HOME=/usr/local/lib/python3.6/site-packages/pyspark \
     	--entrypoint=mango-notebook \
-    	quay.io/biocontainers/mango:0.0.5--py_1 \
+    	quay.io/biocontainers/mango:0.0.5--py_3 \
     	-- --ip=0.0.0.0 --allow-root
 
 **Note:** You must set ``SPARK_HOME`` to run the mango notebook.
@@ -56,12 +64,15 @@ To run create a mango genome on Linux in Docker run:
 
 .. code:: bash
 
-    docker run --net=host -it -p 8888:8888 \
-        -v <host-src>:<container-dest> \
-    	--entrypoint=make_genome \
-    	quay.io/biocontainers/mango:0.0.5--py_1 hg19 <container-dest>
+    LOCAL_LOCATION=<host_src>
+    DOCKER_LOCATION=<docker_src>
 
-The genome file will be saved to ``<host-src>``.
+    docker run --net=host -it -p 8888:8888 \
+        -v $LOCAL_LOCATION:$DOCKER_LOCATION \
+    	--entrypoint=make_genome \
+    	quay.io/biocontainers/mango:0.0.5--py_3 hg19 $DOCKER_LOCATION
+
+The genome file will be saved to ``<host_src>``.
 
 **Note:** To run the make_genome on OS X, remove ``--net=host``.
 
