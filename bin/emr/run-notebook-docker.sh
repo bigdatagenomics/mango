@@ -75,7 +75,7 @@ sudo docker run \
       -i \
       -t \
       $ENTRYPOINT \
-      quay.io/biocontainers/mango:0.0.5--py_3 \
+      quay.io/bigdatagenomics/mango:latest \
       --master yarn \
       --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
       --packages net.fnothaft:jsr203-s3a:0.0.2 \

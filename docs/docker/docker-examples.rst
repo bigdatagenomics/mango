@@ -10,7 +10,7 @@ To pull the Mango docker container, run:
 
 .. code:: bash
 
-   docker pull quay.io/biocontainers/mango:0.0.5--py_3
+   docker pull quay.io/bigdatagenomics/mango:latest
 
 
 Running Mango Browser on Docker
@@ -28,12 +28,12 @@ To run Mango browser on local data, you must first mount these files with the ``
     docker run -it -p 8080:8080 \
         -v $LOCAL_EXAMPLE_FILES:$DOCKER_EXAMPLE_FILES \
         --entrypoint=mango-submit \
-        quay.io/biocontainers/mango:0.0.5--py_3 \
-        -- $DOCKER_EXAMPLE_FILES/hg19.genome \
-        -reads $DOCKER_EXAMPLE_FILES/chr17.7500000-7515000.sam \
-        -variants $DOCKER_EXAMPLE_FILES/ALL.chr17.7500000-7515000.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
+        quay.io/bigdatagenomics/mango:latest \
+        -- $DOCKER_EXAMPLE_FILES/<genome_build_filepath> \
+        -reads $DOCKER_EXAMPLE_FILES/<alignment_filepaths> \
+        -variants $DOCKER_EXAMPLE_FILES/<variant_filepaths>
 
-To create a reference, see `Building a Genome <../browser/genomes.html>`__.
+To create a genome build (<genome_build_filepath>), see `Building a Genome <#creating-a-mango-genome-using-docker>`__.
 
 
 Running Mango Notebook on Docker
@@ -44,12 +44,9 @@ To run Mango notebook on Linux in Docker run:
 .. code:: bash
 
     docker run --net=host -it -p 8888:8888 \
-        -e SPARK_HOME=/usr/local/lib/python3.6/site-packages/pyspark \
     	--entrypoint=mango-notebook \
-    	quay.io/biocontainers/mango:0.0.5--py_3 \
+    	quay.io/bigdatagenomics/mango:latest \
     	-- --ip=0.0.0.0 --allow-root
-
-**Note:** You must set ``SPARK_HOME`` to run the mango notebook.
 
 **Note:** To run the Mango notebook on OS X, remove ``--net=host``.
 
@@ -66,17 +63,15 @@ To run create a mango genome on Linux in Docker run:
 
     LOCAL_LOCATION=<host_src>
     DOCKER_LOCATION=<docker_src>
+    GENOME_BUILD=<genome_name> # i.e. hg19, mm10, etc.
 
     docker run --net=host -it -p 8888:8888 \
         -v $LOCAL_LOCATION:$DOCKER_LOCATION \
     	--entrypoint=make_genome \
-    	quay.io/biocontainers/mango:0.0.5--py_3 hg19 $DOCKER_LOCATION
+    	quay.io/bigdatagenomics/mango:latest $GENOME_BUILD $DOCKER_LOCATION
 
 The genome file will be saved to ``<host_src>``.
 
 **Note:** To run the make_genome on OS X, remove ``--net=host``.
-
-
-# TODO test widgets not working, SPARK_HOME needs to be explicitly set
 
 

@@ -39,8 +39,8 @@ Through the command line, create a new cluster:
 .. code:: bash
 
   aws emr create-cluster
-  --release-label emr-5.24.0 \
-  --name 'emr-5.24.0 Mango example' \
+  --release-label emr-5.27.0 \
+  --name 'emr-5.27.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark  \
   --ec2-attributes KeyName=<YOUR_EC2_KEY>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
@@ -136,17 +136,22 @@ To run Mango Browser on EMR on top of Docker with the hg19 genome run:
 
 .. code:: bash
 
-  /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- /opt/cgl-docker-lib/mango/example-files/hg19.genome \
+  GENOME_BUILD_FILE=<path_to_genome_file> # ie hg18.genome, hg19.genome, mm10.genome, etc.
+
+  /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- $GENOME_BUILD_FILE \
     -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 
+**Note** You must first create a GENOME_BUILD_FILE. To do so, see `creating a reference genome in docker <#creating-a-reference-genome-on-emr-with-docker>`__.
+
 Navigate to <PUBLIC_MASTER_DNS>:8081 to access the browser. In the browser, navigate to ``TP53, chr17-chr17:7,510,400-7,533,590`` to view exome data.
 
-The previous command runs Mango with the pre-built hg19 genome, which is in the docker container.
-To run the Mango browser with a different genome in Mango (ie. hg18), you will first have to
-`create a reference genome <../browser/genomes.html>`__.
 
-To create a reference genome with docker, run:
+Creating a reference genome on EMR with Docker
+----------------------------------------------
+
+To run the Mango browser, you must first create a reference genome. For example, to
+create an hg18 genome, run:
 
 .. code:: bash
 
@@ -224,15 +229,13 @@ This section explains how to run the Mango browser and the Mango notebook withou
 Creating a Cluster
 ------------------
 
-Through the AWS command line, create a new cluster:
+Through the AWS command line, create a new cluster with the latest Mango version:
 
 .. code:: bash
 
-  VERSION=0.0.3
-
   aws emr create-cluster
-  --release-label emr-5.24.0 \
-  --name 'emr-5.24.0 Mango example' \
+  --release-label emr-5.27.0 \
+  --name 'emr-5.27.0 Mango example' \
   --applications Name=Hadoop Name=Hive Name=Spark Name=JupyterHub  \
   --ec2-attributes KeyName=<YOUR_EC2_KEY>,InstanceProfile=EMR_EC2_DefaultRole \
   --service-role EMR_DefaultRole \
@@ -242,7 +245,7 @@ Through the AWS command line, create a new cluster:
   --region <your_region> \
   --log-uri s3://<your-s3-bucket>/emr-logs/ \
   --bootstrap-actions \
-  Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-dist-emr5.sh",Args=[$VERSION]
+  Name='Install Mango', Path="s3://bdg-mango/install-bdg-mango-dist-emr5.sh"
 
 Where $VERSION specifies the Mango version available in the `Maven central repository <https://search.maven.org/search?q=g:org.bdgenomics.mango>`__.
 
@@ -266,14 +269,14 @@ Simply run:
 
 .. code:: bash
 
-  /home/hadoop/mango/bin/make_genome <GENOME_NAME> <OUTPUT_LOCATION>
+  make_genome <GENOME_NAME> <OUTPUT_LOCATION>
 
 This will save a file called ``<GENOME_NAME>.genome`` to your ``<OUTPUT_LOCATION>``.
 Now that you have a reference, you can run Mango browser:
 
 .. code:: bash
 
-    /home/hadoop/mango/bin/emr/run-browser-emr.sh \
+    /home/hadoop/mango/scripts/run-browser-emr.sh \
                --  \
                 <path_to_genome>/hg19.genome \
                -reads s3a://1000genomes/phase1/data/NA19685/exome_alignment/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam \
@@ -296,7 +299,7 @@ To run Mango Notebook on EMR, run the mango-notebook script:
 
 .. code:: bash
 
-  /home/hadoop/mango/bin/emr/run-notebook-emr.sh \
+  /home/hadoop/mango/scripts/run-notebook-emr.sh \
         -- <NOTEBOOK_ARGS>
 
 If you have `established a web connection <#enabling-a-web-connection>`__, you will now be able to access

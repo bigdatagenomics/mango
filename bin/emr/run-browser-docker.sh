@@ -55,9 +55,6 @@ DOCKER_CONTAINER_NAME=mango_browser_${uuid}
 # s3a commands
 EXTRA_CLASSPATH=/usr/lib/hadoop/hadoop-aws*:${AWS_SDK}/*:/usr/lib/hadoop-lzo/lib/*
 
-SPARK_LIBRARY_PATH=${SPARK_LIBRARY_PATH}:${HADOOP_LZO}/native
-
-
 sudo docker run \
  --net=host \
       ${GENOME_FILE_MNT} \
@@ -77,12 +74,11 @@ sudo docker run \
       -e SPARK_CONF_DIR=${SPARK_CONF_DIR} \
       -e HADOOP_CONF_DIR=${HADOOP_CONF_DIR} \
       -e SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*" \
-      -e SPARK_LIBRARY_PATH=${SPARK_LIBRARY_PATH} \
       -p 8081:8081 \
       -i \
       -t \
       --entrypoint=mango-submit \
-       quay.io/biocontainers/mango:0.0.5--py_3 \
+       quay.io/bigdatagenomics/mango:latest \
        --master yarn \
        --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
        --conf fs.s3a.connection.maximum=50000 \

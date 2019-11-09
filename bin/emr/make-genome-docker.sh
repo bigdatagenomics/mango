@@ -26,5 +26,5 @@ docker run \
       -t \
       -v ${OUTPUT_DIR}:${OUTPUT_DIR} \
       --entrypoint=make_genome \
-       quay.io/biocontainers/mango:0.0.5--py_3 \
+      quay.io/bigdatagenomics/mango:latest \
        $ARGS

@@ -38,7 +38,7 @@ export EXTRA_CLASSPATH=${HADOOP_LZO}/*:${AWS_SDK}/aws-java-sdk/*:${AWS_SDK}/emr/
 
 export SPARK_DIST_CLASSPATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/usr/lib/hadoop/.//*:/usr/lib/hadoop-hdfs/./:/usr/lib/hadoop-hdfs/lib/*:/usr/lib/hadoop-hdfs/.//*:/usr/lib/hadoop-yarn/lib/*:/usr/lib/hadoop-yarn/.//*:/usr/lib/hadoop-mapreduce/lib/*:/usr/lib/hadoop-mapreduce/.//*"
 
-/home/hadoop/mango/bin/mango-notebook \
+mango-notebook \
       --master yarn \
       --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
       --packages net.fnothaft:jsr203-s3a:0.0.2 \
