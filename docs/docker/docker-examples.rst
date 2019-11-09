@@ -3,8 +3,7 @@ Running Mango from Docker
 
 Running Mango from Docker requires `Docker to be installed <https://docs.docker.com/>`__.
 
-Mango is available on Docker through `biocontainers <https://biocontainers.pro/#/tools/mango>`__ and
-is available at `quay.io <https://quay.io/repository/biocontainers/mango>`__.
+Mango is available on Docker and is available at `quay.io <https://quay.io/repository/bigdatagenomics/mango>`__.
 
 To pull the Mango docker container, run:
 
