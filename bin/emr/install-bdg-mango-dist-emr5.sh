@@ -36,7 +36,7 @@ conda config -f --add channels bioconda
 conda config -f --add channels conda-forge
 
 # install mango through conda env
-conda install mango
+conda install -y mango
 
 # cleanup
 rm ~/miniconda.sh
