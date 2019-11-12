@@ -27,7 +27,6 @@ from bdgenomics.mango.io.test import IOTestCase
 class BedFileTest(IOTestCase):
     global filename
     filename = "chr17.582500-594500.bed"
-    filename = "all.pos.bed"
     
 
     def test_required_columns(self):

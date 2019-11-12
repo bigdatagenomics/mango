@@ -25,16 +25,18 @@ from bdgenomics.mango.pileup.track import *
 from bdgenomics.mango.io.test import IOTestCase
 
 class VCFFileTest(IOTestCase):
+    global filename
+    filename = "genodata.v3.vcf"
 
     def test_required_columns(self):
-        dataframe = read_vcf(self.exampleFile("genodata.v3.vcf"))
+        dataframe = read_vcf(self.exampleFile(filename))
         VCF_HEADER = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
         dataframe_columns = list(dataframe.columns)
         for name in VCF_HEADER:
             assert(name in dataframe_columns)
 
     def test_column_type(self):
-        dataframe = read_vcf(self.exampleFile("genodata.v3.vcf"))
+        dataframe = read_vcf(self.exampleFile(filename))
         VCF_HEADER = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
         def enforce_type(item, type_x):
             assert(type(item) == type_x)
@@ -48,7 +50,7 @@ class VCFFileTest(IOTestCase):
             result = [enforce_type, list(dataframe[head])]
 
     def test_to_json(self):
-        dataframe = read_vcf(self.exampleFile("genodata.v3.vcf"))
+        dataframe = read_vcf(self.exampleFile(filename))
 
         def is_valid_json(string):
             try:
@@ -58,11 +60,10 @@ class VCFFileTest(IOTestCase):
             return True
 
         assert(type(dataframe._mango_to_json) == str)
-        print(dataframe._mango_to_json)
         assert(is_valid_json(dataframe._mango_to_json) == True)
 
     def test_visualization(self):
-        dataframe = read_vcf(self.exampleFile("genodata.v3.vcf"))
+        dataframe = read_vcf(self.exampleFile(filename))
 
         assert(dataframe._pileup_visualization == "variantJson")
         tracks=[Track(viz="variants", label="my variants", source=pileup.sources.DataFrameSource(dataframe))]

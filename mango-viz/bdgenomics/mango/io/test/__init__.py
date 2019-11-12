@@ -28,5 +28,5 @@ class IOTestCase(unittest.TestCase):
 
         #mangoRoot = os.path.dirname(os.getcwd())
         #return os.path.join(os.path.join(mangoRoot, "example-files"), file)
-        return "../../../../../example-files/" + file
+        return "test_files/" + file
 

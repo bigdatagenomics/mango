@@ -103,11 +103,26 @@ class VCFFile(GenomicFile):
         :param filename:  An optionally gzipped file.
         """
         comments = 0
-        fn_open = gzip.open if filename.endswith('.gz') else open
+        is_gzip = False
+
+        if filename.endswith('.gz'):
+            fn_open = gzip.open
+            is_gzip = True
+        else:
+            fn_open = open
+
         with fn_open(filename) as fh:
-            for line in fh:
-                if line.startswith('#'):
-                    comments += 1
-                else:
-                    break
+            if is_gzip:
+                while True:
+                    line = fh.readline().decode("utf-8")
+                    if line.startswith("#"):
+                        comments += 1
+                    else:
+                        break
+            else:
+                for line in fh:
+                    if line.startswith('#'):
+                        comments += 1
+                    else:
+                        break
         return comments
