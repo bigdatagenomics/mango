@@ -26,6 +26,7 @@ class MangoVizExampleTest(PileupTestCase):
         # these variables are read into mango-tutorial.py
         bedFile = self.exampleFile("chr17.582500-594500.bed")
         alignmentJsonFile = self.dataFile("alignments.ga4gh.chr17.1-250.json") # TODO
+        vcfFile = self.dataFile("genodata.v3.vcf")
         testMode = True
 
     # this file is converted from mango-python-alignment.ipynb in the Makefile
