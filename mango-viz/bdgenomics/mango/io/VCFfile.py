@@ -20,6 +20,7 @@
 from .genomicfile import GenomicFile
 from collections import OrderedDict
 import gzip
+from bdgenomics.mango.pileup.sources import GA4GHVariantJson
 
 class VCFFile(GenomicFile):
 
@@ -29,11 +30,13 @@ class VCFFile(GenomicFile):
 
 
     @classmethod
-    def _read(cls, filename, large = True):
-        """Open an optionally gzipped VCF file and return a pandas.DataFrame with
+    def _read(cls, filename):
+        """Open an optionally gzipped VCF file and return a modin DataFrame with
         each INFO field included as a column in the dataframe.
         
         Borrowed from https://gist.github.com/slowkow/6215557
+
+        Specification: https://samtools.github.io/hts-specs/VCFv4.2.pdf
 
         Note: Using large=False with large VCF files. It will be painfully slow.
         :param filename:    An optionally gzipped VCF file.
@@ -41,16 +44,15 @@ class VCFFile(GenomicFile):
                             leave the INFO fields unseparated as a single column.
         """
 
-        if large:
-            # Set the proper argument if the file is compressed.
-            comp = 'gzip' if filename.endswith('.gz') else None
-            # Count how many comment lines should be skipped.
-            NUM_COMMENTS = cls._count_comments(filename)
-            # Return a simple DataFrame without splitting the INFO column.
-            df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(NUM_COMMENTS-1))
-            NUM_SAMPLES = len(df.columns) - len(VCF_HEADER)
-            df.columns = VCF_HEADER + [i for i in range(1, NUM_SAMPLES+1)]
-            return df       
+        # Set the proper argument if the file is compressed.
+        comp = 'gzip' if filename.endswith('.gz') else None
+        # Count how many comment lines should be skipped.
+        NUM_COMMENTS = cls._count_comments(filename)
+        # Return a simple DataFrame without splitting the INFO column.
+        df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(NUM_COMMENTS-1))
+        NUM_SAMPLES = len(df.columns) - len(VCF_HEADER)
+        df.columns = VCF_HEADER + [i for i in range(1, NUM_SAMPLES+1)]
+        return df       
 
     @classmethod
     def _getcallinformation(cls, row):
@@ -94,7 +96,7 @@ class VCFFile(GenomicFile):
     
     @classmethod
     def _visualization(cls, df):
-        return 'variantJson'
+        return GA4GHVariantJson.name
 
     @classmethod
     def _count_comments(cls, filename):

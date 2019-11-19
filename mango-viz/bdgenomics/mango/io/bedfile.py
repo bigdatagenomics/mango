@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 from .genomicfile import GenomicFile
-
+from bdgenomics.mango.pileup.sources import GA4GHFeatureJson
 
 class BedFile(GenomicFile):
 
@@ -44,4 +44,4 @@ class BedFile(GenomicFile):
     
     @classmethod
     def _visualization(cls, df):
-        return 'featureJson'
+        return GA4GHFeatureJson.name

@@ -19,7 +19,6 @@
 
 import os
 import unittest
-from bdgenomics import mango
 
 
 class IOTestCase(unittest.TestCase):

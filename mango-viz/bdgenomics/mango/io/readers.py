@@ -18,7 +18,6 @@
 from .bedfile import BedFile
 from .VCFfile import VCFFile
 
-
 def read_bed(filepath_or_buffer,
     column_names=["chrom","chromStart", "chromEnd", "name", "score",
     "strand", "thickStart", "thickEnd", "itemRGB", "blockCount",
@@ -29,4 +28,4 @@ def read_bed(filepath_or_buffer,
 
 def read_vcf(filepath_or_buffer):
     return VCFFile.read(filepath_or_buffer)
-    
+

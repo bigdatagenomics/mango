@@ -24,17 +24,33 @@ import bdgenomics.mango.pileup as pileup
 from bdgenomics.mango.pileup.track import *
 from bdgenomics.mango.io.test import IOTestCase
 
+
 class BedFileTest(IOTestCase):
     global filename
     filename = "chr17.582500-594500.bed"
-    
 
+    
     def test_required_columns(self):
         dataframe = read_bed(self.exampleFile(filename))
         dataframe_columns = list(dataframe.columns)
         for name in ("chrom", "chromStart", "chromEnd"):
             assert(name in dataframe_columns)
+    
+    def test_column_type(self):
+        dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))
 
+        chromosomes = list(dataframe["chrom"])
+        chromStart = list(dataframe["chromStart"])
+        chromEnd = list(dataframe["chromEnd"])
+
+        for i in range(len(chromStart)):
+            assert(type(chromStart[i] == int))
+
+        for i in range(len(chromEnd)):
+            assert(type(chromEnd[i] == int))
+
+        for i in range(len(chromosomes)):
+            assert(type(chromosomes[i] == int))
     
     def test_validate_num_rows(self):
         file = self.exampleFile(filename)
