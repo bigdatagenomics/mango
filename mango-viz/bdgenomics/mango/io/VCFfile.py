@@ -37,11 +37,8 @@ class VCFFile(GenomicFile):
         Borrowed from https://gist.github.com/slowkow/6215557
 
         Specification: https://samtools.github.io/hts-specs/VCFv4.2.pdf
-
-        Note: Using large=False with large VCF files. It will be painfully slow.
         :param filename:    An optionally gzipped VCF file.
-        :param large:       Use this with large VCF files to skip the ## lines and
-                            leave the INFO fields unseparated as a single column.
+       
         """
 
         # Set the proper argument if the file is compressed.
