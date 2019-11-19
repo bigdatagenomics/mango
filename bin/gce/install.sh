@@ -77,5 +77,5 @@ then
     echo "Jupyter Notebook extensions installed!"
 fi
 
-pip install cigar
+#pip install cigar
 

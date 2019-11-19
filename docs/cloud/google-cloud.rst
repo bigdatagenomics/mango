@@ -41,8 +41,8 @@ After the above steps are completed, ssh into the master node with the following
 
     gcloud compute ssh <cluster-name>-m
 
-Running Mango through Docker
-============================
+Running Mango on GCE through Docker
+===================================
 
 Before Mango can run, it is recommended to stage datasets into HDFS if you are trying to view specific files. The created container will share the same hadoop file system with the root master user.
 
@@ -57,7 +57,7 @@ An example docker startup script is available in the Mango gce `scripts director
 
     wget 'https://raw.githubusercontent.com/bigdatagenomics/mango/master/bin/gce/run-notebook.sh'
 
-    bash run-notebook.sh --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
+    bash run-notebook.sh --entrypoint=mango-notebook
 
 Once the notebook is running, connect to Mango by setting up a tunnel to your local computer via the exposed port in the master node:
 
