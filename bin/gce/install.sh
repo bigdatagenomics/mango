@@ -76,6 +76,3 @@ then
     ./dataproc-initialization-actions/jupyter/internal/bootstrap-jupyter-ext.sh
     echo "Jupyter Notebook extensions installed!"
 fi
-
-pip install cigar
-
