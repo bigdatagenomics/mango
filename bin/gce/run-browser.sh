@@ -44,7 +44,7 @@ export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 export HADOOP_HDFS=/usr/lib/hadoop-hdfs
 export HADOOP_YARN=/usr/lib/hadoop-yarn
 export HADOOP_MAPREDUCE=/usr/lib/hadoop-mapreduce
-#export CONDA_DIR=/opt/conda
+export CONDA_DIR=/opt/conda
 export PYSPARK_DRIVER_PYTHON=/opt/conda/bin/jupyter
 export HIVE_CONF_DIR=$HIVE_DIR/conf
 
@@ -60,7 +60,7 @@ sudo docker run \
        -v ${HADOOP_CONF_DIR}:${HADOOP_CONF_DIR} \
        -v ${HADOOP_HDFS}:${HADOOP_HDFS} \
        -v ${HADOOP_YARN}:${HADOOP_YARN} \
-#       -v ${CONDA_DIR}:${CONDA_DIR} \
+       -v ${CONDA_DIR}:${CONDA_DIR} \
        -v ${HADOOP_MAPREDUCE}:${HADOOP_MAPREDUCE} \
        -e SPARK_HOME=${SPARK_HOME} \
        -e HADOOP_HOME=${HADOOP_HOME} \
