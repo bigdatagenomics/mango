@@ -27,6 +27,15 @@ done
 PRE_DD_ARGS="${PRE_DD[@]}"
 POST_DD_ARGS="${POST_DD[@]}"
 
+# get location of genome file
+ARRAY=($POST_DD_ARGS)
+GENOME_FILE_LOCATION=${ARRAY[0]}
+
+# if genome file is not on the host, then mount it for docker to access
+if [ -f "$GENOME_FILE_LOCATION" ]; then
+    GENOME_FILE_MNT="-v ${GENOME_FILE_LOCATION}:${GENOME_FILE_LOCATION}"
+fi
+
 export SPARK_HOME=/usr/lib/spark
 export SPARK_CONF_DIR=/usr/lib/spark/conf
 export HADOOP_HOME=/usr/lib/hadoop
@@ -44,6 +53,7 @@ export SPARK_DIST_CLASS_PATH="/usr/lib/hadoop/etc/hadoop:/usr/lib/hadoop/lib/*:/
 
 sudo docker run \
        --net=host \
+       ${GENOME_FILE_MNT} \
        -v ${SPARK_HOME}:${SPARK_HOME} \
        -v ${SPARK_CONF_DIR}:${SPARK_CONF_DIR} \
        -v ${HADOOP_HOME}:${HADOOP_HOME} \
@@ -64,5 +74,5 @@ sudo docker run \
        --master yarn \
        --jars gs://mango-initialization-bucket/google-cloud-nio-0.22.0-alpha-shaded.jar \
        $PRE_DD_ARGS \
-       -- --ip=0.0.0.0 --allow-root \
+       --  \
        $POST_DD_ARGS
