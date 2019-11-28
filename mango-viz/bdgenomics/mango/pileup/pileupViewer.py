@@ -34,8 +34,6 @@ import json
 from urllib.parse import unquote
 
 
-
-
 @widgets.register('bdgenomics.mango.pileup.PileupViewer')
 class PileupViewer(widgets.DOMWidget):
     """ Widget wrapper for pileup.js viewer in Jupyter notebooks.
@@ -78,7 +76,6 @@ class PileupViewer(widgets.DOMWidget):
         """
         self.msg = "toSVG"
         self.msg = ""
-
 
     def saveSVG(self, filepath):
         """ Saves svg to filepath
