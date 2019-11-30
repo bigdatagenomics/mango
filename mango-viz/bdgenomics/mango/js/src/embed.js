@@ -1,7 +1,6 @@
 /* @flow */
 
 // Export widget models and views, and the npm package version number.
-// Export widget models and views, and the npm package version number.
 module.exports = {};
 
 var loadedModules = [
