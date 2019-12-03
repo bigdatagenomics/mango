@@ -40,15 +40,12 @@ class VCFFile(GenomicFile):
         :param filename:    An optionally gzipped VCF file.
        
         """
-
-        # Set the proper argument if the file is compressed.
-        comp = 'gzip' if filename.endswith('.gz') else None
         # Count how many comment lines should be skipped.
         NUM_COMMENTS = cls._count_comments(filename)
         # Return a simple DataFrame without splitting the INFO column.
-        df = cls.dataframe_lib.read_table(filename, compression=comp, skiprows=range(NUM_COMMENTS-1))
+        df = cls.dataframe_lib.read_table(filename, skiprows=range(NUM_COMMENTS-1))
         NUM_SAMPLES = len(df.columns) - len(VCF_HEADER)
-        df.columns = VCF_HEADER + [i for i in range(1, NUM_SAMPLES+1)]
+        df.columns = VCF_HEADER + list(range(1, NUM_SAMPLES+1))
         return df       
 
     @classmethod
