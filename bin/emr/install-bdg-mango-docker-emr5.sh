@@ -19,7 +19,7 @@ sudo service docker start
 sudo usermod -a -G docker hadoop
 
 # pull image
-sudo docker pull quay.io/ucsc_cgl/mango:latest
+sudo docker pull quay.io/bigdatagenomics/mango:latest
 
 if [ "$IS_MASTER" = true ]; then
   mkdir -p /home/hadoop/mango-scripts
@@ -38,7 +38,7 @@ if [ "$IS_MASTER" = true ]; then
 
 fi
 
-# update python to 3.5
-sudo yum -y install python35
+# update python to 3.6
+sudo yum -y install python36
 
 echo "Mango Docker bootstrap action finished"

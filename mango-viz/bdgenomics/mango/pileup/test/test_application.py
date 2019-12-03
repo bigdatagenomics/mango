@@ -18,9 +18,9 @@
 
 import unittest
 import bdgenomics.mango.pileup as pileup
+from bdgenomics.mango.pileup.test import PileupTestCase
 
-
-class MangoVizTest(unittest.TestCase):
+class MangoVizTest(PileupTestCase):
 
     def test_genotypes(self):
         track = pileup.Track(viz="genotypes", label="myGenotypes", source=pileup.sources.VcfDataSource('{}'))
@@ -71,6 +71,21 @@ class MangoVizTest(unittest.TestCase):
         assert(x.reference == 'hg19')
         assert(x.tracks[0] == track)
 
+    # TODO: browser can't be used in these tests.
+    def test_zoomOut(self):
+        track = pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource('fakeGenes.bb'))
+        x = pileup.PileupViewer(locus="chr17:1-100", reference="hg19", tracks=[track])
+        x.zoomOut()
+
+    def test_zoomIn(self):
+        track = pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource('fakeGenes.bb'))
+        x = pileup.PileupViewer(locus="chr17:1-100", reference="hg19", tracks=[track])
+        x.zoomIn()
+
+    def test_toSVG(self):
+        track = pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource('fakeGenes.bb'))
+        x = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        x.getSVG()
 
 # Run tests
 if __name__ == '__main__':

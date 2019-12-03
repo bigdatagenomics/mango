@@ -25,6 +25,6 @@ docker run \
       -i \
       -t \
       -v ${OUTPUT_DIR}:${OUTPUT_DIR} \
-      --entrypoint=/opt/cgl-docker-lib/mango/bin/make_genome \
-       quay.io/ucsc_cgl/mango:latest \
+      --entrypoint=make_genome \
+      quay.io/bigdatagenomics/mango:latest \
        $ARGS

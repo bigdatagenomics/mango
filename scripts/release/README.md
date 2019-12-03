@@ -25,3 +25,6 @@ Be sure to announce the release on the ADAM mailing list and Twitter (@bigdatage
 
 Additionally, once the release is done, you will need to bump the mango-python and mango-viz development versions on trunk and
 release them on pypi. The README's in these submodules explain how to do this.
+
+Update the mango version on bioconda at https://github.com/bioconda/bioconda-recipes/tree/master/recipes/mango.
+Update the docker conda version in docker/Dockerfile.

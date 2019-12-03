@@ -178,7 +178,7 @@ class HistogramDistribution:
         approximateCounts = lambda counts, sample: int(counts * 1.0/sample)
 
         # approximate counts based on sampling
-        self.collectedCounts = map(lambda x: approximateCounts(x[1], self.sample), collectedCounts)
+        self.collectedCounts = list(map(lambda x: approximateCounts(x[1], self.sample), collectedCounts))
 
     def plotDistributions(self, normalize = True, cumulative = False, testMode = False, **kwargs):
         """
@@ -200,6 +200,6 @@ class HistogramDistribution:
 
             f, ax = plt.subplots(figsize=figsize)
             ax.hist(self.collectedCounts, bins)
-            return ax, list(self.collectedCounts)
+            return ax, self.collectedCounts
         else:
-            return None, list(self.collectedCounts)
+            return None, self.collectedCounts
