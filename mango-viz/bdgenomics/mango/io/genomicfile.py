@@ -24,7 +24,7 @@ else:
     import pandas as pd
 
 class GenomicFile(object):
-    dataframe_lib = mpd
+    dataframe_lib = pd
 
     @classmethod
     def read(cls, *args, **kwargs):
