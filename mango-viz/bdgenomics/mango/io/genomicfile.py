@@ -16,7 +16,12 @@
 # limitations under the License.
 #
 
-import modin.pandas as mpd
+import os
+
+if os.environ.get("MANGO_USE_PANDAS", "False").title() == "False":
+    import modin.pandas as pd
+else:
+    import pandas as pd
 
 class GenomicFile(object):
     dataframe_lib = mpd
