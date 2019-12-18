@@ -17,7 +17,7 @@
  */
 package org.bdgenomics.mango.converters
 
-import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
+import org.bdgenomics.adam.rdd.read.AlignmentDataset
 import org.bdgenomics.mango.util.MangoFunSuite
 import org.scalatest.FunSuite
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -28,26 +28,26 @@ class GA4GHutilSuite extends MangoFunSuite {
 
   val samPath = resourcePath("small.1.sam")
 
-  sparkTest("create JSON from AlignmentRecordDataset") {
-    val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPath)
+  sparkTest("create JSON from AlignmentDataset") {
+    val rrdd: AlignmentDataset = sc.loadAlignments(samPath)
 
     val collected = rrdd.rdd.collect()
 
-    val json = GA4GHutil.alignmentRecordDatasetToJSON(rrdd).get("1")
+    val json = GA4GHutil.alignmentDatasetToJSON(rrdd).get("1")
 
     val response = GA4GHutil.stringToSearchReadsResponse(json)
 
     assert(response.getAlignmentsCount == collected.length)
   }
 
-  sparkTest("create JSON from AlignmentRecordDataset with 1 sample") {
-    val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPath)
+  sparkTest("create JSON from AlignmentDataset with 1 sample") {
+    val rrdd: AlignmentDataset = sc.loadAlignments(samPath)
 
     val collected = rrdd.rdd.collect()
 
     // did the converters correctly pull the reaGroupMap as the id?
     val readGroupName = rrdd.readGroups.readGroupMap.keys.head
-    val converted = GA4GHutil.alignmentRecordDatasetToJSON(rrdd, multipleGroupNames = false).get("1")
+    val converted = GA4GHutil.alignmentDatasetToJSON(rrdd, multipleGroupNames = false).get("1")
 
     val json = converted.replaceAll("\\s", "")
 
@@ -61,12 +61,12 @@ class GA4GHutilSuite extends MangoFunSuite {
     assert(response.getAlignmentsCount == collected.length)
   }
 
-  sparkTest("create JSON from AlignmentRecordDataset with more than 1 sample") {
+  sparkTest("create JSON from AlignmentDataset with more than 1 sample") {
 
     val samPaths = globPath(samPath, "small*.sam")
-    val rrdd: AlignmentRecordDataset = sc.loadAlignments(samPaths)
+    val rrdd: AlignmentDataset = sc.loadAlignments(samPaths)
 
-    assert(GA4GHutil.alignmentRecordDatasetToJSON(rrdd, multipleGroupNames = true).size == 2)
+    assert(GA4GHutil.alignmentDatasetToJSON(rrdd, multipleGroupNames = true).size == 2)
   }
 
   sparkTest("create JSON with genotypes from VCF using GenotypeDataset") {

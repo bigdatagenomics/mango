@@ -616,14 +616,14 @@ class VizReads(protected val args: VizReadsArgs) extends BDGSparkCommand[VizRead
   /*
  * Initialize loaded alignment files
  */
-  def initAlignments(sc: SparkContext, prefetch: Int): Option[AlignmentRecordMaterialization] = {
+  def initAlignments(sc: SparkContext, prefetch: Int): Option[AlignmentMaterialization] = {
     if (Option(args.readsPaths).isDefined) {
       val readsPaths = args.readsPaths.split(",").toList
 
       if (readsPaths.nonEmpty) {
         object readsWait
-        VizReads.syncObject += (AlignmentRecordMaterialization.name -> readsWait)
-        Some(new AlignmentRecordMaterialization(sc, readsPaths, VizReads.genome.chromSizes, Some(prefetch)))
+        VizReads.syncObject += (AlignmentMaterialization.name -> readsWait)
+        Some(new AlignmentMaterialization(sc, readsPaths, VizReads.genome.chromSizes, Some(prefetch)))
       } else None
     } else None
   }

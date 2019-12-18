@@ -29,12 +29,12 @@ import scala.collection.mutable.{ ArrayBuffer, ListBuffer }
 
 class MangoKryoRegistrator extends ADAMKryoRegistrator {
   override def registerClasses(kryo: Kryo): Unit = {
-    kryo.register(classOf[ListBuffer[AlignmentRecord]])
-    kryo.register(classOf[ArrayBuffer[AlignmentRecord]])
+    kryo.register(classOf[ListBuffer[Alignment]])
+    kryo.register(classOf[ArrayBuffer[Alignment]])
     kryo.register(classOf[ListBuffer[Genotype]])
     kryo.register(classOf[ArrayBuffer[Genotype]])
     kryo.register(classOf[List[Sample]])
-    kryo.register(classOf[AlignmentRecord], new AvroSerializer[AlignmentRecord]())
+    kryo.register(classOf[Alignment], new AvroSerializer[Alignment]())
     kryo.register(classOf[org.bdgenomics.adam.models.VariantContext],
       new org.bdgenomics.adam.models.VariantContextSerializer)
     kryo.register(classOf[org.bdgenomics.formats.avro.Sample], new AvroSerializer[org.bdgenomics.formats.avro.Sample]())

@@ -27,7 +27,7 @@ import net.liftweb.json._
 import net.liftweb.json.Serialization.write
 import ga4gh.Reads.ReadAlignment
 
-class AlignmentRecordMaterializationSuite extends MangoFunSuite {
+class AlignmentMaterializationSuite extends MangoFunSuite {
 
   implicit val formats = DefaultFormats
 
@@ -50,19 +50,19 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
   val files = List(bamFile)
   val samFiles = List(samFile)
 
-  sparkTest("create new AlignmentRecordMaterialization") {
-    val lazyMat = new AlignmentRecordMaterialization(sc, files, dict)
+  sparkTest("create new AlignmentMaterialization") {
+    val lazyMat = new AlignmentMaterialization(sc, files, dict)
   }
 
-  sparkTest("return raw data from AlignmentRecordMaterialization") {
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+  sparkTest("return raw data from AlignmentMaterialization") {
+    val data = new AlignmentMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 900L)
     val results: Array[ReadAlignment] = data.getJson(region).get(key).get
     assert(results.length == 9387)
   }
 
   sparkTest("can process stringified data") {
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val data = new AlignmentMaterialization(sc, files, dict)
     val region = new ReferenceRegion("chrM", 0L, 900L)
     val results: Array[ReadAlignment] = data.getJson(region).get(key).get
 
@@ -78,7 +78,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
     val rrdd = sc.loadAlignments(inputPath)
     rrdd.saveAsPartitionedParquet(outputPath, partitionSize = 1000000)
     val rdd2 = sc.loadPartitionedParquetAlignments(outputPath)
-    val data: AlignmentRecordMaterialization = new AlignmentRecordMaterialization(sc, List(outputPath), rdd2.sequences)
+    val data: AlignmentMaterialization = new AlignmentMaterialization(sc, List(outputPath), rdd2.sequences)
     val region = new ReferenceRegion("2", 189000000L, 190000000L)
     val mykey = LazyMaterialization.filterKeyFromFile(outputPath)
     val results: Array[ReadAlignment] = data.getJson(region).get(mykey).get
@@ -87,9 +87,9 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   sparkTest("fetches multiple regions from load") {
     val regions = Iterable(ReferenceRegion("chrM", 90L, 110L), ReferenceRegion("chrM", 10100L, 10300L))
-    val data1 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 90L, 110L))))
-    val data2 = AlignmentRecordMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 10100L, 10300L))))
-    val data = AlignmentRecordMaterialization.load(sc, bamFile, Some(regions))
+    val data1 = AlignmentMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 90L, 110L))))
+    val data2 = AlignmentMaterialization.load(sc, bamFile, Some(Iterable(ReferenceRegion("chrM", 10100L, 10300L))))
+    val data = AlignmentMaterialization.load(sc, bamFile, Some(regions))
 
     assert(data.length == data1.length + data2.length)
 
@@ -97,7 +97,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   sparkTest("Should handle chromosomes with different prefixes") {
     val dict = new SequenceDictionary(Vector(SequenceRecord("M", 16699L)))
-    val data = new AlignmentRecordMaterialization(sc, files, dict)
+    val data = new AlignmentMaterialization(sc, files, dict)
     val region = new ReferenceRegion("M", 90L, 110L)
     val results: Array[ReadAlignment] = data.getJson(region).get(key).get
 
@@ -109,7 +109,7 @@ class AlignmentRecordMaterializationSuite extends MangoFunSuite {
 
   sparkTest("should get data from unindexed file when referenceName predicates do not match") {
     val dict = new SequenceDictionary(Vector(SequenceRecord("chr1", 248956422L)))
-    val data = new AlignmentRecordMaterialization(sc, samFiles, dict)
+    val data = new AlignmentMaterialization(sc, samFiles, dict)
     val region = new ReferenceRegion("chr1", 26472784L, 26472884L)
     val results: Array[ReadAlignment] = data.getJson(region).get(samKey).get
 

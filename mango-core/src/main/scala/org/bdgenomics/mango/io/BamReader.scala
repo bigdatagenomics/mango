@@ -23,17 +23,17 @@ import java.io.File
 import htsjdk.samtools.{ QueryInterval, SAMFileHeader, SAMRecord, SamInputResource, SamReaderFactory, ValidationStringency }
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.formats.avro.Alignment
 import org.bdgenomics.mango.converters.SAMRecordConverter
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 
 import scala.collection.JavaConversions._
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
+import org.bdgenomics.adam.rdd.read.AlignmentDataset
 import org.bdgenomics.utils.misc.Logging
 import org.bdgenomics.mango.models.LazyMaterialization
 
-object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, AlignmentRecordDataset] with Logging {
+object BamReader extends GenomicReader[SAMFileHeader, Alignment, AlignmentDataset] with Logging {
 
   def suffixes = Array(".bam", ".sam")
 
@@ -47,9 +47,9 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
    * @param fp filepath
    * @param regionsOpt Option of iterator of ReferenceRegions to query
    * @param local Boolean specifying whether file is local or remote.
-   * @return Iterator of AlignmentRecords
+   * @return Iterator of Alignments
    */
-  def load(fp: String, regionsOpt: Option[Iterable[ReferenceRegion]], local: Boolean): Tuple2[SAMFileHeader, Array[AlignmentRecord]] = {
+  def load(fp: String, regionsOpt: Option[Iterable[ReferenceRegion]], local: Boolean): Tuple2[SAMFileHeader, Array[Alignment]] = {
 
     // if not valid throw Exception
     if (!isValidSuffix(fp)) {
@@ -74,7 +74,7 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
     // no valid dictionary. Cannot query or filter data.
     if (dictionary.getSequences.isEmpty) {
       reader.close()
-      return (header, Array[AlignmentRecord]())
+      return (header, Array[Alignment]())
     }
 
     // modify chr prefix, if this file uses chr prefixes.
@@ -143,7 +143,7 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
    * @param path filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadS3(path: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[SAMFileHeader, Array[AlignmentRecord]] = {
+  def loadS3(path: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[SAMFileHeader, Array[Alignment]] = {
     throw new Exception("Not implemented")
   }
 
@@ -155,7 +155,7 @@ object BamReader extends GenomicReader[SAMFileHeader, AlignmentRecord, Alignment
    * @param fp filepath to load from
    * @return Alignment dataset from the file over specified ReferenceRegion
    */
-  def loadHDFS(@transient sc: SparkContext, fp: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[AlignmentRecordDataset, Array[AlignmentRecord]] = {
+  def loadHDFS(@transient sc: SparkContext, fp: String, regionsOpt: Option[Iterable[ReferenceRegion]]): Tuple2[AlignmentDataset, Array[Alignment]] = {
     // hack to get around issue in hadoop_bam, which throws error if referenceName is not found in bam file
     val path = new org.apache.hadoop.fs.Path(fp)
     val fileSd = SequenceDictionary(SAMHeaderReader.readSAMHeaderFrom(path, sc.hadoopConfiguration))

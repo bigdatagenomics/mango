@@ -25,11 +25,11 @@ case class Materializer(objects: Seq[LazyMaterialization[_, _]]) {
   /**
    * Access functions for materializer
    */
-  def getReads(): Option[AlignmentRecordMaterialization] = {
+  def getReads(): Option[AlignmentMaterialization] = {
     val x = objects.flatMap(r =>
       r match {
-        case m: AlignmentRecordMaterialization => Some(m)
-        case _                                 => None
+        case m: AlignmentMaterialization => Some(m)
+        case _                           => None
       })
     if (x.isEmpty) None
     else Some(x.head)
