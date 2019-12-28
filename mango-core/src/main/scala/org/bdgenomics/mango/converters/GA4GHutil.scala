@@ -28,12 +28,12 @@ import net.liftweb.json.Extraction._
 import net.liftweb.json._
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.adam.rdd.read.AlignmentRecordDataset
+import org.bdgenomics.adam.rdd.read.AlignmentDataset
 import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset, VariantDataset }
 import org.bdgenomics.adam.rdd.feature.FeatureDataset
 import org.bdgenomics.convert.ga4gh.Ga4ghModule
 import org.bdgenomics.convert.{ ConversionStringency, Converter }
-import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.formats.avro.Alignment
 
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
@@ -46,8 +46,8 @@ import org.slf4j.LoggerFactory
 object GA4GHutil {
   val injector: Injector = Guice.createInjector(new Ga4ghModule())
 
-  val alignmentConverter: Converter[AlignmentRecord, ReadAlignment] = injector
-    .getInstance(Key.get(new TypeLiteral[Converter[AlignmentRecord, ReadAlignment]]() {}))
+  val alignmentConverter: Converter[Alignment, ReadAlignment] = injector
+    .getInstance(Key.get(new TypeLiteral[Converter[Alignment, ReadAlignment]]() {}))
 
   val variantConverter: Converter[org.bdgenomics.formats.avro.Variant, ga4gh.Variants.Variant] = injector
     .getInstance(Key.get(new TypeLiteral[Converter[org.bdgenomics.formats.avro.Variant, ga4gh.Variants.Variant]]() {}))
@@ -63,11 +63,11 @@ object GA4GHutil {
   /**
    * Converts avro Alignment Record to GA4GH Read Alignment
    *
-   * @param alignmentRecord Alignment Record
+   * @param alignment Alignment Record
    * @return GA4GH Read Alignment
    */
-  def alignmentRecordToGAReadAlignment(alignmentRecord: AlignmentRecord): ReadAlignment = {
-    alignmentConverter.convert(alignmentRecord, ConversionStringency.LENIENT, logger)
+  def alignmentToGAReadAlignment(alignment: Alignment): ReadAlignment = {
+    alignmentConverter.convert(alignment, ConversionStringency.LENIENT, logger)
   }
 
   /**
@@ -145,18 +145,18 @@ object GA4GHutil {
   }
 
   /**
-   * Converts AlignmentRecordDataset to GA4GHReadsResponse string
+   * Converts AlignmentDataset to GA4GHReadsResponse string
    *
-   * @param alignmentRecordDataset dataset to convert
+   * @param alignmentDataset dataset to convert
    * @param multipleGroupNames Boolean determining whether to map group names separately
    * @return GA4GHReadsResponse json string
    */
-  def alignmentRecordDatasetToJSON(alignmentRecordDataset: AlignmentRecordDataset,
-                                   multipleGroupNames: Boolean = false): java.util.Map[String, String] = {
+  def alignmentDatasetToJSON(alignmentDataset: AlignmentDataset,
+                             multipleGroupNames: Boolean = false): java.util.Map[String, String] = {
 
-    val gaReads: Array[ReadAlignment] = alignmentRecordDataset.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
+    val gaReads: Array[ReadAlignment] = alignmentDataset.rdd.collect.map(a => alignmentConverter.convert(a, ConversionStringency.LENIENT, logger))
 
-    // Group by ReadGroupID, which is set in bdg convert to alignmentRecord's getRecordGroupName(), if it exists, or "1"
+    // Group by ReadGroupID, which is set in bdg convert to alignment's getRecordGroupName(), if it exists, or "1"
     val results: Map[String, ga4gh.ReadServiceOuterClass.SearchReadsResponse] =
       if (multipleGroupNames) {
         gaReads.groupBy(r => r.getReadGroupId).map(sampleReads =>
