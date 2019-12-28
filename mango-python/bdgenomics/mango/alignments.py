@@ -164,7 +164,7 @@ class AlignmentSummary(object):
                                                                    & (r.start < end) & (r.end > start) & (r.readMapped)))
 
         # convert to GA4GH JSON to be consumed by mango-viz module
-        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentRecordDatasetToJSON(filtered._jvmRdd,
+        json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentDatasetToJSON(filtered._jvmRdd,
                                                                                                    multipleGroupNames)
 
         # visualize
