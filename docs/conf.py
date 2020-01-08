@@ -24,7 +24,6 @@ MOCK_MODULES = [
     "bdgenomics.adam.adamContext",
     "matplotlib",
     "matplotlib.pyplot",
-    "ipywidgets",
     "cigar",
     "numpy",
     "modin",

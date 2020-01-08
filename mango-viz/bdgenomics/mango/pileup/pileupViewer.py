@@ -20,6 +20,7 @@ r"""
 PileupViewer
 ============
 .. currentmodule:: bdgenomics.mango.pileup.pileupViewer
+
 .. autosummary::
    :toctree: _generate/
 
@@ -59,18 +60,33 @@ class PileupViewer(widgets.DOMWidget):
     id = uuid.uuid1().int
 
     def goto(self, locus):
+        """
+        Redirects widget view to new genomic locus.
+
+        Args:
+            :param locus: genomic locus is string form (ie. chr1:1-50)
+        """
         self.locus=locus
 
     def zoomOut(self):
+        """
+        Zooms widget view out by a factor of 2.
+
+        """
         self.msg = "zoomOut"
         self.msg = ""
 
     def zoomIn(self):
+        """
+        Zooms widget view in by a factor of 2.
+
+        """
         self.msg = "zoomIn"
         self.msg = ""
 
     def getSVG(self):
-        """ Sends request to javascript to convert to svg
+        """
+        Sends request to javascript to convert to svg
         Needs to run separately from saveSVG because
         js cannot message to kernel until cell is completed.
         """
@@ -78,7 +94,9 @@ class PileupViewer(widgets.DOMWidget):
         self.msg = ""
 
     def saveSVG(self, filepath):
-        """ Saves svg to filepath
+        """
+        Saves svg to filepath
+
         Args:
             :param filepath: path to save svg file to
         """
