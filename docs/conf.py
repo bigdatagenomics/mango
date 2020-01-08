@@ -32,7 +32,6 @@ MOCK_MODULES = [
     "pyspark",
     "pyspark.sql",
     "pyspark.sql.functions"
-
 ]
 
 for mod_name in MOCK_MODULES:
@@ -41,8 +40,16 @@ for mod_name in MOCK_MODULES:
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../mango-viz'))
-sys.path.insert(0, os.path.abspath('../mango-python'))
+this_dir = os.path.dirname(os.path.abspath(__file__))
+mango_viz_dir = os.path.abspath(os.path.join(this_dir, '..','mango-viz'))
+mango_python_dir = os.path.abspath(os.path.join(this_dir, '..','mango-python'))
+
+# make sure paths exists for API docs.
+if not os.path.exists(mango_viz_dir) or not os.path.exists(mango_python_dir):
+    raise FileNotFoundError("%s or %s not found" % (mango_viz_dir,  mango_python_dir))
+
+sys.path.insert(0, mango_viz_dir)
+sys.path.insert(0, mango_python_dir)
 
 def real_dir_name(p, n=1):
     p = os.path.realpath(p)
