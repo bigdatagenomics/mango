@@ -175,7 +175,7 @@ You can then run the Mango browser on HDFS files:
 
 .. code:: bash
 
-  /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- /opt/cgl-docker-lib/mango/example-files/hg19.genome \
+  /home/hadoop/mango-scripts/run-browser-docker.sh <SPARK_ARGS> -- <path_to_genome_file>/hg19.genome \
     -reads hdfs:///user/hadoop/NA19685.mapped.illumina.mosaik.MXL.exome.20110411.bam
 
 
@@ -203,7 +203,7 @@ Example Spark arguments are shown in the following example:
 
 
 Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal.
-An example notebook for EMR can be found at ```/opt/cgl-docker-lib/mango/example-files/notebooks/aws-1000genomes.ipynb``.
+An example notebook for EMR can be found at ```https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/aws-1000genomes.ipynb``.
 
 Accessing files in the Mango notebook from HDFS
 -----------------------------------------------
