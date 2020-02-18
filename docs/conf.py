@@ -348,7 +348,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   (master_doc, 'Mango', u'bdgenomics.mango Documentation',
-   author, 'Mango', 'Toil workflows for running Big Data Genomics tools.',
+   author, 'Mango', 'Genomic visualization.',
    'Miscellaneous'),
 ]
 
