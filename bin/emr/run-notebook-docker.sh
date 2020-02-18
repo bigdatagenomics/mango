@@ -14,7 +14,6 @@ POST_DD=()
 
 # by default, runs mango browser (mango-submit)
 # to override to mango-notebook,
-# run docker with --entrypoint=/opt/cgl-docker-lib/mango/bin/mango-notebook
 ENTRYPOINT="--entrypoint=mango-notebook"
 for ARG in "$@"; do
  shift
