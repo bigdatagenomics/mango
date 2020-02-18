@@ -203,7 +203,7 @@ Example Spark arguments are shown in the following example:
 
 
 Navigate to <PUBLIC_MASTER_DNS>:8888 to access the notebook. Type in the Jupyter notebook token provided in the terminal.
-An example notebook for EMR can be found at ```https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/aws-1000genomes.ipynb``.
+An example notebook for EMR can be found `on the Mango GitHub <https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/aws-1000genomes.ipynb>`__.
 
 Accessing files in the Mango notebook from HDFS
 -----------------------------------------------

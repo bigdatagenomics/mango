@@ -75,14 +75,14 @@ in [readthedocs](https://bdg-mango.readthedocs.io/en/latest/mangoPython/api.html
 
 The Mango Documentation includes instructions for running the Mango notebook on [Amazon AWS](https://bdg-mango.readthedocs.io/en/latest/cloud/emr.html#running-mango-notebook-on-emr-with-docker).
 These instructions can be leveraged to visualize genomic datasets staged in Amazon S3, and include example notebooks for exploring the 1000 Genomes Dataset on Amazon S3. If using the Mango Docker instances,
- an example notebook can be found at `https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/aws-1000genomes.ipynb`.
+ an example notebook can be found [on the GitHub](https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/aws-1000genomes.ipynb).
 
 ## Running the Mango notebook on a Google Dataproc Cluster
 
 
 The Mango Documentation includes instructions for running the Mango notebook on [Google Cloud Engine](https://bdg-mango.readthedocs.io/en/latest/cloud/google-cloud.html#running-mango-notebook-on-a-dataproc-cluster).
 These instructions can be leveraged to visualize genomic datasets staged publically. If using the Mango Docker instances,
-an example notebook can be found at `https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/gce-1000genomes.ipynb`.
+an example notebook can be found [on the GitHub](https://github.com/bigdatagenomics/mango/blob/master/example-files/notebooks/gce-1000genomes.ipynb).
 
 
 # The Mango Browser
