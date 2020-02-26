@@ -16,37 +16,32 @@
 # limitations under the License.
 #
 from .genomicfile import GenomicFile
-
+from bdgenomics.mango.pileup.sources import GA4GHFeatureJson
 
 class BedFile(GenomicFile):
 
     @classmethod
     def _read(cls, filepath_or_buffer, column_names, skiprows):
         return cls.dataframe_lib.read_table(filepath_or_buffer, names=column_names, skiprows=skiprows)
-
+        
     @classmethod
     def _parse(cls, df):
-        chromosomes = list(df["chrom"])
-        chrom_starts = list(df["chromStart"])
-        chrom_ends = list(df["chromEnd"])
-        return (chrom_starts, chrom_ends, chromosomes)
-
+        def _buildrow(row):
+            chromosomes = row["chrom"]
+            chrom_start = row["chromStart"]
+            chrom_end = row["chromEnd"]
+            bed_content = ' "referenceName":"{}", "start":"{}", "end":"{}"'.format(str(chromosomes), str(chrom_start), str(chrom_end))
+            return bed_content
+        return df.apply(_buildrow, axis = 1).squeeze()
+    
     @classmethod
     def _to_json(cls, df):
-        chrom_starts, chrom_ends, chromosomes = cls._parse(df)
+        bed_content_series = cls._parse(df)
         json_ga4gh = "{\"features\":["
-        for i in range(len(chromosomes)+1):
-            if i < len(chromosomes):
-                bed_content = "\"referenceName\":{}, \"start\":{}, \"end\":{}".format("\""+str(chromosomes[i])+"\"", "\""+str(chrom_starts[i])+"\"", "\""+str(chrom_ends[i])+"\"")
-                json_ga4gh = json_ga4gh + "{" + bed_content + "},"
-            else:
-                json_ga4gh = json_ga4gh[:len(json_ga4gh)-1]
-
-
-        #ending json
-        json_ga4gh = json_ga4gh + "]}"
+        json_ga4gh += "{" + bed_content_series.str.cat(sep="},{")[:-2]
+        json_ga4gh = json_ga4gh + '"}]}'
         return json_ga4gh
     
     @classmethod
     def _visualization(cls, df):
-        return 'featureJson'
+        return GA4GHFeatureJson.name
