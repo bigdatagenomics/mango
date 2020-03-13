@@ -1,29 +1,40 @@
 {
   "name": "bdgenomics.mango.pileup",
-  "version": "0.0.3a0",
+  "version": "0.0.5",
   "description": "pileup",
   "author": "Alyssa Morrow",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bdgenomics/mango.git"
+    "url": "https://github.com/bigdatagenomics/mango.git"
+  },
+  "homepage": "https://github.com/bigdatagenomics/mango/tree/master/mango-viz",
+  "bugs": {
+    "url": "https://github.com/bigdatagenomics/mango/issues"
   },
   "keywords": [
     "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension",
     "widgets",
     "ipython",
     "ipywidgets"
   ],
+  "style": "css/index.css",
   "scripts": {
-    "clean": "rimraf dist/",
-    "prepublish": "webpack",
+    "build": "tsc",
+    "clean": "rimraf lib tsconfig.tsbuildinfo",
+    "prepare": "jlpm run clean && jlpm run build",
     "test": "./scripts/test.sh",
     "lint": "./scripts/lint.sh",
     "flow": "flow status",
-    "flow-check": "flow check"
+    "flow-check": "flow check",
+    "watch": "tsc -w"
   },
+  "license": "Apache-2.0",
   "devDependencies": {
     "rimraf": "^2.6.1",
+    "typescript": "~3.7.0",
     "json-loader": "^0.5.4",
     "style-loader": "^0.13.1",
     "webpack": "^1.12.14",
@@ -32,8 +43,12 @@
     "jsxhint": "git://github.com/strml/JSXHint.git"
   },
   "dependencies": {
-    "@jupyter-widgets/base": "^1.0.0",
+    "@jupyterlab/application": "^1.2.0",
+    "@jupyter-widgets/base": "3.0.0",
     "pileup": "0.6.13",
     "underscore": "^1.8.3"
-  }
+  },
+  "sideEffects": [
+    "css/*.css"
+  ]
 }

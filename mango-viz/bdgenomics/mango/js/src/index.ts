@@ -9,7 +9,7 @@
 // dynamically.
 
 // $FlowFixMe
-require("../css/mangoviz.css");
+require("../css/index.css");
 // $FlowFixMe
 require('pileup/style/pileup.css');
 
