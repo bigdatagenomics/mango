@@ -31,4 +31,4 @@ for (var i = 0; i < loadedModules.length; i++) {
     }
 }
 
-module.exports['version'] = require('../package.json').version;
+export let version = require('../package.json').version;
