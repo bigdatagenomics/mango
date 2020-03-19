@@ -4,7 +4,7 @@ Notes for release managers
 This document describes how to make an Mango release.
 
 First, make sure you have:
-- Manually update the mango-python and mango-viz versions
+- Manually update the mango-python and mango-pileup versions
 
 Setup your environment:
 1. Copy (or incorporate) the settings.xml file to ```~/.m2/settings.xml```
@@ -23,7 +23,7 @@ After the release is rsynced to the Maven Central repository, confirm checksums 
 
 Be sure to announce the release on the ADAM mailing list and Twitter (@bigdatagenomics).
 
-Additionally, once the release is done, you will need to bump the mango-python and mango-viz development versions on trunk and
+Additionally, once the release is done, you will need to bump the mango-python and mango-pileup development versions on trunk and
 release them on pypi. The README's in these submodules explain how to do this.
 
 Update the mango version on bioconda at https://github.com/bioconda/bioconda-recipes/tree/master/recipes/mango.

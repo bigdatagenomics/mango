@@ -179,7 +179,7 @@ then
         conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip
         source activate mango-build-${PYTHON_UUID}
 
-        # install npm and node in the venv for mango-viz
+        # install npm and node in the venv for mango-pileup
         conda install -y nodejs
 
         # prepare mango python
@@ -201,15 +201,15 @@ then
         popd
 
         # prepare mango viz
-        pushd mango-viz
+        pushd mango-pileup
         make prepare
         popd
 
-        # run the widgets tests (mango-viz)
+        # run the widgets tests (mango-pileup)
         mvn -P widgets test
 
         # clean mango viz
-        pushd mango-viz
+        pushd mango-pileup
         make clean
         popd
 

@@ -658,7 +658,7 @@
     <profile>
       <id>widgets</id>
       <modules>
-        <module>mango-viz</module>
+        <module>mango-pileup</module>
       </modules>
     </profile>
     <profile>

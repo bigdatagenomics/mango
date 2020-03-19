@@ -40,7 +40,7 @@ make develop
 popd
 
 # prepare mango viz
-pushd mango-viz
+pushd mango-pileup
 make prepare
 make develop
 popd

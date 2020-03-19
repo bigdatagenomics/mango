@@ -32,11 +32,11 @@ class PileupTestCase(unittest.TestCase):
     def notebookFile(self, file):
 
         mangoRoot = os.path.dirname(os.getcwd())
-        return os.path.join(os.path.join(mangoRoot, "mango-viz", "examples"), file)
+        return os.path.join(os.path.join(mangoRoot, "mango-pileup", "examples"), file)
 
 
     def dataFile(self, file):
 
         mangoRoot = os.path.dirname(os.getcwd())
-        return os.path.join(os.path.join(mangoRoot, "mango-viz", "examples", "data"), file)
+        return os.path.join(os.path.join(mangoRoot, "mango-pileup", "examples", "data"), file)
 

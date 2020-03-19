@@ -53,8 +53,8 @@ if [ $python == "true" ]; then
     pip install pypandoc
 
 
-    # set up mango-viz environment for releasing to pypi
-    pushd mango-viz
+    # set up mango-pileup environment for releasing to pypi
+    pushd mango-pileup
 
     # clean any possible extant sdists
     rm -rf dist
