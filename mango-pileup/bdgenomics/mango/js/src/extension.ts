@@ -5,8 +5,8 @@
 // which is required for any notebook extension.
 
 // Configure requirejs
-if (window.require) {
-    window.require.config({
+if ((window as any).require) {
+    (window as any).require.config({
         map: {
             "*" : {
                 "pileup": "nbextensions/pileup/index"
@@ -16,6 +16,4 @@ if (window.require) {
 }
 
 // Export the required load_ipython_extention
-module.exports = {
-    load_ipython_extension: function() {}
-};
+export function load_ipython_extension() {}

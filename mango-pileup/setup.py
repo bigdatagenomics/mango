@@ -178,6 +178,8 @@ setup_args = {
         'ipython',
         'jupyter',
         'widgets',
+        'pileup',
+        'genome'
     ],
     'classifiers': [
         'Development Status :: 4 - Beta',

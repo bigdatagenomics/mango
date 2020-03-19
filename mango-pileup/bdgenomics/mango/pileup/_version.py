@@ -19,5 +19,9 @@
 version_info = (0, 0, '6a1')
 __version__ = '.'.join(map(str, version_info))
 
+
+# version of frontend (in bdgenomics/mango/js directory)
+__frontend_version__ = '^0.0.5'
+
 if __name__ == '__main__':
     print(__version__)

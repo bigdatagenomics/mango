@@ -1,6 +1,4 @@
-jupyter==1.0.0
-ipywidgets==7.0.0
+ipywidgets>=7.5.0
 six==1.11.0
 modin[ray]==0.7.2
 pytest==2.8.3
-jupyter_contrib_nbextensions==0.5.1

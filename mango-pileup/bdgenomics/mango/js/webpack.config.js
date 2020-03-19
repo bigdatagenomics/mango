@@ -17,10 +17,10 @@ module.exports = [
      // "load_ipython_extension" function which is required for any notebook
      // extension.
      //
-        entry: './src/extension.js',
+        entry: './lib/extension.js',
         output: {
             filename: 'extension.js',
-            path: '../pileup/static',
+            path: path.resolve(__dirname, '../pileup/static'),
             libraryTarget: 'amd'
         }
     },
@@ -30,10 +30,10 @@ module.exports = [
      // custom widget.
      // It must be an amd module
      //
-        entry: './src/index.js',
+        entry: './lib/index.js',
         output: {
             filename: 'index.js',
-            path: '../pileup/static',
+            path: path.resolve(__dirname, '../pileup/static'),
             libraryTarget: 'amd'
         },
         devtool: 'source-map',
@@ -56,7 +56,7 @@ module.exports = [
      // The target bundle is always `dist/index.js`, which is the path required
      // by the custom widget embedder.
      //
-        entry: './src/embed.js',
+        entry: './lib/embed.js',
         output: {
             filename: 'index.js',
             path: './dist/',

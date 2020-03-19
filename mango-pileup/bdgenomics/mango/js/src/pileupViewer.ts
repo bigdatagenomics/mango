@@ -1,7 +1,7 @@
 /* @flow */
 
 // $FlowFixMe
-var widgets = require('@jupyter-widgets/base');
+import * as widgets from '@jupyter-widgets/base';
 
 var _ = require('underscore');
 var pileup = require('pileup');
@@ -111,8 +111,11 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
 
         var newTrack = {
           viz: pileup.viz[track.viz](),
+          isReference: false,
+          data: null,
           name: track.label
         };
+
 
         // data may not exist for scale or location tracks
         if (pileup.formats[track.source] != null) {

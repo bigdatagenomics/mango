@@ -33,7 +33,7 @@ from .track import Track, track_list_serialization
 import uuid
 import json
 from urllib.parse import unquote
-
+from ._version import __frontend_version__
 
 @widgets.register('bdgenomics.mango.pileup.PileupViewer')
 class PileupViewer(widgets.DOMWidget):
@@ -44,8 +44,8 @@ class PileupViewer(widgets.DOMWidget):
     _model_name = Unicode('PileupViewerModel').tag(sync=True)
     _view_module = Unicode('pileup').tag(sync=True)
     _model_module = Unicode('pileup').tag(sync=True)
-    _view_module_version = Unicode('^0.1.0').tag(sync=True)
-    _model_module_version = Unicode('^0.1.0').tag(sync=True)
+    _view_module_version = Unicode(__frontend_version__).tag(sync=True)
+    _model_module_version = Unicode(__frontend_version__).tag(sync=True)
 
     # Attributes
     # locus with placeholder
@@ -108,5 +108,3 @@ class PileupViewer(widgets.DOMWidget):
         svg_txt = decoded.replace("data:image/svg+xml;charset=utf-8,", "")
 
         with open(filepath, "w") as f: f.write(svg_txt)
-
-

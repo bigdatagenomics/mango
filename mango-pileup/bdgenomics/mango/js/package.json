@@ -22,20 +22,24 @@
   ],
   "style": "css/index.css",
   "scripts": {
-    "build": "tsc",
-    "clean": "rimraf lib tsconfig.tsbuildinfo",
-    "prepare": "jlpm run clean && jlpm run build",
+    "build": "npm run build:js && webpack",
+    "build:js": "tsc",
+    "watch:js": "tsc --watch",
+    "prepublish": "npm run build",
     "test": "./scripts/test.sh",
     "lint": "./scripts/lint.sh",
     "flow": "flow status",
-    "flow-check": "flow check",
-    "watch": "tsc -w"
+    "flow-check": "flow check"
   },
   "license": "Apache-2.0",
   "devDependencies": {
+    "@jupyter-widgets/controls": "^1.5.0",
+    "@types/node": "^12.0.2",
+    "@types/mocha": "^5.2.7",
     "rimraf": "^2.6.1",
     "typescript": "~3.7.0",
-    "json-loader": "^0.5.4",
+    "imports-loader": "^0.6.5",
+    "json-loader": "^0.5.7",
     "style-loader": "^0.13.1",
     "webpack": "^1.12.14",
     "css-loader": "^0.23.1",
@@ -43,12 +47,18 @@
     "jsxhint": "git://github.com/strml/JSXHint.git"
   },
   "dependencies": {
-    "@jupyterlab/application": "^1.2.0",
-    "@jupyter-widgets/base": "3.0.0",
+    "@jupyter-widgets/base": "^2 || ^3",
+    "@phosphor/messaging": "^1",
+    "@phosphor/widgets": "^1",
     "pileup": "0.6.13",
     "underscore": "^1.8.3"
   },
-  "sideEffects": [
-    "css/*.css"
-  ]
+  "files": [
+    "dist/",
+    "css/",
+    "lib/"
+  ],
+  "jupyterlab": {
+    "extension": "lib/jupyterlab-plugin"
+  }
 }
