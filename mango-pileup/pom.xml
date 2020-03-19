@@ -8,7 +8,7 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mango-viz</artifactId>
+  <artifactId>mango-pileup</artifactId>
   <packaging>jar</packaging>
   <name>Mango: Python visualization hooks</name>
   <properties>

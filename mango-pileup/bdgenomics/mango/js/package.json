@@ -8,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/bigdatagenomics/mango.git"
   },
-  "homepage": "https://github.com/bigdatagenomics/mango/tree/master/mango-viz",
+  "homepage": "https://github.com/bigdatagenomics/mango/tree/master/mango-pileup",
   "bugs": {
     "url": "https://github.com/bigdatagenomics/mango/issues"
   },

@@ -76,7 +76,7 @@ test: check_build_reqs
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	# run lint and flow for js
 	pushd bdgenomics/mango/js \
-		&& npm run lint
+		&& npm run test
 
 
 pypi: clean sdist

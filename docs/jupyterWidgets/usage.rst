@@ -3,12 +3,12 @@ Jupyter Widget Usage
 
 **Note**: Python 2.7 is `dropping support <https://www.anaconda.com/end-of-life-eol-for-python-2-7-is-coming-are-you-ready/>`__ January 1, 2020. For this reason, Mango no longer supports Python 2.
 
-The Mango widgets are Jupyter widgets built using `pileup.js <https://github.com/hammerlab/pileup.js>`__ .
+The Mango widgets are Jupyter widgets built using `pileup.js <https://github.com/hammerlab/pileup.js>`__.
 The widgets support visualizations for alignments, features,
-variants, and genotypes in a Jupyter Notebook.
+variants, and genotypes in a Jupyter Notebook and Jupyter lab version >2.0.
 
-Installation
-------------
+Installation for Jupyter notebook
+---------------------------------
 
 First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
 
@@ -18,17 +18,25 @@ First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
     pip install bdgenomics.mango.pileup
 
     jupyter nbextension enable --py widgetsnbextension
-    jupyter nbextension install --py --symlink --user bdgenomics.mango.pileup
+    jupyter nbextension install --py --user bdgenomics.mango.pileup
     jupyter nbextension enable bdgenomics.mango.pileup --user --py
 
 
+Installation for Jupyter lab
+----------------------------
 
-These tutorials show how to create a Jupyter pileup.js widget. An example notebook can be found in the `Mango Github repository <https://github.com/bigdatagenomics/mango/blob/master/mango-viz/examples/pileup-tutorial.ipynb>`__.
+.. code:: bash
+
+    pip install bdgenomics.mango.pileup
+    jupyter labextension install @jupyter-widgets/jupyterlab-manager # install the Jupyter widgets extension
+    jupyter labextension install bdgenomics.mango.pileup
+
+These tutorials show how to create a Jupyter pileup.js widget. An example notebook can be found in the `Mango Github repository <https://github.com/bigdatagenomics/mango/blob/master/mango-pileup/examples/pileup-tutorial.ipynb>`__.
 
 Pileup Example
 --------------
 
-This example shows how to visualize alignments through a Jupyter widget. It is located in ``<PATH_TO_MANGO>/mango-viz/examples/pileup-tutorial.ipynb``.
+This example shows how to visualize alignments through a Jupyter widget. It is located in ``<PATH_TO_MANGO>/mango-pileup/examples/pileup-tutorial.ipynb``.
 
 .. code:: python
 
