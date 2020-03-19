@@ -25,11 +25,11 @@ workfiles/
 
 # metadata
 example-files/notebooks/metastore_db/*
-mango-viz/examples/.ipynb_checkpoints/*
+mango-pileup/examples/.ipynb_checkpoints/*
 */*/.ipynb_checkpoints/*
 
 # builds
-mango-viz/build/*
+mango-pileup/build/*
 
 # venvs
 venv/*
@@ -38,20 +38,20 @@ mango-python/adam/*
 mango-python/dist/*
 mango-python/build/*
 mango-python/bdgenomics.mango.egg-info/*
-mango-viz/metastore_db/*
-mango-viz/venv/*
+mango-pileup/metastore_db/*
+mango-pileup/venv/*
 *.bak
 
-mango-viz/bdgenomics/mango/pileup/static/*
-mango-viz/bdgenomics/mango/js/dist/*
-mango-viz/bdgenomics.mango.pileup.egg-info/*
+mango-pileup/bdgenomics/mango/pileup/static/*
+mango-pileup/bdgenomics/mango/js/dist/*
+mango-pileup/bdgenomics.mango.pileup.egg-info/*
 *.pyc
 
 example-files/metastore_db/*
 
 
-# mango-viz node modules
-mango-viz/bdgenomics/mango/js/node_modules/*
+# mango-pileup node modules
+mango-pileup/bdgenomics/mango/js/node_modules/*
 
 # docs _build
 docs/_build/*
