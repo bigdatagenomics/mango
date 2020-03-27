@@ -13,8 +13,12 @@ require("../css/index.css");
 // $FlowFixMe
 require('pileup/style/pileup.css');
 
+
 // Export widget models and views, and the npm package version number.
+export let version = require('../package.json').version
+
 module.exports = {};
+module.exports["version"] = version;
 
 var loadedModules = [
     require('./pileupViewer')
@@ -30,5 +34,3 @@ for (var i = 0; i < loadedModules.length; i++) {
         }
     }
 }
-
-export let version = require('../package.json').version;
