@@ -71,7 +71,7 @@ class FeatureSummary(object):
         filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig_full) | (r.referenceName == contig_trimmed))
                                                            & (r.start < end) & (r.end > start)))
 
-        # convert to GA4GH JSON to be consumed by mango-viz module
+        # convert to GA4GH JSON to be consumed by mango-pileup module
         json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.featureDatasetToJSON(filtered._jvmRdd)
 
         # visualize
@@ -80,5 +80,3 @@ class FeatureSummary(object):
             tracks=[Track(viz="features", label=label, source=pileup.sources.GA4GHFeatureJson(json))]
             locus="%s:%i-%i" % (contig, start, end)
             return pileup.PileupViewer(locus=locus, reference=reference, tracks=tracks)
-
-

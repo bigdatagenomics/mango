@@ -4,8 +4,19 @@ Package Install
 ---------------
 
 **Prerequisites**
-- [node](http://nodejs.org/)
+- [node > 12](http://nodejs.org/)
+- Jupyter lab Version 2.0.1 or Jupyter notebook
 
-```bash
-npm install --save bdgenomics.mango.pileup
-```
+## Development
+
+  git clone https://github.com/bigdatagenomics/mango.git
+  cd mango-pileup
+  make develop
+
+## Releases
+
+To cut a new release:
+
+- Update `version` in `package.json`. Commit this change.
+- Run `scripts/publish.sh`
+- Run `npm publish`
