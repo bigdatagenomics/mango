@@ -42,8 +42,8 @@ class PileupViewer(widgets.DOMWidget):
 
     _view_name = Unicode('PileupViewerView').tag(sync=True)
     _model_name = Unicode('PileupViewerModel').tag(sync=True)
-    _view_module = Unicode('pileup').tag(sync=True)
-    _model_module = Unicode('pileup').tag(sync=True)
+    _view_module = Unicode('bdgenomics.mango.pileup').tag(sync=True)
+    _model_module = Unicode('bdgenomics.mango.pileup').tag(sync=True)
     _view_module_version = Unicode(__frontend_version__).tag(sync=True)
     _model_module_version = Unicode(__frontend_version__).tag(sync=True)
 

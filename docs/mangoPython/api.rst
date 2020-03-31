@@ -1,4 +1,4 @@
-Mango Python API Documentation
-==============================
+Mango Pyspark API Documentation
+===============================
 
 .. automodule:: bdgenomics.mango

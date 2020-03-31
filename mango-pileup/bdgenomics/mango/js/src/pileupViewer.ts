@@ -7,14 +7,16 @@ var _ = require('underscore');
 var pileup = require('pileup');
 var utils = require("./utils");
 
+let _version = require('../package.json').version;
+
 var PileupViewerModel = widgets.DOMWidgetModel.extend({
     defaults: _.extend(widgets.DOMWidgetModel.prototype.defaults(), {
         _model_name : 'PileupViewerModel',
         _view_name : 'PileupViewerView',
-        _model_module : 'pileup',
-        _view_module : 'pileup',
-        _model_module_version : '0.0.5',
-        _view_module_version : '0.0.5',
+        _model_module : 'bdgenomics.mango.pileup',
+        _view_module : 'bdgenomics.mango.pileup',
+        _model_module_version : _version,
+        _view_module_version : _version,
         locus : 'chr1:1-50',
         reference: 'hg19',
         svg: '',
