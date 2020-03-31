@@ -89,7 +89,7 @@ test: check_build_reqs
 	pushd ../example-files/notebooks \
 		&& jupyter nbconvert --to python mango-python-coverage.ipynb \
 		&& jupyter nbconvert --to python mango-python-alignment.ipynb \
-		&& jupyter nbconvert --to python mango-viz.ipynb \
+		&& jupyter nbconvert --to python mango-pileup.ipynb \
 		&& jupyter nbconvert --to python mango-python-variants.ipynb
 	mkdir -p target
 	export PYTHONPATH=$(PYTHONPATH) \
@@ -98,7 +98,7 @@ test: check_build_reqs
 	pushd ../example-files/notebooks \
 		&& rm mango-python-coverage.py \
 		&& rm mango-python-alignment.py \
-		&& rm mango-viz.py \
+		&& rm mango-pileup.py \
 		&& rm mango-python-variants.py
 	exit
 

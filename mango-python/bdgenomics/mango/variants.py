@@ -70,7 +70,7 @@ class VariantSummary(object):
         filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig_full) | (r.referenceName == contig_trimmed))
                                                            & (r.start < end) & (r.end > start)))
 
-        # convert to GA4GH JSON to be consumed by mango-viz module
+        # convert to GA4GH JSON to be consumed by mango-pileup module
         json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.variantDatasetToJSON(filtered._jvmRdd)
 
         # visualize
@@ -79,4 +79,3 @@ class VariantSummary(object):
             tracks=[Track(viz="variants", label=label, source=pileup.sources.GA4GHVariantJson(json))]
             locus="%s:%i-%i" % (contig, start, end)
             return pileup.PileupViewer(locus=locus, reference=reference, tracks=tracks)
-

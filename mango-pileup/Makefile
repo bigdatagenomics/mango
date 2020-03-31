@@ -52,7 +52,7 @@ develop:
 	- $(jupyter) nbextension enable --py widgetsnbextension
 	- $(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	- $(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
-
+	- $(jupyter) labextension install bdgenomics/mango/js/ # install widget for jupyter lab
 
 sdist: dist/$(sdist_name)
 dist/$(sdist_name):
@@ -84,7 +84,7 @@ pypi: clean sdist
 	&& $(python) setup.py egg_info sdist bdist_egg \
 	&& twine check dist/* \
 	&& twine upload dist/*
-	
+
 # clean
 clean:
 	rm -rf bdgenomics/mango/js/dist
@@ -93,6 +93,8 @@ clean:
 	rm -rf dist/
 	rm -rf bdgenomics/mango/js/node_modules
 	$(jupyter) nbextension uninstall pileup
+	$(jupyter) labextension uninstall bdgenomics.mango.pileup
+
 
 
 # check for node, jupyter and npm
