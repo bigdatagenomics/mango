@@ -1,6 +1,6 @@
 {
   "name": "bdgenomics.mango.pileup",
-  "version": "0.0.5-beta.5",
+  "version": "0.0.5-beta.1",
   "description": "Interactive Jupyter genome browser",
   "author": "Alyssa Morrow",
   "main": "dist/index.js",
