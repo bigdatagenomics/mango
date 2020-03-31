@@ -1,6 +1,24 @@
-- To release a new version of bdgenomics.mango.pileup on PyPI:
+# Release on npm
+To release a new version of bdgenomics.mango.pileup on npm:
+
+- Update
+- cd bdgenomics/mango/js.
+- Update `version` in `package.json`. Commit this change.
+- Run `scripts/publish.sh`.
+- Run `npm publish`.
+- Push to github.
+
+If you are publishing a beta version, run:
+
+- `npm publish --tag beta`
+
+
+# Release on PyPI
+
+To release a new version of bdgenomics.mango.pileup on PyPI:
 
 Update version in _version.py (set release version, remove 'dev')
+Also, update the npm frontend version in _version.py to match (TODO LINK to npm)
 Update version in bdgenomics/mango/pileup/js/package.json
 make clean
 make sdist

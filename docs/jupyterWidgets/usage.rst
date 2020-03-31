@@ -25,6 +25,11 @@ First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
 Installation for Jupyter lab
 ----------------------------
 
+To use the Mango widgets in Jupyter lab, you will need the following requirements:
+
+- `Jupyter lab version > 2.0 <https://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html>`__
+- `node > 12 <https://nodejs.org/en/download/>`__
+
 .. code:: bash
 
     pip install bdgenomics.mango.pileup
@@ -36,7 +41,7 @@ These tutorials show how to create a Jupyter pileup.js widget. An example notebo
 Pileup Example
 --------------
 
-This example shows how to visualize alignments through a Jupyter widget. It is located in ``<PATH_TO_MANGO>/mango-pileup/examples/pileup-tutorial.ipynb``.
+This example shows how to visualize alignments through a Jupyter widget.
 
 .. code:: python
 
