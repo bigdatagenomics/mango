@@ -35,9 +35,21 @@ node=node
 mango_version:=$(shell $(python) bdgenomics/mango/pileup/_version.py)
 sdist_name:=mango.pileup-$(mango_version).tar.gz
 tests=bdgenomics/mango/
+js_path=bdgenomics/mango/js
 extras=
 current_commit:=$(shell git log --pretty=oneline -n 1 -- $(pwd) | cut -f1 -d " ")
 dirty:=$(shell (git diff --exit-code && git diff --cached --exit-code) > /dev/null || printf -- --DIRTY)
+
+
+# Error if python and npm frontend versions are not equal
+py_frontend_version=$(shell ($(python) -c 'import bdgenomics.mango.pileup._version as version;print(version.__frontend_version__[1:])'))
+npm_frontend_version=$(shell (grep version $(js_path)/package.json | cut -c 15- | rev | cut -c 3- | rev))
+
+ifneq ($(py_frontend_version), $(npm_frontend_version))
+$(error The python frontend versions-$(py_frontend_version)-and npm frontend versions-$(npm_frontend_version)-do not match.)
+endif
+
+
 
 green=\033[0;32m
 normal=\033[0m\n
@@ -45,14 +57,14 @@ red=\033[0;31m
 
 develop:
 	rm -rf bdgenomics/mango/pileup/static
-	rm -rf bdgenomics/mango/js/dist
+	rm -rf $(js_path)/dist
 	rm -rf bdgenomics.mango.pileup.egg-info/
 	$(pip) install -v -e .$(extras)
-	$(jupyter) nbextension uninstall pileup
+	$(jupyter) nbextension uninstall bdgenomics.manog.pileup
 	$(jupyter) nbextension enable --py widgetsnbextension
 	$(jupyter) nbextension install --py --symlink --user bdgenomics.mango.pileup
 	$(jupyter) nbextension enable bdgenomics.mango.pileup --py --user
-	$(jupyter) labextension install bdgenomics/mango/js/ # install widget for jupyter lab
+	$(jupyter) labextension install $(js_path)/ # install widget for jupyter lab
 
 sdist: dist/$(sdist_name)
 dist/$(sdist_name):
@@ -75,9 +87,14 @@ test: check_build_reqs
 	mkdir -p target
 	$(python) -m pytest -vv --junitxml target/pytest-reports/tests.xml $(tests)
 	# run lint and flow for js
-	pushd bdgenomics/mango/js \
-		&& npm run test
+	pushd $(js_path) \
+		&& $(npm) run test
 
+
+npm:
+	pushd $(js_path) \
+		&& ./scripts/publish \
+		&& $(npm) publish
 
 pypi: clean sdist
 	set -x \
@@ -85,14 +102,18 @@ pypi: clean sdist
 	&& twine check dist/* \
 	&& twine upload dist/*
 
+publish:
+	npm
+	pypi
+
 # clean
 clean:
-	rm -rf bdgenomics/mango/js/dist
+	rm -rf $(js_path)/dist
 	rm -rf bdgenomics.mango.pileup.egg-info/
 	rm -rf bdgenomics/mango/pileup/static/
 	rm -rf dist/
-	rm -rf bdgenomics/mango/js/node_modules
-	$(jupyter) nbextension uninstall pileup
+	rm -rf $(js_path)/node_modules
+	$(jupyter) nbextension uninstall bdgenomics.mango.pileup
 	$(jupyter) labextension uninstall bdgenomics.mango.pileup
 
 
@@ -114,5 +135,5 @@ prepare:
 	$(pip) install -r requirements.txt
 
 	# install node_modules
-	cd bdgenomics/mango/js; \
+	cd $(js_path); \
 		$(npm) install

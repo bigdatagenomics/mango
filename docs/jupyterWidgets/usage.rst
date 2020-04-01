@@ -17,10 +17,23 @@ First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
 
     pip install bdgenomics.mango.pileup
 
-    jupyter nbextension enable --py widgetsnbextension
     jupyter nbextension install --py --user bdgenomics.mango.pileup
-    jupyter nbextension enable bdgenomics.mango.pileup --user --py
+    jupyter nbextension install --py --user widgetsnbextension
 
+    jupyter nbextension enable --py --user widgetsnbextension
+    jupyter nbextension enable --py --user bdgenomics.mango.pileup
+
+**Note**: If you are using an conda environment, install extensions using ``--sys-prefix``:
+
+.. code:: bash
+
+    jupyter nbextension install --py --sys-prefix bdgenomics.mango.pileup
+    jupyter nbextension install --py --sys-prefix widgetsnbextension
+
+    jupyter nbextension enable --py --sys-prefix widgetsnbextension
+    jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup 
+
+This will install the bdgenomics.mango.pileup extension into your current conda environment.
 
 Installation for Jupyter lab
 ----------------------------
