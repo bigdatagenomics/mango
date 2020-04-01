@@ -9,7 +9,7 @@ if ((window as any).require) {
     (window as any).require.config({
         map: {
             "*" : {
-                "bdgenomics.mango.pileup": "nbextensions/pileup/index"
+                "bdgenomics.mango.pileup": "nbextensions/bdgenomics.mango.pileup/index"
             }
         }
     });

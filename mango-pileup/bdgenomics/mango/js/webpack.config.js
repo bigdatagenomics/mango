@@ -61,7 +61,7 @@ module.exports = [
             filename: 'index.js',
             path: './dist/',
             libraryTarget: 'amd',
-            publicPath: 'https://unpkg.com/bdgenomics/mango/pileup@' + version + '/dist/'
+            publicPath: 'https://unpkg.com/bdgenomics.mango.pileup@' + version + '/dist/'
         },
         devtool: 'source-map',
         module: {

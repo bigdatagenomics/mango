@@ -37,6 +37,6 @@ def _jupyter_nbextension_paths():
     return [{
         'section': 'notebook',
         'src': 'static',
-        'dest': 'pileup',
-        'require': 'pileup/extension'
+        'dest': 'bdgenomics.mango.pileup',
+        'require': 'bdgenomics.mango.pileup/extension'
     }]
