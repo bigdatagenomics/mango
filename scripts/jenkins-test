@@ -176,7 +176,7 @@ then
     pythons=( 3.6 )
     for python in ${pythons[*]}
     do
-        conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip jupyterlab=2.0.1 
+        conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=20.1.1 jupyterlab=2.0.1 
         source activate mango-build-${PYTHON_UUID}
 
         # install npm and node in the venv for mango-pileup
@@ -281,7 +281,7 @@ then
     if [ "${#PROCESSES[@]}" -gt 0 ] ; then
         echo "Mango Browser Succeeded"
         # kill all Mango Browser related processes
-        kill ${PROCESSES}; 
+        kill ${PROCESSES};
     else
         echo "Mango Browser failed with logs:"
         cat ${MANGO_BROWSER_LOGS}
