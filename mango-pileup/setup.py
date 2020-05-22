@@ -25,15 +25,8 @@ from subprocess import check_call
 import os
 import sys
 
-
-# parse_requirements() returns generator of pip.req.InstallRequirement objects
-try: # for pip >= 10
-    from pip._internal.req import parse_requirements
-except ImportError: # for pip <= 9.0.3
-    from pip.req import parse_requirements
-
-install_reqs = parse_requirements('requirements.txt', session='hack')
-reqs = [str(ir.req) for ir in install_reqs]
+with open('requirements.txt') as reqs_file:
+        reqs = reqs_file.read().splitlines()
 
 here = os.path.dirname(os.path.abspath(__file__))
 node_root = os.path.join(here, 'bdgenomics', 'mango', 'js')
