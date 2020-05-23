@@ -1,72 +1,54 @@
-var path = require('path');
-var version = require('./package.json').version;
+const path = require('path');
 
-// Custom webpack loaders are generally the same for all webpack bundles, hence
-// stored in a separate local variable.
-var loaders = [
-    { test: /\.css$/, loader: "style-loader!css-loader" },
-    { test: /\.json$/, loader: 'json-loader' }
+var rules = [
+    { test: /\.css$/, use: [{loader: "style-loader"}, {loader: "css-loader" }]},
+    { test: /\.less$/, use: [{loader: "style-loader"}, {loader: "css-loader" }, {loader: "less-loader" }]},
+    { test: /\.(jpg|png|gif)$/, use: "file" },
+    // required to load font-awesome
+    { test: /\.woff2(\?v=\d+\.\d+\.\d+)?$/, use: "url?limit=10000&mimetype=application/font-woff" },
+    { test: /\.woff(\?v=\d+\.\d+\.\d+)?$/, use: "url?limit=10000&mimetype=application/font-woff" },
+    { test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, use: "url?limit=10000&mimetype=application/octet-stream" },
+    { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, use: "file" },
+    { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, use: "url?limit=10000&mimetype=image/svg+xml" }
 ];
 
 module.exports = [
     {// Notebook extension
-     //
-     // This bundle only contains the part of the JavaScript that is run on
-     // load of the notebook. This section generally only performs
-     // some configuration for requirejs, and provides the legacy
-     // "load_ipython_extension" function which is required for any notebook
-     // extension.
-     //
         entry: './lib/extension.js',
         output: {
             filename: 'extension.js',
-            path: path.resolve(__dirname, '../pileup/static'),
+            path: path.resolve(__dirname, '../pileup/static/'),
             libraryTarget: 'amd'
-        }
+        },
+        externals: ['@jupyter-widgets/base'],
+        mode: 'production'
     },
-    {// Bundle for the notebook containing the custom widget views and models
-     //
-     // This bundle contains the implementation for the custom widget views and
-     // custom widget.
-     // It must be an amd module
-     //
+    {// bqplot bundle for the classic notebook
         entry: './lib/index.js',
         output: {
             filename: 'index.js',
-            path: path.resolve(__dirname, '../pileup/static'),
+            path: path.resolve(__dirname, '..pileup/static'),
             libraryTarget: 'amd'
         },
         devtool: 'source-map',
         module: {
-            loaders: loaders
+            rules: rules
         },
-        externals: ['@jupyter-widgets/base']
+        externals: ['@jupyter-widgets/base'],
+        mode: 'production'
     },
-    {// Embeddable bdgenomics.mango.pileup bundle
-     //
-     // This bundle is generally almost identical to the notebook bundle
-     // containing the custom widget views and models.
-     //
-     // The only difference is in the configuration of the webpack public path
-     // for the static assets.
-     //
-     // It will be automatically distributed by unpkg to work with the static
-     // widget embedder.
-     //
-     // The target bundle is always `dist/index.js`, which is the path required
-     // by the custom widget embedder.
-     //
+    {// bqplot bundle for unpkg.
         entry: './lib/embed.js',
         output: {
             filename: 'index.js',
-            path: './dist/',
-            libraryTarget: 'amd',
-            publicPath: 'https://unpkg.com/bdgenomics.mango.pileup@' + version + '/dist/'
+            path: path.resolve(__dirname, './dist/'),
+            libraryTarget: 'amd'
         },
         devtool: 'source-map',
         module: {
-            loaders: loaders
+            rules: rules
         },
-        externals: ['@jupyter-widgets/base']
+        externals: ['@jupyter-widgets/base'],
+        mode: 'production'
     }
 ];
