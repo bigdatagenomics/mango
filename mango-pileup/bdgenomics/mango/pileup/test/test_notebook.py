@@ -29,7 +29,7 @@ class MangoVizExampleTest(PileupTestCase):
         vcfFile = self.dataFile("genodata.v3.vcf")
         testMode = True
 
-    # this file is converted from mango-python-alignment.ipynb in the Makefile
+        # this file is converted from mango-python-alignment.ipynb in the Makefile
         pileupFile = self.notebookFile("pileup-tutorial.py")
         exec(open(pileupFile).read())
 
