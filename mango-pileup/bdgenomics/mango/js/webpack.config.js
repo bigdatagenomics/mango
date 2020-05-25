@@ -14,6 +14,13 @@ var rules = [
 
 module.exports = [
     {// Notebook extension
+     //
+     // This bundle only contains the part of the JavaScript that is run on
+     // load of the notebook. This section generally only performs
+     // some configuration for requirejs, and provides the legacy
+     // "load_ipython_extension" function which is required for any notebook
+     // extension.
+     //
         entry: './lib/extension.js',
         output: {
             filename: 'extension.js',
@@ -23,11 +30,16 @@ module.exports = [
         externals: ['@jupyter-widgets/base'],
         mode: 'production'
     },
-    {// bqplot bundle for the classic notebook
+    {// Bundle for the notebook containing the custom widget views and models
+     //
+     // This bundle contains the implementation for the custom widget views and
+     // custom widget.
+     // It must be an amd module
+     //
         entry: './lib/index.js',
         output: {
             filename: 'index.js',
-            path: path.resolve(__dirname, '..pileup/static'),
+            path: path.resolve(__dirname, '../pileup/static'),
             libraryTarget: 'amd'
         },
         devtool: 'source-map',
