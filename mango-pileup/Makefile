@@ -42,7 +42,7 @@ dirty:=$(shell (git diff --exit-code && git diff --cached --exit-code) > /dev/nu
 
 
 # Error if python and npm frontend versions are not equal
-py_frontend_version=$(shell ($(python) -c 'import bdgenomics.mango.pileup._version as version;print(version.__frontend_version__[1:])'))
+py_frontend_version=$(shell ($(python) -c "import sys;sys.path.insert(1, 'bdgenomics/mango/pileup');import _version;print(_version.__frontend_version__[1:])"))
 npm_frontend_version=$(shell (grep version $(js_path)/package.json | cut -c 15- | rev | cut -c 3- | rev))
 
 ifneq ($(py_frontend_version), $(npm_frontend_version))
