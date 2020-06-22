@@ -20,11 +20,6 @@ from __future__ import print_function
 from setuptools import find_packages, setup
 from version import version as mango_version
 
-try: # for pip >= 10
-    from pip._internal.req import parse_requirements
-except ImportError: # for pip <= 9.0.3
-    from pip.req import parse_requirements
-
 import os
 import sys
 
@@ -33,10 +28,8 @@ import sys
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-# parse_requirements() returns generator of pip.req.InstallRequirement objects
-install_reqs = parse_requirements('requirements.txt', session='hack')
-
-reqs = [str(ir.req) for ir in install_reqs]
+with open('requirements.txt') as reqs_file:
+        reqs = reqs_file.read().splitlines()
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
