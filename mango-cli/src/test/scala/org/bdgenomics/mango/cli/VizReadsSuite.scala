@@ -25,7 +25,7 @@ import org.scalatra.test.scalatest.ScalatraSuite
 import net.liftweb.json._
 
 import org.junit.Test
-@org.junit.runner.RunWith(value = classOf[org.scalatest.junit.JUnitRunner])
+@org.junit.runner.RunWith(value = classOf[org.scalatestplus.junit.JUnitRunner])
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   implicit val formats = DefaultFormats
@@ -73,11 +73,11 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH(featureKey, "null", 200, "chrM", 0, 2000).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
     }
 
     get("/quit") {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
     }
   }
 
@@ -114,7 +114,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchReadsRequestGA4GH("null", 200, Array(bamKey), "chrM", 1, 2).toByteArray()
 
     post("/reads/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val parsedData = GA4GHutil.stringToSearchReadsResponse(response.getContent())
         .getAlignmentsList
@@ -134,7 +134,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchReadsRequestGA4GH("null", 200, Array(bamKey), "chrM", 1, 100).toByteArray()
 
     post("/reads/search", body, requestHeader) {
-      assert(status == NotFound().status.code)
+      assert(status == NotFound().status)
     }
   }
 
@@ -144,7 +144,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchReadsRequestGA4GH("null", 200, Array(bamKey), "fakeChr", 1, 100).toByteArray()
 
     post("/reads/search", body, requestHeader) {
-      assert(status == NotFound().status.code)
+      assert(status == NotFound().status)
     }
   }
 
@@ -154,7 +154,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchReadsRequestGA4GH("null", 200, Array("invalidKey"), "chrM", 1, 100).toByteArray()
 
     post("/reads/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
     }
   }
 
@@ -170,7 +170,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchVariantsRequestGA4GH(vcfKey, "null", 200, "chrM", Array(), 0, 100).toByteArray()
 
     post("/variants/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
@@ -187,7 +187,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchVariantsRequestGA4GH("invalidKey", "null", 200, "chrM", Array(), 0, 100).toByteArray()
 
     post("/variants/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
@@ -205,7 +205,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchVariantsRequestGA4GH("invalidKey", "null", 200, "chrM", Array(), 0, 100).toByteArray()
 
     post("/variants/search", body, requestHeader) {
-      assert(status == NotFound().status.code)
+      assert(status == NotFound().status)
     }
   }
 
@@ -216,7 +216,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH(featureKey, "null", 200, "chrM", 0, 1200).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
@@ -231,7 +231,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH("invalidKey", "null", 200, "chrM", 0, 100).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
 
@@ -249,7 +249,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH("invalidKey", "null", 200, "chrM", 0, 100).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == NotFound().status.code)
+      assert(status == NotFound().status)
     }
   }
 
@@ -259,7 +259,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH(featureKey, "null", 200, "fakeChr", 0, 100).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == NotFound().status.code)
+      assert(status == NotFound().status)
     }
   }
 
@@ -275,7 +275,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH(coverageKey, "null", 200, "chrM", 0, 1200).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
 
@@ -289,7 +289,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val body = SearchFeaturesRequestGA4GH("invalidKey", "null", 200, "chrM", 0, 1200).toByteArray()
 
     post("/features/search", body, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
 
@@ -308,7 +308,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val coverageBody = SearchFeaturesRequestGA4GH(coverageKey, "null", 200, "chrM", 0, 1200).toByteArray()
 
     post("/features/search", coverageBody, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
 
@@ -318,7 +318,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val featureBody = SearchFeaturesRequestGA4GH(featureKey, "null", 200, "chrM", 0, 1200).toByteArray()
 
     post("/features/search", featureBody, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
 
@@ -333,7 +333,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val featureBody = SearchFeaturesRequestGA4GH(VizReads.GENES_REQUEST, "null", 200, "chr1", 4773199, 4783199).toByteArray()
 
     post("/features/search", featureBody, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
       val json = GA4GHutil.stringToSearchFeaturesResponse(response.getContent())
         .getFeaturesList
 
@@ -347,7 +347,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val coverageBody = SearchFeaturesRequestGA4GH(coverageKey, "null", 200, "fakeChr", 0, 1200).toByteArray()
 
     post("/features/search", coverageBody, requestHeader) {
-      assert(status == NotFound().status.code)
+      assert(status == NotFound().status)
     }
   }
 
@@ -363,7 +363,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val variantsBody = SearchVariantsRequestGA4GH(vcfKey, "null", 200, "chr1", Array(), 169327640, 169332871).toByteArray()
 
     post("/variants/search", variantsBody, requestHeader) {
-      assert(status == Ok().status.code)
+      assert(status == Ok().status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
@@ -389,7 +389,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val variantsBody = SearchVariantsRequestGA4GH(exVcfKey, "null", 200, "chr1", Array(), 7500000, 7510100).toByteArray()
 
     post("/variants/search", variantsBody, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
@@ -402,11 +402,11 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val variantsBody1 = SearchVariantsRequestGA4GH(exVcfKey, "null", 200, "chr17", Array(), 1, 100).toByteArray()
 
     post("/reads/search", readsBody1, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
     }
 
     post("/variants/search", variantsBody1, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
@@ -420,11 +420,11 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
     val variantsBody2 = SearchVariantsRequestGA4GH(exVcfKey, "null", 200, "chr17", Array(), 7500000, 7510100).toByteArray()
 
     post("/reads/search", readsBody2, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
     }
 
     post("/variants/search", variantsBody2, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
@@ -437,7 +437,7 @@ class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
       Array("HG00096", "HG00097", "HG00099", "HG00100", "HG00101"), 40603901, 40604000).toByteArray()
 
     post("/variants/search", variantsBody3, requestHeader) {
-      assert(status == Ok("").status.code)
+      assert(status == Ok("").status)
 
       val json = GA4GHutil.stringToVariantServiceResponse(response.getContent())
         .getVariantsList
