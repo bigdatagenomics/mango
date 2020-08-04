@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e -x -v
+#set -e -x -v
 
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
@@ -61,9 +61,8 @@ then
 fi
 
 set -e
-
-# are we testing for scala 2.11? if so, we need to rewrite our poms to 2.11 first
-if [ ${SCALAVER} == 2.11 ];
+# build defaults to Scala 2.11
+if [ ${SCALA_VERSION} == 2.11 ];
 then
     # shouldn't be able to move to scala 2.11 twice
     set +e
@@ -73,6 +72,14 @@ then
         echo "We have already moved to Scala 2.11, so running move_to_scala_2.11.sh a second time should fail, but error code was 0 (success)."
         exit 1
     fi
+    set -e
+fi
+
+# move to Scala 2.12 if requested
+if [ ${SCALA_VERSION} == 2.12 ];
+then
+    set +e
+    ./scripts/move_to_scala_2.12.sh
     set -e
 fi
 
@@ -135,170 +142,185 @@ find . -name pom.xml \
     {} \;
 find . -name "*.bak" -exec rm -f {} \;
 
-# run integration tests
-# prebuilt spark distributions are scala 2.11 for spark 2.x
-if [[ ${SCALAVER} == 2.11 ]];
+# set spark artifact string for downloading assembly
+SPARK=spark-${SPARK_VERSION}
+
+# Spark 2.4.3+ and less than 3.0.0 needs special case for Scala 2.12
+if [ ${SCALA_VERSION} == 2.12 ] && [ ${SPARK_VERSION} == 2.4.6 ]
 then
-
-    # set the TMPDIR envar, which is used by python to choose where to make temp directories
-    export TMPDIR=${MANGO_TMP_DIR}
-
-    pushd $PROJECT_ROOT
-
-    # Copy the jar into our temp space for testing
-    cp -r . $MANGO_TMP_DIR
-    popd
-
-    pushd $MANGO_TMP_DIR
-
-    # what hadoop version are we on? format string for downloading spark assembly
-    if [[ $HADOOP_VERSION =~ ^2\.6 ]]; then
-        HADOOP=hadoop2.6
-    elif [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
-        HADOOP=hadoop2.7
-    else
-        echo "Unknown Hadoop version."
-        exit 1
-    fi
-
-    # set spark artifact string for downloading assembly
-    SPARK=spark-${SPARK_VERSION}
-
-    # download prepackaged spark assembly
     curl \
+        -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-without-hadoop-scala-2.12.tgz" \
+        -o ${SPARK}-bin-without-hadoop-scala-2.12.tgz
+
+    tar xzvf ${SPARK}-bin-without-hadoop-scala-2.12.tgz
+    export SPARK_HOME=${ADAM_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12
+
+    curl \
+        -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=hadoop/core/hadoop-2.7.7/hadoop-2.7.7.tar.gz" \
+        -o hadoop-2.7.7.tar.gz
+
+    tar xzvf hadoop-2.7.7.tar.gz
+
+    # remove references to avro 1.7.x
+    find hadoop-2.7.7 -name *.jar | grep avro | xargs rm
+
+    export SPARK_DIST_CLASSPATH=$(hadoop-2.7.7/bin/hadoop classpath)
+else
+    curl \
+        -v \
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
         -o ${SPARK}-bin-${HADOOP}.tgz
 
     tar xzvf ${SPARK}-bin-${HADOOP}.tgz
-    export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
+    export SPARK_HOME=${ADAM_TMP_DIR}/${SPARK}-bin-${HADOOP}
+fi
 
-    # create a conda environment for python build, if necessary
-    pythons=( 3.6 )
-    for python in ${pythons[*]}
-    do
-        conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip
-        source activate mango-build-${PYTHON_UUID}
+# run integration tests
+# set the TMPDIR envar, which is used by python to choose where to make temp directories
+export TMPDIR=${MANGO_TMP_DIR}
 
-        # install npm and node in the venv for mango-viz
-        conda install -y nodejs
+pushd $PROJECT_ROOT
 
-        # prepare mango python
-        pushd mango-python
-        make prepare
-        popd
+# Copy the jar into our temp space for testing
+cp -r . $MANGO_TMP_DIR
+popd
 
-        # we can run the python build, now that we have a spark executable
-        mvn -U \
-            -P python,distribution \
-            package \
-            -DskipTests \
-            -Dhadoop.version=${HADOOP_VERSION} \
-            -Dspark.version=${SPARK_VERSION}
+pushd $MANGO_TMP_DIR
 
-        # clean mango python
-        pushd mango-python
-        make clean
-        popd
+# what hadoop version are we on? format string for downloading spark assembly
+if [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
+    HADOOP=hadoop2.7
+else
+    echo "Unknown Hadoop version."
+    exit 1
+fi
 
-        # prepare mango viz
-        pushd mango-viz
-        make prepare
-        popd
+# create a conda environment for python build, if necessary
+pythons=( 3.6 )
+for python in ${pythons[*]}
+do
+    conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip
+    source activate mango-build-${PYTHON_UUID}
 
-        # run the widgets tests (mango-viz)
-        mvn -P widgets test
+    # install npm and node in the venv for mango-viz
+    conda install -y nodejs
 
-        # clean mango viz
-        pushd mango-viz
-        make clean
-        popd
+    # prepare mango python
+    pushd mango-python
+    make prepare
+    popd
 
-        # make sure that the distribution package contains an egg
-        # if no assembly jar is found, this will exit with code 1 and fail the build
-        tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
-            grep bdgenomics.mango | \
-            grep egg
+    # we can run the python build, now that we have a spark executable
+    mvn -U \
+        -P python,distribution \
+        package \
+        -DskipTests \
+        -Dhadoop.version=${HADOOP_VERSION} \
+        -Dspark.version=${SPARK_VERSION}
 
-        # test mango notebook, output to temporary log file
-        MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
-        bash -xv ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
+    # clean mango python
+    pushd mango-python
+    make clean
+    popd
 
-        # sleep for 2 seconds to let mango-notebook start up
-        sleep 2
+    # prepare mango viz
+    pushd mango-viz
+    make prepare
+    popd
 
-        # if mango-notebook fails, then trying to kill the process will fail
-        if kill $! ; then
-            echo "Mango Notebook Succeeded"
-        else
-            echo "Mango Notebook failed with logs:"
-            cat ${MANGO_NOTEBOOK_LOGS}
-            exit 1
-        fi
+    # run the widgets tests (mango-viz)
+    mvn -P widgets test
 
-        # copy python targets back
-        cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
+    # clean mango viz
+    pushd mango-viz
+    make clean
+    popd
 
-        # deactivate and remove the conda env
-        source deactivate
-        conda remove -y --name mango-build-${PYTHON_UUID} --all
+    # make sure that the distribution package contains an egg
+    # if no assembly jar is found, this will exit with code 1 and fail the build
+    tar tzvf mango-distribution/target/mango-distribution*-bin.tar.gz | \
+        grep bdgenomics.mango | \
+        grep egg
 
-    done
+    # test mango notebook, output to temporary log file
+    MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
+    bash -xv ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
 
-    # test mango submit
-    MANGO_BROWSER_LOGS=${MANGO_TMP_DIR}/mango-submit.log
-    bash -xv ${PROJECT_ROOT}/example-files/browser-scripts/run-example.sh &> ${MANGO_BROWSER_LOGS} &
+    # sleep for 2 seconds to let mango-notebook start up
+    sleep 2
 
-    # sleep for 10 seconds to let mango-browser start up
-    sleep 10
+    # if mango-notebook fails, then trying to kill the process will fail
+    if kill $! ; then
+        echo "Mango Notebook Succeeded"
+    else
+        echo "Mango Notebook failed with logs:"
+        cat ${MANGO_NOTEBOOK_LOGS}
+        exit 1
+    fi
 
-    # make sure server responds to POST for reads and variants
-    curl -s -N \
+    # copy python targets back
+    cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
+
+    # deactivate and remove the conda env
+    source deactivate
+    conda remove -y --name mango-build-${PYTHON_UUID} --all
+
+done
+
+# test mango submit
+MANGO_BROWSER_LOGS=${MANGO_TMP_DIR}/mango-submit.log
+bash -xv ${PROJECT_ROOT}/example-files/browser-scripts/run-example.sh &> ${MANGO_BROWSER_LOGS} &
+
+# sleep for 10 seconds to let mango-browser start up
+sleep 10
+
+# make sure server responds to POST for reads and variants
+curl -s -N \
     --header "Content-type: application/json" \
     --request POST \
     --data "{\"pageToken\":null,\"pageSize\":200,\"readGroupIds\":[\"chr17_7500000-7515000_sam\"],\"referenceId\":\"chr17\",\"start\":1,\"end\":100}"  \
     http://localhost:8080/reads/search | grep alignments
 
-    if [[ $? != 0 ]]; then
-        echo "invalid alignments"
-        exit 1
-    fi
-
-    curl -s -N \
-        --header "Content-type: application/json" \
-        --request POST \
-        --data "{\"variantSetId\":\"ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf\",\"pageToken\":null,\"pageSize\":400,\"referenceName\":\"chr17\",\"callSetIds\":[],\"start\":7500000,\"end\":7515000}"  \
-        http://localhost:8080/variants/search | grep variants
-
-    if [[ $? != 0 ]]; then
-        echo "invalid variants"
-        exit 1
-    fi
-
-    # get processes with mango prefix
-    PROCESSES=( $(ps aux | grep -F 'browser-scripts/run-example.sh' | grep -v -F 'grep' | awk '{ print $2 }') )
-
-    # There should be processes running for mango-browser
-    if [ "${#PROCESSES[@]}" -gt 0 ] ; then
-        echo "Mango Browser Succeeded"
-        # kill all Mango Browser related processes
-        kill ${PROCESSES}; 
-    else
-        echo "Mango Browser failed with logs:"
-        cat ${MANGO_BROWSER_LOGS}
-        exit 1
-    fi
-
-    # test genome builds
-    TEST_GENOME="anoGam1"
-    bash -xv ${PROJECT_ROOT}/bin/make_genome ${TEST_GENOME} ${MANGO_TMP_DIR}
-
-    unzip ${MANGO_TMP_DIR}/${TEST_GENOME}.genome -d ${MANGO_TMP_DIR}/${TEST_GENOME}
-
-    pushd ${MANGO_TMP_DIR}/${TEST_GENOME}
-    cat properties.txt
-    cat ${TEST_GENOME}.chrom.sizes
-    popd
+if [[ $? != 0 ]]; then
+    echo
+    exit 1
 fi
+
+curl -s -N \
+    --header "Content-type: application/json" \
+    --request POST \
+    --data "{\"variantSetId\":\"ALL_chr17_7500000-7515000_phase3_shapeit2_mvncall_integrated_v5a_20130502_genotypes_vcf\",\"pageToken\":null,\"pageSize\":400,\"referenceName\":\"chr17\",\"callSetIds\":[],\"start\":7500000,\"end\":7515000}"  \
+    http://localhost:8080/variants/search | grep variants
+
+if [[ $? != 0 ]]; then
+    echo "invalid variants"
+    exit 1
+fi
+
+# get processes with mango prefix
+PROCESSES=( $(ps aux | grep -F 'browser-scripts/run-example.sh' | grep -v -F 'grep' | awk '{ print $2 }') )
+
+# There should be processes running for mango-browser
+if [ "${#PROCESSES[@]}" -gt 0 ] ; then
+    echo "Mango Browser Succeeded"
+    # kill all Mango Browser related processes
+    kill ${PROCESSES}; 
+else
+    echo "Mango Browser failed with logs:"
+    cat ${MANGO_BROWSER_LOGS}
+    exit 1
+fi
+
+# test genome builds
+TEST_GENOME="anoGam1"
+bash -xv ${PROJECT_ROOT}/bin/make_genome ${TEST_GENOME} ${MANGO_TMP_DIR}
+
+unzip ${MANGO_TMP_DIR}/${TEST_GENOME}.genome -d ${MANGO_TMP_DIR}/${TEST_GENOME}
+
+pushd ${MANGO_TMP_DIR}/${TEST_GENOME}
+cat properties.txt
+cat ${TEST_GENOME}.chrom.sizes
+popd
 
 echo
 echo "All the tests passed"

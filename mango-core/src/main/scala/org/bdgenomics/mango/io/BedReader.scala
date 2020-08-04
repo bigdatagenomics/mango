@@ -28,7 +28,7 @@ import htsjdk.tribble.readers.LineIterator
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.ReferenceRegion
 import org.bdgenomics.mango.models.LazyMaterialization
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
 import htsjdk.tribble.index.{ Index, IndexFactory }
 
 import scala.collection.JavaConversions._
@@ -138,7 +138,7 @@ object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDatas
           .toArray
 
         sc.loadFeatures(fp)
-          .transform(rdd => rdd.filter(g =>
+          .transformDataFrame(rdd => rdd.filter(g =>
             !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
       } else { // no regions defined. return all records.
         sc.loadFeatures(fp)
@@ -155,7 +155,7 @@ object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDatas
     // do not re-generate index file
     if (!idxFile.exists()) {
 
-      log.warn(s"No index file for ${file.getAbsolutePath} found. Generating ${idxFile.getAbsolutePath}...")
+      logger.warn(s"No index file for ${file.getAbsolutePath} found. Generating ${idxFile.getAbsolutePath}...")
 
       // Create the index
       val idx: Index = IndexFactory.createIntervalIndex(file, codec)

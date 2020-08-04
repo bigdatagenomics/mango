@@ -27,8 +27,7 @@ import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, Sequenc
 import java.net.URL
 import scala.io.Source
 import sys.process._
-import org.bdgenomics.utils.misc.Logging
-
+import grizzled.slf4j.Logging
 import java.util.zip.{ ZipEntry, ZipOutputStream, ZipFile, ZipInputStream, GZIPInputStream }
 
 import org.bdgenomics.utils.interval.array.IntervalArray
@@ -121,7 +120,7 @@ object GenomeConfig extends Logging {
           bw.write(s"${REFGENE_KEY}=${REFSEQ_FILE}\n")
         } catch {
           case e: Exception => {
-            log.warn(s"No refGene file found at ${geneUrl} or ${xenoGeneUrl}")
+            logger.warn(s"No refGene file found at ${geneUrl} or ${xenoGeneUrl}")
           }
         }
 
@@ -138,7 +137,7 @@ object GenomeConfig extends Logging {
       bw.write(s"${CYTOBAND_KEY}=${CYTOBAND_FILE}\n")
     } catch {
       case e: Exception => {
-        log.warn(s"No refGene file found at ${cytobandUrl} for genome ${genome}")
+        logger.warn(s"No refGene file found at ${cytobandUrl} for genome ${genome}")
       }
     }
 

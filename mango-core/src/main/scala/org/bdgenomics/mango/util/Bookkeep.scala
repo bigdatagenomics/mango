@@ -19,7 +19,7 @@ package org.bdgenomics.mango.util
 
 import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.utils.interval.array.{ IntervalArray, ConcreteIntervalArray }
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap, ListBuffer }
 
@@ -63,7 +63,7 @@ class Bookkeep(chunkSize: Long) extends Serializable with Logging {
       droppedChr
     } catch {
       case e: NoSuchElementException =>
-        log.warn("bookkeeping queue is empty")
+        logger.warn("bookkeeping queue is empty")
         null
     }
   }

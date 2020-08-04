@@ -22,21 +22,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.SizeEstimator
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.mango.util.Bookkeep
-import org.bdgenomics.utils.instrumentation.Metrics
 import org.bdgenomics.utils.interval.array.IntervalArray
-import org.bdgenomics.utils.misc.Logging
-
+import grizzled.slf4j.Logging
 import scala.reflect.ClassTag
-
-// metric variables
-object LazyMaterializationTimers extends Metrics {
-
-  def put = timer("put data in lazy materialization")
-  def get = timer("get data in lazy materialization")
-  def checkMemory = timer("check memory in lazy materialization")
-  def loadFiles = timer("load files in lazy materialization")
-
-}
 
 /**
  * Tracks regions of data already in memory and loads regions as needed.
@@ -149,33 +137,31 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @return Map of sampleIds and corresponding JSON
    */
   def get(regionOpt: Option[ReferenceRegion] = None): Array[(String, T)] = {
-    LazyMaterializationTimers.get.time {
-      regionOpt match {
-        case Some(_) => {
-          val region = regionOpt.get
-          val seqRecord = sd(region.referenceName)
-          seqRecord match {
-            case Some(_) => {
-              val missing = bookkeep.getMissingRegions(region, getFiles)
-              if (!missing.isEmpty) {
-                put(missing) // put data into interval array
-              }
-              intArray.get(region).toArray.sortBy(_._1).map(_._2)
+    regionOpt match {
+      case Some(_) => {
+        val region = regionOpt.get
+        val seqRecord = sd(region.referenceName)
+        seqRecord match {
+          case Some(_) => {
+            val missing = bookkeep.getMissingRegions(region, getFiles)
+            if (!missing.isEmpty) {
+              put(missing) // put data into interval array
             }
-            case None => {
-              throw new Exception(s"${region} not found in dictionary")
-            }
+            intArray.get(region).toArray.sortBy(_._1).map(_._2)
+          }
+          case None => {
+            throw new Exception(s"${region} not found in dictionary")
           }
         }
-        case None => {
-          val data = loadAllFiles(None)
+      }
+      case None => {
+        val data = loadAllFiles(None)
 
-          // tag entire sequence dictionary
-          bookkeep.rememberValues(sd, getFiles)
+        // tag entire sequence dictionary
+        bookkeep.rememberValues(sd, getFiles)
 
-          intArray = intArray.insert(data.toIterator)
-          data.map(_._2).toArray
-        }
+        intArray = intArray.insert(data.toIterator)
+        data.map(_._2).toArray
       }
     }
   }
@@ -190,19 +176,16 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
   def put(regions: Iterable[ReferenceRegion]) = {
     checkMemory()
 
-    LazyMaterializationTimers.put.time {
+    // filter out regions that are not found in the sequence dictionary
+    val filteredRegions = regions.filter(r => sd(r.referenceName).isDefined)
 
-      // filter out regions that are not found in the sequence dictionary
-      val filteredRegions = regions.filter(r => sd(r.referenceName).isDefined)
+    val data = loadAllFiles(Some(regions))
 
-      val data = loadAllFiles(Some(regions))
+    // tag regions as found, even if there is no data
+    filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
 
-      // tag regions as found, even if there is no data
-      filteredRegions.foreach(r => bookkeep.rememberValues(r, getFiles))
+    intArray = intArray.insert(data.toIterator)
 
-      intArray = intArray.insert(data.toIterator)
-
-    }
   }
 
   /**
@@ -218,17 +201,15 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
     // do we need to modify the chromosome prefix?
     val hasChrPrefix = sd.records.head.name.startsWith("chr")
 
-    LazyMaterializationTimers.loadFiles.time {
-      // get data for all files
-      getFiles.map(fp => {
-        val k = LazyMaterialization.filterKeyFromFile(fp)
-        val t = load(fp, regions)
-        t.map(v => (k, v))
-      }).flatten.map(r => {
-        val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
-        (region, (r._1, setReferenceName(r._2, region.referenceName)))
-      })
-    }
+    // get data for all files
+    getFiles.map(fp => {
+      val k = LazyMaterialization.filterKeyFromFile(fp)
+      val t = load(fp, regions)
+      t.map(v => (k, v))
+    }).flatten.map(r => {
+      val region = LazyMaterialization.modifyChrPrefix(getReferenceRegion(r._2), hasChrPrefix)
+      (region, (r._1, setReferenceName(r._2, region.referenceName)))
+    })
   }
 
   /**
@@ -236,17 +217,15 @@ abstract class LazyMaterialization[T: ClassTag, S: ClassTag](name: String,
    * @return
    */
   private def checkMemory() = {
-    LazyMaterializationTimers.checkMemory.time {
 
-      val size = SizeEstimator.estimate(intArray)
-      val fraction = (size.toDouble) / Runtime.getRuntime().totalMemory()
+    val size = SizeEstimator.estimate(intArray)
+    val fraction = (size.toDouble) / Runtime.getRuntime().totalMemory()
 
-      // if memory usage exceeds memoryFraction, drop last viewed chromosome
-      if (fraction > memoryFraction) {
-        val dropped = bookkeep.dropValues() // drop last chromosome
-        log.warn(s"memory limit exceeded. Dropping ${dropped} from cache")
-        intArray = intArray.filter(_._1.referenceName != dropped)
-      }
+    // if memory usage exceeds memoryFraction, drop last viewed chromosome
+    if (fraction > memoryFraction) {
+      val dropped = bookkeep.dropValues() // drop last chromosome
+      logger.warn(s"memory limit exceeded. Dropping ${dropped} from cache")
+      intArray = intArray.filter(_._1.referenceName != dropped)
     }
   }
 
