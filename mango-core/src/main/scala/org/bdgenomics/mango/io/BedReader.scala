@@ -35,6 +35,7 @@ import scala.collection.JavaConversions._
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.feature.FeatureDataset
+import org.apache.spark.rdd.RDD
 
 object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDataset] with Logging {
 
@@ -138,7 +139,7 @@ object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDatas
           .toArray
 
         sc.loadFeatures(fp)
-          .transformDataFrame(rdd => rdd.filter(g =>
+          .transform((rdd: RDD[Feature]) => rdd.filter(g =>
             !predicateRegions.filter(r => ReferenceRegion.unstranded(g).overlaps(r)).isEmpty))
       } else { // no regions defined. return all records.
         sc.loadFeatures(fp)
