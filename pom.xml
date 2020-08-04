@@ -30,8 +30,8 @@
     <parquet.version>1.10.1</parquet.version>
     <scala.version>2.12.8</scala.version>
     <scala.version.prefix>2.12</scala.version.prefix>
-    <scalatra.version>2.7.0</scalatra.version>
-    <scalatest.version>3.1.0</scalatest.version>
+    <scalatra.version>2.5.0</scalatra.version>
+    <scalatest.version>3.0.7</scalatest.version>
     <scalate.version>1.9.1</scalate.version>
     <spark.version>2.4.4</spark.version>
     <spark.version.prefix>-spark3_</spark.version.prefix>
