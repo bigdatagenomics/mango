@@ -42,7 +42,10 @@ module.exports = function (config) {
 	customLaunchers: {
             ChromeHeadlessNoSandbox: {
 		    base: 'ChromeHeadless',
-		    flags: ['--no-sandbox']
+		    flags: ['--no-sandbox',
+                '--headless',
+                '--disable-web-security',
+                '--disable-gpu']
 	   }
         },
         // if true, Karma captures browsers, runs the tests and exits
