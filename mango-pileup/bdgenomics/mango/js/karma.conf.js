@@ -7,7 +7,7 @@ const process = require('process');
 
 
 module.exports = function (config) {
-    config.set({
+   config.set({
         basePath: '',
         frameworks: ['mocha', 'chai', 'sinon'],
         files: [
@@ -38,12 +38,12 @@ module.exports = function (config) {
         logLevel: config.LOG_INFO,
         autoWatch: true,
         // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-        browsers: ['ChromeHeadless'],
-        customLauncher: {
-            ChromeHeadless: {
-                base: 'ChromeHeadless',
-                flags: ['--headless', '--remote-debugging-port=9222']
-            }
+ 	browsers: ['ChromeHeadlessNoSandbox'],
+	customLaunchers: {
+            ChromeHeadlessNoSandbox: {
+		    base: 'ChromeHeadless',
+		    flags: ['--no-sandbox']
+	   }
         },
         // if true, Karma captures browsers, runs the tests and exits
         singleRun: true,
