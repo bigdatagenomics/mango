@@ -26,7 +26,7 @@
     "build:js": "tsc",
     "watch:js": "tsc --watch",
     "prepublish": "npm run build",
-    "test": "karma start --single-run"
+    "test": "karma start --single-run --browsers ChromeHeadlessNoSandbox"
   },
   "license": "Apache-2.0",
   "devDependencies": {

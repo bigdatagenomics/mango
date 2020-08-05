@@ -2,6 +2,9 @@
 
 set -e -x -v
 
+# navigate to mango parent directory, set in Jenkins
+pushd ${WORKSPACE}
+
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
 
@@ -176,7 +179,7 @@ then
     pythons=( 3.6 )
     for python in ${pythons[*]}
     do
-        conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=20.1.1 jupyterlab=2.0.1 
+        conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
         source activate mango-build-${PYTHON_UUID}
 
         # install npm and node in the venv for mango-pileup
@@ -299,6 +302,9 @@ then
     cat ${TEST_GENOME}.chrom.sizes
     popd
 fi
+
+# exist mango working directory
+popd
 
 echo
 echo "All the tests passed"
