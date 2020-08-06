@@ -17,18 +17,12 @@
  */
 package org.bdgenomics.mango.cli
 
-import java.io.{ File, FileNotFoundException }
-import java.net.URL
+import java.io.FileNotFoundException
 
 import org.bdgenomics.mango.core.util.GenomeConfig
-import org.bdgenomics.mango.core.util.GenomeConfig.{ REFGENE_KEY, REFSEQ_FILE }
 import org.bdgenomics.mango.util.MangoFunSuite
 
-import scala.language.postfixOps
-import sys.process._
-
 class MakeGenomeSuite extends MangoFunSuite {
-
   sparkTest("creates genome") {
     val outputPath = tmpFile("")
 

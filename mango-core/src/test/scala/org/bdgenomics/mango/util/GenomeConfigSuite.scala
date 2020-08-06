@@ -81,16 +81,4 @@ class GenomeConfigSuite extends MangoFunSuite {
     assert(config.chromSizes.records.length == 93)
   }
 
-  sparkTest("should not fail when initial RefSeq file is not available") {
-
-    val outputDir = java.nio.file.Files.createTempDirectory("genomes")
-    val genome = "anoGam1"
-
-    GenomeConfig.saveZippedGenome(genome, outputDir.toAbsolutePath.toString)
-
-    val config = GenomeConfig.loadZippedGenome(s"${outputDir}/${genome}.genome")
-    assert(config.id == genome)
-    assert(config.chromSizes.records.length == 7)
-  }
-
 }
