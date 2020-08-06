@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-#set -e -x -v
+set -e -x -v
+
+# navigate to mango parent directory, set in Jenkins
+pushd ${WORKSPACE}
 
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
@@ -145,6 +148,14 @@ find . -name "*.bak" -exec rm -f {} \;
 # set spark artifact string for downloading assembly
 SPARK=spark-${SPARK_VERSION}
 
+# what hadoop version are we on? format string for downloading spark assembly
+if [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
+    HADOOP=hadoop2.7
+else
+    echo "Unknown Hadoop version."
+    exit 1
+fi
+
 # Spark 2.4.3+ and less than 3.0.0 needs special case for Scala 2.12
 if [ ${SCALA_VERSION} == 2.12 ] && [ ${SPARK_VERSION} == 2.4.6 ]
 then
@@ -153,7 +164,7 @@ then
         -o ${SPARK}-bin-without-hadoop-scala-2.12.tgz
 
     tar xzvf ${SPARK}-bin-without-hadoop-scala-2.12.tgz
-    export SPARK_HOME=${ADAM_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12
+    export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12
 
     curl \
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=hadoop/core/hadoop-2.7.7/hadoop-2.7.7.tar.gz" \
@@ -172,7 +183,7 @@ else
         -o ${SPARK}-bin-${HADOOP}.tgz
 
     tar xzvf ${SPARK}-bin-${HADOOP}.tgz
-    export SPARK_HOME=${ADAM_TMP_DIR}/${SPARK}-bin-${HADOOP}
+    export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 fi
 
 # run integration tests
@@ -187,19 +198,11 @@ popd
 
 pushd $MANGO_TMP_DIR
 
-# what hadoop version are we on? format string for downloading spark assembly
-if [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
-    HADOOP=hadoop2.7
-else
-    echo "Unknown Hadoop version."
-    exit 1
-fi
-
 # create a conda environment for python build, if necessary
 pythons=( 3.6 )
 for python in ${pythons[*]}
 do
-    conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip
+    conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1
     source activate mango-build-${PYTHON_UUID}
 
     # install npm and node in the venv for mango-viz
@@ -320,6 +323,9 @@ unzip ${MANGO_TMP_DIR}/${TEST_GENOME}.genome -d ${MANGO_TMP_DIR}/${TEST_GENOME}
 pushd ${MANGO_TMP_DIR}/${TEST_GENOME}
 cat properties.txt
 cat ${TEST_GENOME}.chrom.sizes
+popd
+
+# exist mango working directory
 popd
 
 echo
