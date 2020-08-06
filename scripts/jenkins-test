@@ -65,7 +65,7 @@ fi
 
 set -e
 # build defaults to Scala 2.11
-if [ ${SCALA_VERSION} == 2.11 ];
+if [ ${SCALAVER} == 2.11 ];
 then
     # shouldn't be able to move to scala 2.11 twice
     set +e
@@ -79,7 +79,7 @@ then
 fi
 
 # move to Scala 2.12 if requested
-if [ ${SCALA_VERSION} == 2.12 ];
+if [ ${SCALAVER} == 2.12 ];
 then
     set +e
     ./scripts/move_to_scala_2.12.sh
@@ -157,7 +157,7 @@ else
 fi
 
 # Spark 2.4.3+ and less than 3.0.0 needs special case for Scala 2.12
-if [ ${SCALA_VERSION} == 2.12 ] && [ ${SPARK_VERSION} == 2.4.6 ]
+if [ ${SCALAVER} == 2.12 ] && [ ${SPARK_VERSION} == 2.4.6 ]
 then
     curl \
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-without-hadoop-scala-2.12.tgz" \
