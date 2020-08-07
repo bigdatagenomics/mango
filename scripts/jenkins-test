@@ -214,8 +214,10 @@ pushd $MANGO_TMP_DIR
 pythons=( 3.6 )
 for python in ${pythons[*]}
 do
+    set +x +v
     conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1
     source activate mango-build-${PYTHON_UUID}
+    set -x -v
 
     # install npm and node in the venv for mango-viz
     conda install -y nodejs
@@ -259,7 +261,9 @@ do
 
     # test mango notebook, output to temporary log file
     MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
-    bash -xv ${PROJECT_ROOT}/bin/mango-notebook -- --ip=0.0.0.0 --no-browser &> ${MANGO_NOTEBOOK_LOGS} &
+
+    # notebook args --ip=0.0.0.0 --no-browser --allow-root required for docker
+    bash -xv ${PROJECT_ROOT}/bin/mango-notebook -- --ip=0.0.0.0 --no-browser --allow-root &> ${MANGO_NOTEBOOK_LOGS} &
 
     # sleep for 2 seconds to let mango-notebook start up
     sleep 2
