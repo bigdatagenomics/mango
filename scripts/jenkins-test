@@ -2,6 +2,14 @@
 
 set -e -x -v
 
+# navigate to mango parent directory, set in Jenkins
+if [ -z "$WORKSPACE" ]
+then
+	echo "WORKSPACE variable is not set. Defaulting to current directory.."
+	WORKSPACE="$(echo $PWD)"
+fi
+pushd ${WORKSPACE}
+
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
 
@@ -30,6 +38,7 @@ PYTHON_UUID=$(uuidgen)
 
 # function that deletes conda environments and temporary environments
 function clean_up {
+    set +x +v
     # deactivate and remove all mango associated conda envs
     source deactivate
     # delete conda env, if it exists
@@ -39,6 +48,7 @@ function clean_up {
     # delete tmp directories
     rm -rf ${MANGO_TMP_DIR}
     rm -rf ${MANGO_MVN_TMP_DIR}
+    set -x -v
 }
 trap clean_up EXIT
 
@@ -299,6 +309,9 @@ then
     cat ${TEST_GENOME}.chrom.sizes
     popd
 fi
+
+# exist mango working directory
+popd
 
 echo
 echo "All the tests passed"
