@@ -27,7 +27,7 @@ import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.converters.GA4GHutil
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.io.BedReader
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
 import scala.collection.JavaConversions._
 
 /**

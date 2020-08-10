@@ -30,7 +30,7 @@ import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 import scala.collection.JavaConversions._
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.read.AlignmentDataset
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
 import org.bdgenomics.mango.models.LazyMaterialization
 
 object BamReader extends GenomicReader[SAMFileHeader, Alignment, AlignmentDataset] with Logging {
@@ -172,8 +172,8 @@ object BamReader extends GenomicReader[SAMFileHeader, Alignment, AlignmentDatase
           sc.loadIndexedBam(fp, predicateRegions, stringency = ValidationStringency.SILENT)
         } catch {
           case e: Exception => { // IllegalArgumentException if local or FileNotFoundException if hdfs
-            log.warn(e.getMessage)
-            log.warn("No bam index detected. File loading will be slow...")
+            logger.warn(e.getMessage)
+            logger.warn("No bam index detected. File loading will be slow...")
             sc.loadBam(fp, stringency = ValidationStringency.SILENT).filterByOverlappingRegions(predicateRegions)
           }
         }

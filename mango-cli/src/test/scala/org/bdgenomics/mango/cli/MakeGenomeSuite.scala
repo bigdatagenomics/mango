@@ -18,6 +18,7 @@
 package org.bdgenomics.mango.cli
 
 import java.io.FileNotFoundException
+
 import org.bdgenomics.mango.core.util.GenomeConfig
 import org.bdgenomics.mango.util.MangoFunSuite
 

@@ -32,7 +32,6 @@ import org.bdgenomics.mango.core.util.{ Genome, GenomeConfig, VizCacheIndicator,
 import org.bdgenomics.mango.filters._
 import org.bdgenomics.mango.models._
 import org.bdgenomics.utils.cli._
-import org.bdgenomics.utils.instrumentation.Metrics
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
@@ -44,28 +43,6 @@ import org.scalatra._
 import scala.io.Source
 import net.liftweb.json.JsonAST._
 import net.liftweb.json.Extraction._
-
-object VizTimers extends Metrics {
-  //HTTP requests
-  val ReadsRequest = timer("GET reads")
-  val FreqRequest = timer("GET frequency")
-  val VarRequest = timer("GET variants")
-  val VarFreqRequest = timer("Get variant frequency")
-  val FeatRequest = timer("GET features")
-  val AlignmentRequest = timer("GET alignment")
-
-  //RDD operations
-  val FreqRDDTimer = timer("RDD Freq operations")
-  val VarRDDTimer = timer("RDD Var operations")
-  val FeatRDDTimer = timer("RDD Feat operations")
-  val RefRDDTimer = timer("RDD Ref operations")
-  val GetPartChunkTimer = timer("Calculate block chunk")
-
-  //Generating Json
-  val MakingTrack = timer("Making Track")
-  val DoingCollect = timer("Doing Collect")
-  val PrintReferenceTimer = timer("JSON get reference string")
-}
 
 /**
  * Contains caching, error and util function information for formatting and serving Json data
@@ -126,8 +103,7 @@ object VizReads extends BDGCommandCompanion with Logging {
     def notFound(name: String) = NotFound(s"$name not found")
     def unknownError(str: String) = NotFound(str)
     def noContent(region: ReferenceRegion): ActionResult = {
-      val msg = s"No content available at ${region.toString}"
-      NoContent(Map.empty, msg)
+      NoContent(Map.empty)
     }
   }
 
@@ -375,50 +351,47 @@ class VizServlet extends ScalatraServlet {
   // Takes SearchReadsRequestGA4GH as parameters.
   post("/reads/search") {
     try {
-      VizTimers.ReadsRequest.time {
+      val searchReadsRequest: SearchReadsRequestGA4GH = net.liftweb.json.parse(request.body).extract[SearchReadsRequestGA4GH]
 
-        val searchReadsRequest: SearchReadsRequestGA4GH = net.liftweb.json.parse(request.body).extract[SearchReadsRequestGA4GH]
+      if (!VizReads.materializer.readsExist) {
+        VizReads.errors.notFound("ReadsMaterialization")
+      } else {
+        // check if end > start, if not return out of bounds.
+        val newEnd = VizUtils.getEnd(searchReadsRequest.end, VizReads.genome.chromSizes(searchReadsRequest.referenceId))
 
-        if (!VizReads.materializer.readsExist) {
-          VizReads.errors.notFound("ReadsMaterialization")
+        if (newEnd <= searchReadsRequest.start) {
+
+          VizReads.errors.outOfBounds
+
         } else {
-          // check if end > start, if not return out of bounds.
-          val newEnd = VizUtils.getEnd(searchReadsRequest.end, VizReads.genome.chromSizes(searchReadsRequest.referenceId))
+          val viewRegion = ReferenceRegion(searchReadsRequest.referenceId, searchReadsRequest.start.toLong,
+            VizUtils.getEnd(searchReadsRequest.end.toLong, VizReads.genome.chromSizes(searchReadsRequest.referenceId)))
+          val key: String = searchReadsRequest.readGroupIds(0) // there will never be more than 1 readGroup for the browser
+          contentType = "json"
 
-          if (newEnd <= searchReadsRequest.start) {
-
-            VizReads.errors.outOfBounds
-
-          } else {
-            val viewRegion = ReferenceRegion(searchReadsRequest.referenceId, searchReadsRequest.start.toLong,
-              VizUtils.getEnd(searchReadsRequest.end.toLong, VizReads.genome.chromSizes(searchReadsRequest.referenceId)))
-            val key: String = searchReadsRequest.readGroupIds(0) // there will never be more than 1 readGroup for the browser
-            contentType = "json"
-
-            val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
-            if (dictOpt.isDefined) {
-              var results: Option[String] = None
-              // region was already collected, grab from cache
-              VizReads.readsWait.synchronized {
-                if (!VizReads.readsIndicator.region.contains(viewRegion)) {
-                  val expanded = VizReads.expand(viewRegion)
-                  VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
-                  VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
-                }
+          val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
+          if (dictOpt.isDefined) {
+            var results: Option[String] = None
+            // region was already collected, grab from cache
+            VizReads.readsWait.synchronized {
+              if (!VizReads.readsIndicator.region.contains(viewRegion)) {
+                val expanded = VizReads.expand(viewRegion)
+                VizReads.readsCache = VizReads.materializer.getReads().get.getJson(expanded)
+                VizReads.readsIndicator = VizCacheIndicator(expanded, 1)
               }
-              // filter data overlapping viewRegion and stringify
-              val dataForKey = VizReads.readsCache.get(key)
+            }
+            // filter data overlapping viewRegion and stringify
+            val dataForKey = VizReads.readsCache.get(key)
 
-              val data = dataForKey.getOrElse(Array.empty).filter(r => {
-                ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
-              })
-              results = Some(VizReads.materializer.getReads().get.stringify(data))
+            val data = dataForKey.getOrElse(Array.empty).filter(r => {
+              ReferencePosition(r.getAlignment.getPosition.getReferenceName, r.getAlignment.getPosition.getPosition).overlaps(viewRegion)
+            })
+            results = Some(VizReads.materializer.getReads().get.stringify(data))
 
-              if (results.isDefined) {
-                Ok(results.get)
-              } else VizReads.errors.noContent(viewRegion)
-            } else VizReads.errors.outOfBounds
-          }
+            if (results.isDefined) {
+              Ok(results.get)
+            } else VizReads.errors.noContent(viewRegion)
+          } else VizReads.errors.outOfBounds
         }
       }
     } catch { // catch all for errors
@@ -431,59 +404,56 @@ class VizServlet extends ScalatraServlet {
 
   post("/variants/search") {
     try {
-      VizTimers.VarRequest.time {
+      val searchVariantsRequest: SearchVariantsRequestGA4GH =
+        net.liftweb.json.parse(request.body).extract[SearchVariantsRequestGA4GH]
 
-        val searchVariantsRequest: SearchVariantsRequestGA4GH =
-          net.liftweb.json.parse(request.body).extract[SearchVariantsRequestGA4GH]
+      if (!VizReads.materializer.variantContextExist)
+        VizReads.errors.notFound("VariantContextMaterialization")
+      else {
 
-        if (!VizReads.materializer.variantContextExist)
-          VizReads.errors.notFound("VariantContextMaterialization")
-        else {
+        // check if end > start, if not return out of bounds.
+        val newEnd = VizUtils.getEnd(searchVariantsRequest.end, VizReads.genome.chromSizes(searchVariantsRequest.referenceName))
 
-          // check if end > start, if not return out of bounds.
-          val newEnd = VizUtils.getEnd(searchVariantsRequest.end, VizReads.genome.chromSizes(searchVariantsRequest.referenceName))
+        if (newEnd <= searchVariantsRequest.start) {
 
-          if (newEnd <= searchVariantsRequest.start) {
+          VizReads.errors.outOfBounds
 
-            VizReads.errors.outOfBounds
+        } else {
+          val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName, searchVariantsRequest.start,
+            VizUtils.getEnd(searchVariantsRequest.end, VizReads.genome.chromSizes(searchVariantsRequest.referenceName)))
 
-          } else {
-            val viewRegion = ReferenceRegion(searchVariantsRequest.referenceName, searchVariantsRequest.start,
-              VizUtils.getEnd(searchVariantsRequest.end, VizReads.genome.chromSizes(searchVariantsRequest.referenceName)))
+          val key: String = searchVariantsRequest.variantSetId
+          contentType = "json"
 
-            val key: String = searchVariantsRequest.variantSetId
-            contentType = "json"
-
-            // if region is in bounds of reference, return data
-            val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
-            if (dictOpt.isDefined) {
-              var results: Option[String] = None
-              val binning: Int =
-                try {
-                  params("binning").toInt
-                } catch {
-                  case e: Exception => 1
-                }
-
-              // region was already collected, grab from cache
-              VizReads.variantsWait.synchronized {
-                if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
-                  val expanded = VizReads.expand(viewRegion)
-                  VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJson(expanded)
-                  VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
-                }
+          // if region is in bounds of reference, return data
+          val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
+          if (dictOpt.isDefined) {
+            var results: Option[String] = None
+            val binning: Int =
+              try {
+                params("binning").toInt
+              } catch {
+                case e: Exception => 1
               }
-              // filter data overlapping viewRegion and stringify
-              val dataForKey = VizReads.variantsCache.get(key)
-              val data = dataForKey.getOrElse(Array.empty)
-                .filter(r => ReferenceRegion(r.getReferenceName, r.getStart, r.getEnd).overlaps(viewRegion))
-              results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
-              if (results.isDefined) {
-                // extract variants only and parse to stringified json
-                Ok(results.get)
-              } else VizReads.errors.noContent(viewRegion)
-            } else VizReads.errors.outOfBounds
-          }
+
+            // region was already collected, grab from cache
+            VizReads.variantsWait.synchronized {
+              if (!VizReads.variantsIndicator.region.contains(viewRegion) || binning != VizReads.variantsIndicator.resolution) {
+                val expanded = VizReads.expand(viewRegion)
+                VizReads.variantsCache = VizReads.materializer.getVariantContext().get.getJson(expanded)
+                VizReads.variantsIndicator = VizCacheIndicator(expanded, binning)
+              }
+            }
+            // filter data overlapping viewRegion and stringify
+            val dataForKey = VizReads.variantsCache.get(key)
+            val data = dataForKey.getOrElse(Array.empty)
+              .filter(r => ReferenceRegion(r.getReferenceName, r.getStart, r.getEnd).overlaps(viewRegion))
+            results = Some(VizReads.materializer.getVariantContext().get.stringify(data))
+            if (results.isDefined) {
+              // extract variants only and parse to stringified json
+              Ok(results.get)
+            } else VizReads.errors.noContent(viewRegion)
+          } else VizReads.errors.outOfBounds
         }
       }
     } catch { // catch all for errors
@@ -496,66 +466,63 @@ class VizServlet extends ScalatraServlet {
 
   post("/features/search") {
     try {
-      VizTimers.FeatRequest.time {
+      val searchFeaturesRequest: SearchFeaturesRequestGA4GH =
+        net.liftweb.json.parse(request.body).extract[SearchFeaturesRequestGA4GH]
 
-        val searchFeaturesRequest: SearchFeaturesRequestGA4GH =
-          net.liftweb.json.parse(request.body).extract[SearchFeaturesRequestGA4GH]
+      val key: String = searchFeaturesRequest.featureSetId
 
-        val key: String = searchFeaturesRequest.featureSetId
+      // check if end > start, if not return out of bounds.
+      val newEnd = VizUtils.getEnd(searchFeaturesRequest.end, VizReads.genome.chromSizes(searchFeaturesRequest.referenceName))
 
-        // check if end > start, if not return out of bounds.
-        val newEnd = VizUtils.getEnd(searchFeaturesRequest.end, VizReads.genome.chromSizes(searchFeaturesRequest.referenceName))
+      if (newEnd <= searchFeaturesRequest.start) {
+        VizReads.errors.outOfBounds
+      } else {
 
-        if (newEnd <= searchFeaturesRequest.start) {
-          VizReads.errors.outOfBounds
+        val viewRegion = ReferenceRegion(searchFeaturesRequest.referenceName, searchFeaturesRequest.start, newEnd)
+
+        // if this is a genes request, return genes
+        if (key == VizReads.GENES_REQUEST && VizReads.genome.genes.isDefined) {
+
+          val genes = VizReads.genome.genes.get.get(viewRegion).toArray.map(_._2)
+
+          Ok(FeatureMaterialization.stringify(genes))
+
+          // otherwise, process features
         } else {
 
-          val viewRegion = ReferenceRegion(searchFeaturesRequest.referenceName, searchFeaturesRequest.start, newEnd)
+          if (!VizReads.materializer.featuresExist)
+            VizReads.errors.notFound("FeaturesMaterialization")
+          else {
 
-          // if this is a genes request, return genes
-          if (key == VizReads.GENES_REQUEST && VizReads.genome.genes.isDefined) {
+            contentType = "json"
 
-            val genes = VizReads.genome.genes.get.get(viewRegion).toArray.map(_._2)
-
-            Ok(FeatureMaterialization.stringify(genes))
-
-            // otherwise, process features
-          } else {
-
-            if (!VizReads.materializer.featuresExist)
-              VizReads.errors.notFound("FeaturesMaterialization")
-            else {
-
-              contentType = "json"
-
-              // if region is in bounds of reference, return data
-              val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
-              if (dictOpt.isDefined) {
-                var results: Option[String] = None
-                val binning: Int =
-                  try {
-                    params("binning").toInt
-                  } catch {
-                    case e: Exception => 1
-                  }
-                VizReads.featuresWait.synchronized {
-                  // region was not already collected, reset cache
-                  if (!VizReads.featuresIndicator.region.contains(viewRegion) || binning != VizReads.featuresIndicator.resolution) {
-                    val expanded = VizReads.expand(viewRegion)
-                    VizReads.featuresCache = VizReads.materializer.getFeatures().get.getJson(expanded)
-                    VizReads.featuresIndicator = VizCacheIndicator(expanded, binning)
-                  }
+            // if region is in bounds of reference, return data
+            val dictOpt = VizReads.genome.chromSizes(viewRegion.referenceName)
+            if (dictOpt.isDefined) {
+              var results: Option[String] = None
+              val binning: Int =
+                try {
+                  params("binning").toInt
+                } catch {
+                  case e: Exception => 1
                 }
-                // filter data overlapping viewRegion and stringify
-                val dataForKey = VizReads.featuresCache.get(key)
-                val data = dataForKey.getOrElse(Array.empty)
-                  .filter(r => ReferenceRegion(r.getReferenceName, r.getStart, r.getEnd).overlaps(viewRegion))
-                results = Some(VizReads.materializer.getFeatures().get.stringify(data))
-                if (results.isDefined) {
-                  Ok(results.get)
-                } else VizReads.errors.noContent(viewRegion)
-              } else VizReads.errors.outOfBounds
-            }
+              VizReads.featuresWait.synchronized {
+                // region was not already collected, reset cache
+                if (!VizReads.featuresIndicator.region.contains(viewRegion) || binning != VizReads.featuresIndicator.resolution) {
+                  val expanded = VizReads.expand(viewRegion)
+                  VizReads.featuresCache = VizReads.materializer.getFeatures().get.getJson(expanded)
+                  VizReads.featuresIndicator = VizCacheIndicator(expanded, binning)
+                }
+              }
+              // filter data overlapping viewRegion and stringify
+              val dataForKey = VizReads.featuresCache.get(key)
+              val data = dataForKey.getOrElse(Array.empty)
+                .filter(r => ReferenceRegion(r.getReferenceName, r.getStart, r.getEnd).overlaps(viewRegion))
+              results = Some(VizReads.materializer.getFeatures().get.stringify(data))
+              if (results.isDefined) {
+                Ok(results.get)
+              } else VizReads.errors.noContent(viewRegion)
+            } else VizReads.errors.outOfBounds
           }
         }
       }

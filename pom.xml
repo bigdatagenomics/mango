@@ -16,10 +16,10 @@
   <name>mango</name>
 
   <properties>
-    <adam.version>0.30.0</adam.version>
+    <adam.version>0.32.0</adam.version>
     <avro.version>1.8.2</avro.version>
     <bdg-formats.version>0.15.0</bdg-formats.version>
-    <bdg-utils.version>0.2.15</bdg-utils.version>
+    <bdg-utils.version>0.3.0</bdg-utils.version>
     <convert.version>0.9.0</convert.version>
     <java.version>1.8</java.version>
     <jetty.version>9.4.17.v20190418</jetty.version>
@@ -28,12 +28,13 @@
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
     <htsjdk.version>2.19.0</htsjdk.version>
     <parquet.version>1.10.1</parquet.version>
-    <scala.version>2.11.12</scala.version>
-    <scala.version.prefix>2.11</scala.version.prefix>
-    <scalatra.version>2.4.1</scalatra.version>
+    <scala.version>2.12.8</scala.version>
+    <scala.version.prefix>2.12</scala.version.prefix>
+    <scalatra.version>2.5.0</scalatra.version>
+    <scalatest.version>3.0.7</scalatest.version>
     <scalate.version>1.9.1</scalate.version>
     <spark.version>2.4.4</spark.version>
-    <spark.version.prefix>-spark2_</spark.version.prefix>
+    <spark.version.prefix>-spark3_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
     <protobuf.version>3.0.0-beta-3</protobuf.version>
@@ -321,7 +322,7 @@
             <junitxml>.</junitxml>
             <filereports>mangoTestSuite.txt</filereports>
             <argLine>-Xmx1024m -Dsun.io.serialization.extendedDebugInfo=true</argLine>
-            <stdout>F</stdout>
+	        <stdout>F</stdout>
           </configuration>
           <executions>
             <execution>
@@ -526,11 +527,6 @@
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.utils</groupId>
-        <artifactId>utils-metrics${spark.version.prefix}${scala.version.prefix}</artifactId>
-        <version>${bdg-utils.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.bdgenomics.utils</groupId>
         <artifactId>utils-misc${spark.version.prefix}${scala.version.prefix}</artifactId>
         <version>${bdg-utils.version}</version>
         <type>test-jar</type>
@@ -565,7 +561,7 @@
       <dependency>
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest_${scala.version.prefix}</artifactId>
-        <version>3.0.7</version>
+        <version>${scalatest.version}</version>
       </dependency>
       <dependency>
         <groupId>org.scalatra</groupId>
@@ -589,7 +585,7 @@
       </dependency>
       <dependency>
         <groupId>org.scalatra.scalate</groupId>
-        <artifactId>scalate-precompiler_2.11</artifactId>
+        <artifactId>scalate-precompiler_2.12</artifactId>
         <version>1.9.1.0</version>
       </dependency>
       <dependency>
