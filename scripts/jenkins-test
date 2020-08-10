@@ -2,6 +2,14 @@
 
 set -e -x -v
 
+# navigate to mango parent directory, set in Jenkins
+if [ -z "$WORKSPACE" ]
+then
+	echo "WORKSPACE variable is not set. Defaulting to current directory.."
+	WORKSPACE="$(echo $PWD)"
+fi
+pushd ${WORKSPACE}
+
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
 
@@ -30,6 +38,7 @@ PYTHON_UUID=$(uuidgen)
 
 # function that deletes conda environments and temporary environments
 function clean_up {
+    set +x +v
     # deactivate and remove all mango associated conda envs
     source deactivate
     # delete conda env, if it exists
@@ -39,6 +48,7 @@ function clean_up {
     # delete tmp directories
     rm -rf ${MANGO_TMP_DIR}
     rm -rf ${MANGO_MVN_TMP_DIR}
+    set -x -v
 }
 trap clean_up EXIT
 
@@ -176,7 +186,7 @@ then
     pythons=( 3.6 )
     for python in ${pythons[*]}
     do
-        conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip
+        conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip==19.3.1
         source activate mango-build-${PYTHON_UUID}
 
         # install npm and node in the venv for mango-viz
@@ -221,7 +231,7 @@ then
 
         # test mango notebook, output to temporary log file
         MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
-        bash -xv ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
+        bash -xv ${PROJECT_ROOT}/bin/mango-notebook -- --ip=0.0.0.0 --no-browser --allow-root &> ${MANGO_NOTEBOOK_LOGS} &
 
         # sleep for 2 seconds to let mango-notebook start up
         sleep 2
@@ -299,6 +309,9 @@ then
     cat ${TEST_GENOME}.chrom.sizes
     popd
 fi
+
+# exist mango working directory
+popd
 
 echo
 echo "All the tests passed"
