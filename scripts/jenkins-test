@@ -231,7 +231,7 @@ then
 
         # test mango notebook, output to temporary log file
         MANGO_NOTEBOOK_LOGS=${MANGO_TMP_DIR}/mango-notebook.log
-        bash -xv ${PROJECT_ROOT}/bin/mango-notebook  &> ${MANGO_NOTEBOOK_LOGS} &
+        bash -xv ${PROJECT_ROOT}/bin/mango-notebook -- --ip=0.0.0.0 --no-browser --allow-root &> ${MANGO_NOTEBOOK_LOGS} &
 
         # sleep for 2 seconds to let mango-notebook start up
         sleep 2
