@@ -2,6 +2,15 @@
 
 set -e -x -v
 
+# there are missing builds for bdgenomics for versions 2.11/3.0.0
+# because Spark 3.0.0 is prebuilt with scala 2.12. In this case,
+# do not run the tests.
+if [[ (${SCALAVER} == 2.11 ) && (${SPARK_VERSION} == 3.0.0) ]];
+then
+    echo "Missing dependecies for Scala version ${SCALAVER} and Spark version ${SPARK_VERSION}. Skipping."
+    exit 0
+fi
+
 
 # navigate to mango parent directory, set in Jenkins
 if [ -z "$WORKSPACE" ]
