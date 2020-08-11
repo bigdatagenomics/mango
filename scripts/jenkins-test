@@ -203,7 +203,7 @@ else
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
         -o ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz
 
-    tar xzf ${SPARK}-bin-${HADOOP}.tgz --directory ${MANGO_TMP_DIR}
+    tar xzf ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz --directory ${MANGO_TMP_DIR}
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 fi
 
