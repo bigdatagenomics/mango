@@ -182,28 +182,28 @@ if [ ${SCALAVER} == 2.12 ] && [ ${SPARK_VERSION} == 2.4.6 ]
 then
     curl \
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-without-hadoop-scala-2.12.tgz" \
-        -o ${SPARK}-bin-without-hadoop-scala-2.12.tgz
+        -o ${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12.tgz
 
-    tar xzf ${SPARK}-bin-without-hadoop-scala-2.12.tgz
+    tar xzf ${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12.tgz --directory ${MANGO_TMP_DIR}
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12
 
     curl \
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=hadoop/core/hadoop-2.7.7/hadoop-2.7.7.tar.gz" \
-        -o hadoop-2.7.7.tar.gz
+        -o ${MANGO_TMP_DIR}/hadoop-2.7.7.tar.gz
 
-    tar xzf hadoop-2.7.7.tar.gz
+    tar xzf ${MANGO_TMP_DIR}/hadoop-2.7.7.tar.gz --directory ${MANGO_TMP_DIR}
 
     # remove references to avro 1.7.x
-    find hadoop-2.7.7 -name *.jar | grep avro | xargs rm
+    find ${MANGO_TMP_DIR}/hadoop-2.7.7 -name *.jar | grep avro | xargs rm
 
-    export SPARK_DIST_CLASSPATH=$(hadoop-2.7.7/bin/hadoop classpath)
+    export SPARK_DIST_CLASSPATH=$(${MANGO_TMP_DIR}/hadoop-2.7.7/bin/hadoop classpath)
 else
     curl \
         -v \
         -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
-        -o ${SPARK}-bin-${HADOOP}.tgz
+        -o ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz
 
-    tar xzf ${SPARK}-bin-${HADOOP}.tgz
+    tar xzf ${SPARK}-bin-${HADOOP}.tgz --directory ${MANGO_TMP_DIR}
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 fi
 
