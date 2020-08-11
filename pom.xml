@@ -10,10 +10,10 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.bdgenomics.mango</groupId>
-  <artifactId>mango-parent</artifactId>
+  <artifactId>mango-parent-spark3_${scala.version.prefix}</artifactId>
   <version>0.0.6-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>mango</name>
+  <name>mango_${scala.version.prefix}</name>
 
   <properties>
     <adam.version>0.32.0</adam.version>
@@ -24,6 +24,7 @@
     <java.version>1.8</java.version>
     <jetty.version>9.4.17.v20190418</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
+     <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
     <hadoop.version>2.7.5</hadoop.version>
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
     <htsjdk.version>2.19.0</htsjdk.version>
@@ -595,17 +596,17 @@
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.mango</groupId>
-        <artifactId>mango-core</artifactId>
+        <artifactId>mango-core-spark3_${scala.version.prefix}</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.mango</groupId>
-        <artifactId>mango-cli</artifactId>
+        <artifactId>mango-cli-spark3_${scala.version.prefix}</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.bdgenomics.mango</groupId>
-        <artifactId>mango-core</artifactId>
+        <artifactId>mango-core-spark3_${scala.version.prefix}</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>

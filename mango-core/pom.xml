@@ -4,13 +4,13 @@
 
   <parent>
     <groupId>org.bdgenomics.mango</groupId>
-    <artifactId>mango-parent</artifactId>
+    <artifactId>mango-parent-spark3_${scala.version.prefix}</artifactId>
     <version>0.0.6-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
-  <artifactId>mango-core</artifactId>
+  <artifactId>mango-core-spark3_${scala.version.prefix}</artifactId>
   <packaging>jar</packaging>
-  <name>mango: CORE</name>
+  <name>mango_${scala.version.prefix}: CORE</name>
   <build>
     <plugins>
       <plugin>
