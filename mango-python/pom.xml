@@ -3,14 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.bdgenomics.mango</groupId>
-    <artifactId>mango-parent</artifactId>
+    <artifactId>mango-parent-spark3_${scala.version.prefix}</artifactId>
     <version>0.0.6-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mango-python</artifactId>
+  <artifactId>mango-python-spark3_${scala.version.prefix}</artifactId>
   <packaging>jar</packaging>
-  <name>Mango: Python APIs</name>
+  <name>Mango_${scala.version.prefix}: Python APIs</name>
   <properties>
     <timestamp>${maven.build.timestamp}</timestamp>
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>

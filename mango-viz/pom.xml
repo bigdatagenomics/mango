@@ -3,14 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.bdgenomics.mango</groupId>
-    <artifactId>mango-parent</artifactId>
+    <artifactId>mango-parent-spark3_${scala.version.prefix}</artifactId>
     <version>0.0.6-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mango-viz</artifactId>
+  <artifactId>mango-viz-spark3_${scala.version.prefix}</artifactId>
   <packaging>jar</packaging>
-  <name>Mango: Python visualization hooks</name>
+  <name>Mango_${scala.version.prefix}: Python visualization hooks</name>
   <properties>
     <timestamp>${maven.build.timestamp}</timestamp>
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
