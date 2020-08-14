@@ -2,16 +2,6 @@
 
 set -e -x -v
 
-# there are missing builds for bdgenomics for versions 2.11/3.0.0
-# because Spark 3.0.0 is prebuilt with scala 2.12. In this case,
-# do not run the tests.
-if [[ (${SCALAVER} == 2.11 ) && (${SPARK_VERSION} == 3.0.0) ]];
-then
-    echo "Missing dependecies for Scala version ${SCALAVER} and Spark version ${SPARK_VERSION}. Skipping."
-    exit 0
-fi
-
-
 # navigate to mango parent directory, set in Jenkins
 if [ -z "$WORKSPACE" ]
 then
@@ -224,11 +214,11 @@ pythons=( 3.6 )
 for python in ${pythons[*]}
 do
     set +x +v
-    conda create -y -q -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
+    conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
     source activate mango-build-${PYTHON_UUID}
     set -x -v
 
-    # install npm and node in the venv for mango-viz
+    # install npm and node in the venv for mango-pileup
     conda install -y nodejs
 
     # prepare mango python
@@ -251,15 +241,15 @@ do
     popd
 
     # prepare mango viz
-    pushd ${WORKSPACE}/mango-viz
+    pushd ${WORKSPACE}/mango-pileup
     make prepare
     popd
 
-    # run the widgets tests (mango-viz)
+    # run the widgets tests (mango-pileup)
     mvn -P widgets test
 
     # clean mango viz
-    pushd ${WORKSPACE}/mango-viz
+    pushd ${WORKSPACE}/mango-pileup
     make clean
     popd
 
@@ -291,9 +281,10 @@ do
     cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
 
     # deactivate and remove the conda env
+    set +e +x
     source deactivate
     conda remove -y --name mango-build-${PYTHON_UUID} --all
-
+    set -e -x
 done
 
 # test mango submit
