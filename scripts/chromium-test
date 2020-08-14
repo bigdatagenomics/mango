@@ -10,6 +10,17 @@ then
 fi
 pushd ${WORKSPACE}
 
+apt-get --purge remove -y
+unset CHROME_BIN
+
+# install manually missing libraries for chrome
+apt-get install -y libappindicator3-1
+
+# install chrome
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+dpkg -i google-chrome-stable_current_amd64.deb; apt-get -fy install
+export CHROME_BIN=/usr/bin/google-chrome-stable
+
 # unique identifier for conda env
 PYTHON_UUID=$(uuidgen)
 
