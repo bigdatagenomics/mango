@@ -8,9 +8,11 @@ if [ $# -lt 3 ]; then
     exit 1
 fi
 
+# if GPG fails, do: export GPG_TTY=$(tty)
+
 # pick arguments
-release=$1
-devel=$2
+release=$1 # ie 0.0.1
+devel=$2   # ie 0.0.2-SNAPSHOT
 python=$3 # boolean (true or false) determines whether to push python
 
 # get current branch
@@ -45,13 +47,11 @@ fi
 # Note that you have to manually update the versions first.
 if [ $python == "true" ]; then
     # set up mango-python environment for releasing to pypi
-    rm -rf release-venv
-    virtualenv release-venv
-    . release-venv/bin/activate
+    conda remove --name release-env --all
+    conda create --name release-env --python=3.6
+    source activate release-env
     pip install pyspark
     pip install twine
-    pip install pypandoc
-
 
     # set up mango-pileup environment for releasing to pypi
     pushd mango-pileup
@@ -77,8 +77,8 @@ if [ $python == "true" ]; then
     popd
 
     # deactivate the python virtualenv
-    deactivate
-    rm -rf release-venv
+    source deactivate
+    conda remove --name release-env --all
 fi
 
 if [ $branch = "master" ]; then

@@ -19,18 +19,23 @@
 package org.bdgenomics.mango.core.util
 
 import java.io._
-import java.nio.file.{ Path, Files }
+import java.nio.file.{ Files, Path }
 import java.util.Properties
 import java.util.stream.Collectors
+
 import ga4gh.SequenceAnnotations
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
 import java.net.URL
+
 import scala.io.Source
 import sys.process._
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
+import java.util.zip.{ GZIPInputStream, ZipEntry, ZipFile, ZipInputStream, ZipOutputStream }
 
-import java.util.zip.{ ZipEntry, ZipOutputStream, ZipFile, ZipInputStream, GZIPInputStream }
+import scala.language.postfixOps
+import java.net.HttpURLConnection
 
+import org.bdgenomics.mango.io.HttpDownloadUtility
 import org.bdgenomics.utils.interval.array.IntervalArray
 
 /**
@@ -82,64 +87,71 @@ object GenomeConfig extends Logging {
     val outputDir = new File(tmpPath)
     outputDir.mkdirs()
 
-    // specify build
-    val sequenceLocation = s"http://hgdownload.cse.ucsc.edu/goldenPath/${genome}/bigZips/${genome}.2bit"
-
-    // Should throw FileNotFoundException if 2bit does not exist
-    try {
-      new URL(sequenceLocation).getContent()
-    }
-
-    // download chromsizes to output
-    // Should throw FileNotFoundException if chrom.sizes does not exist
-    new URL(s"http://hgdownload.cse.ucsc.edu/goldenPath/${genome}/bigZips/${genome}.chrom.sizes") #> new File(s"${tmpPath}/${genome}.chrom.sizes") !!
-
     // write properties file
     val propertiesFile = new File(s"${outputDir}/${PROPERTIES_FILE}")
     val bw = new BufferedWriter(new FileWriter(propertiesFile))
 
-    bw.write(s"${TWOBIT_KEY}=${sequenceLocation}\n")
-    bw.write(s"${CHROMSIZES_KEY}=${genome}${CHROMSIZES_SUFFIX}\n")
+    // specify build. Do not download, but we access remotely.
+    val sequenceLocation = s"http://hgdownload.cse.ucsc.edu/goldenPath/${genome}/bigZips/${genome}.2bit"
+
+    // Should throw FileNotFoundException if 2bit does not exist
+    var responseCode = HttpDownloadUtility.checkFile(sequenceLocation)
+
+    if (responseCode != HttpURLConnection.HTTP_OK) {
+      throw new FileNotFoundException(s"Genome file ${sequenceLocation} threw http response code ${responseCode}")
+    } else {
+      bw.write(s"${TWOBIT_KEY}=${sequenceLocation}\n")
+    }
+
+    // download chromsizes to output
+    // Should throw FileNotFoundException if chrom.sizes does not exist
+    val chromLocation = s"http://hgdownload.cse.ucsc.edu/goldenPath/${genome}/bigZips/${genome}.chrom.sizes"
+    val chromOut = s"${tmpPath}/${genome}.chrom.sizes"
+
+    responseCode = HttpDownloadUtility.downloadFile(chromLocation, chromOut)
+    if (responseCode != HttpURLConnection.HTTP_OK) {
+      throw new FileNotFoundException(s"Genome file ${chromLocation} threw http response code ${responseCode}")
+    } else {
+      bw.write(s"${CHROMSIZES_KEY}=${genome}${CHROMSIZES_SUFFIX}\n")
+
+    }
 
     // try getting genes
     val geneUrl = s"http://hgdownload.soe.ucsc.edu/goldenPath/${genome}/database/refGene.txt.gz"
     val xenoGeneUrl = s"http://hgdownload.soe.ucsc.edu/goldenPath/${genome}/database/xenoRefGene.txt.gz"
-    val out = s"${tmpPath}/refGene.txt.gz"
+    val out = s"${tmpPath}/${REFSEQ_FILE}"
 
-    try {
+    responseCode = HttpDownloadUtility.downloadFile(geneUrl, out)
 
-      new URL(geneUrl) #> new File(out) !!
+    if (responseCode == HttpURLConnection.HTTP_OK) {
 
       bw.write(s"${REFGENE_KEY}=${REFSEQ_FILE}\n")
 
-    } catch {
-      case e: Exception => {
-        try {
+    } else {
 
-          new URL(xenoGeneUrl) #> new File(out) !!
+      responseCode = HttpDownloadUtility.downloadFile(xenoGeneUrl, out)
 
-          bw.write(s"${REFGENE_KEY}=${REFSEQ_FILE}\n")
-        } catch {
-          case e: Exception => {
-            log.warn(s"No refGene file found at ${geneUrl} or ${xenoGeneUrl}")
-          }
-        }
+      if (responseCode == HttpURLConnection.HTTP_OK) {
 
+        bw.write(s"${REFGENE_KEY}=${REFSEQ_FILE}\n")
+
+      } else {
+        logger.warn(s"No refGene file found at ${geneUrl} or ${xenoGeneUrl}")
       }
+
     }
 
     // try getting cytoband file
-    val cytobandUrl = s"http://hgdownload.cse.ucsc.edu/goldenpath/${genome}/database/cytoBand.txt.gz"
+    val cytobandUrl = s"http://hgdownload.cse.ucsc.edu/goldenpath/${genome}/database/${CYTOBAND_FILE}"
+    val cytobandOut = s"${tmpPath}/cytoBand.txt.gz"
 
-    try {
-      val out = s"${tmpPath}/cytoBand.txt.gz"
-      new URL(cytobandUrl) #> new File(out) !!
+    responseCode = HttpDownloadUtility.downloadFile(cytobandUrl, cytobandOut)
 
+    if (responseCode == HttpURLConnection.HTTP_OK) {
       bw.write(s"${CYTOBAND_KEY}=${CYTOBAND_FILE}\n")
-    } catch {
-      case e: Exception => {
-        log.warn(s"No refGene file found at ${cytobandUrl} for genome ${genome}")
-      }
+    } else {
+      logger.warn(s"No refGene file found at ${cytobandUrl} for genome ${genome}")
+
     }
 
     bw.flush()

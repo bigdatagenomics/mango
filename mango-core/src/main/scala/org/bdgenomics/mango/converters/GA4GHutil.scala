@@ -36,7 +36,6 @@ import org.bdgenomics.convert.{ ConversionStringency, Converter }
 import org.bdgenomics.formats.avro.Alignment
 
 import scala.collection.JavaConverters._
-import scala.collection.JavaConversions._
 import org.slf4j.LoggerFactory
 
 /*
@@ -171,7 +170,7 @@ object GA4GHutil {
 
     // convert results to json strings for each readGroupName
     val jsonMap = results.map(r => (r._1, com.google.protobuf.util.JsonFormat.printer().includingDefaultValueFields().print(r._2)))
-    return mapAsJavaMap(jsonMap)
+    return jsonMap.asJava
   }
 
   /**

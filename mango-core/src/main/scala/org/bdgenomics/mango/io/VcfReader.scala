@@ -33,7 +33,7 @@ import org.bdgenomics.adam.rdd.variant.VariantContextDataset
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.models.{ ReferenceRegion, VariantContext => ADAMVariantContext }
 import org.bdgenomics.mango.models.LazyMaterialization
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
 import org.bdgenomics.formats.avro.Sample
 import scala.collection.JavaConversions._
 import htsjdk.tribble.AbstractFeatureReader
@@ -130,7 +130,7 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
             })
           } catch {
             case e: NullPointerException => {
-              log.warn(s"File ${fp} did not have sequence header")
+              logger.warn(s"File ${fp} did not have sequence header")
               regions
             }
           }
@@ -202,7 +202,7 @@ object VcfReader extends GenomicReader[VCFHeader, ADAMVariantContext, VariantCon
 
     // do not re-generate index file
     if (!idxFile.exists()) {
-      log.warn(s"No index file for ${file.getAbsolutePath} found. Generating ${idxFile.getAbsolutePath}...")
+      logger.warn(s"No index file for ${file.getAbsolutePath} found. Generating ${idxFile.getAbsolutePath}...")
 
       // Create the index
       if (!isCompressed(fp)) {

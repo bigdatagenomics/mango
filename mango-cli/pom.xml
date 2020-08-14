@@ -4,13 +4,13 @@
 
   <parent>
     <groupId>org.bdgenomics.mango</groupId>
-    <artifactId>mango-parent</artifactId>
-    <version>0.0.4-SNAPSHOT</version>
+    <artifactId>mango-parent-spark3_${scala.version.prefix}</artifactId>
+    <version>0.0.6-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
-  <artifactId>mango-cli</artifactId>
+  <artifactId>mango-cli-spark3_${scala.version.prefix}</artifactId>
   <packaging>jar</packaging>
-  <name>mango: CLI</name>
+  <name>mango_${scala.version.prefix}: CLI</name>
   <build>
     <plugins>
       <plugin>
@@ -197,11 +197,6 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.utils</groupId>
-      <artifactId>utils-metrics${spark.version.prefix}${scala.version.prefix}</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bdgenomics.utils</groupId>
       <artifactId>utils-misc${spark.version.prefix}${scala.version.prefix}</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
@@ -243,7 +238,7 @@
     </dependency>
     <dependency>
       <groupId>org.bdgenomics.mango</groupId>
-      <artifactId>mango-core</artifactId>
+      <artifactId>mango-core-spark3_${scala.version.prefix}</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>

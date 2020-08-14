@@ -25,7 +25,7 @@ import org.scalatra.test.scalatest.ScalatraSuite
 import net.liftweb.json._
 
 import org.junit.Test
-@org.junit.runner.RunWith(value = classOf[org.scalatest.junit.JUnitRunner])
+@org.junit.runner.RunWith(value = classOf[org.scalatestplus.junit.JUnitRunner])
 class VizReadsSuite extends MangoFunSuite with ScalatraSuite {
 
   implicit val formats = DefaultFormats

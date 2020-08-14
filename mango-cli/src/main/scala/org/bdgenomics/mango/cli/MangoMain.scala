@@ -22,7 +22,7 @@ import javax.inject.Inject
 import com.google.inject.AbstractModule
 import net.codingwell.scalaguice.ScalaModule
 import org.bdgenomics.utils.cli.{ Args4j, ParquetArgs, Args4jBase, BDGCommandCompanion }
-import org.bdgenomics.utils.misc.Logging
+import grizzled.slf4j.Logging
 import org.bdgenomics.adam.util.ParquetLogger
 import org.bdgenomics.mango.cli._
 
@@ -84,7 +84,7 @@ class MangoMain @Inject() (commandGroups: List[CommandGroup]) extends Logging {
   }
 
   def apply(args: Array[String]) {
-    log.info("Mango invoked with args: %s".format(argsToString(args)))
+    logger.info("Mango invoked with args: %s".format(argsToString(args)))
     if (args.length < 1) {
       printCommands()
     } else if (args.contains("--version") || args.contains("-version")) {
