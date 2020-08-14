@@ -38,10 +38,13 @@ source activate mango-build-${PYTHON_UUID}
 set -x -v
 
 # install npm and node in the venv for mango-pileup
-conda install -y nodejs
+# conda install -y nodejs
 
-pushd ${WORKSPACE}/mango-pileup/bdgenomics/mango/js
-npm install
+pushd ${WORKSPACE}/mango-pileup
+make prepare
+make develop
+
+pushd ${WORKSPACE}/mango-pileup/bdgenomics/mango/js/
 
 npm run test
 popd
