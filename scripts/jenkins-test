@@ -36,6 +36,8 @@ VERSION=$(grep "<version>" ${PROJECT_ROOT}/pom.xml  | head -2 | tail -1 | sed 's
 # unique identifier for conda env
 PYTHON_UUID=$(uuidgen)
 
+echo $CHROME_BIN
+
 # function that deletes conda environments and temporary environments
 function clean_up {
     set +x +v
