@@ -224,9 +224,13 @@ do
     conda install -y nodejs
 
     # prepare mango python
-    pushd ${WORKSPACE}/mango-python
+    pushd mango-python
     make prepare
+
+    python -h
+	make develop
     popd
+
 
     # we can run the python build, now that we have a spark executable
     # requires SPARK_HOME to be set
@@ -238,12 +242,12 @@ do
         -Dspark.version=${SPARK_VERSION}
 
     # clean mango python
-    pushd ${WORKSPACE}/mango-python
+    pushd mango-python
     make clean
     popd
 
     # prepare mango viz
-    pushd ${WORKSPACE}/mango-pileup
+    pushd mango-pileup
     make prepare
     popd
 
@@ -251,7 +255,7 @@ do
     mvn -P widgets test
 
     # clean mango viz
-    pushd ${WORKSPACE}/mango-pileup
+    pushd mango-pileup
     make clean
     popd
 
