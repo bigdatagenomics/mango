@@ -220,6 +220,9 @@ do
     source activate mango-build-${PYTHON_UUID}
     set -x -v
 
+    which python
+    python -h
+
     # install npm and node in the venv for mango-pileup
     conda install -y nodejs
 
