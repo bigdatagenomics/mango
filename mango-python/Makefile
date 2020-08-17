@@ -124,9 +124,8 @@ check_build_reqs:
 
 
 prepare:
-	$(pip) install pytest==3.9.1
+	which $(pip)
 	# ipython version required for python 2.7
-	$(pip) install jupyter_contrib_nbextensions
 	$(pip) install -r requirements.txt
 
 

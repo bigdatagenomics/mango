@@ -6,3 +6,5 @@ bdgenomics.adam==0.30.0
 bdgenomics.mango.pileup==0.0.6a0
 ipywidgets==7.0.0
 psutil
+pytest==3.9.1
+jupyter_contrib_nbextensions
