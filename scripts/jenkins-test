@@ -23,7 +23,7 @@ mkdir $MANGO_TMP_DIR
 export TMPDIR=${MANGO_TMP_DIR}
 
 # Copy workspace into our temp space for testing
-cp -r $WORKSPACE/* $MANGO_TMP_DIR
+cp -rT $WORKSPACE $MANGO_TMP_DIR
 
 # new project root is tmp dir, where everything was copied
 PROJECT_ROOT=$MANGO_TMP_DIR
