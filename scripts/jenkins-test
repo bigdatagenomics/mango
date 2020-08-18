@@ -23,7 +23,7 @@ mkdir $MANGO_TMP_DIR
 export TMPDIR=${MANGO_TMP_DIR}
 
 # Copy workspace into our temp space for testing
-cp -r $WORKSPACE $MANGO_TMP_DIR
+cp -r $WORKSPACE/* $MANGO_TMP_DIR
 
 # new project root is tmp dir, where everything was copied
 PROJECT_ROOT=$MANGO_TMP_DIR
@@ -41,8 +41,6 @@ find . -name "*.bak" -exec rm {} \;
 export PATH=${JAVA_HOME}/bin/:${PATH}
 export MAVEN_OPTS="-Xmx1536m -XX:MaxPermSize=1g -Dfile.encoding=utf-8"
 VERSION=$(grep "<version>" ${PROJECT_ROOT}/pom.xml  | head -2 | tail -1 | sed 's/ *<version>//g' | sed 's/<\/version>//g')
-
-exit 1
 
 # unique identifier for conda env
 PYTHON_UUID=$(uuidgen)
@@ -107,8 +105,6 @@ then
     ./scripts/move_to_spark_2.sh
     set -e
 fi
-
-exit 1
 
 # print versions
 echo "Testing MANGO version ${VERSION} on Spark ${SPARK_VERSION} and Hadoop ${HADOOP_VERSION}"
