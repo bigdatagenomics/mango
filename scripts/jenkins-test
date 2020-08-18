@@ -8,7 +8,6 @@ then
 	echo "WORKSPACE variable is not set. Defaulting to current directory.."
 	WORKSPACE="$(echo $PWD)"
 fi
-pushd ${WORKSPACE}
 
 # make a tempdir for writing maven cruft to
 MANGO_MVN_TMP_DIR=$(mktemp -d -t mangoTestMvnXXXXXXX)
@@ -18,6 +17,18 @@ MANGO_TMP_DIR=$(mktemp -d -t mangoTestXXXXXXX)
 
 MANGO_TMP_DIR=$MANGO_TMP_DIR/deleteMePleaseThisIsNoLongerNeeded
 mkdir $MANGO_TMP_DIR
+
+# run integration tests
+# set the TMPDIR envar, which is used by python to choose where to make temp directories
+export TMPDIR=${MANGO_TMP_DIR}
+
+# Copy workspace into our temp space for testing
+cp -r $WORKSPACE $MANGO_TMP_DIR
+
+# new project root is tmp dir, where everything was copied
+PROJECT_ROOT=$MANGO_TMP_DIR
+
+pushd $PROJECT_ROOT
 
 # add this tempdir to the poms...
 find . -name pom.xml \
@@ -29,14 +40,12 @@ find . -name "*.bak" -exec rm {} \;
 # variable declarations
 export PATH=${JAVA_HOME}/bin/:${PATH}
 export MAVEN_OPTS="-Xmx1536m -XX:MaxPermSize=1g -Dfile.encoding=utf-8"
-DIR=$( cd $( dirname ${BASH_SOURCE[0]} ) && pwd )
-PROJECT_ROOT=${DIR}/..
 VERSION=$(grep "<version>" ${PROJECT_ROOT}/pom.xml  | head -2 | tail -1 | sed 's/ *<version>//g' | sed 's/<\/version>//g')
+
+exit 1
 
 # unique identifier for conda env
 PYTHON_UUID=$(uuidgen)
-
-echo $CHROME_BIN
 
 # function that deletes conda environments and temporary environments
 function clean_up {
@@ -98,6 +107,8 @@ then
     ./scripts/move_to_spark_2.sh
     set -e
 fi
+
+exit 1
 
 # print versions
 echo "Testing MANGO version ${VERSION} on Spark ${SPARK_VERSION} and Hadoop ${HADOOP_VERSION}"
@@ -199,17 +210,7 @@ else
     export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 fi
 
-# run integration tests
-# set the TMPDIR envar, which is used by python to choose where to make temp directories
-export TMPDIR=${MANGO_TMP_DIR}
 
-pushd $PROJECT_ROOT
-
-# Copy the jar into our temp space for testing
-cp -r . $MANGO_TMP_DIR
-popd
-
-pushd $MANGO_TMP_DIR
 
 # create a conda environment for python build, if necessary
 pythons=( 3.6 )
