@@ -8,7 +8,19 @@ then
 	echo "WORKSPACE variable is not set. Defaulting to current directory.."
 	WORKSPACE="$(echo $PWD)"
 fi
-pushd ${WORKSPACE}
+
+# make a temp directory for loading worspace to
+MANGO_TMP_DIR=$(mktemp -d -t mangoTestXXXXXXX)
+MANGO_TMP_DIR=$MANGO_TMP_DIR/deleteMePleaseThisIsNoLongerNeeded
+mkdir $MANGO_TMP_DIR
+
+# Copy workspace into our temp space for testing
+cp -rT $WORKSPACE $MANGO_TMP_DIR
+
+# new project root is tmp dir, where everything was copied
+PROJECT_ROOT=$MANGO_TMP_DIR
+
+pushd $PROJECT_ROOT
 
 # move to Scala 2.11 if requested
 if [ ${SCALAVER} == 2.11 ];
@@ -31,4 +43,3 @@ mvn clean
 
 # Push snapshot at https://oss.sonatype.org/content/repositories/snapshots/
 mvn --settings=${SETTINGS_DOCKER} deploy -DskipTests -Pdistribution
-
