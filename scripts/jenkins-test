@@ -213,7 +213,7 @@ pythons=( 3.6 )
 for python in ${pythons[*]}
 do
     conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
-    conda activate mango-build-${PYTHON_UUID}
+    source activate mango-build-${PYTHON_UUID}
 
     # install npm and node in the venv for mango-pileup
     conda install -y nodejs
@@ -221,6 +221,7 @@ do
     # prepare mango python
     pushd mango-python
     make prepare
+    make develop
     popd
 
     # we can run the python build, now that we have a spark executable
