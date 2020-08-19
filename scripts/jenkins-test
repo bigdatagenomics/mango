@@ -129,12 +129,12 @@ then
     echo "Coveralls token is not set. Exiting..."
     exit 1
 fi
-
-# if those pass, run tests
-mvn -U \
-    test \
-    -P core,coverage,coveralls  scoverage:report coveralls:report \
-    -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
+#
+# # if those pass, run tests
+# mvn -U \
+#     test \
+#     -P core,coverage,coveralls  scoverage:report coveralls:report \
+#     -DrepoToken=${COVERALLS_REPO_TOKEN} ${COVERALLS_PRB_OPTION}
 
 # make verbose again
 set -x -v
@@ -212,36 +212,36 @@ fi
 pythons=( 3.6 )
 for python in ${pythons[*]}
 do
-    set +x +v
+    # set +x +v
     conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
-    source activate mango-build-${PYTHON_UUID}
-    set -x -v
+    conda activate mango-build-${PYTHON_UUID}
+    # set -x -v
 
     # install npm and node in the venv for mango-pileup
     conda install -y nodejs
 
     python -h
 
-    pip install cigar==0.1.3
-    python -h
-    pip install matplotlib==2.0.2
-    python -h
-    pip install ipython==7.8.0
-    python -h
-    pip install jupyter==1.0.0
-    python -h
-    pip install bdgenomics.adam==0.30.0
-    python -h
-    pip install bdgenomics.mango.pileup==0.0.6a0
-    python -h
-    pip install ipywidgets==7.0.0
-    python -h
-    pip install psutil
-    python -h
-    pip install pytest==3.9.1
-    python -h
-    pip install jupyter_contrib_nbextensions
-    python -h
+    # pip install cigar==0.1.3
+    # python -h
+    # pip install matplotlib==2.0.2
+    # python -h
+    # pip install ipython==7.8.0
+    # python -h
+    # pip install jupyter==1.0.0
+    # python -h
+    # pip install bdgenomics.adam==0.30.0
+    # python -h
+    # pip install bdgenomics.mango.pileup==0.0.6a0
+    # python -h
+    # pip install ipywidgets==7.0.0
+    # python -h
+    # pip install psutil
+    # python -h
+    # pip install pytest==3.9.1
+    # python -h
+    # pip install jupyter_contrib_nbextensions
+    # python -h
 
     # prepare mango python
     pushd mango-python
