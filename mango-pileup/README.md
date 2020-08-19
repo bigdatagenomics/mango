@@ -10,10 +10,12 @@ bdgenomics.mango.pileup builds off of [pileup.js](https://github.com/hammerlab/p
     $ pip install bdgenomics.mango.pileup
 
 #### Enable widgets for Jupyter notebook:
+
     $ jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup  # can be skipped for notebook version 5.3 and above
 
-#### Install widgets for jupyter lab
-    jupyter labextension install bdgenomics.mango.pileup
+#### Install widgets for jupyter lab:
+
+    $ jupyter labextension install bdgenomics.mango.pileup
 
 ## Running Examples
 
