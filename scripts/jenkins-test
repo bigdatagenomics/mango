@@ -221,6 +221,12 @@ do
     # prepare mango python
     pushd mango-python
     make prepare
+    popd
+
+    # need to run develop separately because of inconsistent Docker/Jenkins python bug
+    # Otherwise, gets error: python: bad interpreter: Invalid argument
+    # see issue https://github.com/googledatalab/datalab/pull/2100, no solution.
+    pushd mango-python
     make develop
     popd
 
