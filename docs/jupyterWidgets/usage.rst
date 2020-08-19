@@ -3,12 +3,12 @@ Jupyter Widget Usage
 
 **Note**: Python 2.7 is `dropping support <https://www.anaconda.com/end-of-life-eol-for-python-2-7-is-coming-are-you-ready/>`__ January 1, 2020. For this reason, Mango no longer supports Python 2.
 
-The Mango widgets are Jupyter widgets built using `pileup.js <https://github.com/hammerlab/pileup.js>`__ .
+The Mango widgets are Jupyter widgets built using `pileup.js <https://github.com/hammerlab/pileup.js>`__.
 The widgets support visualizations for alignments, features,
-variants, and genotypes in a Jupyter Notebook.
+variants, and genotypes in a Jupyter Notebook and Jupyter lab version >2.0.
 
-Installation
-------------
+Installation for Jupyter notebook
+---------------------------------
 
 First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
 
@@ -17,18 +17,44 @@ First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
 
     pip install bdgenomics.mango.pileup
 
-    jupyter nbextension enable --py widgetsnbextension
-    jupyter nbextension install --py --symlink --user bdgenomics.mango.pileup
-    jupyter nbextension enable bdgenomics.mango.pileup --user --py
+    jupyter nbextension install --py --user bdgenomics.mango.pileup
+    jupyter nbextension install --py --user widgetsnbextension
 
+    jupyter nbextension enable --py --user widgetsnbextension
+    jupyter nbextension enable --py --user bdgenomics.mango.pileup
 
+**Note**: If you are using an conda environment, install extensions using ``--sys-prefix``:
 
-These tutorials show how to create a Jupyter pileup.js widget. An example notebook can be found in the `Mango Github repository <https://github.com/bigdatagenomics/mango/blob/master/mango-viz/examples/pileup-tutorial.ipynb>`__.
+.. code:: bash
+
+    jupyter nbextension install --py --sys-prefix bdgenomics.mango.pileup
+    jupyter nbextension install --py --sys-prefix widgetsnbextension
+
+    jupyter nbextension enable --py --sys-prefix widgetsnbextension
+    jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup 
+
+This will install the bdgenomics.mango.pileup extension into your current conda environment.
+
+Installation for Jupyter lab
+----------------------------
+
+To use the Mango widgets in Jupyter lab, you will need the following requirements:
+
+- `Jupyter lab version > 2.0 <https://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html>`__
+- `node > 12 <https://nodejs.org/en/download/>`__
+
+.. code:: bash
+
+    pip install bdgenomics.mango.pileup
+    jupyter labextension install @jupyter-widgets/jupyterlab-manager # install the Jupyter widgets extension
+    jupyter labextension install bdgenomics.mango.pileup
+
+These tutorials show how to create a Jupyter pileup.js widget. An example notebook can be found in the `Mango Github repository <https://github.com/bigdatagenomics/mango/blob/master/mango-pileup/examples/pileup-tutorial.ipynb>`__.
 
 Pileup Example
 --------------
 
-This example shows how to visualize alignments through a Jupyter widget. It is located in ``<PATH_TO_MANGO>/mango-viz/examples/pileup-tutorial.ipynb``.
+This example shows how to visualize alignments through a Jupyter widget.
 
 .. code:: python
 

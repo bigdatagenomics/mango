@@ -33,7 +33,7 @@ class NotebookTest(SparkTestCase):
         featureFile = self.exampleFile("chr17.582500-594500.bed")
 
         # this file is converted from ipynb in make test
-        testFile = self.exampleFile("notebooks/mango-viz.py")
+        testFile = self.exampleFile("notebooks/mango-pileup.py")
         exec(open(testFile).read())
 
     def test_coverage_example(self):

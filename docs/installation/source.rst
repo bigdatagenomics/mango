@@ -46,15 +46,15 @@ To build and test `Mango’s Python bindings <#python>`__, first set environment
 .. code:: bash
 
    export SPARK_HOME=<PATH_TO_SPARK>
-   export MANGO_HOME=<PATH_TO_MANGO> 
-   
+   export MANGO_HOME=<PATH_TO_MANGO>
+
 Next, build Mango jars without running tests, by running the following command from the root of the Mango repo install directory:
 
 .. code:: bash
 
    mvn clean package -DskipTests
 
-Additionally, the PySpark dependencies must be on the Python module load path and the Mango JARs must be built and provided to PySpark. This can be done with the following bash commands: 
+Additionally, the PySpark dependencies must be on the Python module load path and the Mango JARs must be built and provided to PySpark. This can be done with the following bash commands:
 
 .. code:: bash
 
@@ -72,17 +72,17 @@ Next, install dependencies using the following commands:
    cd mango-python
    make prepare
    cd ..
-   cd mango-viz
+   cd mango-pileup
    make prepare
    cd ..
-   
-Finally, run ``mvn package`` again, this time enabling the ``python`` profile as well as tests:   
+
+Finally, run ``mvn package`` again, this time enabling the ``python`` profile as well as tests:
 
 
 .. code:: bash
 
     mvn package -P python
 
-This will enable the ``mango-python`` and ``mango-viz`` module as part of the Mango build.
+This will enable the ``mango-python`` and ``mango-pileup`` module as part of the Mango build.
 This module uses Maven to invoke a Makefile that builds a Python egg and
-runs tests. 
+runs tests.

@@ -40,7 +40,7 @@ for mod_name in MOCK_MODULES:
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 this_dir = os.path.dirname(os.path.abspath(__file__))
-mango_viz_dir = os.path.abspath(os.path.join(this_dir, '..','mango-viz'))
+mango_viz_dir = os.path.abspath(os.path.join(this_dir, '..','mango-pileup'))
 mango_python_dir = os.path.abspath(os.path.join(this_dir, '..','mango-python'))
 
 # make sure paths exists for API docs.

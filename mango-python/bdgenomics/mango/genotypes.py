@@ -135,7 +135,7 @@ class GenotypeSummary(object):
         filtered = self.genotypeDataset.transform(lambda r: r.filter(((r.referenceName == contig_full) | (r.referenceName == contig_trimmed))
                                                            & (r.start < end) & (r.end > start)))
 
-        # convert to GA4GH JSON to be consumed by mango-viz module
+        # convert to GA4GH JSON to be consumed by mango-pileup module
         json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.genotypeDatasetToJSON(filtered._jvmRdd)
 
         # visualize

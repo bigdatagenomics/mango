@@ -36,7 +36,7 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>../mango-viz/bdgenomics.mango.pileup.egg-info</directory>
+      <directory>../mango-pileup/bdgenomics.mango.pileup.egg-info</directory>
       <outputDirectory>bdgenomics.mango.pileup.egg-info</outputDirectory>
       <directoryMode>0755</directoryMode>
       <fileMode>0755</fileMode>
@@ -57,7 +57,7 @@
       <fileMode>0644</fileMode>
     </fileSet>
     <fileSet>
-      <directory>../mango-viz/dist</directory>
+      <directory>../mango-pileup/dist</directory>
       <includes>
         <include>bdgenomics.mango.pileup*.egg</include>
       </includes>

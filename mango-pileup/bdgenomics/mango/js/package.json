@@ -1,0 +1,74 @@
+{
+  "name": "bdgenomics.mango.pileup",
+  "version": "0.0.5-beta.1",
+  "description": "Interactive Jupyter genome browser",
+  "author": "Alyssa Morrow",
+  "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bigdatagenomics/mango.git"
+  },
+  "homepage": "https://github.com/bigdatagenomics/mango/tree/master/mango-pileup",
+  "bugs": {
+    "url": "https://github.com/bigdatagenomics/mango/issues"
+  },
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension",
+    "widgets",
+    "ipython",
+    "ipywidgets"
+  ],
+  "style": "css/index.css",
+  "scripts": {
+    "build": "npm run build:js && webpack",
+    "build:js": "tsc",
+    "watch:js": "tsc --watch",
+    "prepublish": "npm run build",
+    "test": "karma start --single-run --browsers ChromeHeadlessNoSandbox"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@jupyter-widgets/controls": "^1.5.0",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.0.2",
+    "css-loader": "^0.23.1",
+    "imports-loader": "^0.6.5",
+    "json-loader": "^0.5.7",
+    "karma": "^5.0.2",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-mocha": "^2.0.0",
+    "karma-mocha-reporter": "^2.2.5",
+    "karma-sinon": "^1.0.5",
+    "karma-sourcemap-loader": "^0.3.7",
+    "karma-typescript": "^5.0.2",
+    "karma-typescript-es6-transform": "^5.0.2",
+    "karma-webpack": "^4.0.2",
+    "rimraf": "^2.6.1",
+    "style-loader": "^0.13.1",
+    "typescript": "~3.7.0",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
+    "mocha": "^5.2.0",
+    "chai": "^4.1.2",
+    "sinon": "^7.3.2",
+    "sinon-chai": "^3.3.0"
+  },
+  "dependencies": {
+    "@jupyter-widgets/base": "^2 || ^3",
+    "@phosphor/messaging": "^1",
+    "@phosphor/widgets": "^1",
+    "pileup": "0.6.13",
+    "underscore": "^1.8.3"
+  },
+  "files": [
+    "dist/",
+    "css/",
+    "lib/"
+  ],
+  "jupyterlab": {
+    "extension": "lib/jupyterlab-plugin"
+  }
+}

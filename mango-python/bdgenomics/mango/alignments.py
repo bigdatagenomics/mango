@@ -163,7 +163,7 @@ class AlignmentSummary(object):
         filtered = self.dataset.transform(lambda r: r.filter(((r.referenceName == contig_full) | (r.referenceName == contig_trimmed))
                                                                    & (r.start < end) & (r.end > start) & (r.readMapped)))
 
-        # convert to GA4GH JSON to be consumed by mango-viz module
+        # convert to GA4GH JSON to be consumed by mango-pileup module
         json_map = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.alignmentDatasetToJSON(filtered._jvmRdd,
                                                                                                    multipleGroupNames)
 
