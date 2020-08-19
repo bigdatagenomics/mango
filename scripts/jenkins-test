@@ -220,48 +220,10 @@ do
     # install npm and node in the venv for mango-pileup
     conda install -y nodejs
 
-    which python
-    python -h
-
-    pip install cigar==0.1.3
-    python -h
-
-    pip install matplotlib==2.0.2
-    python -h
-
-    pip install ipython==7.8.0
-    python -h
-
-    pip install jupyter==1.0.0
-    python -h
-
-    pip install bdgenomics.adam==0.30.0
-    python -h
-
-    pip install bdgenomics.mango.pileup==0.0.6a0
-    python -h
-
-    pip install ipywidgets==7.0.0
-
-    python -h
-    pip install psutil
-    python -h
-
-    pip install pytest==3.9.1
-    python -h
-
-    pip install jupyter_contrib_nbextensions
-
-    python -h
-
     # prepare mango python
     pushd mango-python
     make prepare
-
-    python -h
-	make develop
     popd
-
 
     # we can run the python build, now that we have a spark executable
     # requires SPARK_HOME to be set
@@ -313,9 +275,6 @@ do
         cat ${MANGO_NOTEBOOK_LOGS}
         exit 1
     fi
-
-    # copy python targets back
-    cp -r mango-python/target ${PROJECT_ROOT}/mango-python/
 
     # deactivate and remove the conda env
     set +e +x
