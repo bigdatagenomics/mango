@@ -223,13 +223,6 @@ do
     make prepare
     popd
 
-    # need to run develop separately because of inconsistent Docker/Jenkins python bug
-    # Otherwise, gets error: python: bad interpreter: Invalid argument
-    # see issue https://github.com/googledatalab/datalab/pull/2100, no solution.
-    pushd mango-python
-    make develop
-    popd
-
     # we can run the python build, now that we have a spark executable
     # requires SPARK_HOME to be set
     mvn -U \
