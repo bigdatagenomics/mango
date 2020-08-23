@@ -47,6 +47,11 @@ PYTHON_UUID=$(uuidgen)
 
 # function that deletes conda environments and temporary environments
 function clean_up {
+    # print python debugging statements
+    ls -las /usr/bin | grep python
+    ls -las /home/jenkins/.conda/envs/mango-build-${PYTHON_UUID}/bin/ | grep python
+    python3 -h
+
     set +x +v
     # deactivate and remove all mango associated conda envs
     source deactivate
@@ -215,19 +220,15 @@ do
     conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
     source activate mango-build-${PYTHON_UUID}
 
+    ls -las /usr/bin | grep python
+    ls -las /home/jenkins/.conda/envs/mango-build-${PYTHON_UUID}/bin/ | grep python
+
     # install npm and node in the venv for mango-pileup
     conda install -y nodejs
 
     # prepare mango python
     pushd mango-python
     make prepare
-    popd
-
-    # need to run develop separately because of inconsistent Docker/Jenkins python bug
-    # Otherwise, gets error: python: bad interpreter: Invalid argument
-    # see issue https://github.com/googledatalab/datalab/pull/2100, no solution.
-    pushd mango-python
-    make develop
     popd
 
     # we can run the python build, now that we have a spark executable
