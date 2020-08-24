@@ -47,6 +47,16 @@ PYTHON_UUID=$(uuidgen)
 
 # function that deletes conda environments and temporary environments
 function clean_up {
+
+	# Print python debugging statements.
+	# Can remove once https://github.com/bigdatagenomics/mango/issues/571
+	# is resolved.
+	ls -las /usr/bin | grep python
+    if [ -d "/home/jenkins/.conda/envs/mango-build-${PYTHON_UUID}" ];
+    then
+       ls -las /home/jenkins/.conda/envs/mango-build-${PYTHON_UUID}/bin/ | grep python
+    fi
+
     set +x +v
     # deactivate and remove all mango associated conda envs
     source deactivate
@@ -214,6 +224,12 @@ for python in ${pythons[*]}
 do
     conda create -y -q -c conda-forge -n mango-build-${PYTHON_UUID} python=${python} pip=19.3.1 jupyterlab=2.0.1
     source activate mango-build-${PYTHON_UUID}
+
+
+	# print python debugging statements. Can remove once https://github.com/bigdatagenomics/mango/issues/571
+	# is resolved.
+	ls -las /usr/bin | grep python
+	ls -las /home/jenkins/.conda/envs/mango-build-${PYTHON_UUID}/bin/ | grep python
 
     # install npm and node in the venv for mango-pileup
     conda install -y nodejs
