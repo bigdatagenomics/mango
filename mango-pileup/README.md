@@ -1,6 +1,6 @@
 # bdgenomics.mango.pileup
 
-bdgenomics.mango.pileup is a Jupyter widget that allows users to view genomic reads, variants and features in a Jupyter notebook or in Jupyter lab version >2.0.
+bdgenomics.mango.pileup is a Jupyter widget that allows users to view genomic reads, variants and features in a Jupyter notebook or in Jupyter lab version >3.0.0.
 bdgenomics.mango.pileup builds off of [pileup.js](https://github.com/hammerlab/pileup.js).
 
 ## Installation
@@ -13,8 +13,9 @@ bdgenomics.mango.pileup builds off of [pileup.js](https://github.com/hammerlab/p
 
     $ jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup  # can be skipped for notebook version 5.3 and above
 
-#### Install widgets for jupyter lab:
+#### Install widgets for jupyterLab:
 
+    $ jupyter labextension install @jupyter-widgets/jupyterlab-manager # install the Jupyter widgets extension
     $ jupyter labextension install bdgenomics.mango.pileup
 
 ## Running Examples
@@ -29,7 +30,7 @@ Or run in Jupyter lab:
 
 ### from Source:
 
-For a development installation (requires npm (version >= 3.8) and node (version >= 4.0)):
+For a development installation (requires npm (version >= 3.8) and node (version >= 12.0)):
 
     $ git clone https://github.com/bdgenomics/mango
     $ cd mango-pileup

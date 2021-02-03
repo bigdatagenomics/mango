@@ -30,7 +30,7 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@jupyter-widgets/controls": "^1.5.0",
+    "@jupyter-widgets/controls": "^1.5.0 || ^2 || ^3",
     "@types/mocha": "^5.2.7",
     "@types/node": "^12.0.2",
     "css-loader": "^0.23.1",
@@ -57,7 +57,7 @@
     "sinon-chai": "^3.3.0"
   },
   "dependencies": {
-    "@jupyter-widgets/base": "^2 || ^3",
+    "@jupyter-widgets/base": "^2 || ^3 || ^4.0.0",
     "@phosphor/messaging": "^1",
     "@phosphor/widgets": "^1",
     "pileup": "0.6.13",
