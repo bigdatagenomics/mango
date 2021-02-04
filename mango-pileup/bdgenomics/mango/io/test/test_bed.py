@@ -29,13 +29,13 @@ class BedFileTest(IOTestCase):
     global filename
     filename = "chr17.582500-594500.bed"
 
-    
+
     def test_required_columns(self):
         dataframe = read_bed(self.exampleFile(filename))
         dataframe_columns = list(dataframe.columns)
         for name in ("chrom", "chromStart", "chromEnd"):
             assert(name in dataframe_columns)
-    
+
     def test_column_type(self):
         dataframe = read_bed(self.exampleFile("chr17.582500-594500.bed"))
 
@@ -51,7 +51,7 @@ class BedFileTest(IOTestCase):
 
         for i in range(len(chromosomes)):
             assert(type(chromosomes[i] == int))
-    
+
     def test_validate_num_rows(self):
         file = self.exampleFile(filename)
         dataframe = read_bed(file)
@@ -80,8 +80,9 @@ class BedFileTest(IOTestCase):
 
         assert(dataframe._pileup_visualization == "featureJson")
         tracks=[Track(viz="features", label="my features", source=pileup.sources.DataFrameSource(dataframe))]
-        reads = pileup.PileupViewer(chr="chr22", start=10436,stop=10564, reference="hg19", tracks=tracks)
+        reads = pileup.PileupViewer(chrom="chr22", start=10436,stop=10564, reference="hg19", tracks=tracks)
         assert(str(type(reads)) == '<class \'bdgenomics.mango.pileup.pileupViewer.PileupViewer\'>')
+        assert(reads.chrom == 'chr22')
 
 
 # Run tests

@@ -67,9 +67,9 @@ class VCFFileTest(IOTestCase):
 
         assert(dataframe._pileup_visualization == "variantJson")
         tracks=[Track(viz="variants", label="my variants", source=pileup.sources.DataFrameSource(dataframe))]
-        reads = pileup.PileupViewer(chr="chr22",start=10436,stop=10564, reference="hg19", tracks=tracks)
+        reads = pileup.PileupViewer(chrom="chr22",start=10436,stop=10564, reference="hg19", tracks=tracks)
         assert(str(type(reads)) == '<class \'bdgenomics.mango.pileup.pileupViewer.PileupViewer\'>')
-
+        assert(reads.chrom == 'chr22')
 
     # Run tests
 if __name__ == '__main__':
