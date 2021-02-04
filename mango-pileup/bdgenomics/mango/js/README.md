@@ -34,11 +34,23 @@ Matching versions:
 
 | npm          | pypi    |
 |--------------|---------|
-| 0.0.5-beta.0 | 0.0.6a1 |
+| 0.0.6-beta.1 | 0.0.6a1 |
 
 
 ## Development
 
-- git clone https://github.com/bigdatagenomics/mango.git
-- cd mango-pileup/bdgenomics/mango/js
-- make develop
+    $ git clone https://github.com/bigdatagenomics/mango.git
+    $ cd mango-pileup/bdgenomics/mango/js
+    $ make develop
+
+## Testing
+
+To run unit tests, run:
+
+    $ npm run watch:js # watches js and automatically updates
+    $ npm run test
+
+To run unit tests in a Chrome browser, run
+
+    $ npm run watch:js # watches js and automatically updates
+    $ npm run test:browser

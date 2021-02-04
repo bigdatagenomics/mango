@@ -31,7 +31,7 @@ First, install and enable bdgenomics.mango.pileup, a Jupyter Widget:
     jupyter nbextension install --py --sys-prefix widgetsnbextension
 
     jupyter nbextension enable --py --sys-prefix widgetsnbextension
-    jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup 
+    jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup
 
 This will install the bdgenomics.mango.pileup extension into your current conda environment.
 
@@ -74,7 +74,7 @@ This example shows how to visualize alignments through a Jupyter widget.
     tracks=[Track(viz="pileup", label="my Reads", source=pileup.sources.GA4GHAlignmentJson(GA4GHAlignmentJson))]
 
     # render tracks in widget
-    reads = pileup.PileupViewer(locus="chr17:1-100", reference="hg19", tracks=tracks)
+    reads = pileup.PileupViewer(chrom="chr17", start=1, stop=100, reference="hg19", tracks=tracks)
     reads
 
 .. image:: ../img/jupyterWidgets/pileupWidget.png
@@ -92,7 +92,7 @@ This example shows how to visualize variants through a Jupyter widget.
     tracks=[Track(viz="variants", label="my Variants", source=pileup.sources.VcfDataSource("<path_to_file>/my_vcf.vcf"))]
 
     # render tracks in widget
-    variants = pileup.PileupViewer(locus="chr1:10436-10564", reference="hg19", tracks=tracks)
+    variants = pileup.PileupViewer(chrom="chr1", start=10436, stop=10564, reference="hg19", tracks=tracks)
     variants
 
 .. image:: ../img/jupyterWidgets/variantWidget.png
@@ -112,7 +112,7 @@ This example shows how to visualize features through a Jupyter widget.
     tracks=[Track(viz="features", label="my Features", source=pileup.sources.GA4GHFeatureJson(GA4GHFeatureJson))]
 
     # render tracks in widget
-    features = pileup.PileupViewer(locus='chr1:120000-121000', reference="hg19", tracks=tracks)
+    features = pileup.PileupViewer(chrom="chr1", start=120000, stop=121000, reference="hg19", tracks=tracks)
     features
 
 .. image:: ../img/jupyterWidgets/featureWidget.png
@@ -129,7 +129,7 @@ This example shows how to visualize genotypes through a Jupyter widget.
     tracks=[Track(viz="genotypes", label="my Genotypes", source=pileup.sources.VcfDataSource("<path_to_file>/my_vcf.vcf"))]
 
     # render tracks in widget
-    genotypes = pileup.PileupViewer(locus="chr22:21340030-21340150", reference="hg19", tracks=tracks)
+    genotypes = pileup.PileupViewer(chrom="chr22", start=21340030, stop=21340150, reference="hg19", tracks=tracks)
     genotypes
 
 .. image:: ../img/jupyterWidgets/genotypeWidget.png

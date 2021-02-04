@@ -17,38 +17,35 @@ var PileupViewerModel = widgets.DOMWidgetModel.extend({
         _view_module : 'bdgenomics.mango.pileup',
         _model_module_version : _version,
         _view_module_version : _version,
-        locus : 'chr1:1-50',
+        chrom: 'chr1',
+        start: 1,
+        stop: 50,
         reference: 'hg19',
         svg: '',
         tracks: []
     })
 });
 
-function stringToLocus(str) {
-    var contig = str.split(':')[0];
-    var start =  parseInt(str.split(':')[1].split('-')[0]);
-    var stop =  parseInt(str.split(':')[1].split('-')[1]);
-    return {contig: contig, start: start, stop: stop};
+function createLocusDict(contig, start, stop) {
+    return { contig: contig, start: start, stop: stop };
 }
-
-function locusToString(locus) {
-    return `${locus.contig}:${locus.start}-${locus.stop}`;
-}
-
-
 
 // Custom View. Renders the widget model.
 var PileupViewerView = widgets.DOMWidgetView.extend({
     pileup: null,
 
     render: function() {
-      this.data_changed();
-      this.listenTo(this.model, 'change:locus', this._locus_changed, this);
-      this.listenTo(this.model, 'change:msg', this._msg_changed, this);
+        this.data_changed();
+        this.listenTo(this.model, 'change:chrom', this._locus_changed, this);
+        this.listenTo(this.model, 'change:start', this._locus_changed, this);
+        this.listenTo(this.model, 'change:stop', this._locus_changed, this);
+        this.listenTo(this.model, 'change:msg', this._msg_changed, this);
     },
 
     _locus_changed: function() {
-        var range = stringToLocus(this.model.get('locus'));
+        var range = createLocusDict(this.model.get('chrom'),
+                                  this.model.get('start'),
+                                  this.model.get('stop'));
         this.pileup.setRange(range);
     },
 
@@ -57,13 +54,18 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
         switch(this.model.get('msg')) {
             case 'zoomIn':
                 var newRange = this.pileup.zoomIn();
-                this.model.set('locus', locusToString(newRange));
+                this.model.set('chrom', newRange.contig);
+                this.model.set('start', newRange.start);
+                this.model.set('stop', newRange.stop);
+
                 this.model.save_changes();
                 break;
 
             case 'zoomOut':
                 var newRange = this.pileup.zoomOut();
-                this.model.set('locus', locusToString(newRange));
+                this.model.set('chrom', newRange.contig);
+                this.model.set('start', newRange.start);
+                this.model.set('stop', newRange.stop);
                 this.model.save_changes();
                 break;
 
@@ -126,7 +128,9 @@ var PileupViewerView = widgets.DOMWidgetView.extend({
         sources.push(newTrack);
       }
 
-      var range = stringToLocus(this.model.get('locus'));
+      var range = createLocusDict(this.model.get('chrom'),
+                                this.model.get('start'),
+                                this.model.get('stop'));
 
       this.pileup = pileup.create(this.el, {
         range: range,

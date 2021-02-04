@@ -173,42 +173,21 @@ find . -name "*.bak" -exec rm -f {} \;
 SPARK=spark-${SPARK_VERSION}
 
 # what hadoop version are we on? format string for downloading spark assembly
-if [[ $HADOOP_VERSION =~ ^2\.7 ]]; then
-    HADOOP=hadoop2.7
+if [[ $HADOOP_VERSION =~ ^3\.2 ]]; then
+    HADOOP=hadoop3.2
 else
     echo "Unknown Hadoop version."
     exit 1
 fi
 
-# Spark 2.4.3+ and less than 3.0.0 needs special case for Scala 2.12
-if [ ${SCALAVER} == 2.12 ] && [ ${SPARK_MAJOR_VERSION} == 2 ]
-then
-    curl \
-        -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-without-hadoop-scala-2.12.tgz" \
-        -o ${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12.tgz
 
-    tar xzf ${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12.tgz --directory ${MANGO_TMP_DIR}
-    export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-without-hadoop-scala-2.12
+curl \
+    -v \
+    -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
+    -o ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz
 
-    curl \
-        -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=hadoop/core/hadoop-2.7.7/hadoop-2.7.7.tar.gz" \
-        -o ${MANGO_TMP_DIR}/hadoop-2.7.7.tar.gz
-
-    tar xzf ${MANGO_TMP_DIR}/hadoop-2.7.7.tar.gz --directory ${MANGO_TMP_DIR}
-
-    # remove references to avro 1.7.x
-    find ${MANGO_TMP_DIR}/hadoop-2.7.7 -name *.jar | grep avro | xargs rm
-
-    export SPARK_DIST_CLASSPATH=$(${MANGO_TMP_DIR}/hadoop-2.7.7/bin/hadoop classpath)
-else
-    curl \
-        -v \
-        -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=spark/${SPARK}/${SPARK}-bin-${HADOOP}.tgz" \
-        -o ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz
-
-    tar xzf ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz --directory ${MANGO_TMP_DIR}
-    export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
-fi
+tar xzf ${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}.tgz --directory ${MANGO_TMP_DIR}
+export SPARK_HOME=${MANGO_TMP_DIR}/${SPARK}-bin-${HADOOP}
 
 
 

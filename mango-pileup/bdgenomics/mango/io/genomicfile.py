@@ -53,4 +53,5 @@ class GenomicFile(object):
     def from_pandas(cls, df):
         df._mango_parse = cls._parse(df)
         df._mango_to_json = cls._to_json(df)
+        df._pileup_visualization = cls._visualization(df)
         return df

@@ -49,7 +49,7 @@ class TestTypes(unittest.TestCase):
         sourceOptions = {
             'url': 'http://www.biodalliance.org/datasets/ensGene.bb'
         }
-        gene_track=pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource(sourceOptions)) 
+        gene_track=pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource(sourceOptions))
         pileup_track = pileup.Track(viz="pileup", label="myReads", source=pileup.sources.GA4GHAlignmentJson(str))
 
         tracks = [pileup_track, gene_track]
@@ -68,33 +68,38 @@ class TestTypes(unittest.TestCase):
 
         pileup.Track(viz="pileup", label="myReads", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz pileup with incompatible TwoBit source
             pileup.Track(viz="pileup", label="myReads", source=pileup.sources.TwoBitDataSource("fakeFile.2bit"))
 
-            self.assertTrue('Invalid data source twoBit for track pileup' in context.exception)
+        self.assertTrue("Invalid viz 'pileup'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: genome." in str(context.exception))
 
 
     def test_track_invalid_viz_coverage(self):
 
         pileup.Track(viz="coverage", label="myCoverage", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz coverage with incompatible TwoBit source
             pileup.Track(viz="coverage", label="myReads", source=pileup.sources.TwoBitDataSource("fakeFile.2bit"))
 
-            self.assertTrue('Invalid data source twoBit for track coverage' in context.exception)
+        self.assertTrue("Invalid viz 'coverage'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: genome." in str(context.exception))
+
+
 
 
     def test_track_invalid_viz_features(self):
-        
+
         pileup.Track(viz="features", label="myFeatures", source=pileup.sources.BigBedDataSource("fakeFile.bb"))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz features with incompatible GA4GHVariantJson source
             pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHVariantJson("{}"))
 
-            self.assertTrue('Invalid data source variantJson for track features' in context.exception)
+        self.assertTrue("Invalid viz 'features'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: variants, genotypes." in str(context.exception))
 
 
     def test_track_invalid_viz_genome(self):
@@ -102,56 +107,60 @@ class TestTypes(unittest.TestCase):
         pileup.Track(viz="genome", label="myReference", source=pileup.sources.TwoBitDataSource("fakeFile.2bit"))
 
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz genome with incompatible GA4GHFeatureJson source
             pileup.Track(viz="genome", label="myReference", source=pileup.sources.GA4GHFeatureJson("{}"))
 
-
-            self.assertTrue('Invalid data source featureJson for track genome' in context.exception)
+        self.assertTrue("Invalid viz 'genome'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: coverage, features." in str(context.exception))
 
 
     def test_track_invalid_viz_variants(self):
 
         pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHVariantSource("www.fakeEndpoint.com", "readGroup"))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz variants with incompatible GA4GHAlignmentSource source
             pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHAlignmentSource("www.fakeEndpoint.com", "readGroup"))
 
-            self.assertTrue('Invalid data source GAReadAlignment for track variants' in context.exception)
+        self.assertTrue("Invalid viz 'variants'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: pileup." in str(context.exception))
 
 
     def test_track_invalid_viz_genes(self):
 
+        # should work
         pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BigBedDataSource("fakeFile.bb"))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz genes with incompatible bam data source
             pileup.Track(viz="genes", label="myGenes", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-            self.assertTrue('Invalid data source bam for track genes' in context.exception)
-
+        self.assertTrue("Invalid viz 'genes'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: coverage, pileup." in str(context.exception))
 
     def test_track_invalid_viz_scale(self):
 
         pileup.Track(viz="scale", label="scale")
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz scale with incompatible with any source
             pileup.Track(viz="scale", label="scale", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-            self.assertTrue('Invalid data source bam for track scale' in context.exception)
+        self.assertTrue("Invalid viz 'scale'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: coverage, pileup." in str(context.exception))
 
 
     def test_track_invalid_viz_location(self):
 
         pileup.Track(viz="location", label="location")
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ValueError) as context:
             # viz location with incompatible any source
             pileup.Track(viz="location", label="location", source=pileup.sources.BamDataSource("fakeFile.bam"))
 
-            self.assertTrue('Invalid data source bam for track location' in context.exception)
+        self.assertTrue("Invalid viz 'location'" in str(context.exception))
+        self.assertTrue("Valid viz tracks include: coverage, pileup." in str(context.exception))
 
 
 # Run tests

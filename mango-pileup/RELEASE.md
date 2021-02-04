@@ -1,9 +1,11 @@
 # Release on npm
+JupyterLab requires an npm version to be installed.
 To release a new version of bdgenomics.mango.pileup on npm:
 
-- Update
-- cd bdgenomics/mango/js.
-- Update `version` in `package.json`. Commit this change.
+- Update the frontend `version` in `bdgenomics/mango/js/package.json`
+and `bdgenomics/mango/pileup/_version.py`.
+Make sure these versions match. Commit this change.
+- cd into `bdgenomics/mango/js/`
 - Run `scripts/publish.sh`.
 - Run `npm publish`.
 - Push to github.
