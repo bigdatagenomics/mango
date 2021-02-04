@@ -48,9 +48,13 @@ class PileupViewer(widgets.DOMWidget):
     _model_module_version = Unicode(__frontend_version__).tag(sync=True)
 
     # Attributes
-    # locus with placeholder
-    locus=Unicode('chr1:1-50').tag(sync=True)
+    # locus related placeholders
+    chrom=Unicode('chr1').tag(sync=True)
+    start=Int(1).tag(sync=True)
+    stop=Int(50).tag(sync=True)
+
     svg=Unicode('').tag(sync=True)
+
     # message for updating js
     msg=Unicode('').tag(sync=True)
     # string of reference genome.
@@ -59,14 +63,18 @@ class PileupViewer(widgets.DOMWidget):
     tracks = List(Track()).tag(sync=True, **track_list_serialization)
     id = uuid.uuid1().int
 
-    def goto(self, locus):
+    def goto(self, chrom, start, stop):
         """
         Redirects widget view to new genomic locus.
 
-        Args:
-            :param locus: genomic locus is string form (ie. chr1:1-50)
+         :param str chrom: genomic locus chrom
+         :param int start: genomic locus start
+         :param int stop: genomic locus end
+
         """
-        self.locus=locus
+        self.chrom=chrom
+        self.start=start
+        self.stop=stop
 
     def zoomOut(self):
         """

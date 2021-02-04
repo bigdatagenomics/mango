@@ -66,7 +66,7 @@ class TestEmbed:
 
         track = pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHFeatureJson('{}'))
 
-        w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        w = pileup.PileupViewer(chrom="chr17",start=1,stop=250, reference="hg19", tracks=[track])
         state = dependency_state(w, drop_defaults=True)
         data = embed_data(views=w, drop_defaults=True, state=state)
 
@@ -83,8 +83,8 @@ class TestEmbed:
         feature_track = pileup.Track(viz="features", label="myFeatures", source=pileup.sources.GA4GHFeatureJson('{}'))
         variant_track = pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHVariantJson('{}'))
 
-        w1 = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[feature_track])
-        w2 = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[variant_track])
+        w1 = pileup.PileupViewer(chrom="chr17",start=1,stop=250, reference="hg19", tracks=[feature_track])
+        w2 = pileup.PileupViewer(chrom="chr17",start=1,stop=250, reference="hg19", tracks=[variant_track])
 
         jslink((w1, 'reference'), (w2, 'reference'))
         state = dependency_state([w1, w2], drop_defaults=True)
@@ -129,7 +129,7 @@ class TestEmbed:
 
         track = pileup.Track(viz="variants", label="myVariants", source=pileup.sources.GA4GHVariantJson('{}'))
 
-        w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        w = pileup.PileupViewer(chrom="chr17",start=1,stop=250, reference="hg19", tracks=[track])
 
         state = dependency_state(w, drop_defaults=True)
         snippet = embed_snippet(views=w, drop_defaults=True, state=state)
@@ -141,7 +141,7 @@ class TestEmbed:
     def test_minimal_pileup_html(self):
         track = pileup.Track(viz="pileup", label="myReads", source=pileup.sources.GA4GHAlignmentJson('{}'))
 
-        w = pileup.PileupViewer(locus="chr17:1-250", reference="hg19", tracks=[track])
+        w = pileup.PileupViewer(chrom="chr17",start=1,stop=250, reference="hg19", tracks=[track])
         output = StringIO()
         state = dependency_state(w, drop_defaults=True)
         embed_minimal_html(output, views=w, drop_defaults=True, state=state)

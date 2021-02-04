@@ -80,7 +80,7 @@ class BedFileTest(IOTestCase):
 
         assert(dataframe._pileup_visualization == "featureJson")
         tracks=[Track(viz="features", label="my features", source=pileup.sources.DataFrameSource(dataframe))]
-        reads = pileup.PileupViewer(locus="chr22:10436-10564", reference="hg19", tracks=tracks)
+        reads = pileup.PileupViewer(chr="chr22", start=10436,stop=10564, reference="hg19", tracks=tracks)
         assert(str(type(reads)) == '<class \'bdgenomics.mango.pileup.pileupViewer.PileupViewer\'>')
 
 

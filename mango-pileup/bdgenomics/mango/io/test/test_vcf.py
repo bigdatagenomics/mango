@@ -46,7 +46,7 @@ class VCFFileTest(IOTestCase):
             if (head == 'POS'):
                 current_type = "<class 'numpy.int64'>";
             elif (head == 'QUAL'):
-                current_type = "<class 'numpy.float64'>";                
+                current_type = "<class 'numpy.float64'>";
             result = [enforce_type, list(dataframe[head])]
 
     def test_to_json(self):
@@ -67,7 +67,7 @@ class VCFFileTest(IOTestCase):
 
         assert(dataframe._pileup_visualization == "variantJson")
         tracks=[Track(viz="variants", label="my variants", source=pileup.sources.DataFrameSource(dataframe))]
-        reads = pileup.PileupViewer(locus="chr22:10436-10564", reference="hg19", tracks=tracks)
+        reads = pileup.PileupViewer(chr="chr22",start=10436,stop=10564, reference="hg19", tracks=tracks)
         assert(str(type(reads)) == '<class \'bdgenomics.mango.pileup.pileupViewer.PileupViewer\'>')
 
 

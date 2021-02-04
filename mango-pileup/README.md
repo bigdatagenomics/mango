@@ -34,19 +34,18 @@ For a development installation (requires npm (version >= 3.8) and node (version 
 
     $ git clone https://github.com/bdgenomics/mango
     $ cd mango-pileup
-    $ rm -r bdgenomics/mango/pileup/static
 
-Install bdgenomics.mango.pileup:
+Install bdgenomics.mango.pileup as a Jupyter Notebook Extension:
 
+    $ make clean
     $ pip install -e .
     $ jupyter nbextension install --py --symlink --sys-prefix bdgenomics.mango.pileup
-    $ jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup]
+    $ jupyter nbextension enable --py --sys-prefix bdgenomics.mango.pileup
 
 Note for developers: the --symlink argument on Linux or OS X allows one to modify the JavaScript code in-place. This feature is not available with Windows.
 
 
-To install the JupyterLab extension, install the Package, the Jupyter widgets extension, and the bdgenomics.mango.pileup extension:
-
+Install bdgenomics.mango.pileup as a JupyterLab extension:
 
     $ pip install -e .
     $ cd bdgenomics/mango/js/

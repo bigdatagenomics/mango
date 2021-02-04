@@ -1,7 +1,3 @@
-.reads, .features {
-  height: 200px !important;
-}
-
 /* Used to show overflow for gear dropdown menus.
    Can add :has(> .pileup-root) when css has attribute works. */
 .jupyter-widgets-view, .p-Widget {
