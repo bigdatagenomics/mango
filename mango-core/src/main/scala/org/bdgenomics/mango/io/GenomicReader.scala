@@ -23,7 +23,7 @@ import java.net.URL
 
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.adam.rdd.GenomicDataset
+import org.bdgenomics.adam.ds.GenomicDataset
 
 /**
  * Trait for specifying functions for loading data from remote or local

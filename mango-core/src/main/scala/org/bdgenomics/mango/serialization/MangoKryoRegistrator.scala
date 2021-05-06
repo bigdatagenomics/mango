@@ -20,7 +20,7 @@ package org.bdgenomics.mango.serialization
 import com.esotericsoftware.kryo.Kryo
 import org.apache.spark.serializer.KryoRegistrator
 import org.bdgenomics.adam.models._
-import org.bdgenomics.adam.rdd.read.realignment._
+import org.bdgenomics.adam.ds.read.realignment._
 import org.bdgenomics.adam.serialization._
 import org.bdgenomics.adam.util.{ TwoBitFile, TwoBitFileSerializer }
 import org.bdgenomics.formats.avro._

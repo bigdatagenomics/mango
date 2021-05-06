@@ -21,8 +21,8 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ SequenceDictionary, ReferenceRegion }
 import org.bdgenomics.adam.projections.{ AlignmentField, Projection }
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.read.AlignmentDataset
+import org.bdgenomics.adam.ds.ADAMContext._
+import org.bdgenomics.adam.ds.read.AlignmentDataset
 import org.bdgenomics.formats.avro.Alignment
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.io.BamReader

@@ -28,9 +28,9 @@ import net.liftweb.json.Extraction._
 import net.liftweb.json._
 import org.bdgenomics.adam.models.VariantContext
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.adam.rdd.read.AlignmentDataset
-import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset, VariantDataset }
-import org.bdgenomics.adam.rdd.feature.FeatureDataset
+import org.bdgenomics.adam.ds.read.AlignmentDataset
+import org.bdgenomics.adam.ds.variant.{ GenotypeDataset, VariantContextDataset, VariantDataset }
+import org.bdgenomics.adam.ds.feature.FeatureDataset
 import org.bdgenomics.convert.ga4gh.Ga4ghModule
 import org.bdgenomics.convert.{ ConversionStringency, Converter }
 import org.bdgenomics.formats.avro.Alignment

@@ -85,31 +85,6 @@ fi
 
 set -e
 
-# move to Scala 2.11 if requested
-if [ ${SCALAVER} == 2.11 ];
-then
-    set +e
-    ./scripts/move_to_scala_2.11.sh
-    set -e
-fi
-
-
-# move to Scala 2.12 if requested
-if [ ${SCALAVER} == 2.12 ];
-then
-    set +e
-    ./scripts/move_to_scala_2.12.sh
-    set -e
-fi
-
-# move to Spark 2.x if requested
-if [ ${SPARK_MAJOR_VERSION} == 2 ];
-then
-    set +e
-    ./scripts/move_to_spark_2.sh
-    set -e
-fi
-
 # print versions
 echo "Testing MANGO version ${VERSION} on Spark ${SPARK_VERSION} and Hadoop ${HADOOP_VERSION}"
 

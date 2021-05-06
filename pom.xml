@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
-    <version>7</version>
+    <version>9</version>
     <relativePath />
   </parent>
 
@@ -16,25 +16,25 @@
   <name>mango_${scala.version.prefix}</name>
 
   <properties>
-    <adam.version>0.32.0</adam.version>
+    <adam.version>0.34.0</adam.version>
     <avro.version>1.8.2</avro.version>
     <bdg-formats.version>0.15.0</bdg-formats.version>
     <bdg-utils.version>0.3.0</bdg-utils.version>
-    <convert.version>0.9.0</convert.version>
+    <convert.version>0.11.0</convert.version>
     <java.version>1.8</java.version>
     <jetty.version>9.4.35.v20201120</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
      <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
-    <hadoop.version>2.7.5</hadoop.version>
+    <hadoop.version>3.2.1</hadoop.version>
     <hadoop-bam.version>7.9.2</hadoop-bam.version>
     <htsjdk.version>2.19.0</htsjdk.version>
     <parquet.version>1.10.1</parquet.version>
-    <scala.version>2.12.8</scala.version>
+    <scala.version>2.12.10</scala.version>
     <scala.version.prefix>2.12</scala.version.prefix>
     <scalatra.version>2.5.0</scalatra.version>
     <scalatest.version>3.0.7</scalatest.version>
     <scalate.version>1.9.1</scalate.version>
-    <spark.version>2.4.4</spark.version>
+    <spark.version>3.0.2</spark.version>
     <spark.version.prefix>-spark3_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
@@ -130,7 +130,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>3.2.2</version>
+          <version>4.4.1</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>
@@ -176,12 +176,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>2.5.3</version>
+          <version>3.0.0-M1</version>
           <configuration>
             <mavenExecutorId>forked-path</mavenExecutorId>
             <useReleaseProfile>false</useReleaseProfile>
@@ -201,7 +201,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.0</version>
+          <version>3.8.1</version>
           <configuration>
             <source>${java.version}</source>
             <target>${java.version}</target>
@@ -215,7 +215,7 @@
         <plugin>
           <groupId>pl.project13.maven</groupId>
           <artifactId>git-commit-id-plugin</artifactId>
-          <version>2.2.2</version>
+          <version>4.0.3</version>
           <configuration>
             <gitDescribe>
               <always>true</always>
@@ -231,7 +231,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>3.0.0-M2</version>
+          <version>3.0.0-M3</version>
           <executions>
             <execution>
               <id>enforce-versions</id>
@@ -261,17 +261,17 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.1.2</version>
+          <version>3.2.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.2.4</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -317,7 +317,7 @@
         <plugin>
           <groupId>org.scalatest</groupId>
           <artifactId>scalatest-maven-plugin</artifactId>
-          <version>2.0.0</version>
+          <version>2.0.2</version>
           <configuration>
             <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
             <junitxml>.</junitxml>
@@ -681,7 +681,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>3.0.1</version>
+            <version>3.2.1</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -695,7 +695,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.0</version>
             <executions>
               <execution>
                 <id>attach-javadocs</id>

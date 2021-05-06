@@ -19,7 +19,7 @@
 package org.bdgenomics.mango.models
 
 import net.liftweb.json._
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.ds.ADAMContext._
 import org.bdgenomics.adam.models.{ VariantContext, ReferenceRegion, SequenceDictionary, SequenceRecord }
 import org.bdgenomics.formats.avro.Variant
 import org.bdgenomics.mango.converters.GA4GHutil
@@ -81,7 +81,7 @@ class VariantContextMaterializationSuite extends MangoFunSuite {
     val grdd = sc.loadGenotypes(inputPath)
     grdd.saveAsPartitionedParquet(outputPath)
     val grdd2 = sc.loadPartitionedParquetGenotypes(outputPath)
-    val data: VariantContextMaterialization = new VariantContextMaterialization(sc, List(outputPath), grdd2.sequences)
+    val data: VariantContextMaterialization = new VariantContextMaterialization(sc, List(outputPath), grdd2.references)
     val mykey = LazyMaterialization.filterKeyFromFile(outputPath)
     val region = new ReferenceRegion("1", 0L, 2000000L)
     val results = data.getJson(region).get(mykey).get

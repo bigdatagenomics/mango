@@ -22,7 +22,7 @@ import org.apache.parquet.filter2.dsl.Dsl._
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary }
 import org.bdgenomics.adam.projections.{ FeatureField, Projection }
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.ds.ADAMContext._
 import org.bdgenomics.formats.avro.Feature
 import org.bdgenomics.mango.converters.GA4GHutil
 import org.bdgenomics.mango.core.util.ResourceUtils

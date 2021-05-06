@@ -17,12 +17,12 @@
  */
 package org.bdgenomics.mango.converters
 
-import org.bdgenomics.adam.rdd.read.AlignmentDataset
+import org.bdgenomics.adam.ds.read.AlignmentDataset
 import org.bdgenomics.mango.util.MangoFunSuite
 import org.scalatest.FunSuite
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.FeatureDataset
-import org.bdgenomics.adam.rdd.variant.VariantDataset
+import org.bdgenomics.adam.ds.ADAMContext._
+import org.bdgenomics.adam.ds.feature.FeatureDataset
+import org.bdgenomics.adam.ds.variant.VariantDataset
 
 class GA4GHutilSuite extends MangoFunSuite {
 

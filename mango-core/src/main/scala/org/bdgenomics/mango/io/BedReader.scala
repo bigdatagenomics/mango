@@ -33,8 +33,8 @@ import htsjdk.tribble.index.{ Index, IndexFactory }
 
 import scala.collection.JavaConversions._
 import org.bdgenomics.formats.avro.Feature
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.feature.FeatureDataset
+import org.bdgenomics.adam.ds.ADAMContext._
+import org.bdgenomics.adam.ds.feature.FeatureDataset
 import org.apache.spark.rdd.RDD
 
 object BedReader extends GenomicReader[FeatureCodecHeader, Feature, FeatureDataset] with Logging {
