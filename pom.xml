@@ -16,7 +16,7 @@
   <name>mango_${scala.version.prefix}</name>
 
   <properties>
-    <adam.version>0.34.0</adam.version>
+    <adam.version>0.35.0</adam.version>
     <avro.version>1.8.2</avro.version>
     <bdg-formats.version>0.15.0</bdg-formats.version>
     <bdg-utils.version>0.3.0</bdg-utils.version>
