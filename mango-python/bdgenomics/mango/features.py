@@ -72,7 +72,7 @@ class FeatureSummary(object):
                                                            & (r.start < end) & (r.end > start)))
 
         # convert to GA4GH JSON to be consumed by mango-pileup module
-        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.featureDatasetToJSON(filtered._jvmRdd)
+        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.featureDatasetToJSON(filtered._jvmDataset)
 
         # visualize
         if (showPlot):
