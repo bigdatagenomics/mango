@@ -43,7 +43,7 @@ class VariantSummary(object):
 
         Args:
             :param ac: bdgenomics.adamContext.ADAMContext
-            :param dataset: bdgenomics.adam.rdd.VariantDataset
+            :param dataset: bdgenomics.adam.ds.VariantDataset
         """
         self.ac = ac
         self.dataset = dataset

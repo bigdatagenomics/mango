@@ -51,7 +51,7 @@ class GenotypeSummary(object):
         Args:
             :param spark: SparkSession
             :param ac: bdgenomics.adam.damContext.ADAMContext
-            :param genotypeDataset:  bdgenomics.adam.rdd.GenotypeDataset
+            :param genotypeDataset:  bdgenomics.adam.ds.GenotypeDataset
             :param sample: fraction of reads to sample from
         """
 
@@ -158,7 +158,7 @@ class VariantsPerSampleDistribution(HistogramDistribution):
 
         Args:
             :param ss: global SparkSession.
-            :param genotypeDataset: bdgenomics.adam.rdd.GenotypeDataset
+            :param genotypeDataset: bdgenomics.adam.ds.GenotypeDataset
             :param sample: Fraction to sample GenotypeDataset. Should be between 0 and 1
         """
 
@@ -182,7 +182,7 @@ class HetHomRatioDistribution(object):
 
         Args:
             :param ss: global SparkSession.
-            :param genotypeDataset: bdgenomics.adam.rdd.GenotypeDataset
+            :param genotypeDataset: bdgenomics.adam.ds.GenotypeDataset
             :param sample: Fraction to sample GenotypeDataset. Should be between 0 and 1
         """
 
@@ -236,7 +236,7 @@ class GenotypeCallRatesDistribution(object):
 
         Args:
             :param ss: SparkContext
-            :param genotypeDataset: bdgenomics.adam.rdd.GenotypeDataset
+            :param genotypeDataset: bdgenomics.adam.ds.GenotypeDataset
             :param sample: Fraction to sample GenotypeDataset. Should be between 0 and 1
         """
 

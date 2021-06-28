@@ -43,7 +43,7 @@ class FeatureSummary(object):
 
         Args:
             :param ac: bdgenomics.adam.damContext.ADAMContext
-            :param dataset: bdgenomics.adam.rdd.FeatureDataset
+            :param dataset: bdgenomics.adam.ds.FeatureDataset
         """
         self.ac = ac
         self.dataset = dataset
