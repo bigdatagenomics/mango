@@ -20,7 +20,7 @@ package org.bdgenomics.mango.models
 
 import ga4gh.Reads
 import org.bdgenomics.adam.models.{ ReferenceRegion, SequenceDictionary, SequenceRecord }
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.ds.ADAMContext._
 import org.bdgenomics.mango.converters.GA4GHutil
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json._
@@ -78,7 +78,7 @@ class AlignmentMaterializationSuite extends MangoFunSuite {
     val rrdd = sc.loadAlignments(inputPath)
     rrdd.saveAsPartitionedParquet(outputPath, partitionSize = 1000000)
     val rdd2 = sc.loadPartitionedParquetAlignments(outputPath)
-    val data: AlignmentMaterialization = new AlignmentMaterialization(sc, List(outputPath), rdd2.sequences)
+    val data: AlignmentMaterialization = new AlignmentMaterialization(sc, List(outputPath), rdd2.references)
     val region = new ReferenceRegion("2", 189000000L, 190000000L)
     val mykey = LazyMaterialization.filterKeyFromFile(outputPath)
     val results: Array[ReadAlignment] = data.getJson(region).get(mykey).get

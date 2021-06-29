@@ -43,7 +43,7 @@ class VariantSummary(object):
 
         Args:
             :param ac: bdgenomics.adamContext.ADAMContext
-            :param dataset: bdgenomics.adam.rdd.VariantDataset
+            :param dataset: bdgenomics.adam.ds.VariantDataset
         """
         self.ac = ac
         self.dataset = dataset
@@ -71,7 +71,7 @@ class VariantSummary(object):
                                                            & (r.start < end) & (r.end > start)))
 
         # convert to GA4GH JSON to be consumed by mango-pileup module
-        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.variantDatasetToJSON(filtered._jvmRdd)
+        json = self.ac._jvm.org.bdgenomics.mango.converters.GA4GHutil.variantDatasetToJSON(filtered._jvmDataset)
 
         # visualize
         if (showPlot):

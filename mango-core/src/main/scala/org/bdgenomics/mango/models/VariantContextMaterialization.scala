@@ -20,8 +20,8 @@ package org.bdgenomics.mango.models
 import net.liftweb.json.Serialization.write
 import org.apache.spark._
 import org.bdgenomics.adam.models.{ VariantContext, ReferenceRegion, SequenceDictionary }
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.variant.{ GenotypeDataset, VariantContextDataset }
+import org.bdgenomics.adam.ds.ADAMContext._
+import org.bdgenomics.adam.ds.variant.{ GenotypeDataset, VariantContextDataset }
 import org.bdgenomics.formats.avro.{ Sample, Variant }
 import org.bdgenomics.mango.core.util.ResourceUtils
 import org.bdgenomics.mango.io.VcfReader

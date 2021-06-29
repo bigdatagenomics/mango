@@ -22,22 +22,6 @@ PROJECT_ROOT=$MANGO_TMP_DIR
 
 pushd $PROJECT_ROOT
 
-# move to Scala 2.11 if requested
-if [ ${SCALAVER} == 2.11 ];
-then
-    set +e
-    ./scripts/move_to_scala_2.11.sh
-    set -e
-fi
-
-# move to Spark 2.x if requested
-if [ ${SPARK_VERSION} == 2.4.6 ];
-then
-    set +e
-    ./scripts/move_to_spark_2.sh
-    set -e
-fi
-
 # clean
 mvn clean
 

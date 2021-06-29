@@ -28,8 +28,8 @@ import org.bdgenomics.mango.converters.SAMRecordConverter
 import org.seqdoop.hadoop_bam.util.SAMHeaderReader
 
 import scala.collection.JavaConversions._
-import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.read.AlignmentDataset
+import org.bdgenomics.adam.ds.ADAMContext._
+import org.bdgenomics.adam.ds.read.AlignmentDataset
 import grizzled.slf4j.Logging
 import org.bdgenomics.mango.models.LazyMaterialization
 

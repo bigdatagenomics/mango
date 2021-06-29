@@ -29,8 +29,8 @@ import htsjdk.variant.variantcontext.{ VariantContext => HtsjdkVariantContext }
 import htsjdk.variant.vcf.{ VCFCodec, VCFFileReader, VCFHeader, VCFHeaderLine }
 import org.apache.spark.SparkContext
 import org.bdgenomics.adam.converters.VariantContextConverter
-import org.bdgenomics.adam.rdd.variant.VariantContextDataset
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.ds.variant.VariantContextDataset
+import org.bdgenomics.adam.ds.ADAMContext._
 import org.bdgenomics.adam.models.{ ReferenceRegion, VariantContext => ADAMVariantContext }
 import org.bdgenomics.mango.models.LazyMaterialization
 import grizzled.slf4j.Logging

@@ -24,13 +24,13 @@ echo "releasing from ${commit} on branch ${branch}"
 # push branch
 git push origin ${branch}
 
-# do spark 2, scala 2.11 release
-git checkout -b maint_spark2_2.11-${release} ${branch}
-git commit -a -m "Modifying pom.xml files for Spark 2, Scala 2.11 release."
+# do spark 3, scala 2.12 release
+git checkout -b maint_spark3_2.12-${release} ${branch}
+git commit -a -m "Modifying pom.xml files for Spark 3, Scala 2.12 release."
 mvn --batch-mode \
   -P distribution \
   -Dresume=false \
-  -Dtag=mango-parent-spark2_2.11-${release} \
+  -Dtag=mango-parent-spark3_2.12-${release} \
   -DreleaseVersion=${release} \
   -DdevelopmentVersion=${devel} \
   -DbranchName=mango-${release} \
@@ -39,7 +39,7 @@ mvn --batch-mode \
   release:perform
 
 if [ $? != 0 ]; then
-  echo "Releasing Spark 2, Scala 2.11 version failed."
+  echo "Releasing Spark 3, Scala 2.12 version failed."
   exit 1
 fi
 

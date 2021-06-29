@@ -44,7 +44,7 @@ class CoverageDistribution(CountDistribution):
 
         Args:
             :param ss: global SparkSession.
-            :param coverageRDD: bdgenomics.adam.rdd.CoverageDataset
+            :param coverageRDD: bdgenomics.adam.ds.CoverageDataset
             :param sample: Fraction to sample CoverageRDD. Should be between 0 and 1
 
         """

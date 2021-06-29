@@ -20,7 +20,7 @@ package org.bdgenomics.mango.io
 
 import ga4gh.Reads
 import org.bdgenomics.adam.models.ReferenceRegion
-import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.ds.ADAMContext._
 import org.bdgenomics.mango.util.MangoFunSuite
 import net.liftweb.json._
 
