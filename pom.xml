@@ -22,7 +22,7 @@
     <bdg-utils.version>0.3.0</bdg-utils.version>
     <convert.version>0.11.0</convert.version>
     <java.version>1.8</java.version>
-    <jetty.version>9.4.41.v20210516</jetty.version>
+    <jetty.version>9.4.43.v20210629</jetty.version>
     <ga4gh.version>0.6.0a10</ga4gh.version>
      <!-- Edit the following line to configure the Hadoop (HDFS) version. -->
     <hadoop.version>3.2.1</hadoop.version>
