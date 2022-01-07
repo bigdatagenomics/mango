@@ -38,7 +38,7 @@
     <spark.version.prefix>-spark3_</spark.version.prefix>
     <snappy.version>1.0.5</snappy.version>
     <scoverage.plugin.version>1.1.1</scoverage.plugin.version>
-    <protobuf.version>3.0.0-beta-3</protobuf.version>
+    <protobuf.version>3.16.1</protobuf.version>
   </properties>
 
   <licenses>
